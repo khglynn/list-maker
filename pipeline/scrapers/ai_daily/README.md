@@ -107,6 +107,18 @@ This creates reviewable rows in Neon tables like:
 - `ai_entity_facts`
 - `ai_mention_review_queue`
 
+Review-first views (recommended in Neon UI):
+- `ai_v_run_summary`
+- `ai_v_priority_entity_counts`
+- `ai_v_priority_mentions`
+- `ai_v_link_hunt_queue`
+- `ai_v_open_review_items`
+
+Note on empty tables at this stage:
+- `ai_entity_aliases` stays empty until we start alias normalization.
+- `ai_reference_link_candidates` stays empty until URL discovery is running.
+- `ai_episode_reference_links` stays empty until URLs are verified and promoted.
+
 ## Output location
 
 - Local text + metadata files:

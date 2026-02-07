@@ -48,6 +48,18 @@ Loaded runs currently in Neon:
 - Run `3`: `batch-01-gpt41-apples-to-apples` (`gpt-4.1`) → 292 mentions, 123 facts, 50 review rows
 - Run `4`: `batch-01-focused-mini` (`gpt-4.1-mini`) → 75 mentions, 57 facts, 16 review rows
 
+Expected empty tables right now:
+- `ai_entity_aliases` (we have not run alias normalization yet)
+- `ai_reference_link_candidates` (URL discovery phase not run yet)
+- `ai_episode_reference_links` (URL verification/promotion phase not run yet)
+
+Recommended review views in Neon:
+- `ai_v_run_summary`
+- `ai_v_priority_entity_counts`
+- `ai_v_priority_mentions`
+- `ai_v_link_hunt_queue`
+- `ai_v_open_review_items`
+
 ## Next move
 
 1. Initialize draft `ai_*` tables in Neon.
