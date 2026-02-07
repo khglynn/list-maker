@@ -1,7 +1,7 @@
 # AI Daily Brief Transcript Pipeline
 
 *Created: 2026-02-05*
-*Last updated: 2026-02-05*
+*Last updated: 2026-02-07*
 
 This script pulls recent episodes, gets full transcripts, and saves them in two places:
 - Neon table: `episode_transcripts`
@@ -13,6 +13,10 @@ This script pulls recent episodes, gets full transcripts, and saves them in two 
 - `extract_entities.py`
 - `init_entity_schema.py`
 - `load_entity_batch.py`
+- `normalize_aliases.py`
+- `discover_links.py`
+- `report_summary.py`
+- `dedupe_links.py`
 
 ## What it does
 
@@ -28,7 +32,7 @@ This script pulls recent episodes, gets full transcripts, and saves them in two 
 - `OPENAI_API_KEY`
 
 Optional:
-- `FIRECRAWL_API_KEY` (not needed by this script)
+- `FIRECRAWL_API_KEY` (used by `discover_links.py`)
 
 ## Run
 
@@ -118,6 +122,36 @@ Note on empty tables at this stage:
 - `ai_entity_aliases` stays empty until we start alias normalization.
 - `ai_reference_link_candidates` stays empty until URL discovery is running.
 - `ai_episode_reference_links` stays empty until URLs are verified and promoted.
+
+## Alias + Link Enrichment (current quality pass)
+
+Run alias normalization:
+
+```bash
+cd pipeline/scrapers/ai_daily
+python3 normalize_aliases.py
+```
+
+Run link discovery for selected runs:
+
+```bash
+cd pipeline/scrapers/ai_daily
+python3 discover_links.py --run-ids 4,3 --limit 200
+```
+
+Generate an easy quality summary:
+
+```bash
+cd pipeline/scrapers/ai_daily
+python3 report_summary.py --run-id 3 --top 20
+```
+
+Clean duplicate promoted links if needed:
+
+```bash
+cd pipeline/scrapers/ai_daily
+python3 dedupe_links.py
+```
 
 ## Output location
 
