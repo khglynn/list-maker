@@ -135,6 +135,17 @@ python3 discover_links.py --run-ids 1 --limit 300
 python3 report_summary.py --run-id 1 --top 25
 ```
 
+Guarded scale workflow (preflight + automatic quality gates):
+
+```bash
+cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists
+pipeline/venv/bin/python pipeline/scrapers/ai_daily/run_guarded_backfill.py \
+  --since-date 2025-08-08 \
+  --preflight-new 10 \
+  --run-full \
+  --chunk-size 20
+```
+
 ---
 
 ## Show Configuration

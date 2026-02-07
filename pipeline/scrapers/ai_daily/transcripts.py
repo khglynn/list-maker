@@ -15,6 +15,7 @@ Usage:
     python transcripts.py --limit 25
     python transcripts.py --limit 25 --dry-run
     python transcripts.py --limit 25 --force
+    python transcripts.py --limit 300 --since-date 2025-08-08 --max-new 10
 """
 
 from __future__ import annotations
@@ -422,6 +423,9 @@ def run(
     feed_url: str,
     limit: int,
     model: str,
+    since_date: Optional[date],
+    max_new: int,
+    summary_out: Optional[Path],
     force: bool,
     dry_run: bool,
 ) -> None:
@@ -432,6 +436,12 @@ def run(
     print(f"Fetching feed: {feed_url}", flush=True)
     episodes = fetch_feed(feed_url=feed_url, limit=limit)
     print(f"Found {len(episodes)} episodes in feed window", flush=True)
+    if since_date:
+        episodes = [e for e in episodes if e.publish_date and e.publish_date >= since_date]
+        print(
+            f"After since-date filter ({since_date.isoformat()}): {len(episodes)} episodes",
+            flush=True,
+        )
 
     conn = get_db_connection()
     try:
@@ -441,11 +451,24 @@ def run(
 
         created = 0
         skipped = 0
+        filtered = 0
+        created_episode_ids: list[int] = []
+        skipped_episode_ids: list[int] = []
+        failed_episode_ids: list[int] = []
         for idx, ep in enumerate(episodes, start=1):
+            if max_new > 0 and created >= max_new:
+                print(f"Reached --max-new={max_new}; stopping early.", flush=True)
+                break
+
+            if since_date and ep.publish_date and ep.publish_date < since_date:
+                filtered += 1
+                continue
+
             episode_id = upsert_episode(conn, show_id, ep)
             already = transcript_exists(conn, episode_id)
             if already and not force:
                 skipped += 1
+                skipped_episode_ids.append(episode_id)
                 print(f"[{idx}/{len(episodes)}] Skip existing: {ep.title}", flush=True)
                 continue
 
@@ -471,6 +494,7 @@ def run(
             if not transcript_text:
                 if not ep.audio_url:
                     print(f"[{idx}/{len(episodes)}] Missing audio URL: {ep.title}", flush=True)
+                    failed_episode_ids.append(episode_id)
                     continue
                 if not api_key:
                     raise RuntimeError("OPENAI_API_KEY missing; cannot generate transcript")
@@ -506,13 +530,37 @@ def run(
                 model=model_used,
             )
             created += 1
+            created_episode_ids.append(episode_id)
             print(f"  Saved transcript for episode_id={episode_id} ({source_type})", flush=True)
 
         print("", flush=True)
         print("Done.", flush=True)
         print(f"Saved/updated transcripts: {created}", flush=True)
         print(f"Skipped existing: {skipped}", flush=True)
+        print(f"Failed/missing audio: {len(failed_episode_ids)}", flush=True)
         print(f"Local transcript cache: {cache_dir}", flush=True)
+
+        if summary_out:
+            summary_out.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "generated_at_utc": datetime.utcnow().isoformat() + "Z",
+                "feed_url": feed_url,
+                "limit": limit,
+                "since_date": since_date.isoformat() if since_date else None,
+                "max_new": max_new,
+                "model": model,
+                "force": force,
+                "dry_run": dry_run,
+                "saved_or_updated_count": created,
+                "skipped_existing_count": skipped,
+                "failed_count": len(failed_episode_ids),
+                "filtered_count": filtered,
+                "created_episode_ids": created_episode_ids,
+                "skipped_episode_ids": skipped_episode_ids,
+                "failed_episode_ids": failed_episode_ids,
+            }
+            summary_out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            print(f"Summary JSON: {summary_out}", flush=True)
     finally:
         conn.close()
 
@@ -532,6 +580,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit", type=int, default=25, help="Episodes to process (default: 25)")
     parser.add_argument("--feed-url", default=DEFAULT_FEED_URL, help="Podcast RSS feed URL")
     parser.add_argument("--model", default=DEFAULT_STT_MODEL, help="OpenAI transcription model")
+    parser.add_argument(
+        "--since-date",
+        type=str,
+        default="",
+        help="Only process episodes on/after YYYY-MM-DD (publish_date based)",
+    )
+    parser.add_argument(
+        "--max-new",
+        type=int,
+        default=0,
+        help="Stop after creating/updating this many transcripts (0 = no cap)",
+    )
+    parser.add_argument(
+        "--summary-out",
+        type=str,
+        default="",
+        help="Optional JSON path to write run summary (created IDs, skipped IDs, etc.)",
+    )
     parser.add_argument("--force", action="store_true", help="Overwrite existing transcripts")
     parser.add_argument("--dry-run", action="store_true", help="No database/file writes")
     return parser.parse_args()
@@ -540,11 +606,24 @@ def parse_args() -> argparse.Namespace:
 if __name__ == "__main__":
     load_environment()
     args = parse_args()
+    since_date_value: Optional[date] = None
+    if args.since_date.strip():
+        try:
+            since_date_value = date.fromisoformat(args.since_date.strip())
+        except ValueError as exc:
+            print(f"Error: invalid --since-date '{args.since_date}'. Use YYYY-MM-DD.", file=sys.stderr)
+            sys.exit(1)
+    summary_out_path: Optional[Path] = None
+    if args.summary_out.strip():
+        summary_out_path = Path(args.summary_out).expanduser().resolve()
     try:
         run(
             feed_url=args.feed_url,
             limit=args.limit,
             model=args.model,
+            since_date=since_date_value,
+            max_new=args.max_new,
+            summary_out=summary_out_path,
             force=args.force,
             dry_run=args.dry_run,
         )

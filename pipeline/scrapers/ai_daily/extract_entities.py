@@ -67,6 +67,16 @@ CORE_TYPES = {
 REQUEST_TIMEOUT_SECONDS = 180
 DEFAULT_MODEL = "gpt-4.1-mini"
 DEFAULT_CONFIDENCE_REVIEW_THRESHOLD = 0.78
+SURVEY_TERMS = {"survey", "poll", "barometer", "census", "questionnaire"}
+MEDIA_OUTLET_TERMS = {
+    "wall street journal",
+    "wsj",
+    "new york times",
+    "nyt",
+    "bloomberg",
+    "reuters",
+    "the information",
+}
 
 
 @dataclass
@@ -404,6 +414,30 @@ def postprocess_mention_types(mention: dict[str, Any]) -> dict[str, Any]:
             mention["entity_type"] = "organization"
             mention["review_reason"] = mention["review_reason"] or "media_outlet_not_report"
             mention["needs_review"] = True
+
+    # Clean survey naming so org names become "X survey" when needed.
+    if mention["entity_type"] == "survey":
+        canonical = mention.get("canonical_name", "")
+        canonical_l = canonical.lower()
+        context_l = mention.get("context_snippet", "").lower()
+
+        if canonical_l in {"ai daily brief", "the ai daily brief"} and "pulse survey" in text_blob:
+            mention["canonical_name"] = "AI Usage Pulse Survey"
+            mention["needs_review"] = True
+            mention["review_reason"] = mention["review_reason"] or "survey_name_normalized"
+        elif any(term in canonical_l for term in MEDIA_OUTLET_TERMS):
+            mention["entity_type"] = "organization"
+            mention["needs_review"] = True
+            mention["review_reason"] = mention["review_reason"] or "media_outlet_not_survey"
+        elif not any(term in canonical_l for term in SURVEY_TERMS):
+            if "survey" in context_l:
+                mention["canonical_name"] = f"{canonical} survey".strip()
+                mention["needs_review"] = True
+                mention["review_reason"] = mention["review_reason"] or "survey_suffix_added"
+            elif "poll" in context_l:
+                mention["canonical_name"] = f"{canonical} poll".strip()
+                mention["needs_review"] = True
+                mention["review_reason"] = mention["review_reason"] or "survey_suffix_added"
 
     # Recover surveys when strong lexical cue exists.
     if mention["entity_type"] in {"other", "organization", "person"}:

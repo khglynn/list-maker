@@ -19,6 +19,7 @@ No required custom views and no extra AI review/link tables.
 - `normalize_aliases.py` (merges obvious duplicates)
 - `discover_links.py` (finds URLs and writes back to mentions)
 - `report_summary.py` (prints quality summary)
+- `run_guarded_backfill.py` (preflight + quality-gated chunk processing)
 
 ## Required Env Vars
 
@@ -27,6 +28,30 @@ No required custom views and no extra AI review/link tables.
 
 Optional:
 - `FIRECRAWL_API_KEY` (used by `discover_links.py`)
+
+## Guarded Scale Run (recommended)
+
+This mode is designed to stop early if output quality drifts.
+
+Preflight only (10 new episodes):
+
+```bash
+cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists
+pipeline/venv/bin/python pipeline/scrapers/ai_daily/run_guarded_backfill.py \
+  --since-date 2025-08-08 \
+  --preflight-new 10
+```
+
+Then full run with chunk checks:
+
+```bash
+cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists
+pipeline/venv/bin/python pipeline/scrapers/ai_daily/run_guarded_backfill.py \
+  --since-date 2025-08-08 \
+  --preflight-new 10 \
+  --run-full \
+  --chunk-size 20
+```
 
 ## End-to-End Flow
 
@@ -68,6 +93,12 @@ python3 discover_links.py --run-ids 1 --limit 300
 cd pipeline/scrapers/ai_daily
 python3 report_summary.py --run-id 1 --top 25
 ```
+
+## Transcript Script Safety Options
+
+- `--since-date YYYY-MM-DD` to scope to a date window.
+- `--max-new N` to cap how many new transcripts are created in one run.
+- `--summary-out /path/to/file.json` to record created/skipped/failed episode IDs.
 
 ## Transcript Output Location
 
