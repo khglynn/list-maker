@@ -1,0 +1,284 @@
+{
+  "episode_id": 1342,
+  "publish_date": "2026-02-03",
+  "title": "The AI Race Just Got a SpaceX-Sized Twist",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Race-Just-Got-a-SpaceX-Sized-Twist-e3ejn0u",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1342-the-ai-race-just-got-a-spacex-sized-twist.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 14,
+  "mentions": [
+    {
+      "episode_id": 1342,
+      "mention_text": "Codex app",
+      "canonical_name": "Codex app",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Codex app is a powerful new interface designed to effortlessly manage multiple agents at once, run work in parallel, and collaborate with agents over long-running tasks.",
+      "context_snippet": "OpenAI's new Codex app and the shifting paradigm of how we work with agents",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "features",
+          "fact_value": {
+            "manage_multiple_agents": true,
+            "run_work_in_parallel": true,
+            "collaborate_long_running_tasks": true,
+            "supports_work_trees": true,
+            "extends_with_skills": true,
+            "automations": true
+          },
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Claude Code",
+      "canonical_name": "Claude Code",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Claude Code about a year ago shifted developer behavior towards terminal use",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_launch",
+          "fact_value": "Claude Code launched about a year ago",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Grok Imagine 1.0",
+      "canonical_name": "Grok Imagine 1.0",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Grok Imagine 1.0 update brings 10 second video generation, 720p resolution, and dramatically better audio",
+      "context_snippet": "XAI officially launched Grok Imagine 1.0",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "features",
+          "fact_value": {
+            "video_generation_seconds": 10,
+            "resolution": "720p",
+            "audio_quality": "dramatically better"
+          },
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Blitzy",
+      "canonical_name": "Blitzy",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://blitzy.com",
+      "quoted_text": "Blitzy solves infinite code context and orchestrates thousands of agents across full codebases",
+      "context_snippet": "Blitzy provides infinite code context and autonomous sprint delivery",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_features",
+          "fact_value": {
+            "infinite_code_context": true,
+            "agent_orchestration": true,
+            "autonomous_sprint_delivery": "over 80%"
+          },
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Kobayashi letter",
+      "canonical_name": "Kobayashi letter",
+      "entity_type": "report",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The biggest IPO in history just got even bigger.",
+      "context_snippet": "The Kobayashi letter commented on the SpaceX and XAI merger IPO implications",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Grok",
+      "canonical_name": "Grok",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "XAI is on the verge of some big Grok updates",
+      "context_snippet": "XAI launched Grok Imagine 1.0 with video and audio improvements",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Claude Sonnet 5",
+      "canonical_name": "Claude Sonnet 5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "All signs point to Claude Sonnet 5 coming very soon",
+      "context_snippet": "Claude Sonnet 5 model expected to launch soon",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "GPT-5",
+      "canonical_name": "GPT-5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Since the launch of GPT-5, OpenAI has been competing strongly in coding use cases",
+      "context_snippet": "GPT-5 launch marked a shift in coding AI competition",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Sonnet 3.5",
+      "canonical_name": "Sonnet 3.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic and Claude have seemed unassailable since Sonnet 3.5",
+      "context_snippet": "Sonnet 3.5 model marked Anthropic's coding dominance",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Cursor",
+      "canonical_name": "Cursor",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Theo called the Codex app a Cursor killer",
+      "context_snippet": "Codex app compared favorably to Cursor by Theo",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "OpenClaw",
+      "canonical_name": "OpenClaw",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Peter Steinberger creator of Claudebot / Moltbot / OpenClaw",
+      "context_snippet": "OpenClaw is an AI coding tool used by Peter Steinberger",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Claudebot",
+      "canonical_name": "Claudebot",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Peter Steinberger creator of Claudebot / Moltbot / OpenClaw",
+      "context_snippet": "Claudebot is an AI coding tool used by Peter Steinberger",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Moltbot",
+      "canonical_name": "Moltbot",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Peter Steinberger creator of Claudebot / Moltbot / OpenClaw",
+      "context_snippet": "Moltbot is an AI coding tool used by Peter Steinberger",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Signal",
+      "canonical_name": "Signal",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "AI is going to sever the deepest identity loop in the West, i.e. who you are is roughly equal to what you do for money.",
+      "context_snippet": "Signal shared reflections on AI's impact on identity and work",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "The episode heavily focuses on the SpaceX acquisition of XAI and the launch of OpenAI's Codex app.",
+    "Multiple organizations, software products, models, and persons are mentioned with relevant context and opinions.",
+    "Financial and technical claims are attributed to credible sources like Bloomberg and The Information.",
+    "Social media posts from Twitter (X) are included when they provide significant opinions or facts.",
+    "No URLs were invented; only known URLs or null were used.",
+    "No media outlets other than The Information and Bloomberg were mentioned as organizations.",
+    "The taxonomy was strictly followed with conservative inclusion of mentions."
+  ]
+}

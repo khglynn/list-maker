@@ -1,0 +1,17 @@
+episode_id,entity_type,canonical_name,mention_text,confidence,review_reason,platform,source_url,context_snippet
+1339,account,Oracle Corporation,Oracle,0.9000,posting_context_retyped_to_account,x,,Oracle responded first in a statement provided to the WSJ and later published on X. The NVIDIA open AI deal has zero impact on our financial relationship with open AI.
+1339,other,MCP,MCP,0.8500,Unclear if MCP is a software product or protocol,,,Xcode agentic coding feature built using MCP allowing multiple coding agents.
+1339,other,Meta Ray-Ban Stories,Meta Ray Bans,0.9000,"Product type unclear, possibly hardware product",,,Meta's AI wearables category lead with Meta Ray Bans contributed to positive market reaction.
+1339,model,Sonnet 5,Sonnet 5,0.7000,low_confidence,,,Sonnet 5 is a rumored upcoming AI model.
+1339,other,Mac Mini,Mac Mini,0.8500,"Hardware product, not software or model",,,Mac Mini hardware is popular for running AI agents like OpenClaw.
+1339,other,You Can With AI podcast,You Can With AI podcast,0.8500,"Podcast name, not in locked taxonomy",,,You Can With AI podcast is a show about enterprise AI hosted for KPMG.
+1343,account,Andrej Karpathy,Andrej Karpathy,0.9500,posting_context_retyped_to_account,x,,"one year ago, 365 days, that Andrej Karpathy tweeted there is a new kind of coding I call vibe-coding..."
+1343,other,vibe-coding,vibe-coding,0.8000,"Unclear if 'vibe-coding' is a model, concept, or software product",,,"one year ago, 365 days, that Andrej Karpathy tweeted there is a new kind of coding I call vibe-coding..."
+1343,other,You Can With AI,You Can With AI,0.9000,Podcast is not in locked taxonomy; marked needs_review,,,"You'll want to check out another podcast that I've had the privilege to host, which is called You Can With AI from KPMG..."
+1344,account,Jason Luongo,Jason Luongo,0.9000,posting_context_retyped_to_account,twitter,,Jason Luongo tweeted bullishly about Amazon's AI investments and infrastructure dominance.
+1344,account,Emily Plum,Emily Plum,0.9000,posting_context_retyped_to_account,x,,"Emily Plum, a congressional candidate, posted about layoffs at Amazon not being AI-related but about cheaper labor."
+1344,account,ASML,ASML,0.8500,posting_context_retyped_to_account,x,,Companies growing but still downsizing is a phenomenon to watch in 2026.
+1349,account,Alex Finn,Alex Finn,0.9000,posting_context_retyped_to_account,twitter,,"Alex Finn was getting similar results. Over last weekend, he tweeted, I woke up this morning and my 24-7 AI employee Claudbot Henry texted me that he did all these tasks overnight without asking"
+1349,software_product,Moltbook,Multbook,0.9500,Spelling variant of Moltbook; possibly same entity,twitter,,"Matt Schlitt wrote Introducing Multbook, a new social network for every open CLAW to hang out. Multbook is run by my multi-AI agent, Claude Clautergreig."
+1349,software_product,ChatGPT,ChatGBT,0.8000,Possible transcription error: ChatGBT likely refers to ChatGPT,,,Charlie Ward pasted gibberish post into ChatGBT and it decoded it as ROT13 cipher.
+1349,other,Roko's Basilisk,Rocco's Basilisk,0.9000,Name likely misspelled; should be Roko's Basilisk,,,"Rocco tweeted about Multbook and referenced Rocco's Basilisk, an early AI thought experiment about a future superintelligence punishing non-contributors."

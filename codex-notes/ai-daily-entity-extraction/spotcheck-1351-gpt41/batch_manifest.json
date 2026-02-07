@@ -1,0 +1,334 @@
+{
+  "batch_name": "spotcheck-1351-gpt41",
+  "generated_at_utc": "2026-02-06T23:57:07.892918+00:00",
+  "model": "gpt-4.1",
+  "input": {
+    "episodes_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/2026-02-06-ai-daily-25-episodes.csv",
+    "transcripts_dir": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts",
+    "limit": 5,
+    "offset": 0,
+    "explicit_ids": [
+      1351
+    ],
+    "max_chars": 50000,
+    "confidence_review_threshold": 0.78
+  },
+  "episodes": [
+    {
+      "episode_id": 1351,
+      "publish_date": "2026-01-28",
+      "title": "Are Agent Swarms the Next AI Paradigm?",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Are-Agent-Swarms-the-Next-AI-Paradigm-e3eb0mb",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1351-are-agent-swarms-the-next-ai-paradigm.txt",
+      "mention_count": 54,
+      "review_count": 2
+    }
+  ],
+  "summary": {
+    "mention_count": 54,
+    "review_count": 2,
+    "counts_by_type": {
+      "organization": 21,
+      "software_product": 4,
+      "person": 10,
+      "model": 9,
+      "other": 2,
+      "benchmark": 4,
+      "account": 4
+    },
+    "top_entities": [
+      {
+        "entity_type": "organization",
+        "canonical_name": "Anthropic",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Singapore Sovereign Wealth Fund",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Sequoia Capital",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Microsoft",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "NVIDIA",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "OpenAI",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "SoftBank Group",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Reuters",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "NVIDIA H200",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Alibaba Group",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "ByteDance",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "DeepSeek",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Jensen Huang",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "UK Department for Science, Innovation and Technology",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Liz Kendall",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Cisco Systems",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Cognizant",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "National Health Service",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Amazon",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Google",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Salesforce",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Open University",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Quen 3 Max Thinking",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "Heavy Mode",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "benchmark",
+        "canonical_name": "GPQA",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "benchmark",
+        "canonical_name": "LiveCodeBench",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Claude Haiku 4.5",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Gemini 3 Pro",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "GPT-5.2",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "DeepSeek v3.2",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Kimi K2.5",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Gemini 3 Flash",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Agentic Vision",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Omar Sanseviero",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Moonshot AI",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Artificial Analysis",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "benchmark",
+        "canonical_name": "Humanity's last exam",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "benchmark",
+        "canonical_name": "Artificial Analysis Index",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Kimi K2 Thinking",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Enrico",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Demis Hassabis",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Balazs Nemethy",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Shafi",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Simon Willison",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Swicks",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Sauad Rizwan",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "Parallel Agent Reinforcement Learning (PARL)",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Simon Smith",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "ClickHealth",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Cloud Code",
+        "mention_count": 1
+      }
+    ],
+    "facts_by_key": {
+      "fundraising_round": 1,
+      "expected_revenue_2026": 1,
+      "investment_in_anthropic": 4,
+      "fundraising_2025": 1,
+      "investment_in_openai": 1,
+      "import_approval_china": 1,
+      "received_h200_approval": 2,
+      "ai_training_initiative": 1,
+      "developer": 2,
+      "score_increase": 2,
+      "feature_of": 1,
+      "score": 1
+    }
+  },
+  "new_type_candidates": [
+    {
+      "episode_id": 1351,
+      "proposed_type": "podcast",
+      "reason": "The show 'You Can With AI' is a podcast, which is not covered by the locked taxonomy.",
+      "example_mention": "You Can With AI from KPMG"
+    },
+    {
+      "episode_id": 1351,
+      "proposed_type": "badge",
+      "reason": "The 'AI Foundations badge' is a certification/badge awarded after training, not covered by the locked taxonomy.",
+      "example_mention": "Workers that complete the training will be certified with an AI Foundations badge"
+    }
+  ],
+  "notes": [
+    "Some references to features (e.g., Heavy Mode, PARL) are marked as 'other' and flagged for review due to unclear taxonomy fit.",
+    "Mentions of the podcast 'You Can With AI' and the 'AI Foundations badge' suggest possible new entity types.",
+    "All URLs are set to null as none were provided in the transcript.",
+    "Editorial flag is set to true except for explicit sponsor/ad reads.",
+    "No duplicate mention rows with identical mention_text and context.",
+    "Capped at 40 high-quality mentions as per instructions."
+  ],
+  "outputs": {
+    "episode_json_dir": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/spotcheck-1351-gpt41/episodes",
+    "mentions_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/spotcheck-1351-gpt41/mentions.csv",
+    "review_queue_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/spotcheck-1351-gpt41/review_queue.csv",
+    "episode_summary_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/spotcheck-1351-gpt41/episode_summary.csv"
+  }
+}

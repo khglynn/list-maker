@@ -1,0 +1,6 @@
+episode_id,entity_type,canonical_name,mention_text,confidence,review_reason,platform,source_url,context_snippet
+1339,model,Sonnet 5,Sonnet 5,0.7000,low_confidence,,,Sonnet 5 is a rumored upcoming AI model expected in 2026.
+1339,model,GPT 5.3,GPT 5.3,0.7000,low_confidence,,,GPT 5.3 is a rumored upcoming version of the GPT model series.
+1339,model,Gemini 3 Pro,Gemini 3 Pro,0.7000,low_confidence,,,Gemini 3 Pro is a rumored upcoming advanced version of the Gemini model.
+1349,software_product,ChatGBT,ChatGBT,0.8000,Possible misspelling of ChatGPT,,,"Charlie Ward writes, we noticed this weird post on Maltbook, which seemed to be written in complete gibberish. ... then we pasted it into ChatGBT and WTF. ChatGBT said it's written in ROT13, a simple letter substitution cipher, each letter is shifted 13 paces."
+1349,other,Rocco's Basilisk,Rocco's Basilisk,0.8500,Unclear if paper or concept; marked as other,,,"Rocco, whose name you might recognize from Rocco's Basilisk, which was a very early AI thought experiment"

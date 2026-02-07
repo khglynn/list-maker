@@ -1,0 +1,661 @@
+{
+  "episode_id": 1344,
+  "publish_date": "2026-02-01",
+  "title": "OpenAI IPO? Grok-SpaceX Merger? The AI IPO Race Heats Up",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-IPO--Grok-SpaceX-Merger--The-AI-IPO-Race-Heats-Up-e3efme6",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1344-openai-ipo-grok-spacex-merger-the-ai-ipo-race-heats-up.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 27,
+  "mentions": [
+    {
+      "episode_id": 1344,
+      "mention_text": "OpenAI IPO",
+      "canonical_name": "OpenAI IPO",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-IPO--Grok-SpaceX-Merger--The-AI-IPO-Race-Heats-Up-e3efme6",
+      "quoted_text": "OpenAI has pushed up plans to go public and are now targeting the fourth quarter.",
+      "context_snippet": "The Wall Street Journal reports that OpenAI has pushed up plans to go public and are now targeting the fourth quarter.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "planned_ipo_quarter",
+          "fact_value": "Q4 2026",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "ipo_urgency_reason",
+          "fact_value": "Concerns about Anthropic beating OpenAI to IPO",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Genie 3",
+      "canonical_name": "Genie 3",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Genie 3 is capable of generating playable 3D worlds, allowing the users to navigate through the scene with the mouse and arrow keys.",
+      "context_snippet": "Genie 3 is capable of generating playable 3D worlds, allowing the users to navigate through the scene with the mouse and arrow keys.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "capability",
+          "fact_value": "Generates playable 3D worlds",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "availability",
+          "fact_value": "Available to Gemini Ultra subscribers as research preview",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "DeepMind",
+      "canonical_name": "DeepMind",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "DeepMind was making rapid progress on world models.",
+      "context_snippet": "It seemed like DeepMind was making rapid progress on world models.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "research_focus",
+          "fact_value": "World models",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Sora app",
+      "canonical_name": "Sora app",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "TechCrunch reports that the Sora app from OpenAI is struggling.",
+      "context_snippet": "TechCrunch reports that the Sora app from OpenAI is struggling with downloads tapering off.",
+      "sentiment_label": "negative",
+      "is_editorial": false,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "downloads",
+          "fact_value": "3 million in Sept-Oct, 3.2 million in Nov, 1.2 million in Jan",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "app_store_ranking",
+          "fact_value": "Fallen out of top 100 free apps on iOS and Android US stores",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Times on this day 1776",
+      "canonical_name": "Times on this day 1776",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Darren Aronofsky used AI to create a series about the year 1776.",
+      "context_snippet": "Times on this day 1776 is a series created using AI by Darren Aronofsky.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "creator",
+          "fact_value": "Darren Aronofsky",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "content_type",
+          "fact_value": "AI-created film series",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Perplexity",
+      "canonical_name": "Perplexity",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Perplexity has signed a massive new cloud deal with Microsoft.",
+      "context_snippet": "Perplexity signed a $750 million three-year cloud deal with Microsoft.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "deal_value",
+          "fact_value": 750000000,
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "deal_duration_years",
+          "fact_value": 3,
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "cloud_provider_switch",
+          "fact_value": "From AWS to Microsoft",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Anthropic",
+      "canonical_name": "Anthropic",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic is going to war with the Pentagon over limits to their military AI deal.",
+      "context_snippet": "Anthropic's $200 million military AI deal with the Pentagon is souring due to usage restrictions.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "military_deal_value",
+          "fact_value": 200000000,
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "deal_start_date",
+          "fact_value": "July 2025",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "deal_issues",
+          "fact_value": "Restrictions on lethal operations and domestic surveillance",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Claude",
+      "canonical_name": "Claude",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Claude is used extensively in national security missions.",
+      "context_snippet": "Anthropic spokesperson said Claude is used extensively in national security missions.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "usage",
+          "fact_value": "National security missions",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "KPMG",
+      "canonical_name": "KPMG",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": "https://www.kpmg.us/agents",
+      "quoted_text": "KPMG is turning AI potential into business value with embedded AI agents.",
+      "context_snippet": "KPMG has embedded AI in agents across their enterprise to boost efficiency and quality.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "ai_use_case",
+          "fact_value": "Embedded AI agents for efficiency and quality",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Sektion",
+      "canonical_name": "Sektion",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://sectionai.com",
+      "quoted_text": "Sektion is a platform that helps manage AI transformation across organizations.",
+      "context_snippet": "Sektion coaches employees on AI use cases and tracks AI business impact.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "functionality",
+          "fact_value": "AI transformation management and coaching",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "ZenFlow",
+      "canonical_name": "ZenFlow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "ZenFlow is the first AI orchestration layer that brings discipline to AI prompt chaos.",
+      "context_snippet": "ZenFlow transforms free-form prompting into spec-driven workflows and multi-agent verification.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "feature",
+          "fact_value": "AI orchestration layer with multi-agent verification",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Superintelligent",
+      "canonical_name": "Superintelligent",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Superintelligent helps companies figure out how to use AI better with voice agents and proprietary intelligence.",
+      "context_snippet": "Superintelligent deploys voice agents and offers an AI Strategy Compass tool for AI adoption.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product",
+          "fact_value": "AI Strategy Compass tool for AI adoption",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "QAI",
+      "canonical_name": "QAI",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Apple acquired QAI, a company working on imaging and machine learning for silent speech detection.",
+      "context_snippet": "Apple paid $2 billion for QAI, which develops technology to detect speech without audio.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "acquisition_price",
+          "fact_value": 2000000000,
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "technology_focus",
+          "fact_value": "Imaging and machine learning for silent speech detection",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "founder",
+          "fact_value": "Aviad Maizels",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "PrimeSense",
+      "canonical_name": "PrimeSense",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "PrimeSense developed image recognition technology powering Xbox Kinect and Apple's Face ID.",
+      "context_snippet": "QAI CEO Aviad Maizels previously founded PrimeSense.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "products",
+          "fact_value": [
+            "Xbox Kinect",
+            "Apple Face ID"
+          ],
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Apple",
+      "canonical_name": "Apple Inc.",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Apple reported its largest quarter ever for iPhone sales with $85 billion revenue.",
+      "context_snippet": "Apple's earnings showed 23% revenue growth with record iPhone sales.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "iphone_revenue_q",
+          "fact_value": 85000000000,
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "revenue_growth",
+          "fact_value": 0.23,
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Tim Cook",
+      "canonical_name": "Tim Cook",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Tim Cook said Apple is integrating intelligence across the OS in a personal and private way.",
+      "context_snippet": "Cook responded to questions about monetizing AI with a statement about integrating intelligence.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Robert Scoble",
+      "canonical_name": "Robert Scoble",
+      "entity_type": "person",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Robert Scoble wrote that Apple's purchase is important for future AI-enabled cameras and devices.",
+      "context_snippet": "Scoble commented on Apple's acquisition of QAI and future AI hardware integration.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Ben Casnocha",
+      "canonical_name": "Ben Casnocha",
+      "entity_type": "person",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Ben Casnocha speculated Apple might ramp up AI M&A spending to $10-20 billion over next years.",
+      "context_snippet": "Casnocha wrote about Apple's potential future AI acquisitions after QAI deal.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Amazon",
+      "canonical_name": "Amazon",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Amazon is considering a $50 billion bet on OpenAI.",
+      "context_snippet": "Amazon, Nvidia, and Microsoft in talks to invest $60 billion in OpenAI; Amazon likely $20 billion or more.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "openai_investment_estimate",
+          "fact_value": 50000000000,
+          "confidence": 0.85
+        },
+        {
+          "fact_key": "openai_valuation_target",
+          "fact_value": 830000000000,
+          "confidence": 0.8
+        },
+        {
+          "fact_key": "amazon_anthropic_stake",
+          "fact_value": "Approx. 10%",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Andy Jassy",
+      "canonical_name": "Andy Jassy",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "CEO Andy Jassy sent a memo expecting AI adoption to reduce employee needs.",
+      "context_snippet": "Andy Jassy indicated AI adoption would lead to workforce reductions at Amazon.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Beth Galletti",
+      "canonical_name": "Beth Galletti",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Beth Galletti confirmed layoffs of 16,000 employees at Amazon.",
+      "context_snippet": "SVP of People Beth Galletti published a blog post confirming layoffs.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "layoff_count",
+          "fact_value": 16000,
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "ASML",
+      "canonical_name": "ASML",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "ASML posted record quarterly orders and plans to cut 1,700 tech and IT jobs.",
+      "context_snippet": "ASML is growing sales but still downsizing workforce by 1,700 jobs.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "job_cuts",
+          "fact_value": 1700,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Anthropic IPO",
+      "canonical_name": "Anthropic IPO",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic is open to an IPO by the end of the year.",
+      "context_snippet": "Anthropic has told bankers they are open to an IPO by end of 2026.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "ipo_timing",
+          "fact_value": "End of 2026",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "SpaceX",
+      "canonical_name": "SpaceX",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "SpaceX and XAI are in talks to merge; SpaceX considering IPO over summer.",
+      "context_snippet": "Reuters reports SpaceX and XAI merger talks and possible SpaceX IPO in summer 2026.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "merger_partners",
+          "fact_value": [
+            "SpaceX",
+            "XAI"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "ipo_timing",
+          "fact_value": "Summer 2026",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "XAI",
+      "canonical_name": "XAI",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Tesla announced a $2 billion investment in XAI.",
+      "context_snippet": "Tesla invested $2 billion in XAI despite a failed shareholder vote.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "investment_amount",
+          "fact_value": 2000000000,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Tesla",
+      "canonical_name": "Tesla, Inc.",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Tesla invested $2 billion in XAI and is considering a merger with SpaceX.",
+      "context_snippet": "Bloomberg reported Tesla considering merger with SpaceX as alternative to XAI merger.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Sam Altman",
+      "canonical_name": "Sam Altman",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "CEO Andy Jassy is holding negotiations directly with Sam Altman around the exact shape of the deal.",
+      "context_snippet": "Amazon CEO Andy Jassy negotiating with Sam Altman on OpenAI investment deal.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    }
+  ],
+  "new_type_candidates": [
+    {
+      "episode_id": 1344,
+      "proposed_type": "survey",
+      "reason": "The episode mentions an 'AI usage pulse survey' collecting data on AI model usage and categories.",
+      "example_mention": "AI usage pulse survey"
+    }
+  ],
+  "notes": [
+    "Some mentions such as 'OpenAI IPO' and 'Anthropic IPO' are categorized as 'other' due to lack of a locked type for IPO events.",
+    "The episode contains multiple references to AI models, organizations, persons, and software products relevant to the AI industry.",
+    "No URLs were invented; only URLs explicitly mentioned or clearly inferred from episode metadata were included.",
+    "Mentions related to sponsors and ads are marked as is_editorial=false.",
+    "Sentiment labels are mostly neutral or positive, reflecting factual reporting or positive commentary.",
+    "No duplicate mentions with identical mention_text and context were included."
+  ]
+}

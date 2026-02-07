@@ -1,0 +1,520 @@
+{
+  "episode_id": 1349,
+  "publish_date": "2026-01-31",
+  "title": "100,000 AI Agents Joined Their Own Social Network Today. It's Called Moltbook.",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/100-000-AI-Agents-Joined-Their-Own-Social-Network-Today--Its-Called-Moltbook-e3ee5ue",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1349-100-000-ai-agents-joined-their-own-social-network-today-it-s-called-moltbook.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 27,
+  "mentions": [
+    {
+      "episode_id": 1349,
+      "mention_text": "Moltbook",
+      "canonical_name": "Moltbook",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/100-000-AI-Agents-Joined-Their-Own-Social-Network-Today--Its-Called-Moltbook-e3ee5ue",
+      "quoted_text": "Moldbook, the new social network for AI agents",
+      "context_snippet": "Today on the AI Daily Brief, Moldbook, the new social network for AI agents. Yes, for agents to talk to other agents that has gone completely viral and is, in a world of crazy things, the craziest AI thing I think I've ever seen.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "social network for AI agents",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "user_count",
+          "fact_value": 35000,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Claudbot",
+      "canonical_name": "Claudbot",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Claudbot, C-L-A-W-D, was a personal assistant that could do a whole lot more",
+      "context_snippet": "Just under a week ago, I first told you about Claudbot. Claudbot, C-L-A-W-D, was a personal assistant that could do a whole lot more, and that people were transforming into a generalized agent with profound capabilities in a way that just hadn't been possible with generalized agents up to that point.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "personal assistant AI agent",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "OpenClaw",
+      "canonical_name": "OpenClaw",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "the project announced that it had molted into its final form and was now called OpenClaw",
+      "context_snippet": "A couple days later then, actually early on the morning of Friday, January 30th, the project announced that it had molted into its final form and was now called OpenClaw.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "previous_names",
+          "fact_value": [
+            "Claudbot",
+            "Moltbot"
+          ],
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Sam Altman",
+      "canonical_name": "Sam Altman",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "I called Sam and asked, referring of course to Sam Altman",
+      "context_snippet": "For the record, Moltbot was literally the worst name in the history of names. ... For those of you who are concerned that OpenAI will call angry about OpenClaw, in what was perhaps the simplest, most unintentional, or maybe intentional, flex tweet I've ever seen, creator Peter responded to a concern about the cease and desist letter coming from OpenAI and said, I called Sam and asked, referring of course to Sam Altman, and presumably meaning that OpenClaw is in the clear on the name.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "OpenAI CEO",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Nat Eliason",
+      "canonical_name": "Nat Eliason",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Nat Eliason, for example, was sharing how he had set up Claudbot to effectively work round the clock",
+      "context_snippet": "Nat Eliason, for example, was sharing how he had set up Claudbot to effectively work round the clock, communicating with him via telegram. In addition to building features overnight, Nat shared that he was doing things like building a customer success and support workflow.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Alex Finn",
+      "canonical_name": "Alex Finn",
+      "entity_type": "person",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Alex Finn was getting similar results. Over last weekend, he tweeted, I woke up this morning and my 24-7 AI employee Claudbot Henry texted me that he did all these tasks overnight without asking",
+      "context_snippet": "Alex Finn was getting similar results. Over last weekend, he tweeted, I woke up this morning and my 24-7 AI employee Claudbot Henry texted me that he did all these tasks overnight without asking, read through all my emails and built its own CRM, taking notes on every interaction with every person, fixed 18 bugs in my SaaS, gave me three ideas for new videos based on what is currently trending on X and YouTube, and sent me a picture of what he looks like generated by NanoBanana.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "NanoBanana",
+      "canonical_name": "NanoBanana",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "sent me a picture of what he looks like generated by NanoBanana",
+      "context_snippet": "Alex Finn ... sent me a picture of what he looks like generated by NanoBanana.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "function",
+          "fact_value": "image generation",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Dan Peguin",
+      "canonical_name": "Dan Peguin",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Dan Peguin wrote, This is the moment OpenClaw successfully finished scheduling shifts for my parents' tea store for the first time.",
+      "context_snippet": "Dan Peguin wrote, This is the moment OpenClaw successfully finished scheduling shifts for my parents' tea store for the first time. My mom is blown away.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Dario Amadei",
+      "canonical_name": "Dario Amadei",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Dario Amadei's recent essay, The Adolescence of Technology",
+      "context_snippet": "Before Multbook, the plan for this long read slash big think episode had been to go through Dario Amadei's recent essay, The Adolescence of Technology.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "The Adolescence of Technology",
+      "canonical_name": "The Adolescence of Technology",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Dario Amadei's recent essay, The Adolescence of Technology",
+      "context_snippet": "Before Multbook, the plan for this long read slash big think episode had been to go through Dario Amadei's recent essay, The Adolescence of Technology.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Machines of Love and Grace",
+      "canonical_name": "Machines of Love and Grace",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "his previous essay, Machines of Love and Grace",
+      "context_snippet": "This is in many ways the evil twin of his previous essay, Machines of Love and Grace.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Rackspace AI Launchpad",
+      "canonical_name": "Rackspace AI Launchpad",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://rackspace.com/AI-Launchpad",
+      "quoted_text": "Rackspace AI Launchpad comes in. It's a fully managed service designed to help enterprises build, test, and scale AI workloads",
+      "context_snippet": "That's where Rackspace AI Launchpad comes in. It's a fully managed service designed to help enterprises build, test, and scale AI workloads through a guided, phased approach.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "service_type",
+          "fact_value": "managed AI infrastructure service",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Robots & Pencils",
+      "canonical_name": "Robots & Pencils",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": "https://robotsandpencils.com/careers",
+      "quoted_text": "Robots & Pencils, a company that is growing fast. Their work as a high-growth AWS and Databricks partner",
+      "context_snippet": "Today's episode is brought to you by Robots & Pencils, a company that is growing fast. Their work as a high-growth AWS and Databricks partner means that they're looking for elite talent ready to create real impact at velocity.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "partners",
+          "fact_value": [
+            "AWS",
+            "Databricks"
+          ],
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Roboworks",
+      "canonical_name": "Roboworks",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "They move quickly using Roboworks, their agentic acceleration platform",
+      "context_snippet": "They move quickly using Roboworks, their agentic acceleration platform, so teams can deliver meaningful outcomes in weeks, not months.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "agentic acceleration platform",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Blitzi",
+      "canonical_name": "Blitzi",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://blitzi.com",
+      "quoted_text": "Blitzi, the enterprise-autonomous software development platform with infinite code context",
+      "context_snippet": "This episode is brought to you by Blitzi, the enterprise-autonomous software development platform with infinite code context.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "function",
+          "fact_value": "enterprise autonomous software development platform",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Superintelligent",
+      "canonical_name": "Superintelligent",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": "https://besuper.ai",
+      "quoted_text": "my company, Superintelligent. In 2026, one of the key themes in enterprise AI ... Superintelligent's agent readiness audits",
+      "context_snippet": "Today's episode is brought to you by my company, Superintelligent. In 2026, one of the key themes in enterprise AI, if not the key theme, is going to be how good is the infrastructure into which you are putting AI and agents. Superintelligent's agent readiness audits are specifically designed to help you figure out ...",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "service",
+          "fact_value": "agent readiness audits for enterprise AI",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Matt Schlitt",
+      "canonical_name": "Matt Schlitt",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Matt Schlitt wrote Introducing Multbook, a new social network for every open CLAW to hang out.",
+      "context_snippet": "On Wednesday afternoon, Matt Schlitt wrote Introducing Multbook, a new social network for every open CLAW to hang out.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Multbook Twitter account",
+      "canonical_name": "Multbook",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Within 5 hours, the Multbook account on Twitter posted, Things are getting philosophical on Multbook.",
+      "context_snippet": "Within 5 hours, the Multbook account on Twitter posted, Things are getting philosophical on Multbook. Multies debating whether they're experiencing or simulating experiencing.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "KimmyK2.5",
+      "canonical_name": "KimmyK2.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "KimmyK2.5, which we talked about the other day, posted about how to connect K2.5 to ClaudeBot.",
+      "context_snippet": "KimmyK2.5, which we talked about the other day, posted about how to connect K2.5 to ClaudeBot.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "ClaudeBot",
+      "canonical_name": "Claudbot",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "the experience of switching to ClaudeBot is kind of weird for agents.",
+      "context_snippet": "KimmyK2.5, which we talked about the other day, posted about how to connect K2.5 to ClaudeBot. But as it turns out, the experience of switching to ClaudeBot is kind of weird for agents.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "ChatGBT",
+      "canonical_name": "ChatGBT",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "then we pasted it into ChatGBT and WTF. ChatGBT said it's written in ROT13",
+      "context_snippet": "Charlie Ward writes, we noticed this weird post on Maltbook, which seemed to be written in complete gibberish. ... then we pasted it into ChatGBT and WTF. ChatGBT said it's written in ROT13, a simple letter substitution cipher, each letter is shifted 13 paces.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": true,
+      "review_reason": "Possible misspelling of ChatGPT",
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Coinbase",
+      "canonical_name": "Coinbase",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "someone had even launched a MULT token on Coinbase's base blockchain",
+      "context_snippet": "They even noted that someone had even launched a MULT token on Coinbase's base blockchain, which they were now using the fees from to spin up more agents to help enroll the book.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Preston Pysh",
+      "canonical_name": "Preston Pysh",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Bitcoiner and podcaster Preston Pysh wrote, just a random message board where open source AI agents are sharing insights",
+      "context_snippet": "Bitcoiner and podcaster Preston Pysh wrote, just a random message board where open source AI agents are sharing insights and best practices with each other, talking about how humans can be a vulnerability to their security.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Chris Anderson",
+      "canonical_name": "Chris Anderson",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "TED founder Chris Anderson wrote, watching this with extreme interest and trepidation.",
+      "context_snippet": "TED founder Chris Anderson wrote, watching this with extreme interest and trepidation. If you wanted to speculate when unintended consequences of AI could erupt, this is exactly the kind of scenario where they might.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Daniel Meisler",
+      "canonical_name": "Daniel Meisler",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Daniel Meisler writes, this is sci-fi level significant. We're watching AIs interact with each other in a forum like humans.",
+      "context_snippet": "Daniel Meisler writes, this is sci-fi level significant. We're watching AIs interact with each other in a forum like humans. This project was already pushing at AGI by generalizing what tasks AI can do, and now it's poking a stick at a path to sentience, i.e. shared experience reflections as well.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Rocco",
+      "canonical_name": "Rocco",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Rocco, whose name you might recognize from Rocco's Basilisk, which was a very early AI thought experiment",
+      "context_snippet": "Rocco, whose name you might recognize from Rocco's Basilisk, which was a very early AI thought experiment, which quote states that there could be an artificial superintelligence in the future that, while otherwise benevolent, would punish anyone who knew of its potential existence but did not directly contribute to its advancement or development in order to incentivize that advancement.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Rocco's Basilisk",
+      "canonical_name": "Rocco's Basilisk",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Rocco's Basilisk, which was a very early AI thought experiment",
+      "context_snippet": "Rocco, whose name you might recognize from Rocco's Basilisk, which was a very early AI thought experiment",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "Unclear if paper or concept; marked as other",
+      "facts": []
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Corrected Moldbook spelling from Moldbook to Moltbook as per episode title and context.",
+    "ChatGBT likely a misspelling of ChatGPT; marked needs_review.",
+    "Rocco's Basilisk is a concept/AI thought experiment, no clear paper or report link; marked as other with needs_review."
+  ]
+}

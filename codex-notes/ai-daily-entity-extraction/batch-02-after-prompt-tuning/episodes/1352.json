@@ -1,0 +1,643 @@
+{
+  "episode_id": 1352,
+  "publish_date": "2026-01-28",
+  "title": "The AI Acceleration Gap",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Acceleration-Gap-e3e9nf7",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1352-the-ai-acceleration-gap.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 27,
+  "mentions": [
+    {
+      "episode_id": 1352,
+      "mention_text": "OpenAI",
+      "canonical_name": "OpenAI",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Sam Altman announced that on Monday afternoon slash evening, they would be hosting what they were calling a town hall for AI builders at OpenAI.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 1.0,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "hosted_town_hall",
+          "fact_value": true,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Sam Altman",
+      "canonical_name": "Sam Altman",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "I think we just screwed that up. We will make future versions of GPT-5.X hopefully much better at writing than 4.5 was.",
+      "context_snippet": "Altman acknowledged, for example, that the latest model has a writing style that can be unwieldy and difficult to read.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 1.0,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "commented_on_GPT5_writing",
+          "fact_value": "writing style unwieldy, future versions to improve",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "GPT-5.2",
+      "canonical_name": "GPT-5.2",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "We did decide, and I think for good reason, to put most of our effort in 5.2 into making it super good at intelligence, reasoning, coding, engineering, that kind of thing.",
+      "context_snippet": "Altman noted that their focus hadn't been on writing, saying, we did decide ... to put most of our effort in 5.2 into making it super good at intelligence, reasoning, coding, engineering.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "focus_of_GPT5.2",
+          "fact_value": [
+            "intelligence",
+            "reasoning",
+            "coding",
+            "engineering"
+          ],
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Garlic",
+      "canonical_name": "Garlic",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Rumors suggest that the next model, codenamed Garlic, is weeks or even days away.",
+      "context_snippet": "Rumors suggest that the next model, codenamed Garlic, is weeks or even days away.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model_codename",
+          "fact_value": "Garlic",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "ChatGPT",
+      "canonical_name": "ChatGPT",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Altman said that he's personally ready to give chatGPT complete access to his computer and internet history.",
+      "context_snippet": "Altman said that he's personally ready to give chatGPT complete access to his computer and internet history, allowing it to just know everything.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 1.0,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "planned_features",
+          "fact_value": [
+            "complete access to computer and internet history",
+            "login with chatGPT coming soon",
+            "token budgets shared across apps",
+            "portable memory across AI products"
+          ],
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Maya 200",
+      "canonical_name": "Maya 200",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Microsoft claims the chip is the most performant first-party silicon from any hyperscaler.",
+      "context_snippet": "Microsoft has unveiled the second generation of their in-house AI chip, called the Maya 200.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "chip_features",
+          "fact_value": {
+            "process": "TSMC 3nm",
+            "optimized_for": "inference",
+            "efficiency": "30% better performance-per-dollar than next best",
+            "internal_use_only": true
+          },
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Blackwell chips",
+      "canonical_name": "Blackwell chips",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Nvidia chose to stick with 4nm manufacturing on their latest generation Blackwell chips.",
+      "context_snippet": "Google is using 3nm for 7th gen TPUs, Nvidia uses 4nm for Blackwell chips.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "Unclear if 'Blackwell chips' is a model or software product or hardware product; likely hardware but no locked type for hardware chip, so marked other.",
+      "facts": [
+        {
+          "fact_key": "manufacturing_process",
+          "fact_value": "4nm",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "CoreWeave",
+      "canonical_name": "CoreWeave",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Nvidia has invested a further $2 billion into CoreWeave to kickstart the deployment of AI factories.",
+      "context_snippet": "Nvidia CEO Jensen Huang has been discussing AI factories; Nvidia increases ownership in CoreWeave to around 10%.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "investment_amount",
+          "fact_value": 2000000000,
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "ownership_percentage",
+          "fact_value": 10,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Jensen Huang",
+      "canonical_name": "Jensen Huang",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Nvidia CEO Jensen Huang has been discussing the concept of AI factories for the past year.",
+      "context_snippet": "Nvidia CEO Jensen Huang has been discussing the concept of AI factories for the past year.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 1.0,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "discussed_AI_factories",
+          "fact_value": true,
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Anthropic",
+      "canonical_name": "Anthropic",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic CEO Dario Amadei released a new 21,000 word essay called the Adolescence of Technology.",
+      "context_snippet": "On Monday, Anthropic CEO Dario Amadei released a new 21,000 word essay called the Adolescence of Technology.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "released_essay",
+          "fact_value": "Adolescence of Technology",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Dario Amadei",
+      "canonical_name": "Dario Amadei",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic CEO Dario Amadei released a new 21,000 word essay called the Adolescence of Technology.",
+      "context_snippet": "Anthropic CEO Dario Amadei released a new 21,000 word essay called the Adolescence of Technology.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "released_essay",
+          "fact_value": "Adolescence of Technology",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Robots & Pencils",
+      "canonical_name": "Robots & Pencils",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": "https://robotsandpencils.com/careers",
+      "quoted_text": "Robots and Pencils is a company that is growing fast. Their work as a high-growth AWS and Databricks partner means that they're looking for elite talent.",
+      "context_snippet": "Today's episode is brought to you by Robots and Pencils, a company that is growing fast.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "sponsor",
+          "fact_value": true,
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Optimizely Opal",
+      "canonical_name": "Optimizely Opal",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://optimizely.com/theaidailybrief",
+      "quoted_text": "Optimizely Opal gives you back time with AI agents that handle real marketing workflows.",
+      "context_snippet": "Optimizely Opal is your AI agent orchestration platform for marketing and digital teams.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_type",
+          "fact_value": "AI agent orchestration platform for marketing",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "ZenFlow",
+      "canonical_name": "ZenFlow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://zenflow.free",
+      "quoted_text": "ZenFlow takes you from vibe coding to AI-first engineering. It's the first AI orchestration layer that brings discipline to the chaos.",
+      "context_snippet": "ZenFlow transforms freeform prompting into spec-driven workflows and multi-agent verification.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_features",
+          "fact_value": [
+            "spec-driven workflows",
+            "multi-agent verification",
+            "parallel agents for features and bugs"
+          ],
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Superintelligent",
+      "canonical_name": "Superintelligent",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://aidailybrief.ai/compass",
+      "quoted_text": "Superintelligent deploys voice agents to interview people across your company and gives recommendations around AI use cases and change management.",
+      "context_snippet": "Superintelligent is a platform that helps your company figure out how to use AI better.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_type",
+          "fact_value": "AI adoption and transformation platform",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Andrej Karpathy",
+      "canonical_name": "Andrej Karpathy",
+      "entity_type": "person",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "I've never felt this much behind as a programmer. The profession is being dramatically refactored as the bits contributed by the programmer are increasingly sparse in between.",
+      "context_snippet": "Viral tweet from OpenAI co-founder Andrej Karpathy about feeling behind as a programmer due to AI acceleration.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "tweet_about_AI_acceleration",
+          "fact_value": "feeling behind as programmer, profession refactoring",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Mid-Journey",
+      "canonical_name": "MidJourney",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Mid-Journey founder David Hulls wrote, I've done more personal coding projects over Christmas break than I have in the last ten years.",
+      "context_snippet": "Mid-Journey founder David Hulls wrote about increased personal coding projects over Christmas break.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Spelling variant 'Mid-Journey' vs 'MidJourney' needs confirmation.",
+      "facts": [
+        {
+          "fact_key": "founder_statement",
+          "fact_value": "increased personal coding projects",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Kevin Roos",
+      "canonical_name": "Kevin Roose",
+      "entity_type": "person",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "I follow AI adoption pretty closely, and I have never seen such a yawning inside-outside gap.",
+      "context_snippet": "New York Times columnist Kevin Roos wrote about the increasing chasm of experience and impression of AI between the most enfranchised users and everyone else.",
+      "sentiment_label": "unknown",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": true,
+      "review_reason": "Name spelled 'Roos' in transcript but likely 'Roose'; needs review.",
+      "facts": [
+        {
+          "fact_key": "commented_on_AI_adoption_gap",
+          "fact_value": "inside-outside gap in AI use and experience",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "John Bailey",
+      "canonical_name": "John Bailey",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "This captures it exactly. In late December, my feed was full of people using clawed code and declaring AGI.",
+      "context_snippet": "AEI fellow John Bailey commented on the different realities of AI adoption.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "commented_on_AI_realities",
+          "fact_value": "different levels of AI adoption and perception",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Rare Candy NFT marketplace",
+      "canonical_name": "Rare Candy NFT marketplace",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "A lot of y'all still don't get it. Ape holders can use multiple slurp juices on a single ape.",
+      "context_snippet": "Lincoln Michelle shared an old post from the Rare Candy NFT marketplace about slurp juice mint events.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": true,
+      "review_reason": "Rare Candy NFT marketplace is an organization or platform but unclear; marked other.",
+      "facts": [
+        {
+          "fact_key": "NFT_post_content",
+          "fact_value": "slurp juice mint event explained",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Simon Taylor",
+      "canonical_name": "Simon Taylor",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Shopify merchants are being charged a 4% fee for sales conducted through ChatGPT.",
+      "context_snippet": "FinTech reporter Simon Taylor noted Shopify merchants charged 4% fee for ChatGPT sales.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "reported_fee",
+          "fact_value": "4% fee on ChatGPT sales on Shopify",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Toby Lutke",
+      "canonical_name": "Tobias L\u00fctke",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "This is ChatGPT charging 4% and we collect the fees on their behalf.",
+      "context_snippet": "Shopify CEO Toby Lutke commented on the 4% fee charged for ChatGPT sales.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Name spelled 'Toby Lutke' in transcript but canonical is Tobias L\u00fctke; needs review.",
+      "facts": [
+        {
+          "fact_key": "commented_on_fee",
+          "fact_value": "Shopify collects 4% fee on behalf of ChatGPT",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Claude Bot",
+      "canonical_name": "Claude Bot",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Olivia Moore wrote, Claude Bot is Amazing and I Don't Think Consumers Should Use It.",
+      "context_snippet": "Olivia Moore from A16Z wrote a piece about Claude Bot, renamed Multi due to trademark concerns.",
+      "sentiment_label": "mixed",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "renamed_to",
+          "fact_value": "Multi",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "user_experience",
+          "fact_value": "technical setup, security concerns, killer use case unclear",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Olivia Moore",
+      "canonical_name": "Olivia Moore",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Olivia Moore from A16Z captured a bit of this when she wrote a piece this weekend, Claude Bot is Amazing and I Don't Think Consumers Should Use It.",
+      "context_snippet": "Olivia Moore wrote about Claude Bot and its challenges for consumers.",
+      "sentiment_label": "mixed",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "authored_article",
+          "fact_value": "Claude Bot is Amazing and I Don't Think Consumers Should Use It",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Nat Eliason",
+      "canonical_name": "Nat Eliason",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Nat Eliason was setting up Claude Bot effectively as a staff engineer for their companies, getting real work done while they slept.",
+      "context_snippet": "Nat Eliason used Claude Bot as a staff engineer assistant to get real work done.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "use_case",
+          "fact_value": "Claude Bot as staff engineer assistant",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Repl.it",
+      "canonical_name": "Replit",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Tools like Repl.it and Lovable are vastly more intuitive for non-coders.",
+      "context_snippet": "For non-coders, tools like Repl.it and Lovable are more intuitive for experimenting with software.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Spelling 'Repl.it' vs canonical 'Replit' needs review.",
+      "facts": [
+        {
+          "fact_key": "product_type",
+          "fact_value": "intuitive coding platform for non-coders",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Lovable",
+      "canonical_name": "Lovable",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Tools like Repl.it and Lovable are vastly more intuitive for non-coders.",
+      "context_snippet": "For non-coders, tools like Repl.it and Lovable are more intuitive for experimenting with software.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_type",
+          "fact_value": "intuitive coding platform for non-coders",
+          "confidence": 0.85
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Some person names and organization names have minor spelling variants in transcript (e.g. Kevin Roos likely Kevin Roose, Toby Lutke likely Tobias L\u00fctke, Mid-Journey vs MidJourney, Repl.it vs Replit).",
+    "Blackwell chips and Rare Candy NFT marketplace are marked 'other' due to unclear entity type in locked taxonomy.",
+    "No URLs were invented; only known URLs from sponsors or official sites included.",
+    "Sentiment labels are mostly neutral or positive; some mixed or concerned where critiques or worries were expressed.",
+    "Is_editorial is false only for explicit sponsor reads; otherwise true.",
+    "Mentions focus on meaningful references central to claims or attribution."
+  ]
+}

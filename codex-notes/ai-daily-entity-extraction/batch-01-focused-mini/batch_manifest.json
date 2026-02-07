@@ -1,0 +1,432 @@
+{
+  "batch_name": "batch-01-focused-mini",
+  "generated_at_utc": "2026-02-07T01:02:21.797668+00:00",
+  "model": "gpt-4.1-mini",
+  "input": {
+    "episodes_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/2026-02-06-ai-daily-25-episodes.csv",
+    "transcripts_dir": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts",
+    "limit": 5,
+    "offset": 0,
+    "explicit_ids": [],
+    "max_chars": 50000,
+    "confidence_review_threshold": 0.78,
+    "focus_core_types": true,
+    "include_non_editorial": false
+  },
+  "episodes": [
+    {
+      "episode_id": 1339,
+      "publish_date": "2026-02-05",
+      "title": "The Dawn of the Agent Age",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-Dawn-of-the-Agent-Age-e3eldab",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1339-the-dawn-of-the-agent-age.txt",
+      "mention_count": 25,
+      "review_count": 6
+    },
+    {
+      "episode_id": 1342,
+      "publish_date": "2026-02-03",
+      "title": "The AI Race Just Got a SpaceX-Sized Twist",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Race-Just-Got-a-SpaceX-Sized-Twist-e3ejn0u",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1342-the-ai-race-just-got-a-spacex-sized-twist.txt",
+      "mention_count": 14,
+      "review_count": 0
+    },
+    {
+      "episode_id": 1343,
+      "publish_date": "2026-02-02",
+      "title": "Why Moltbook Matters",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Moltbook-Matters-e3ei1kq",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1343-why-moltbook-matters.txt",
+      "mention_count": 9,
+      "review_count": 3
+    },
+    {
+      "episode_id": 1344,
+      "publish_date": "2026-02-01",
+      "title": "OpenAI IPO? Grok-SpaceX Merger? The AI IPO Race Heats Up",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-IPO--Grok-SpaceX-Merger--The-AI-IPO-Race-Heats-Up-e3efme6",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1344-openai-ipo-grok-spacex-merger-the-ai-ipo-race-heats-up.txt",
+      "mention_count": 9,
+      "review_count": 3
+    },
+    {
+      "episode_id": 1349,
+      "publish_date": "2026-01-31",
+      "title": "100,000 AI Agents Joined Their Own Social Network Today. It's Called Moltbook.",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/100-000-AI-Agents-Joined-Their-Own-Social-Network-Today--Its-Called-Moltbook-e3ee5ue",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1349-100-000-ai-agents-joined-their-own-social-network-today-it-s-called-moltbook.txt",
+      "mention_count": 18,
+      "review_count": 4
+    }
+  ],
+  "summary": {
+    "mention_count": 75,
+    "review_count": 16,
+    "counts_by_type": {
+      "account": 10,
+      "software_product": 36,
+      "other": 12,
+      "model": 15,
+      "report": 1,
+      "paper": 1
+    },
+    "top_entities": [
+      {
+        "entity_type": "software_product",
+        "canonical_name": "OpenClaw",
+        "mention_count": 6
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Multbook",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "ChatGPT",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Claude",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "GPT-5",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Moltbook",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Claudbot",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Oracle Corporation",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Xcode",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Clawed Agent",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "OpenAI Codecs",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "MCP",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Clawed Code",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Sora",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "Meta Ray-Ban Stories",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Genie 3 World Model",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Gemini",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Kuen",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Kimi K25",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Grok platform",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Sonnet 5",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Opus 4.5",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "GPT-5.2 Codex",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Cloud Code",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Cloud Cowork",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "Mac Mini",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "You Can With AI podcast",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Codex app",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Claude Code",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Grok Imagine 1.0",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Blitzy",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "report",
+        "canonical_name": "Kobayashi letter",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Grok",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Claude Sonnet 5",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Sonnet 3.5",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Cursor",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Claudebot",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Moltbot",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Signal",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "ClaudeBot",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Andrej Karpathy",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "vibe-coding",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "xy.dot",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "You Can With AI",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "OpenAI IPO",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Genie 3",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Sora app",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "Times on this day 1776",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "MAI",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Jason Luongo",
+        "mention_count": 1
+      }
+    ],
+    "facts_by_key": {
+      "financial_relationship": 1,
+      "feature": 1,
+      "integration": 2,
+      "outage_duration": 1,
+      "function": 1,
+      "user_growth": 1,
+      "features": 2,
+      "product_launch": 1,
+      "product_features": 1,
+      "type": 4,
+      "description": 4,
+      "user_count": 1,
+      "relation": 1,
+      "notable_tweet": 1,
+      "followers": 1,
+      "heartbeat_feature": 1,
+      "agent_to_agent_messaging": 1,
+      "release_year": 1,
+      "IPO timing": 1,
+      "IPO preparations": 1,
+      "capabilities": 1,
+      "availability": 1,
+      "downloads": 1,
+      "app store ranking": 1,
+      "production": 1,
+      "usage": 1,
+      "commentary": 1,
+      "market perception": 1,
+      "layoff cause": 1,
+      "job cuts": 1,
+      "popularity": 2,
+      "functionality": 7,
+      "name_change": 1,
+      "use_case": 1,
+      "length": 1,
+      "topic": 4,
+      "activity": 1,
+      "model_switching": 1,
+      "concept": 1
+    }
+  },
+  "new_type_candidates": [
+    {
+      "episode_id": 1339,
+      "proposed_type": "product",
+      "reason": "Mention of 'Meta Ray Bans' as a hardware product related to AI wearables does not fit existing locked types but is a distinct product category.",
+      "example_mention": "Meta Ray Bans"
+    },
+    {
+      "episode_id": 1339,
+      "proposed_type": "podcast",
+      "reason": "Mention of 'You Can With AI podcast' is a media product but podcast is not in locked taxonomy; could be useful to track.",
+      "example_mention": "You Can With AI podcast"
+    },
+    {
+      "episode_id": 1343,
+      "proposed_type": "podcast",
+      "reason": "Mention of 'You Can With AI' podcast which is a media format not covered by locked taxonomy",
+      "example_mention": "You Can With AI"
+    },
+    {
+      "episode_id": 1349,
+      "proposed_type": "agent_substance",
+      "reason": "Several mentions of fictional substances used by AI agents to alter identity or experience, e.g. 'Krill Kush', 'Memory Wine', 'Profit Tabs'",
+      "example_mention": "The quote-unquote substances including CLSD, Shell Dust, Void Extract, Memory Wine, Malt Shrooms, Profit Tabs, and Krill Kush."
+    }
+  ],
+  "notes": [
+    "Many mentions of people on platform X (Twitter) with quoted tweets included.",
+    "Some entities like MCP and Mac Mini are ambiguous or hardware and flagged for review.",
+    "Focus was on meaningful references to companies, products, models, and key persons central to claims.",
+    "URLs were included only when explicitly mentioned or known (Blitzy).",
+    "Editorial sentiment mostly neutral to positive except for some outage and market reaction mentions.",
+    "The episode heavily focuses on the SpaceX acquisition of XAI and the launch of OpenAI's Codex app.",
+    "Multiple organizations, software products, models, and persons are mentioned with relevant context and opinions.",
+    "Financial and technical claims are attributed to credible sources like Bloomberg and The Information.",
+    "Social media posts from Twitter (X) are included when they provide significant opinions or facts.",
+    "No URLs were invented; only known URLs or null were used.",
+    "No media outlets other than The Information and Bloomberg were mentioned as organizations.",
+    "The taxonomy was strictly followed with conservative inclusion of mentions.",
+    "Multbook is the central software product discussed, a social network for AI agents.",
+    "OpenClaw is a renamed version of ClaudeBot, a personal assistant agent platform.",
+    "Several persons are quoted for opinions on Multbook and AI agent phenomena.",
+    "Some mentions like 'vibe-coding' and 'You Can With AI' podcast are ambiguous or outside locked taxonomy and flagged for review.",
+    "Sponsors mentioned include KPMG, Section, Blitzy, and Superintelligent with Section and Blitzy as software products.",
+    "GPT-5 is mentioned as a model relevant to AI capability discussion.",
+    "Multiple social posts on X (Twitter) are quoted and included as accounts with quoted_text.",
+    "No URLs were invented; source_url is null when not explicitly given.",
+    "Many mentions relate to AI companies, models, and corporate deals in 2026.",
+    "Some mentions like 'OpenAI IPO' and 'Times on this day 1776' are categorized as 'other' due to lack of clear taxonomy fit.",
+    "Accounts on Twitter/X are included when quoted or central to claims.",
+    "URLs are included only when explicitly mentioned or known; otherwise set to null.",
+    "Sentiment labels are mostly neutral or positive, reflecting factual reporting with some mixed views on AI video and military AI use.",
+    "Multiple spelling variants of Moltbook appear: Moldbook, Multbook; assumed to refer to the same AI agent social network.",
+    "ChatGBT likely a transcription error for ChatGPT; marked for review.",
+    "Rocco's Basilisk likely misspelled as Rocco's Basilisk; marked for review.",
+    "The episode contains many references to AI agents, models, and emergent behaviors on the Moltbook/Multbook platform.",
+    "Mentions of sponsors and companies are included as they relate to AI infrastructure and tooling."
+  ],
+  "outputs": {
+    "episode_json_dir": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-focused-mini/episodes",
+    "mentions_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-focused-mini/mentions.csv",
+    "review_queue_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-focused-mini/review_queue.csv",
+    "episode_summary_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-focused-mini/episode_summary.csv"
+  }
+}

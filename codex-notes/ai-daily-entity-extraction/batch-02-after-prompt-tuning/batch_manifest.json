@@ -1,0 +1,479 @@
+{
+  "batch_name": "batch-02-after-prompt-tuning",
+  "generated_at_utc": "2026-02-06T23:27:20.769195+00:00",
+  "model": "gpt-4.1-mini",
+  "input": {
+    "episodes_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/2026-02-06-ai-daily-25-episodes.csv",
+    "transcripts_dir": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts",
+    "limit": 5,
+    "offset": 5,
+    "explicit_ids": [],
+    "max_chars": 50000,
+    "confidence_review_threshold": 0.78
+  },
+  "episodes": [
+    {
+      "episode_id": 1350,
+      "publish_date": "2026-01-30",
+      "title": "Are Markets Still Worried About an AI Bubble?",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Are-Markets-Still-Worried-About-an-AI-Bubble-e3eco6e",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1350-are-markets-still-worried-about-an-ai-bubble.txt",
+      "mention_count": 30,
+      "review_count": 1
+    },
+    {
+      "episode_id": 1352,
+      "publish_date": "2026-01-28",
+      "title": "The AI Acceleration Gap",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Acceleration-Gap-e3e9nf7",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1352-the-ai-acceleration-gap.txt",
+      "mention_count": 27,
+      "review_count": 6
+    },
+    {
+      "episode_id": 1351,
+      "publish_date": "2026-01-28",
+      "title": "Are Agent Swarms the Next AI Paradigm?",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Are-Agent-Swarms-the-Next-AI-Paradigm-e3eb0mb",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1351-are-agent-swarms-the-next-ai-paradigm.txt",
+      "mention_count": 50,
+      "review_count": 1
+    },
+    {
+      "episode_id": 1353,
+      "publish_date": "2026-01-26",
+      "title": "Ralph Wiggum, Clawdbot, and Mac Minis: How Pros Are Vibe Coding in 2026",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Ralph-Wiggum--Clawdbot--and-Mac-Minis-How-Pros-Are-Vibe-Coding-in-2026-e3e5ior",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1353-ralph-wiggum-clawdbot-and-mac-minis-how-pros-are-vibe-coding-in-2026.txt",
+      "mention_count": 37,
+      "review_count": 5
+    },
+    {
+      "episode_id": 1354,
+      "publish_date": "2026-01-25",
+      "title": "Skills for the Code AGI Era",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Skills-for-the-Code-AGI-Era-e3e4skk",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1354-skills-for-the-code-agi-era.txt",
+      "mention_count": 19,
+      "review_count": 2
+    }
+  ],
+  "summary": {
+    "mention_count": 163,
+    "review_count": 15,
+    "counts_by_type": {
+      "organization": 53,
+      "model": 20,
+      "software_product": 34,
+      "person": 42,
+      "other": 11,
+      "blog_post": 1,
+      "paper": 2
+    },
+    "top_entities": [
+      {
+        "entity_type": "software_product",
+        "canonical_name": "ZenFlow",
+        "mention_count": 5
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "OpenAI",
+        "mention_count": 4
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Anthropic",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Robots & Pencils",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Superintelligent",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Superintelligent",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "AI Strategy Compass",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Sam Altman",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "GPT-5.2",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "ChatGPT",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Jensen Huang",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Nat Eliason",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Replit",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Lovable",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Reuters",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "DeepSeek v3.2",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Cloud Code",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Opus 4.5",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Meta Platforms, Inc.",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Microsoft Corporation",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "SoftBank Group Corp.",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Clawd",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Clawd co-work",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Microsoft 365 CoPilot",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Satya Nadella",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "MoltBot",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Kyle Russell",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Gavin Baker",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Amjad Massad",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Google LLC",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Gemini",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Tesla, Inc.",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "XAI",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Grok",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "Tesla Model 3 and Tesla Model X",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "Optimus robots",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Rackspace AI Launchpad",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "Ray-Ban",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Microsoft Azure",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "GitHub",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Samsung Electronics",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "SK Hynix",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Garlic",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Maya 200",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "Blackwell chips",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "CoreWeave",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Dario Amadei",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Optimizely Opal",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Andrej Karpathy",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "MidJourney",
+        "mention_count": 1
+      }
+    ],
+    "facts_by_key": {
+      "reported_earnings": 2,
+      "market_reaction": 2,
+      "investment_amount": 3,
+      "investment_target": 2,
+      "fundraising_target_2026": 1,
+      "valuation_2026": 1,
+      "partnership": 1,
+      "default_model_for": 1,
+      "competitor_to": 1,
+      "development_time_days": 1,
+      "competitor": 1,
+      "role": 3,
+      "former_name": 1,
+      "product_upgrade": 1,
+      "integration": 1,
+      "product": 1,
+      "type": 17,
+      "discontinued_models": 1,
+      "powered_by": 1,
+      "service_type": 1,
+      "product_type": 6,
+      "focus": 1,
+      "product_status": 1,
+      "product_focus": 1,
+      "growth_rate": 1,
+      "ownership": 1,
+      "profit_increase": 2,
+      "hosted_town_hall": 1,
+      "commented_on_GPT5_writing": 1,
+      "focus_of_GPT5.2": 1,
+      "model_codename": 1,
+      "planned_features": 1,
+      "chip_features": 1,
+      "manufacturing_process": 1,
+      "ownership_percentage": 1,
+      "discussed_AI_factories": 1,
+      "released_essay": 2,
+      "sponsor": 1,
+      "product_features": 1,
+      "tweet_about_AI_acceleration": 1,
+      "founder_statement": 1,
+      "commented_on_AI_adoption_gap": 1,
+      "commented_on_AI_realities": 1,
+      "NFT_post_content": 1,
+      "reported_fee": 1,
+      "commented_on_fee": 1,
+      "renamed_to": 1,
+      "user_experience": 1,
+      "authored_article": 1,
+      "use_case": 1,
+      "funding_round_size": 2,
+      "valuation": 1,
+      "2026_revenue_forecast": 1,
+      "2027_revenue_forecast": 1,
+      "2029_revenue_forecast": 1,
+      "2026_training_costs": 1,
+      "profitability_timeline": 1,
+      "investment_commitment": 1,
+      "AI_training_program": 1,
+      "training_goal": 1,
+      "benchmark_improvement_GPQA": 1,
+      "benchmark_improvement_LiveCodeBench": 1,
+      "cost_comparison": 2,
+      "company_use": 1,
+      "feature_name": 1,
+      "feature_description": 1,
+      "performance_improvement": 1,
+      "ranking": 1,
+      "benchmark_score_Humanity's_last_exam": 1,
+      "multimodality": 1,
+      "PARL": 1,
+      "product_description": 3,
+      "job_creation_argument": 1,
+      "productivity_benefits": 1,
+      "AI_ROI_stage": 1,
+      "media_summary": 1,
+      "job_impact_estimate": 1,
+      "job_impact_study": 1,
+      "AI_productivity_tool_critique": 1,
+      "enterprise_business_share": 1,
+      "ARR_growth": 1,
+      "AI_impact_realism": 1,
+      "product_function": 2,
+      "company_focus": 1,
+      "service_offering": 1,
+      "tweet_content": 1,
+      "model_usage": 2,
+      "product_origin": 1,
+      "autonomous_coding_experiment": 1,
+      "blog_post_topic": 1,
+      "concept_origin": 1,
+      "concept_author": 1,
+      "definition": 1,
+      "RALF_definition": 1,
+      "podcast_guest": 1,
+      "article_content": 1,
+      "use_case_critique": 1,
+      "viral_post": 1,
+      "usage": 1,
+      "controversy": 1,
+      "event_host": 1,
+      "tool_usage": 1,
+      "poll_result": 1,
+      "tool_mention": 1,
+      "event_description": 1,
+      "release_period": 2,
+      "significance": 1,
+      "function": 4,
+      "platform": 1,
+      "partnerships": 1
+    }
+  },
+  "new_type_candidates": [
+    {
+      "episode_id": 1351,
+      "proposed_type": "podcast",
+      "reason": "Mention of 'You Can With AI' podcast which is a media product but not in locked taxonomy",
+      "example_mention": "You Can With AI"
+    }
+  ],
+  "notes": [
+    "The transcript contains some possible typos or unclear names, e.g. 'SK Hyings' likely refers to 'SK Hynix'.",
+    "No URLs were provided for many reports or social posts; source_url set to null accordingly.",
+    "Social posts from Twitter (X) accounts Kyle Russell, Gavin Baker, and ZeroXMo were included with platform 'x'.",
+    "Meta's Ray-Bans are categorized as 'other' since they are hardware products with AI features, not software or models.",
+    "The episode heavily discusses market reactions and earnings calls, so many mentions are editorial with sentiment labels reflecting market perception.",
+    "Some person names and organization names have minor spelling variants in transcript (e.g. Kevin Roos likely Kevin Roose, Toby Lutke likely Tobias L\u00fctke, Mid-Journey vs MidJourney, Repl.it vs Replit).",
+    "Blackwell chips and Rare Candy NFT marketplace are marked 'other' due to unclear entity type in locked taxonomy.",
+    "No URLs were invented; only known URLs from sponsors or official sites included.",
+    "Sentiment labels are mostly neutral or positive; some mixed or concerned where critiques or worries were expressed.",
+    "Is_editorial is false only for explicit sponsor reads; otherwise true.",
+    "Mentions focus on meaningful references central to claims or attribution.",
+    "Extracted key organizations, models, software products, and persons central to claims or attribution.",
+    "Conservative approach taken; generic terms and unclear types avoided or marked for review.",
+    "URLs only included when explicitly mentioned or clearly inferred from context.",
+    "Podcast mention 'You Can With AI' flagged for review as podcast is not in locked taxonomy.",
+    "Many mentions are of emerging AI tools and concepts with limited public URLs or formal classification.",
+    "Some terms like Ralph Wiggum, bash loop, and VibeCodeCamp are categorized as 'other' due to unclear entity type.",
+    "Social posts on X (formerly Twitter) are included when quoted and attributed.",
+    "URLs are included only when explicitly mentioned or clearly inferable.",
+    "Editorial sentiment is mostly positive or neutral reflecting the podcast's tone.",
+    "Mentioned 'Repl.it' likely refers to 'Replit' software product; spelling and canonical name should be verified.",
+    "Mentioned 'Lovable' as a vibe coding platform is unclear; needs verification if it is a software product or other entity.",
+    "Most mentions are editorial commentary or essays by Nathan Lambert about AI agent skills and software engineering shifts.",
+    "Sponsors mentioned include Robots & Pencils and Superintelligent with their respective platforms and products.",
+    "No URLs were provided for essays or models; source_url set to null except for known URLs like zenflow.free and RobotsAndPencils.com/careers."
+  ],
+  "outputs": {
+    "episode_json_dir": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-02-after-prompt-tuning/episodes",
+    "mentions_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-02-after-prompt-tuning/mentions.csv",
+    "review_queue_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-02-after-prompt-tuning/review_queue.csv",
+    "episode_summary_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-02-after-prompt-tuning/episode_summary.csv"
+  }
+}

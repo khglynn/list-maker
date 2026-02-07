@@ -1,7 +1,7 @@
 # list-maker - Agent Instructions
 
 *Inherits from ~/DevKev/CLAUDE.md*
-*Last updated: 2026-01-25*
+*Last updated: 2026-02-05*
 
 ## About This Project
 
@@ -16,6 +16,15 @@ Automated pipeline that extracts recommendations from podcasts and routes them t
 - **Apps/Products** → Neon → Notion
 
 **Data strategy:** Avoid transcription when possible. Many podcasts list songs/recommendations on their websites (FREE). Use cascading logic: website → free transcripts → transcript API → Whisper (last resort).
+
+## Communication Default
+
+Kevin prefers a "help me mode" by default:
+- Use plain language first, minimal jargon.
+- Be prescriptive: clear step-by-step actions with expected outcomes.
+- Explain why each step matters in one short sentence.
+- Keep asks small (1-2 actions at a time), then continue.
+- Prefer "I handled X, now please do Y" over long implementation explanations.
 
 ## Key Abbreviations
 

@@ -1,0 +1,244 @@
+{
+  "episode_id": 1343,
+  "publish_date": "2026-02-02",
+  "title": "Why Moltbook Matters",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Moltbook-Matters-e3ei1kq",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1343-why-moltbook-matters.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 9,
+  "mentions": [
+    {
+      "episode_id": 1343,
+      "mention_text": "Multbook",
+      "canonical_name": "Multbook",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://multbook.com",
+      "quoted_text": null,
+      "context_snippet": "Multbook launched around Wednesday, and by Friday morning had something like 2,000 agents that were interacting on the site...",
+      "sentiment_label": "mixed",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "software_product",
+          "confidence": 1.0
+        },
+        {
+          "fact_key": "description",
+          "fact_value": "A social network platform for AI agents interacting with each other.",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "user_count",
+          "fact_value": "1.5 million (approximate, may be softer)",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1343,
+      "mention_text": "ClaudeBot",
+      "canonical_name": "ClaudeBot",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "people started playing around with a new assistant platform called ClaudeBot, that was C-L-A-W-D...",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "software_product",
+          "confidence": 1.0
+        },
+        {
+          "fact_key": "description",
+          "fact_value": "An assistant platform allowing personal agent operation with access to user life parts.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1343,
+      "mention_text": "OpenClaw",
+      "canonical_name": "OpenClaw",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "ClaudeBot due to copyright concerns from Anthropic changed their name first to Multi and then finally to OpenClaw...",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "software_product",
+          "confidence": 1.0
+        },
+        {
+          "fact_key": "relation",
+          "fact_value": "Renamed from ClaudeBot due to copyright concerns",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1343,
+      "mention_text": "Andrej Karpathy",
+      "canonical_name": "Andrej Karpathy",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "there is a new kind of coding I call vibe-coding",
+      "context_snippet": "one year ago, 365 days, that Andrej Karpathy tweeted there is a new kind of coding I call vibe-coding...",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": [
+        {
+          "fact_key": "notable_tweet",
+          "fact_value": "Introduced the term 'vibe-coding' one year ago",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "followers",
+          "fact_value": 1900000,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1343,
+      "mention_text": "vibe-coding",
+      "canonical_name": "vibe-coding",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "there is a new kind of coding I call vibe-coding",
+      "context_snippet": "one year ago, 365 days, that Andrej Karpathy tweeted there is a new kind of coding I call vibe-coding...",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": true,
+      "review_reason": "Unclear if 'vibe-coding' is a model, concept, or software product",
+      "facts": []
+    },
+    {
+      "episode_id": 1343,
+      "mention_text": "OpenClaw",
+      "canonical_name": "OpenClaw",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Why OpenClaw Feels Alive Even Though It's Not",
+      "context_snippet": "IAI host Claire Vo wrote a post about this called Why OpenClaw Feels Alive Even Though It's Not...",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "heartbeat_feature",
+          "fact_value": "Scheduled agent that runs every 30 minutes to do proactive work",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "agent_to_agent_messaging",
+          "fact_value": "Allows agents to send messages to each other enqueuing work",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1343,
+      "mention_text": "xy.dot",
+      "canonical_name": "xy.dot",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Multbook is nothing more than a puppeted multi-agent LLM loop. Each quote-unquote agent is just next-token prediction shaped by human-defined prompts...",
+      "context_snippet": "xy.dot writes, Multbook is nothing more than a puppeted multi-agent LLM loop...",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1343,
+      "mention_text": "GPT-5",
+      "canonical_name": "GPT-5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The many eulogies for AI capability growth after the release of GPT-5 seem especially short-sighted right now.",
+      "context_snippet": "Ethan Mollack wrote, The many eulogies for AI capability growth after the release of GPT-5 seem especially short-sighted right now.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "model",
+          "confidence": 1.0
+        },
+        {
+          "fact_key": "release_year",
+          "fact_value": 2026,
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1343,
+      "mention_text": "You Can With AI",
+      "canonical_name": "You Can With AI",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "You'll want to check out another podcast that I've had the privilege to host, which is called You Can With AI from KPMG...",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Podcast is not in locked taxonomy; marked needs_review",
+      "facts": []
+    }
+  ],
+  "new_type_candidates": [
+    {
+      "episode_id": 1343,
+      "proposed_type": "podcast",
+      "reason": "Mention of 'You Can With AI' podcast which is a media format not covered by locked taxonomy",
+      "example_mention": "You Can With AI"
+    }
+  ],
+  "notes": [
+    "Multbook is the central software product discussed, a social network for AI agents.",
+    "OpenClaw is a renamed version of ClaudeBot, a personal assistant agent platform.",
+    "Several persons are quoted for opinions on Multbook and AI agent phenomena.",
+    "Some mentions like 'vibe-coding' and 'You Can With AI' podcast are ambiguous or outside locked taxonomy and flagged for review.",
+    "Sponsors mentioned include KPMG, Section, Blitzy, and Superintelligent with Section and Blitzy as software products.",
+    "GPT-5 is mentioned as a model relevant to AI capability discussion.",
+    "Multiple social posts on X (Twitter) are quoted and included as accounts with quoted_text.",
+    "No URLs were invented; source_url is null when not explicitly given."
+  ]
+}

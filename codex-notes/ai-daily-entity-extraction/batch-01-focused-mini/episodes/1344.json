@@ -1,0 +1,232 @@
+{
+  "episode_id": 1344,
+  "publish_date": "2026-02-01",
+  "title": "OpenAI IPO? Grok-SpaceX Merger? The AI IPO Race Heats Up",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-IPO--Grok-SpaceX-Merger--The-AI-IPO-Race-Heats-Up-e3efme6",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1344-openai-ipo-grok-spacex-merger-the-ai-ipo-race-heats-up.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 9,
+  "mentions": [
+    {
+      "episode_id": 1344,
+      "mention_text": "OpenAI IPO",
+      "canonical_name": "OpenAI IPO",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-IPO--Grok-SpaceX-Merger--The-AI-IPO-Race-Heats-Up-e3efme6",
+      "quoted_text": null,
+      "context_snippet": "OpenAI has pushed up plans to go public and are now targeting the fourth quarter. They are reportedly taking informal meetings with investment banks and have hired a chief accounting officer and corporate business finance officer to handle investor relations and financial reporting.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "IPO timing",
+          "fact_value": "OpenAI targeting Q4 2026 for IPO",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "IPO preparations",
+          "fact_value": "Hiring chief accounting officer and corporate business finance officer",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Genie 3",
+      "canonical_name": "Genie 3",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The model is fully available to the public, rolling out first to Gemini Ultra subscribers. It's still a research preview, but people can now start playing around and creating their own generated worlds for the first time.",
+      "context_snippet": "Genie 3 is capable of generating playable 3D worlds, allowing the users to navigate through the scene with the mouse and arrow keys. The first thing I generated was a neon cyberpunk world set in the 2060s, but where there were no humans, only animals.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "capabilities",
+          "fact_value": "Generates playable 3D worlds with navigation",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "availability",
+          "fact_value": "Available to Gemini Ultra subscribers as research preview",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Sora app",
+      "canonical_name": "Sora app",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "TechCrunch reports that the Sora app from OpenAI is struggling with churn and falling downloads.",
+      "context_snippet": "Sora saw 3 million downloads across September and October with another 3.2 million in November. Monthly downloads are now down almost two-thirds since then, with January figures at 1.2 million. On the US App Store, Sora has now fallen out of the top 100 list for free apps on both iOS and Android.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "downloads",
+          "fact_value": "3 million in Sep-Oct, 3.2 million in Nov, 1.2 million in Jan",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "app store ranking",
+          "fact_value": "Fallen out of top 100 free apps on iOS and Android US stores",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Times on this day 1776",
+      "canonical_name": "Times on this day 1776",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Darren Aronofsky used AI to create a series that brings us back to the year 1776 in a film format rather than a documentary.",
+      "context_snippet": "The series is available on Time's website and has received mixed reactions about AI use in video production.",
+      "sentiment_label": "mixed",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "production",
+          "fact_value": "AI-assisted film series about 1776 by Darren Aronofsky",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Claude",
+      "canonical_name": "Claude",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic's Claude is used extensively in national security missions.",
+      "context_snippet": "Anthropic spokesperson said Claude is used quote, extensively in national security missions.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "usage",
+          "fact_value": "Extensive use in national security missions",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "MAI on Twitter",
+      "canonical_name": "MAI",
+      "entity_type": "account",
+      "platform": "twitter",
+      "source_url": null,
+      "quoted_text": "The stakes here go way beyond one contract. It's about whether Frontier AI labs become neutral infrastructure providers or political actors that get to say no when governments want to weaponize their models.",
+      "context_snippet": "MAI summarized the broader implications of the Anthropic-Pentagon dispute on AI redlines and political roles of AI labs.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "commentary",
+          "fact_value": "AI labs' role in government weaponization decisions is critical",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Jason Luongo",
+      "canonical_name": "Jason Luongo",
+      "entity_type": "account",
+      "platform": "twitter",
+      "source_url": null,
+      "quoted_text": "Guess who bought another Amazon leap today while everyone else was panicking? Everyone still thinks of Amazon as a retail company. Meanwhile, AWS is the backbone of AI infrastructure...",
+      "context_snippet": "Jason Luongo tweeted bullishly about Amazon's AI investments and infrastructure dominance.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": [
+        {
+          "fact_key": "market perception",
+          "fact_value": "Amazon is an underrated AI stock with strong infrastructure and investments",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Emily Plum",
+      "canonical_name": "Emily Plum",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "This wasn't about AI but outsourcing; I was laid off despite leading global AI enablement.",
+      "context_snippet": "Emily Plum, a congressional candidate, posted about layoffs at Amazon not being AI-related but about cheaper labor.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": [
+        {
+          "fact_key": "layoff cause",
+          "fact_value": "Outsourcing and labor market dynamics, not AI",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "ASML",
+      "canonical_name": "ASML",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "ASML posted record quarterly orders and increased sales projections but plans to cut 1,700 tech and IT jobs.",
+      "context_snippet": "Companies growing but still downsizing is a phenomenon to watch in 2026.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": [
+        {
+          "fact_key": "job cuts",
+          "fact_value": 1700,
+          "confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Many mentions relate to AI companies, models, and corporate deals in 2026.",
+    "Some mentions like 'OpenAI IPO' and 'Times on this day 1776' are categorized as 'other' due to lack of clear taxonomy fit.",
+    "Accounts on Twitter/X are included when quoted or central to claims.",
+    "URLs are included only when explicitly mentioned or known; otherwise set to null.",
+    "Sentiment labels are mostly neutral or positive, reflecting factual reporting with some mixed views on AI video and military AI use."
+  ]
+}

@@ -1,0 +1,3 @@
+episode_id,entity_type,canonical_name,mention_text,confidence,review_reason,platform,source_url,context_snippet
+1351,other,Heavy Mode,Heavy Mode,0.7000,"Unclear if this is a software_product, model feature, or other.",,,The model makes use of an inference technique that the Quen team are calling Heavy Mode.
+1351,other,Parallel Agent Reinforcement Learning (PARL),"PARL, Parallel Agent Reinforcement Learning",0.7000,"Unclear if this is a model, software_product, or other.",,,"They used PARL, Parallel Agent Reinforcement Learning, where they gave an orchestrator a compute-in-time budget that made it impossible to complete tasks sequentially."

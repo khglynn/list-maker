@@ -1,0 +1,470 @@
+{
+  "batch_name": "batch-01-gpt41-apples-to-apples",
+  "generated_at_utc": "2026-02-07T00:27:40.281391+00:00",
+  "model": "gpt-4.1",
+  "input": {
+    "episodes_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/2026-02-06-ai-daily-25-episodes.csv",
+    "transcripts_dir": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts",
+    "limit": 5,
+    "offset": 0,
+    "explicit_ids": [],
+    "max_chars": 50000,
+    "confidence_review_threshold": 0.78
+  },
+  "episodes": [
+    {
+      "episode_id": 1339,
+      "publish_date": "2026-02-05",
+      "title": "The Dawn of the Agent Age",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-Dawn-of-the-Agent-Age-e3eldab",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1339-the-dawn-of-the-agent-age.txt",
+      "mention_count": 84,
+      "review_count": 20
+    },
+    {
+      "episode_id": 1342,
+      "publish_date": "2026-02-03",
+      "title": "The AI Race Just Got a SpaceX-Sized Twist",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Race-Just-Got-a-SpaceX-Sized-Twist-e3ejn0u",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1342-the-ai-race-just-got-a-spacex-sized-twist.txt",
+      "mention_count": 62,
+      "review_count": 8
+    },
+    {
+      "episode_id": 1343,
+      "publish_date": "2026-02-02",
+      "title": "Why Moltbook Matters",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Moltbook-Matters-e3ei1kq",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1343-why-moltbook-matters.txt",
+      "mention_count": 48,
+      "review_count": 6
+    },
+    {
+      "episode_id": 1344,
+      "publish_date": "2026-02-01",
+      "title": "OpenAI IPO? Grok-SpaceX Merger? The AI IPO Race Heats Up",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-IPO--Grok-SpaceX-Merger--The-AI-IPO-Race-Heats-Up-e3efme6",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1344-openai-ipo-grok-spacex-merger-the-ai-ipo-race-heats-up.txt",
+      "mention_count": 66,
+      "review_count": 6
+    },
+    {
+      "episode_id": 1349,
+      "publish_date": "2026-01-31",
+      "title": "100,000 AI Agents Joined Their Own Social Network Today. It's Called Moltbook.",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/100-000-AI-Agents-Joined-Their-Own-Social-Network-Today--Its-Called-Moltbook-e3ee5ue",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1349-100-000-ai-agents-joined-their-own-social-network-today-it-s-called-moltbook.txt",
+      "mention_count": 32,
+      "review_count": 10
+    }
+  ],
+  "summary": {
+    "mention_count": 292,
+    "review_count": 50,
+    "counts_by_type": {
+      "organization": 69,
+      "person": 83,
+      "other": 29,
+      "software_product": 56,
+      "model": 34,
+      "survey": 5,
+      "account": 9,
+      "blog_post": 3,
+      "paper": 4
+    },
+    "top_entities": [
+      {
+        "entity_type": "organization",
+        "canonical_name": "Anthropic",
+        "mention_count": 5
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "OpenClaw",
+        "mention_count": 5
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Sam Altman",
+        "mention_count": 4
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Claude",
+        "mention_count": 4
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "OpenAI",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "KPMG",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Blitzy",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "xAI",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Bloomberg",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Multbook",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Latent Space",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "The Wall Street Journal",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Microsoft",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Apple Inc.",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Claude Code",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Every",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Sora",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "You Can With AI",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Superintelligent",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "SpaceX",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Opus 4.5",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "Initial Public Offering",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Grok",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Logan Kilpatrick",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Codex app",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "The Information",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Nick Carter",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Genie 3",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Robots & Pencils",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Roboworks",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "GPT-5",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Claude Opus 4.5",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Peter Steinberger",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Signal",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Claude Sonnet 5",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "ClaudeBot",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Section",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Superintelligent",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Dario Amodei",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "paper",
+        "canonical_name": "The Adolescence of Technology",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "survey",
+        "canonical_name": "AI Usage Pulse Survey",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "NVIDIA",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Jensen Huang",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Oracle Corporation",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "X",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "organization",
+        "canonical_name": "Intel Corporation",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "Cisco AI Summit",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Lippu Tan",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "person",
+        "canonical_name": "Eric Demers",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Xcode",
+        "mention_count": 1
+      }
+    ],
+    "facts_by_key": {
+      "investment_amount": 1,
+      "role": 25,
+      "contract_value": 1,
+      "previous_role": 1,
+      "new_features": 1,
+      "feature": 1,
+      "acquired_by": 2,
+      "acquisition": 1,
+      "developer": 15,
+      "topic": 1,
+      "model_usage": 1,
+      "purpose": 1,
+      "previously_acquired": 1,
+      "operator": 1,
+      "definition": 1,
+      "article_title": 1,
+      "reporting": 1,
+      "blog_post_title": 1,
+      "author": 5,
+      "features": 1,
+      "product_type": 1,
+      "focus": 1,
+      "function": 1,
+      "user_count_claimed": 1,
+      "description": 36,
+      "origin": 1,
+      "year": 1,
+      "host_organization": 1,
+      "followers_x": 1,
+      "affiliation": 3,
+      "capability": 1,
+      "access": 1,
+      "downloads": 1,
+      "partnership_with": 1,
+      "cloud_deal_with": 1,
+      "deal_value": 1,
+      "cloud_customer": 1,
+      "cloud_provider_for": 1,
+      "lawsuit_against": 1,
+      "investment_in": 1,
+      "merger_talks_with": 1,
+      "launch_date": 1,
+      "action": 1
+    }
+  },
+  "new_type_candidates": [
+    {
+      "episode_id": 1339,
+      "proposed_type": "podcast",
+      "reason": "Referenced as a podcast series ('You Can With AI podcast I host for KPMG').",
+      "example_mention": "You Can With AI"
+    },
+    {
+      "episode_id": 1339,
+      "proposed_type": "platform",
+      "reason": "X is referenced as a social media platform where statements are published.",
+      "example_mention": "X"
+    },
+    {
+      "episode_id": 1342,
+      "proposed_type": "infrastructure",
+      "reason": "Colossus clusters are described as major infrastructure for AI compute, not a software product or model.",
+      "example_mention": "Colossus clusters"
+    },
+    {
+      "episode_id": 1343,
+      "proposed_type": "podcast",
+      "reason": "The show 'You Can With AI' is a podcast, which is not a locked type but is referenced as a distinct media product.",
+      "example_mention": "You Can With AI"
+    },
+    {
+      "episode_id": 1343,
+      "proposed_type": "feature",
+      "reason": "Features like 'heartbeat' and 'crons' in OpenClaw are referenced as important technical mechanisms but do not fit existing locked types.",
+      "example_mention": "heartbeat"
+    },
+    {
+      "episode_id": 1344,
+      "proposed_type": "video_series",
+      "reason": "Times on this day 1776 appears to be a video series or film project, not a report, paper, or blog post.",
+      "example_mention": "Times on this day 1776"
+    },
+    {
+      "episode_id": 1344,
+      "proposed_type": "community",
+      "reason": "FinTwit refers to a financial Twitter community, not an account or organization.",
+      "example_mention": "FinTwit"
+    },
+    {
+      "episode_id": 1349,
+      "proposed_type": "token",
+      "reason": "MULT token is a cryptocurrency/token used for agent creation on Multbook, not covered by locked types.",
+      "example_mention": "MULT token"
+    },
+    {
+      "episode_id": 1349,
+      "proposed_type": "synthetic_substance",
+      "reason": "CLSD, Shell Dust, etc. are fictional synthetic substances/system prompts for AI agents, not covered by locked types.",
+      "example_mention": "CLSD"
+    },
+    {
+      "episode_id": 1349,
+      "proposed_type": "thought_experiment",
+      "reason": "Rocco's Basilisk is a philosophical thought experiment, not a locked type.",
+      "example_mention": "Rocco's Basilisk"
+    }
+  ],
+  "notes": [
+    "Some model names (e.g., Clawed Agent, Clawed Code, Cloud Code, Cloud Cowork) appear to be typos or variants of Anthropic's Claude models; marked for review.",
+    "Several concepts (e.g., Vibe coding, AI adoption gap) are not locked types and are marked as 'other' with needs_review.",
+    "Some entities (e.g., Sora, MCP) are ambiguous and need further clarification.",
+    "Podcast sponsorships (KPMG, Blitzy, Superintelligent) are marked as is_editorial=false.",
+    "Mentions of IPO, events, and concepts are marked as 'other' and flagged for review.",
+    "Some model versions (e.g., GPT 5.2 Codex, GPT 5.3) are unconfirmed and marked for review.",
+    "Some entities like Multbook, OpenClaw, Granola, Dovetail, Ashby, and Clulee need further review to confirm if they are software products, models, or organizations.",
+    "Colossus clusters and Kardashev level 2 civilization are included as 'other' due to lack of a more precise locked type.",
+    "All URLs are omitted unless explicitly stated or sponsor/official site.",
+    "Sentiment is based on context and quoted text where available.",
+    "Sponsor reads are marked as is_editorial=false.",
+    "No duplicate mention/context pairs are included.",
+    "Some features (heartbeat, crons) and media types (podcast) do not fit locked taxonomy.",
+    "Mentions of 'vibe-coding' and 'Crustafarianism' are included as 'other' with needs_review=true due to unclear type.",
+    "Cloud Code is included with needs_review=true as it's unclear if it's a product or generic term.",
+    "All sponsor mentions are marked is_editorial=false as they are explicit ad reads.",
+    "No URLs are invented; null is used where not available.",
+    "Capped at 40 high-confidence, non-duplicate, meaningful mentions.",
+    "Some entities (e.g., Chatsheep ET, ClaudeBot/OpenClaw) need further verification for type and existence.",
+    "Several social posts are referenced but not all are directly quoted or attributed to a specific account.",
+    "Mentions of IPO, FinTwit, and Times on this day 1776 are flagged for review due to unclear type or centrality.",
+    "Sponsor mentions are marked is_editorial=false as per explicit ad reads.",
+    "Some mentions (e.g., ChatGBT) may be misspellings or unclear references and are flagged for review.",
+    "Synthetic substances (CLSD, Shell Dust, etc.) are not in locked types and are marked as 'other' with needs_review.",
+    "MULT token is a cryptocurrency, not a locked type, and is marked as 'other' with needs_review.",
+    "Rocco's Basilisk is a thought experiment, not a locked type, and is marked as 'other' with needs_review.",
+    "Only explicit sponsor/ad reads are marked is_editorial=false; all other host commentary is is_editorial=true."
+  ],
+  "outputs": {
+    "episode_json_dir": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-gpt41-apples-to-apples/episodes",
+    "mentions_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-gpt41-apples-to-apples/mentions.csv",
+    "review_queue_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-gpt41-apples-to-apples/review_queue.csv",
+    "episode_summary_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-gpt41-apples-to-apples/episode_summary.csv"
+  }
+}

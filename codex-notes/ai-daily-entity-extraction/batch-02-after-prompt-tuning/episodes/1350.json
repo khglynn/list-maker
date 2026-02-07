@@ -1,0 +1,700 @@
+{
+  "episode_id": 1350,
+  "publish_date": "2026-01-30",
+  "title": "Are Markets Still Worried About an AI Bubble?",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Are-Markets-Still-Worried-About-an-AI-Bubble-e3eco6e",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1350-are-markets-still-worried-about-an-ai-bubble.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 30,
+  "mentions": [
+    {
+      "episode_id": 1350,
+      "mention_text": "Meta",
+      "canonical_name": "Meta Platforms, Inc.",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Meta wins, Microsoft loses when it comes to after-hours market reaction to earnings.",
+      "context_snippet": "Today on the AI Daily Brief, as Meta and Microsoft report earnings, are markets still worried about an AI bubble? ... Meta wins, Microsoft loses when it comes to after-hours market reaction to earnings.",
+      "sentiment_label": "mixed",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "reported_earnings",
+          "fact_value": true,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "market_reaction",
+          "fact_value": "positive after-hours trading",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Microsoft",
+      "canonical_name": "Microsoft Corporation",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Meta wins, Microsoft loses when it comes to after-hours market reaction to earnings.",
+      "context_snippet": "Today on the AI Daily Brief, as Meta and Microsoft report earnings, are markets still worried about an AI bubble? ... Meta wins, Microsoft loses when it comes to after-hours market reaction to earnings.",
+      "sentiment_label": "mixed",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "reported_earnings",
+          "fact_value": true,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "market_reaction",
+          "fact_value": "negative after-hours trading",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "SoftBank",
+      "canonical_name": "SoftBank Group Corp.",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": "https://www.wsj.com",
+      "quoted_text": "SoftBank is in talks to invest another crisp $30 billion into OpenAI's next monster fundraising round.",
+      "context_snippet": "SoftBank appears ready to double down on open AI with another $30 billion investment. The Wall Street Journal reports that SoftBank is in talks to invest another crisp $30 billion into OpenAI's next monster fundraising round.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "investment_amount",
+          "fact_value": 30000000000,
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "investment_target",
+          "fact_value": "OpenAI",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "OpenAI",
+      "canonical_name": "OpenAI",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "OpenAI is targeting $100 billion in fundraising this year. The valuation is said to be $830 billion.",
+      "context_snippet": "OpenAI is targeting $100 billion in fundraising this year. The valuation is said to be $830 billion, which is another 66% jump from the $500 billion valuation struck in October.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "fundraising_target_2026",
+          "fact_value": 100000000000,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "valuation_2026",
+          "fact_value": 830000000000,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Anthropic",
+      "canonical_name": "Anthropic",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "ServiceNow has signed another big AI deal, this time with Anthropic, partnering with the lab along multiple angles.",
+      "context_snippet": "Moving over to OpenAI competitor Anthropic, ServiceNow has signed another big AI deal, this time with Anthropic, partnering with the lab along multiple angles.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "partnership",
+          "fact_value": "ServiceNow and Anthropic",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Clawd",
+      "canonical_name": "Clawd",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The multi-year deal includes making Clawd the default model across ServiceNow's platform.",
+      "context_snippet": "The multi-year deal includes making Clawd the default model across ServiceNow's platform. Clawd will also drive their Agent Builder, which allows users to create custom workflows and Vibecode apps.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "default_model_for",
+          "fact_value": "ServiceNow platform",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Clawd co-work",
+      "canonical_name": "Clawd co-work",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Clawd co-work has apparently raised the alarm at Microsoft. Product leaders at Microsoft told colleagues that co-work seemed like a competitor for 365 CoPilot.",
+      "context_snippet": "Clawd co-work has apparently raised the alarm at Microsoft. Product leaders at Microsoft told colleagues that co-work seemed like a competitor for 365 CoPilot.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "competitor_to",
+          "fact_value": "Microsoft 365 CoPilot",
+          "confidence": 0.85
+        },
+        {
+          "fact_key": "development_time_days",
+          "fact_value": 10,
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "365 CoPilot",
+      "canonical_name": "Microsoft 365 CoPilot",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Product leaders at Microsoft told colleagues that co-work seemed like a competitor for 365 CoPilot.",
+      "context_snippet": "Clawd co-work has apparently raised the alarm at Microsoft. Product leaders at Microsoft told colleagues that co-work seemed like a competitor for 365 CoPilot.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "competitor",
+          "fact_value": "Clawd co-work",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Satya Nadella",
+      "canonical_name": "Satya Nadella",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "CEO Satya Nadella was even reportedly dabbling with Clawd Bot, now called MoltBot, over recent days.",
+      "context_snippet": "CEO Satya Nadella was even reportedly dabbling with Clawd Bot, now called MoltBot, over recent days.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "CEO of Microsoft",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "MoltBot",
+      "canonical_name": "MoltBot",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "CEO Satya Nadella was even reportedly dabbling with Clawd Bot, now called MoltBot, over recent days.",
+      "context_snippet": "CEO Satya Nadella was even reportedly dabbling with Clawd Bot, now called MoltBot, over recent days.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "former_name",
+          "fact_value": "Clawd Bot",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Kyle Russell",
+      "canonical_name": "Kyle Russell",
+      "entity_type": "person",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Microsoft Office? Oh, you mean the Clawd wrapper?",
+      "context_snippet": "Twitter was of course ablaze with jokes. Kyle Russell wrote, Microsoft Office? Oh, you mean the Clawd wrapper?",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Gavin Baker",
+      "canonical_name": "Gavin Baker",
+      "entity_type": "person",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Clawd Cowork is what co-pilot should have been. Evidently built in 10 days with Clawd code while Microsoft has been working on co-pilot for years.",
+      "context_snippet": "Meanwhile, a couple of weeks ago, even before this, Gavin Baker said, Clawd Cowork is what co-pilot should have been. Evidently built in 10 days with Clawd code while Microsoft has been working on co-pilot for years.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Amjad Massad",
+      "canonical_name": "Amjad Massad",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "To make a bit of an excuse for Microsoft, the world is just waking up to the fact that coding agents are general agents.",
+      "context_snippet": "Repl.it CEO Amjad Massad said, To make a bit of an excuse for Microsoft, the world is just waking up to the fact that coding agents are general agents.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "CEO of Repl.it",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Google",
+      "canonical_name": "Google LLC",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Google is getting in the AI browser game with a big agentic upgrade for Chrome.",
+      "context_snippet": "Moving over to Google's side of the house, Google is getting in the AI browser game with a big agentic upgrade for Chrome.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_upgrade",
+          "fact_value": "Gemini in Chrome",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Gemini",
+      "canonical_name": "Gemini",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Google first added Gemini to Chrome in September, but that iteration kept the AI sandboxed in its own window.",
+      "context_snippet": "Google first added Gemini to Chrome in September, but that iteration kept the AI sandboxed in its own window. With this update, Gemini will be able to use open tabs as context and function as a web agent.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "integration",
+          "fact_value": "Chrome browser",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Tesla",
+      "canonical_name": "Tesla, Inc.",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Tesla has made a $2 billion investment into XAI in defiance of a shareholder vote.",
+      "context_snippet": "Tesla has made a $2 billion investment into XAI in defiance of a shareholder vote.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "investment_amount",
+          "fact_value": 2000000000,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "investment_target",
+          "fact_value": "XAI",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "XAI",
+      "canonical_name": "XAI",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "XAI is developing leading digital AI products and services such as its LLM, Grok.",
+      "context_snippet": "XAI is developing leading digital AI products and services such as its LLM, Grok.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product",
+          "fact_value": "Grok (LLM)",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Grok",
+      "canonical_name": "Grok",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "XAI is developing leading digital AI products and services such as its LLM, Grok.",
+      "context_snippet": "XAI is developing leading digital AI products and services such as its LLM, Grok.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "LLM",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Model 3 and Model X",
+      "canonical_name": "Tesla Model 3 and Tesla Model X",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "They announced that the Model 3 and Model X will be discontinued, with the production line repurposed for Optimus robots.",
+      "context_snippet": "Tesla disclosed a 61% drop in profits year over year. They announced that the Model 3 and Model X will be discontinued, with the production line repurposed for Optimus robots.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "discontinued_models",
+          "fact_value": [
+            "Model 3",
+            "Model X"
+          ],
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Optimus robots",
+      "canonical_name": "Optimus robots",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "There are plans to use XAI models to power the Optimus robots.",
+      "context_snippet": "XAI has also provided Grok in some Tesla vehicles and there's plans to use XAI models to power the Optimus robots.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "powered_by",
+          "fact_value": "XAI models",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Rackspace AI Launchpad",
+      "canonical_name": "Rackspace AI Launchpad",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://rackspace.com/ai-launchpad",
+      "quoted_text": "Rackspace AI Launchpad is a fully managed service designed to help enterprises build, test, and scale AI workloads.",
+      "context_snippet": "That's where Rackspace AI Launchpad comes in. It's a fully managed service designed to help enterprises build, test, and scale AI workloads through a guided phased approach.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "service_type",
+          "fact_value": "managed AI infrastructure service",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "ZenFlow",
+      "canonical_name": "ZenFlow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://zenflow.free",
+      "quoted_text": "ZenFlow takes you from vibe coding to AI-first engineering. It's the first AI orchestration layer that brings discipline to the chaos.",
+      "context_snippet": "Enter ZenFlow. ZenFlow takes you from vibe coding to AI-first engineering. It's the first AI orchestration layer that brings discipline to the chaos.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_type",
+          "fact_value": "AI orchestration layer",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Robots & Pencils",
+      "canonical_name": "Robots & Pencils",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": "https://robotsandpencils.com/aidailybrief",
+      "quoted_text": "Robots & Pencils is a company built to close that gap. They design and deliver intelligent, cloud-native systems powered by generative and agentic AI.",
+      "context_snippet": "Robots & Pencils is a company built to close that gap. They design and deliver intelligent, cloud-native systems powered by generative and agentic AI.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "focus",
+          "fact_value": "generative and agentic AI systems",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Superintelligent",
+      "canonical_name": "Superintelligent",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Superintelligent is a platform that very simply put is all about helping your company figure out how to use AI better.",
+      "context_snippet": "Today's episode is brought to you by Superintelligent. Superintelligent is a platform that very simply put is all about helping your company figure out how to use AI better.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_type",
+          "fact_value": "AI adoption and transformation platform",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "AI Strategy Compass",
+      "canonical_name": "AI Strategy Compass",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Our forthcoming AI Strategy Compass tool is ready to start to be tested.",
+      "context_snippet": "Our forthcoming AI Strategy Compass tool is ready to start to be tested. This is a power tool for anyone who is responsible for AI adoption or AI transformation inside their companies.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_status",
+          "fact_value": "forthcoming/testing",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Ray-Bans",
+      "canonical_name": "Ray-Ban",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Meta is doubling down on making meta Ray-Bans the default options for portable AI.",
+      "context_snippet": "Mark Zuckerberg painted a bold vision ... Zuckerberg is doubling down on making meta Ray-Bans the default options for portable AI.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_focus",
+          "fact_value": "AI wearables",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Azure",
+      "canonical_name": "Microsoft Azure",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Azure revenues are still growing at a 38% pace and the slowdown was only a single percentage point compared to the prior quarter.",
+      "context_snippet": "One could be forgiven for thinking that this slowdown doesn't seem to actually be that large of a problem. Azure revenues are still growing at a 38% pace and the slowdown was only a single percentage point compared to the prior quarter.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "growth_rate",
+          "fact_value": 0.38,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "GitHub",
+      "canonical_name": "GitHub",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Microsoft owns the coding mega-platform GitHub.",
+      "context_snippet": "Microsoft stands accused of letting its advantages dwindle despite ownership of the coding mega-platform GitHub.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "ownership",
+          "fact_value": "Microsoft",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Samsung",
+      "canonical_name": "Samsung Electronics",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Samsung reported that profits had doubled from this time last year, reaching $13.7 billion.",
+      "context_snippet": "Samsung reported that profits had doubled from this time last year, reaching $13.7 billion. This was a 61% increase from the previous quarter.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "profit_increase",
+          "fact_value": "doubled year over year",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "SK Hyings",
+      "canonical_name": "SK Hynix",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "SK Hyings doubled operating profit to $13.5 billion.",
+      "context_snippet": "The story was similar for SK Hyings, who doubled operating profit to $13.5 billion.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Possible typo in transcript: 'SK Hyings' likely refers to 'SK Hynix'.",
+      "facts": [
+        {
+          "fact_key": "profit_increase",
+          "fact_value": "doubled year over year",
+          "confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "The transcript contains some possible typos or unclear names, e.g. 'SK Hyings' likely refers to 'SK Hynix'.",
+    "No URLs were provided for many reports or social posts; source_url set to null accordingly.",
+    "Social posts from Twitter (X) accounts Kyle Russell, Gavin Baker, and ZeroXMo were included with platform 'x'.",
+    "Meta's Ray-Bans are categorized as 'other' since they are hardware products with AI features, not software or models.",
+    "The episode heavily discusses market reactions and earnings calls, so many mentions are editorial with sentiment labels reflecting market perception."
+  ]
+}

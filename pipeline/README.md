@@ -98,6 +98,42 @@ Use `mcp__spotify__update_playlist` or Spotify app.
 
 ---
 
+## AI Daily Brief Transcript Backfill
+
+For full transcripts (last 25 episodes), use:
+
+```bash
+cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/scrapers/ai_daily
+python3 transcripts.py --limit 25 --dry-run
+python3 transcripts.py --limit 25
+```
+
+What it does:
+- Pulls recent episodes from RSS
+- Uses official transcript URL when present
+- Otherwise generates transcript from audio with OpenAI STT
+- Saves transcript to Neon (`episode_transcripts`) and local cache (`pipeline/_cache/ai_daily/transcripts/`)
+
+For entity extraction schema testing (5-episode batches), use:
+
+```bash
+cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/scrapers/ai_daily
+python3 extract_entities.py --limit 5 --offset 0
+```
+
+This creates review artifacts under:
+- `codex-notes/ai-daily-entity-extraction/<batch-name>/`
+
+To make the draft schema visible in Neon Database Studio:
+
+```bash
+cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/scrapers/ai_daily
+python3 init_entity_schema.py
+python3 load_entity_batch.py --batch-dir /Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-initial
+```
+
+---
+
 ## Show Configuration
 
 Defined in `sync_playlist.py` → `SHOWS` dict:

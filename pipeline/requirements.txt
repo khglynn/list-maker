@@ -12,3 +12,4 @@ python-dotenv>=1.0.0      # Load .env files
 thefuzz>=0.22.0           # Fuzzy string matching
 python-Levenshtein>=0.23.0  # 10x faster fuzzy matching
 httpx>=0.27.0             # Async HTTP client (for Firecrawl)
+requests>=2.31.0          # RSS fetch + OpenAI transcription uploads

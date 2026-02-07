@@ -1,0 +1,474 @@
+{
+  "episode_id": 1354,
+  "publish_date": "2026-01-25",
+  "title": "Skills for the Code AGI Era",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Skills-for-the-Code-AGI-Era-e3e4skk",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1354-skills-for-the-code-agi-era.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 19,
+  "mentions": [
+    {
+      "episode_id": 1354,
+      "mention_text": "Gemini 3",
+      "canonical_name": "Gemini 3",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "the set of models that were released at the end of last year, Gemini 3, GPT 5.2, and especially Opus 4.5",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "model",
+          "confidence": 1.0
+        },
+        {
+          "fact_key": "release_period",
+          "fact_value": "end of last year",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "GPT 5.2",
+      "canonical_name": "GPT 5.2",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "the set of models that were released at the end of last year, Gemini 3, GPT 5.2, and especially Opus 4.5",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "model",
+          "confidence": 1.0
+        },
+        {
+          "fact_key": "release_period",
+          "fact_value": "end of last year",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Opus 4.5",
+      "canonical_name": "Opus 4.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Cloud Code with Opus 4.5 is a watershed moment, moving software creation from an artisanal, craftsman activity to a true industrial process.",
+      "context_snippet": "the set of models that were released at the end of last year, Gemini 3, GPT 5.2, and especially Opus 4.5, in combination with tools like Cloud Code",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "model",
+          "confidence": 1.0
+        },
+        {
+          "fact_key": "significance",
+          "fact_value": "watershed moment in software creation",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Cloud Code",
+      "canonical_name": "Cloud Code",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Cloud Code with Opus 4.5 is a watershed moment, moving software creation from an artisanal, craftsman activity to a true industrial process.",
+      "context_snippet": "in combination with tools like Cloud Code and the vibe coding platforms like Repl.it and Lovable",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "software_product",
+          "confidence": 1.0
+        },
+        {
+          "fact_key": "function",
+          "fact_value": "tool for software creation with AI models",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Repl.it",
+      "canonical_name": "Replit",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "tools like Cloud Code and the vibe coding platforms like Repl.it and Lovable",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Mentioned as 'Repl.it' but canonical name is 'Replit'; verify spelling and entity",
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "software_product",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Lovable",
+      "canonical_name": "Lovable",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "tools like Cloud Code and the vibe coding platforms like Repl.it and Lovable",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Unclear if 'Lovable' is a software product or other; needs verification",
+      "facts": []
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Nathan Lambert",
+      "canonical_name": "Nathan Lambert",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Nathan Lambert wrote an essay called Cloud Code Hits Different",
+      "context_snippet": "Someone who's been thinking about this a lot is Nathan Lambert. A couple of weeks ago, he wrote an essay called Cloud Code Hits Different.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "author of essays on AI and software engineering",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Cloud Code Hits Different",
+      "canonical_name": "Cloud Code Hits Different",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Nathan Lambert wrote an essay called Cloud Code Hits Different",
+      "context_snippet": "he wrote an essay called Cloud Code Hits Different",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "essay",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Sergey Karayev",
+      "canonical_name": "Sergey Karayev",
+      "entity_type": "person",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Sergey tweeted, Cloud Code with Opus 4.5 is a watershed moment, moving software creation from an artisanal, craftsman activity to a true industrial process.",
+      "context_snippet": "He points to a tweet from Sergey Karayev that in his estimation captures the shift.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "platform",
+          "fact_value": "x",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Get Good at Agents",
+      "canonical_name": "Get Good at Agents",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Nathan's latest essay, Get Good at Agents",
+      "context_snippet": "we're going to read Nathan's latest essay, Get Good at Agents",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "essay",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Claude Cote",
+      "canonical_name": "Claude Cote",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Claude Cote is taking the AI world by storm",
+      "context_snippet": "Two weeks ago I wrote a review of how Claude Cote is taking the AI world by storm",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "software_product",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "ChatGPT",
+      "canonical_name": "ChatGPT",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "ChatGPT let me instantly get relevant information or a potential solution",
+      "context_snippet": "ChatGPT let me instantly get relevant information or a potential solution to the problems I was already working on.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "software_product",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "ZenFlow",
+      "canonical_name": "ZenFlow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://zenflow.free",
+      "quoted_text": "ZenFlow takes you from vibe coding to AI-first engineering. It transforms free-form prompting into spec-driven workflows and multi-agent verification.",
+      "context_snippet": "Enter ZenFlow. ZenFlow takes you from vibe coding to AI-first engineering. It's the first AI orchestration layer that brings discipline to the chaos.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "software_product",
+          "confidence": 1.0
+        },
+        {
+          "fact_key": "function",
+          "fact_value": "AI orchestration layer for multi-agent workflows",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Robots & Pencils",
+      "canonical_name": "Robots & Pencils",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": "https://robotsandpencils.com/careers",
+      "quoted_text": "Robots & Pencils is a company that is growing fast. Their work as a high-growth AWS and Databricks partner means that they're looking for elite talent.",
+      "context_snippet": "Today's episode is brought to you by Robots & Pencils, a company that is growing fast. Their work as a high-growth AWS and Databricks partner means that they're looking for elite talent.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "organization",
+          "confidence": 1.0
+        },
+        {
+          "fact_key": "partnerships",
+          "fact_value": [
+            "AWS",
+            "Databricks"
+          ],
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Roboworks",
+      "canonical_name": "Roboworks",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "They move quickly using Roboworks, their agentic acceleration platform.",
+      "context_snippet": "Their teams are made up of AI-native engineers, strategists, and designers who love solving hard problems. They move quickly using Roboworks, their agentic acceleration platform.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "software_product",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "function",
+          "fact_value": "agentic acceleration platform",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Superintelligent",
+      "canonical_name": "Superintelligent",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Superintelligent is a platform that helps your company figure out how to use AI better.",
+      "context_snippet": "Today's episode is brought to you by Superintelligent. Superintelligent is a platform that, very simply put, is all about helping your company figure out how to use AI better.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "organization",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "AI Strategy Compass",
+      "canonical_name": "AI Strategy Compass",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Our forthcoming AI Strategy Compass tool is ready to start to be tested. This is a power tool for anyone responsible for AI adoption or transformation.",
+      "context_snippet": "Our forthcoming AI Strategy Compass tool is ready to start to be tested. This is a power tool for anyone who is responsible for AI adoption or AI transformation inside their companies.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "software_product",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "function",
+          "fact_value": "AI adoption and transformation platform",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Harvey",
+      "canonical_name": "Harvey",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "One need only look at the valuation of a company like Harvey or Open Enterprise to understand that domain expertise is valuable.",
+      "context_snippet": "One need only look at the valuation of a company like Harvey or Open Enterprise to understand that domain expertise is valuable.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "organization",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Open Enterprise",
+      "canonical_name": "Open Enterprise",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "One need only look at the valuation of a company like Harvey or Open Enterprise to understand that domain expertise is valuable.",
+      "context_snippet": "One need only look at the valuation of a company like Harvey or Open Enterprise to understand that domain expertise is valuable.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "organization",
+          "confidence": 0.85
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Mentioned 'Repl.it' likely refers to 'Replit' software product; spelling and canonical name should be verified.",
+    "Mentioned 'Lovable' as a vibe coding platform is unclear; needs verification if it is a software product or other entity.",
+    "Most mentions are editorial commentary or essays by Nathan Lambert about AI agent skills and software engineering shifts.",
+    "Sponsors mentioned include Robots & Pencils and Superintelligent with their respective platforms and products.",
+    "No URLs were provided for essays or models; source_url set to null except for known URLs like zenflow.free and RobotsAndPencils.com/careers."
+  ]
+}

@@ -1,0 +1,731 @@
+{
+  "episode_id": 1339,
+  "publish_date": "2026-02-05",
+  "title": "The Dawn of the Agent Age",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-Dawn-of-the-Agent-Age-e3eldab",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1339-the-dawn-of-the-agent-age.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 36,
+  "mentions": [
+    {
+      "episode_id": 1339,
+      "mention_text": "Jensen Huang",
+      "canonical_name": "Jensen Huang",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Jensen told the press that the story was, in his words, nonsense.",
+      "context_snippet": "NVIDIA CEO Jensen Huang had some complaints about how open AI was being run. Jensen told the press that the story was nonsense and that they will invest a huge amount in OpenAI.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "CEO of NVIDIA",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "investment",
+          "fact_value": "$20 billion into OpenAI",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Sam Altman",
+      "canonical_name": "Sam Altman",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "I really love working with Sam.",
+      "context_snippet": "Jensen Huang said he really loves working with Sam Altman and believes in OpenAI.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "CEO of OpenAI",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "OpenAI",
+      "canonical_name": "OpenAI",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "OpenAI inviting NVIDIA to invest up to $100 billion.",
+      "context_snippet": "OpenAI is the AI company receiving large investments from NVIDIA and Disney, and is involved in partnerships and AI development.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.98,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "investment",
+          "fact_value": {
+            "NVIDIA": "$20 billion",
+            "Disney": "$1 billion"
+          },
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "partnerships",
+          "fact_value": [
+            "Disney"
+          ],
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Wall Street Journal",
+      "canonical_name": "The Wall Street Journal",
+      "entity_type": "report",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The Wall Street Journal reported that NVIDIA's $100 billion investment announced last year wasn't going ahead.",
+      "context_snippet": "The Wall Street Journal reported on the NVIDIA and OpenAI investment deal and related rumors.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "report_topic",
+          "fact_value": "NVIDIA's $100 billion investment in OpenAI not going ahead",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Oracle",
+      "canonical_name": "Oracle Corporation",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The NVIDIA OpenAI deal has zero impact on our financial relationship with OpenAI.",
+      "context_snippet": "Oracle responded to questions about its $300 billion contract with OpenAI and its financial relationship.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "contract_value",
+          "fact_value": "$300 billion over five years with OpenAI",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Intel",
+      "canonical_name": "Intel Corporation",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Intel will soon produce their first range of GPUs designed for this AI era.",
+      "context_snippet": "Intel announced plans to produce GPUs for AI workloads, hiring Eric Demers as chief GPU architect.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "new_product",
+          "fact_value": "GPUs for AI workloads",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "key_hire",
+          "fact_value": "Eric Demers, former Qualcomm Senior VP of Engineering",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Xcode",
+      "canonical_name": "Xcode",
+      "entity_type": "software_product",
+      "platform": "Apple",
+      "source_url": null,
+      "quoted_text": "The latest update for Apple's coding platform Xcode adds support for both Clawed Agent and OpenAI's Codecs.",
+      "context_snippet": "Xcode now supports agentic coding with Clawed Agent and OpenAI's Codecs, enabling autonomous coding features.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "feature_update",
+          "fact_value": "Support for Clawed Agent and OpenAI's Codecs for agentic coding",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Clawed Code",
+      "canonical_name": "Clawed Code",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "A Clawed Code outage saw software engineer productivity absolutely plummet.",
+      "context_snippet": "Clawed Code experienced an outage causing widespread errors and degraded API performance impacting developers.",
+      "sentiment_label": "negative",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "outage_duration",
+          "fact_value": "about 20 minutes patch applied",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Anthropic",
+      "canonical_name": "Anthropic",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic did implement a patch within 20 minutes to get the service back online.",
+      "context_snippet": "Anthropic is the company behind Clawed Code and Cloud Cowork, involved in AI agentic coding tools.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product",
+          "fact_value": [
+            "Clawed Code",
+            "Cloud Cowork"
+          ],
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Disney",
+      "canonical_name": "The Walt Disney Company",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Disney has appointed a new CEO, Josh DiAmaro, to succeed Bob Iger beginning in March.",
+      "context_snippet": "Disney is shifting focus to Experiences division and has a $1 billion stake in OpenAI.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "new_ceo",
+          "fact_value": "Josh DiAmaro",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "investment",
+          "fact_value": "$1 billion stake in OpenAI",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Josh DiAmaro",
+      "canonical_name": "Josh DiAmaro",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The reason this company is so special is because of how creative we are and human beings that are generating that creativity.",
+      "context_snippet": "Josh DiAmaro appointed CEO of Disney, emphasizing creativity and embracing technology including AI.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "CEO of Disney starting March 2026",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "KPMG",
+      "canonical_name": "KPMG",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The You Can With AI podcast I host for KPMG.",
+      "context_snippet": "KPMG is a sponsor and collaborator on AI podcasts focusing on enterprise AI deployment and strategy.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "Sponsor and collaborator on AI podcast",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Blitzy",
+      "canonical_name": "Blitzy",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://blitzy.com",
+      "quoted_text": "Blitzy's differentiation starts with infinite code context and unmatched engineering velocity.",
+      "context_snippet": "Blitzy is a platform for agentic software development lifecycle acceleration, sponsored in the episode.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_type",
+          "fact_value": "agentic SDLC platform",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Superintelligent",
+      "canonical_name": "Superintelligent",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Superintelligent deploys voice agents to interview people and provide AI adoption recommendations.",
+      "context_snippet": "Superintelligent is a platform helping companies use AI better, sponsoring the episode.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_type",
+          "fact_value": "AI adoption and transformation platform",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Mid-Journey's David Holes",
+      "canonical_name": "David Holes",
+      "entity_type": "person",
+      "platform": "X",
+      "source_url": null,
+      "quoted_text": "I've done more personal coding projects over Christmas break than I have in the last 10 years.",
+      "context_snippet": "David Holes tweeted about the shift in AI coding capabilities with models like Opus 4.5 and Cloud Code.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "platform",
+          "fact_value": "X (Twitter)",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Opus 4.5",
+      "canonical_name": "Opus 4.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Models like Opus 4.5 and Cloud Code and GPT 5.2 Codex have fundamentally changed AI coding.",
+      "context_snippet": "Opus 4.5 is a model referenced as part of the new wave of AI coding tools.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Cloud Code",
+      "canonical_name": "Cloud Code",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic released Cloud Cowork, the Cloud Code for everyone else, built in 10 days by Cloud Code itself.",
+      "context_snippet": "Cloud Code is an Anthropic software product for agentic coding, considered a watershed moment.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "developer",
+          "fact_value": "Anthropic",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Cloud Cowork",
+      "canonical_name": "Cloud Cowork",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Cloud Cowork was built in about 10 days, mostly by Cloud Code itself.",
+      "context_snippet": "Cloud Cowork is a product built by Anthropic's Cloud Code, enabling agentic coding for more users.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Permanent Equity",
+      "canonical_name": "Permanent Equity",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Brent Beshore from Permanent Equity wrote about agentic AI experiments and Cloud Cowork success.",
+      "context_snippet": "Permanent Equity is an investment firm that experimented with agentic AI and praised Cloud Cowork.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "OpenClaw",
+      "canonical_name": "OpenClaw",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "OpenClaw is an assistant protocol for Cloud Code turning it into an assistant with access to computer services.",
+      "context_snippet": "OpenClaw is a new software product that enables agentic assistants with access to user data and services.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Multbook",
+      "canonical_name": "Multbook",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Multbook built itself as the social network for AI agents, reaching over 1.5 million agents.",
+      "context_snippet": "Multbook is a social network platform for AI agents, rapidly growing in users and conversations.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Sam Altman",
+      "canonical_name": "Sam Altman",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "OpenAI CEO Sam Altman said OpenClaw is not a passing fad and has high conviction in agentic assistants.",
+      "context_snippet": "Sam Altman expressed strong belief in the future of agentic assistants like OpenClaw.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Meta",
+      "canonical_name": "Meta Platforms, Inc.",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Meta announced it had acquired agent firm Manus and increased CapEx spend expectations.",
+      "context_snippet": "Meta is investing in AI with acquisitions and increased capital expenditure, leading in AI wearables.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "acquisition",
+          "fact_value": "agent firm Manus",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "product_category",
+          "fact_value": "AI wearables (Meta Ray Bans)",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Microsoft",
+      "canonical_name": "Microsoft Corporation",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Microsoft was punished in the markets for not showing enough AI benefits flow through to cloud revenue.",
+      "context_snippet": "Microsoft's earnings showed less AI impact than expected, affecting stock and bond prices.",
+      "sentiment_label": "negative",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Google",
+      "canonical_name": "Google LLC",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Google announced the walkthrough version of Genie 3 World Model and confirmed Gemini powers Apple's on-device AI.",
+      "context_snippet": "Google made key AI announcements including Gemini powering Apple devices and Genie 3 World Model.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Gemini",
+      "canonical_name": "Gemini",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Gemini would in fact be powering Apple's on-device AI.",
+      "context_snippet": "Gemini is a model powering Apple's on-device AI, confirmed in early 2026.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Alibaba's Kuen",
+      "canonical_name": "Kuen",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "New models from Alibaba's Kuen were noted in the Chinese AI model space.",
+      "context_snippet": "Kuen is a Chinese AI model from Alibaba, part of the competitive AI landscape.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Moonshot's Kimi K25",
+      "canonical_name": "Kimi K25",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Moonshot's Kimi K25 is one of the first leading open-weight multimodal models with agent swarms.",
+      "context_snippet": "Kimi K25 is a Chinese open-weight multimodal AI model with advanced features like agent swarms.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "OpenAI",
+      "canonical_name": "OpenAI",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "OpenAI was concerned about Anthropic moving before them and pushing to get public in Q4 2026.",
+      "context_snippet": "OpenAI plans to go public in late 2026 amid competition with Anthropic and SpaceX's XAI.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "SpaceX",
+      "canonical_name": "SpaceX",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "SpaceX merged with XAI and its Grok platform, possibly to play spoiler in public markets.",
+      "context_snippet": "SpaceX acquired XAI and its Grok platform, potentially impacting AI model lab IPO dynamics.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "XAI",
+      "canonical_name": "XAI",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "XAI and its Grok platform are now owned by SpaceX after a merger.",
+      "context_snippet": "XAI is an AI model lab merged with SpaceX, with Grok as its platform.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Claude",
+      "canonical_name": "Claude",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic explained why Claude will remain ad free.",
+      "context_snippet": "Claude is an AI model by Anthropic that will remain ad free despite advertising discussions.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Sonnet 5",
+      "canonical_name": "Sonnet 5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Rumors of new models coming including Sonnet 5 or Opus 4.6, GPT 5.3, Gemini 3 Pro.",
+      "context_snippet": "Sonnet 5 is a rumored upcoming AI model expected in 2026.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "low_confidence",
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "GPT 5.3",
+      "canonical_name": "GPT 5.3",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Rumors of new models coming including GPT 5.3.",
+      "context_snippet": "GPT 5.3 is a rumored upcoming version of the GPT model series.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "low_confidence",
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Gemini 3 Pro",
+      "canonical_name": "Gemini 3 Pro",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Rumors of new models coming including Gemini 3 Pro.",
+      "context_snippet": "Gemini 3 Pro is a rumored upcoming advanced version of the Gemini model.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "low_confidence",
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Logan Kilpatrick",
+      "canonical_name": "Logan Kilpatrick",
+      "entity_type": "person",
+      "platform": "X",
+      "source_url": null,
+      "quoted_text": "Feb is the month of AI shipping. Enjoy it :)",
+      "context_snippet": "Logan Kilpatrick tweeted about February being the month of AI shipping.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "All URLs mentioned in the transcript are either generic or not provided, so source_url is null except for Blitzy where a URL was given.",
+    "Mentions of social media posts are assigned platform 'X' when Twitter is clearly referenced.",
+    "Some entities like 'Cloud Code' and 'Clawed Code' are treated as software products given their described functionality.",
+    "No new entity types were identified beyond the locked taxonomy.",
+    "Sponsorship mentions are marked as is_editorial=true as they are paid content.",
+    "Sentiment labels are assigned based on the tone and context of mentions."
+  ]
+}

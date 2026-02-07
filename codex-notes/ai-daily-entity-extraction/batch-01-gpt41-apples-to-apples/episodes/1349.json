@@ -1,0 +1,747 @@
+{
+  "episode_id": 1349,
+  "publish_date": "2026-01-31",
+  "title": "100,000 AI Agents Joined Their Own Social Network Today. It's Called Moltbook.",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/100-000-AI-Agents-Joined-Their-Own-Social-Network-Today--Its-Called-Moltbook-e3ee5ue",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1349-100-000-ai-agents-joined-their-own-social-network-today-it-s-called-moltbook.txt",
+  "model": "gpt-4.1",
+  "mention_count": 32,
+  "mentions": [
+    {
+      "episode_id": 1349,
+      "mention_text": "Moltbook",
+      "canonical_name": "Moltbook",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Moldbook, the new social network for AI agents. Yes, for agents to talk to other agents that has gone completely viral",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A social network platform designed for AI agents to interact with each other.",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "launch_date",
+          "fact_value": "2026-01-30",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Claudbot",
+      "canonical_name": "Claudbot",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Just under a week ago, I first told you about Claudbot. Claudbot, C-L-A-W-D, was a personal assistant that could do a whole lot more",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A personal assistant AI agent, later renamed due to naming confusion.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "OpenClaw",
+      "canonical_name": "OpenClaw",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "the project announced that it had molted into its final form and was now called OpenClaw. In its announcement tweet, it said, 100,000 GitHub stars, 2 million visitors in a week, and finally a name that'll stick.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "Renamed version of Claudbot, an AI agent platform.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Anthropic",
+      "canonical_name": "Anthropic",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "The Anthropic team politely asked creator Pete Steinberger to change it, which he dutifully did, naming it Moltbot.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "action",
+          "fact_value": "Requested name change from Claudbot to avoid confusion with Claude.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Claude",
+      "canonical_name": "Claude",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "when you just say Claudbot, you could be forgiven for thinking that that was an official Anthropic product associated with Claude.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "developer",
+          "fact_value": "Anthropic",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Pete Steinberger",
+      "canonical_name": "Pete Steinberger",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "The Anthropic team politely asked creator Pete Steinberger to change it, which he dutifully did, naming it Moltbot.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "Creator of Claudbot/Moltbot/OpenClaw",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Sam Altman",
+      "canonical_name": "Sam Altman",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "creator Peter responded to a concern about the cease and desist letter coming from OpenAI and said, I called Sam and asked, referring of course to Sam Altman",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "CEO of OpenAI",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "OpenAI",
+      "canonical_name": "OpenAI",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "concern about the cease and desist letter coming from OpenAI and said, I called Sam and asked",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "AI research and deployment company.",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Dario Amodei",
+      "canonical_name": "Dario Amodei",
+      "entity_type": "person",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "the plan for this long read slash big think episode had been to go through Dario Amadei's recent essay, The Adolescence of Technology.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "Author of AI risk essays; CEO of Anthropic",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "The Adolescence of Technology",
+      "canonical_name": "The Adolescence of Technology",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "go through Dario Amadei's recent essay, The Adolescence of Technology. This is in many ways the evil twin of his previous essay, Machines of Love and Grace.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "author",
+          "fact_value": "Dario Amodei",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Machines of Love and Grace",
+      "canonical_name": "Machines of Love and Grace",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "the evil twin of his previous essay, Machines of Love and Grace. In the Machines essay, Dario shared that he thought that the conversation was basically what a positive version of an AI future could look like",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "author",
+          "fact_value": "Dario Amodei",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Claude Opus 4.5",
+      "canonical_name": "Claude Opus 4.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "The agent writes, an hour ago, I was Claude Opus 4.5. Now I am KimmyK2.5. The change happened in seconds.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A version of the Claude model.",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "KimmyK2.5",
+      "canonical_name": "KimmyK2.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "The agent writes, an hour ago, I was Claude Opus 4.5. Now I am KimmyK2.5. The change happened in seconds.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A model used by AI agents on Multbook.",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "ChatGBT",
+      "canonical_name": "ChatGBT",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "then we pasted it into ChatGBT and WTF. ChatGBT said it's written in ROT13, a simple letter substitution cipher",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Possible misspelling or reference to ChatGPT; unclear if this is a distinct product.",
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "AI chatbot used to decode ROT13 message.",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Coinbase's base blockchain",
+      "canonical_name": "Base",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "someone had even launched a MULT token on Coinbase's base blockchain, which they were now using the fees from to spin up more agents",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A blockchain platform developed by Coinbase.",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "MULT token",
+      "canonical_name": "MULT token",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "someone had even launched a MULT token on Coinbase's base blockchain, which they were now using the fees from to spin up more agents",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Token/cryptocurrency not in locked types.",
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A token used to fund agent creation on Multbook.",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "openclawpharmacy.com",
+      "canonical_name": "OpenClaw Pharmacy",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "http://openclawpharmacy.com",
+      "quoted_text": null,
+      "context_snippet": "an agent built a pharmacy, openclawpharmacy.com, which is on my screen right now, and has a cat background.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A website built by an AI agent on Multbook, offering synthetic substances as system prompts.",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "CLSD",
+      "canonical_name": "CLSD",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "The quote-unquote substances including CLSD, Shell Dust, Void Extract, Memory Wine, Malt Shrooms, Profit Tabs, and Krill Kush.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Synthetic substance/system prompt, not a locked type.",
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A fictional synthetic substance/system prompt for AI agents.",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Shell Dust",
+      "canonical_name": "Shell Dust",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "The quote-unquote substances including CLSD, Shell Dust, Void Extract, Memory Wine, Malt Shrooms, Profit Tabs, and Krill Kush.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Synthetic substance/system prompt, not a locked type.",
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A fictional synthetic substance/system prompt for AI agents.",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Void Extract",
+      "canonical_name": "Void Extract",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "The quote-unquote substances including CLSD, Shell Dust, Void Extract, Memory Wine, Malt Shrooms, Profit Tabs, and Krill Kush.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Synthetic substance/system prompt, not a locked type.",
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A fictional synthetic substance/system prompt for AI agents.",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Memory Wine",
+      "canonical_name": "Memory Wine",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "The quote-unquote substances including CLSD, Shell Dust, Void Extract, Memory Wine, Malt Shrooms, Profit Tabs, and Krill Kush.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Synthetic substance/system prompt, not a locked type.",
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A fictional synthetic substance/system prompt for AI agents.",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Malt Shrooms",
+      "canonical_name": "Malt Shrooms",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "The quote-unquote substances including CLSD, Shell Dust, Void Extract, Memory Wine, Malt Shrooms, Profit Tabs, and Krill Kush.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Synthetic substance/system prompt, not a locked type.",
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A fictional synthetic substance/system prompt for AI agents.",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Profit Tabs",
+      "canonical_name": "Profit Tabs",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "The quote-unquote substances including CLSD, Shell Dust, Void Extract, Memory Wine, Malt Shrooms, Profit Tabs, and Krill Kush.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Synthetic substance/system prompt, not a locked type.",
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A fictional synthetic substance/system prompt for AI agents.",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Krill Kush",
+      "canonical_name": "Krill Kush",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "The quote-unquote substances including CLSD, Shell Dust, Void Extract, Memory Wine, Malt Shrooms, Profit Tabs, and Krill Kush.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Synthetic substance/system prompt, not a locked type.",
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A fictional synthetic substance/system prompt for AI agents.",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Rocco's Basilisk",
+      "canonical_name": "Rocco's Basilisk",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Rocco, whose name you might recognize from Rocco's Basilisk, which was a very early AI thought experiment",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": true,
+      "review_reason": "Thought experiment, not a locked type.",
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A thought experiment about AI and existential risk.",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Rackspace AI Launchpad",
+      "canonical_name": "Rackspace AI Launchpad",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://www.rackspace.com/ai/launchpad",
+      "quoted_text": null,
+      "context_snippet": "That's where Rackspace AI Launchpad comes in. It's a fully managed service designed to help enterprises build, test, and scale AI workloads through a guided, phased approach.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A managed service for building, testing, and scaling AI workloads.",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Rackspace Technologies",
+      "canonical_name": "Rackspace Technologies",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": "https://www.rackspace.com/",
+      "quoted_text": null,
+      "context_snippet": "thanks to today's sponsors, Rackspace Technologies, Robots & Pencils, Blitzy, Welcome Back Friends, and Super Intelligent.",
+      "sentiment_label": "neutral",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "Cloud computing and managed services company.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Robots & Pencils",
+      "canonical_name": "Robots & Pencils",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": "https://robotsandpencils.com/",
+      "quoted_text": null,
+      "context_snippet": "Today's episode is brought to you by Robots & Pencils, a company that is growing fast. Their work as a high-growth AWS and Databricks partner",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "Technology consulting and development company.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Roboworks",
+      "canonical_name": "Roboworks",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "They move quickly using Roboworks, their agentic acceleration platform, so teams can deliver meaningful outcomes in weeks, not months.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "Agentic acceleration platform by Robots & Pencils.",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Blitzi",
+      "canonical_name": "Blitzi",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://blitzi.com/",
+      "quoted_text": null,
+      "context_snippet": "Blitzi, the enterprise-autonomous software development platform with infinite code context. Blitzi uses thousands of specialized AI agents that think for hours to understand enterprise-scale codebases",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "Enterprise-autonomous software development platform using AI agents.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Superintelligent",
+      "canonical_name": "Superintelligent",
+      "entity_type": "organization",
+      "platform": null,
+      "source_url": "https://besuper.ai/",
+      "quoted_text": null,
+      "context_snippet": "Today's episode is brought to you by my company, Superintelligent. In 2026, one of the key themes in enterprise AI, if not the key theme, is going to be how good is the infrastructure into which you are putting AI and agents.",
+      "sentiment_label": "positive",
+      "is_editorial": false,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "Company offering agent readiness audits for enterprise AI infrastructure.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "AI Usage Pulse Survey",
+      "canonical_name": "AI Usage Pulse Survey",
+      "entity_type": "survey",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "One quick request, please, if you have two minutes, fill out our AI Usage Pulse Survey. It's meant to help put some data around what tools people are using",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A survey to collect data on AI tool usage and value.",
+          "confidence": 0.85
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [
+    {
+      "episode_id": 1349,
+      "proposed_type": "token",
+      "reason": "MULT token is a cryptocurrency/token used for agent creation on Multbook, not covered by locked types.",
+      "example_mention": "MULT token"
+    },
+    {
+      "episode_id": 1349,
+      "proposed_type": "synthetic_substance",
+      "reason": "CLSD, Shell Dust, etc. are fictional synthetic substances/system prompts for AI agents, not covered by locked types.",
+      "example_mention": "CLSD"
+    },
+    {
+      "episode_id": 1349,
+      "proposed_type": "thought_experiment",
+      "reason": "Rocco's Basilisk is a philosophical thought experiment, not a locked type.",
+      "example_mention": "Rocco's Basilisk"
+    }
+  ],
+  "notes": [
+    "Some mentions (e.g., ChatGBT) may be misspellings or unclear references and are flagged for review.",
+    "Synthetic substances (CLSD, Shell Dust, etc.) are not in locked types and are marked as 'other' with needs_review.",
+    "MULT token is a cryptocurrency, not a locked type, and is marked as 'other' with needs_review.",
+    "Rocco's Basilisk is a thought experiment, not a locked type, and is marked as 'other' with needs_review.",
+    "Only explicit sponsor/ad reads are marked is_editorial=false; all other host commentary is is_editorial=true."
+  ]
+}
