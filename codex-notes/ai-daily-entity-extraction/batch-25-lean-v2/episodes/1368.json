@@ -1,0 +1,334 @@
+{
+  "episode_id": 1368,
+  "publish_date": "2026-01-10",
+  "title": "What Happens When AI Obliterates Your Business Model?",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/What-Happens-When-AI-Obliterates-Your-Business-Model-e3debhm",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1368-what-happens-when-ai-obliterates-your-business-model.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 14,
+  "mentions": [
+    {
+      "episode_id": 1368,
+      "mention_text": "Gmail",
+      "canonical_name": "Gmail",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Google announced a big AI overhaul for, you guessed it, Gmail. First up, Google is bringing AI search to the inbox.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "feature",
+          "fact_value": "Gmail now supports AI search with natural language queries, suggested to-do lists, and AI-generated replies",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1368,
+      "mention_text": "Gemini",
+      "canonical_name": "Gemini",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Google is moving more Gemini features from the paid tier to their free product, including help me write and AI suggested replies.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "feature_migration",
+          "fact_value": "Gemini AI features moved from paid to free tier in Gmail",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1368,
+      "mention_text": "H200",
+      "canonical_name": "NVIDIA H200",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Chinese demand for H200s is quite high after the Trump administration announced the advanced chips would be available for export last month.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_demand",
+          "fact_value": "High Chinese demand for NVIDIA H200 AI chips",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1368,
+      "mention_text": "Blackwell chips",
+      "canonical_name": "NVIDIA Blackwell chips",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "H200 demand from the rest of the world is now close to zero now that Blackwell chips are available.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_replacement",
+          "fact_value": "Blackwell chips availability reduced global demand for H200 chips",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1368,
+      "mention_text": "Salesforce",
+      "canonical_name": "Salesforce",
+      "entity_type": "survey",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Salesforce reports a huge uptick in AI shopping in their annual holiday survey with 12% global growth and 9% in the U.S.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "survey_retyped_from_context",
+      "facts": [
+        {
+          "fact_key": "survey",
+          "fact_value": "Salesforce annual holiday survey showed increased AI-powered retail sales and conversions",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1368,
+      "mention_text": "ChatGPT",
+      "canonical_name": "ChatGPT",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "The share of traffic from ChatGPT and Perplexity doubled this year and conversion rates were way up.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "usage_growth",
+          "fact_value": "ChatGPT traffic share doubled in AI shopping context",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1368,
+      "mention_text": "Perplexity",
+      "canonical_name": "Perplexity",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "The share of traffic from ChatGPT and Perplexity doubled this year and conversion rates were way up.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "usage_growth",
+          "fact_value": "Perplexity traffic share doubled in AI shopping context",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1368,
+      "mention_text": "Buy for Me",
+      "canonical_name": "Buy for Me",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Buy for Me uses AI agents to buy products from third-party websites, integrated into Amazon's marketplace.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "feature_description",
+          "fact_value": "AI agentic shopping feature on Amazon buying from third-party retailers",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1368,
+      "mention_text": "Copilot Checkout",
+      "canonical_name": "Copilot Checkout",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Copilot Checkout allows users to shop without leaving the app, integrating Shopify, PayPal, Stripe, and Etsy.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "feature_description",
+          "fact_value": "AI shopping feature integrated with multiple payment and retail platforms",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1368,
+      "mention_text": "Stack Overflow",
+      "canonical_name": "Stack Overflow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Stack Overflow is a forum for programming questions that has seen a dramatic decline in queries since ChatGPT launched.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "usage_decline",
+          "fact_value": "Stack Overflow queries dropped from 300,000/month peak to under 7,000/month",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1368,
+      "mention_text": "Tailwind",
+      "canonical_name": "Tailwind CSS",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "75% of the people on our engineering team lost their jobs here yesterday because of the brutal impact AI has had on our business.",
+      "context_snippet": "Tailwind, an open-source CSS framework, saw 75% layoffs despite growing popularity due to AI reducing paid product revenue.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "business_impact",
+          "fact_value": "AI usage increased Tailwind popularity but decreased revenue by 80%, causing layoffs",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1368,
+      "mention_text": "ZenFlow",
+      "canonical_name": "ZenFlow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://zenflow.free",
+      "quoted_text": "ZenFlow takes you from vibe coding to AI-first engineering. It's the first AI orchestration layer that brings discipline to the chaos.",
+      "context_snippet": "ZenFlow is an AI orchestration layer transforming free-form prompting into spec-driven workflows and multi-agent verification.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_description",
+          "fact_value": "AI orchestration layer for disciplined AI-first engineering and multi-agent verification",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1368,
+      "mention_text": "AI Strategy Compass",
+      "canonical_name": "AI Strategy Compass",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://aidailybrief.ai/compass",
+      "quoted_text": "AI Strategy Compass is a forthcoming power tool for AI adoption and transformation inside companies.",
+      "context_snippet": "Superintelligent's forthcoming AI Strategy Compass tool is ready for beta testing to help AI transformation.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_description",
+          "fact_value": "Automated platform for AI adoption and transformation management",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1368,
+      "mention_text": "You Can With AI podcast",
+      "canonical_name": "You Can With AI podcast",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "You Can With AI podcast cuts through hype to focus on deployment and responsible scaling of AI in enterprise.",
+      "context_snippet": "The host mentions their podcast 'You Can With AI' focused on enterprise AI strategy and deployment.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "podcast_description",
+          "fact_value": "Podcast about enterprise AI deployment and strategy hosted by the episode host",
+          "confidence": 0.85
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [
+    {
+      "episode_id": 1368,
+      "proposed_type": "podcast",
+      "reason": "The mention of 'You Can With AI podcast' is a media type not in the locked taxonomy but clearly a podcast.",
+      "example_mention": "You Can With AI podcast"
+    }
+  ],
+  "notes": [
+    "Many mentions are organizations and software products related to AI and commerce.",
+    "Several persons are quoted for opinions or social posts, mostly related to Tailwind's business impact from AI.",
+    "No URLs were invented; only those explicitly mentioned or clearly inferred were included.",
+    "The mention 'You Can With AI podcast' is not in the locked taxonomy; flagged as 'other' with needs_review false.",
+    "Sentiment labels are mostly neutral or positive for product launches and mixed or negative for business disruption stories."
+  ]
+}

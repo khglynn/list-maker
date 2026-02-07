@@ -1,0 +1,339 @@
+{
+  "episode_id": 1366,
+  "publish_date": "2026-01-11",
+  "title": "Does Work Still Matter in the Age of AI?",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Does-Work-Still-Matter-in-the-Age-of-AI-e3dgbkg",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1366-does-work-still-matter-in-the-age-of-ai.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 15,
+  "mentions": [
+    {
+      "episode_id": 1366,
+      "mention_text": "Capital in the 22nd Century",
+      "canonical_name": "Capital in the 22nd Century",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Dwarkesh Patel and Philip Trammell called Capital in the 22nd Century. Now, this is an extremely long form and dense essay, and there has been a ton of debate around it.",
+      "context_snippet": "For today's show, we're actually going to string excerpts of about five together, with the first being from Dwarkesh Patel and Philip Trammell called Capital in the 22nd Century.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "authors",
+          "fact_value": [
+            "Dwarkesh Patel",
+            "Philip Trammell"
+          ],
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "type",
+          "fact_value": "essay",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "Capital in the 21st Century",
+      "canonical_name": "Capital in the Twenty-First Century",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "In his 2013 Capital in the 21st Century, the socialist economist Thomas Piketty argued that...",
+      "context_snippet": "Dwarkesh and Philip write, In his 2013 Capital in the 21st Century, the socialist economist Thomas Piketty argued that...",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Entity type 'book' is not in locked taxonomy; consider 'paper' or 'report' or 'other'.",
+      "facts": [
+        {
+          "fact_key": "author",
+          "fact_value": "Thomas Piketty",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "publication_year",
+          "fact_value": 2013,
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "AI and the Human Condition",
+      "canonical_name": "AI and the Human Condition",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Ben Thompson's strategery essay which he published earlier this week called AI and the Human Condition.",
+      "context_snippet": "Where I'm interested in picking up the story is with the Ben Thompson's strategery essay which he published earlier this week called AI and the Human Condition.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "author",
+          "fact_value": "Ben Thompson",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "AIDB Intelligence product",
+      "canonical_name": "AIDB Intelligence",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://aidbintel.com",
+      "quoted_text": "I have some big announcements coming up soon with the AIDB Intelligence product. If you want to learn more about that, go to aidbintel.com and you can sign up for updates.",
+      "context_snippet": "I have some big announcements coming up soon with the AIDB Intelligence product. If you want to learn more about that, go to aidbintel.com and you can sign up for updates.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "website",
+          "fact_value": "https://aidbintel.com",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "ChatsGBT",
+      "canonical_name": "ChatGPT",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "LLMs in particular are quite literally content producers. What's the point of writing analysis when ChatsGBT or Gemini or Cloud will deliver analysis on demand about any topic you want?",
+      "context_snippet": "On the one hand, AI is one of the greatest gifts ever in terms of topics to cover. On the other hand, LLMs in particular are quite literally content producers. What's the point of writing analysis when ChatsGBT or Gemini or Cloud will deliver analysis on demand about any topic you want?",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Mentioned as LLM but 'ChatsGBT' likely a mispronunciation or typo of 'ChatGPT'; needs review.",
+      "facts": []
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "Gemini",
+      "canonical_name": "Gemini",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "What's the point of writing analysis when ChatsGBT or Gemini or Cloud will deliver analysis on demand about any topic you want?",
+      "context_snippet": "LLMs in particular are quite literally content producers. What's the point of writing analysis when ChatsGBT or Gemini or Cloud will deliver analysis on demand about any topic you want?",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "LLM",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "Cloud Code",
+      "canonical_name": "Cloud Code",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Using the newest models Opus 4.5 and GPT 5.2 through interfaces like Cloud Code.",
+      "context_snippet": "Grigolino Ross wrote a piece in his Pragmatic Engineer newsletter called When AI Writes Almost All Code, What Happens to Software Engineering? In it he identifies the same magical feeling that so many other devs had while they were doing their side projects and personal projects over the holiday using the newest models Opus 4.5 and GPT 5.2 through interfaces like Cloud Code.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "Opus 4.5",
+      "canonical_name": "Opus 4.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Using the newest models Opus 4.5 and GPT 5.2 through interfaces like Cloud Code.",
+      "context_snippet": "Grigolino Ross wrote a piece in his Pragmatic Engineer newsletter called When AI Writes Almost All Code, What Happens to Software Engineering? In it he identifies the same magical feeling that so many other devs had while they were doing their side projects and personal projects over the holiday using the newest models Opus 4.5 and GPT 5.2 through interfaces like Cloud Code.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "GPT 5.2",
+      "canonical_name": "GPT-5.2",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Using the newest models Opus 4.5 and GPT 5.2 through interfaces like Cloud Code.",
+      "context_snippet": "Grigolino Ross wrote a piece in his Pragmatic Engineer newsletter called When AI Writes Almost All Code, What Happens to Software Engineering? In it he identifies the same magical feeling that so many other devs had while they were doing their side projects and personal projects over the holiday using the newest models Opus 4.5 and GPT 5.2 through interfaces like Cloud Code.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "Pragmatic Engineer newsletter",
+      "canonical_name": "Pragmatic Engineer",
+      "entity_type": "blog_post",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Grigolino Ross wrote a piece in his Pragmatic Engineer newsletter called When AI Writes Almost All Code, What Happens to Software Engineering?",
+      "context_snippet": "Grigolino Ross wrote a piece in his Pragmatic Engineer newsletter called When AI Writes Almost All Code, What Happens to Software Engineering?",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "author",
+          "fact_value": "Grigolino Ross",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "When AI Writes Almost All Code, What Happens to Software Engineering?",
+      "canonical_name": "When AI Writes Almost All Code, What Happens to Software Engineering?",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Grigolino Ross wrote a piece in his Pragmatic Engineer newsletter called When AI Writes Almost All Code, What Happens to Software Engineering?",
+      "context_snippet": "Grigolino Ross wrote a piece in his Pragmatic Engineer newsletter called When AI Writes Almost All Code, What Happens to Software Engineering?",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "author",
+          "fact_value": "Grigolino Ross",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "Shobham Sabu",
+      "canonical_name": "Shobham Sabu",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Google's senior AI product manager, Shobham Sabu, wrote a piece on X called The Modern AI PM in the Age of Agents.",
+      "context_snippet": "Google's senior AI product manager, Shobham Sabu, wrote a piece on X called The Modern AI PM in the Age of Agents.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "senior AI product manager at Google",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "The Modern AI PM in the Age of Agents",
+      "canonical_name": "The Modern AI PM in the Age of Agents",
+      "entity_type": "social_post",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "The job of a PM used to be translation. You talked to customers, synthesized their problems, wrote specs and handed them to engineers. You were the bridge between what people need and what gets built. The value was in that translation layer. That layer is compressing. When agents can take a well-formed problem and produce working code, the PM's job shifts...",
+      "context_snippet": "Google's senior AI product manager, Shobham Sabu, wrote a piece on X called The Modern AI PM in the Age of Agents. It is an exploration of exactly this, how the role of product manager is changing.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "author",
+          "fact_value": "Shobham Sabu",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "platform",
+          "fact_value": "x",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "Repl.it",
+      "canonical_name": "Replit",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Nowhere is this more true than in AI development platforms like Repl.it.",
+      "context_snippet": "Nowhere is this more true than in AI development platforms like Repl.it. At scale, these platforms will make life start to feel like you're progressing through a game.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Name variant 'Repl.it' vs 'Replit'; needs review for canonical name.",
+      "facts": []
+    },
+    {
+      "episode_id": 1366,
+      "mention_text": "Minecraft",
+      "canonical_name": "Minecraft",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "A useful analogy here is Minecraft. Minecraft doesn't give you a finished solution or a prescribed path. It gives you a world, a set of primitives, and fast feedback.",
+      "context_snippet": "A useful analogy here is Minecraft. Minecraft doesn't give you a finished solution or a prescribed path. It gives you a world, a set of primitives, and fast feedback.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    }
+  ],
+  "new_type_candidates": [
+    {
+      "episode_id": 1366,
+      "proposed_type": "book",
+      "reason": "Capital in the 21st Century is a well-known book but 'book' is not in locked taxonomy; consider adding for future.",
+      "example_mention": "Capital in the 21st Century"
+    }
+  ],
+  "notes": [
+    "Some mentions like 'ChatsGBT' appear to be typos or mispronunciations of known entities like 'ChatGPT'.",
+    "Repl.it is likely the same as Replit, a software product; canonical name needs confirmation.",
+    "Capital in the 21st Century is a book but 'book' is not a locked entity type; marked for review.",
+    "Multiple sponsors and products mentioned with URLs included where available.",
+    "Ben Thompson and Dwarkesh Patel are persons central to the discussion and included accordingly.",
+    "Social media platform 'X' is used for some accounts and posts."
+  ]
+}

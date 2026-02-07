@@ -1,0 +1,219 @@
+{
+  "episode_id": 1344,
+  "publish_date": "2026-02-01",
+  "title": "OpenAI IPO? Grok-SpaceX Merger? The AI IPO Race Heats Up",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-IPO--Grok-SpaceX-Merger--The-AI-IPO-Race-Heats-Up-e3efme6",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1344-openai-ipo-grok-spacex-merger-the-ai-ipo-race-heats-up.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 8,
+  "mentions": [
+    {
+      "episode_id": 1344,
+      "mention_text": "OpenAI IPO",
+      "canonical_name": "OpenAI IPO",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-IPO--Grok-SpaceX-Merger--The-AI-IPO-Race-Heats-Up-e3efme6",
+      "quoted_text": null,
+      "context_snippet": "OpenAI has pushed up plans to go public and are now targeting the fourth quarter. They are reportedly taking informal meetings with investment banks and have hired a chief accounting officer and corporate business finance officer to handle investor relations and financial reporting.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "IPO timing",
+          "fact_value": "OpenAI targeting Q4 for IPO",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "IPO preparations",
+          "fact_value": "Hiring chief accounting officer and corporate business finance officer",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Genie 3",
+      "canonical_name": "Genie 3",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The model is fully available to the public, rolling out first to Gemini Ultra subscribers. It's still a research preview, but people can now start playing around and creating their own generated worlds for the first time.",
+      "context_snippet": "Google's Genie 3 world model is now publicly available to Gemini Ultra subscribers, capable of generating playable 3D worlds with navigation and character control.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model capability",
+          "fact_value": "Generates playable 3D worlds with navigation",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "availability",
+          "fact_value": "Available to Gemini Ultra subscribers as research preview",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Sora app",
+      "canonical_name": "Sora app",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "TechCrunch reports that the Sora app from OpenAI is struggling with churn and falling downloads, having dropped out of the top 100 free apps on iOS and Android in the US.",
+      "context_snippet": "OpenAI's Sora app had 3 million downloads in September and October, 3.2 million in November, but monthly downloads have dropped to 1.2 million in January and fallen out of top 100 free apps.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "downloads",
+          "fact_value": {
+            "September-October": 3000000,
+            "November": 3200000,
+            "January": 1200000
+          },
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "app store ranking",
+          "fact_value": "Fallen out of top 100 free apps on iOS and Android US stores",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Claude",
+      "canonical_name": "Claude",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic's Claude model is used extensively in national security missions and is part of ongoing discussions with the Department of War.",
+      "context_snippet": "Anthropic spokesperson stated Claude is used extensively in national security and that discussions continue with the Department of War about future work.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "usage",
+          "fact_value": "Extensive use in national security missions",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Chris on Twitter",
+      "canonical_name": "Chris",
+      "entity_type": "account",
+      "platform": "twitter",
+      "source_url": null,
+      "quoted_text": "The fact that the whole world isn't talking about Genie 3 right now is deeply concerning. This is going to hit the general public like a truck.",
+      "context_snippet": "Chris on Twitter expressed strong positive excitement about Genie 3's impact on the public and video game industry.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "opinion",
+          "fact_value": "Genie 3 will cause major disruption and impact video games",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Kyle Russell",
+      "canonical_name": "Kyle Russell",
+      "entity_type": "account",
+      "platform": "twitter",
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Kyle Russell agreed with Ethan Mollick's Generation of the World of Hamlet, highlighting world models' impact on video games.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "opinion",
+          "fact_value": "World models will hit video game industry like an atomic bomb",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "Swicks from Latent Space",
+      "canonical_name": "Swicks",
+      "entity_type": "account",
+      "platform": "twitter",
+      "source_url": null,
+      "quoted_text": "Genie 3 has flaws like clipping terrain and 60-second world limit, but is a real-time playable video world model.",
+      "context_snippet": "Swicks praised Genie 3's real-time video world model capabilities despite some flaws.",
+      "sentiment_label": "mixed",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model flaws",
+          "fact_value": "Terrain clipping, 60-second limit, static world except main character",
+          "confidence": 0.8
+        },
+        {
+          "fact_key": "model strengths",
+          "fact_value": "Real-time playable video world model with good instruction following",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1344,
+      "mention_text": "ASML",
+      "canonical_name": "ASML",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "ASML posted record quarterly orders and increased sales projections but plans to cut about 1,700 tech and IT jobs.",
+      "context_snippet": "ASML's growth despite job cuts exemplifies companies growing while downsizing.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": [
+        {
+          "fact_key": "job cuts",
+          "fact_value": 1700,
+          "confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Mentions focus on key companies, models, deals, and people central to AI race and IPO news.",
+    "Some mentions like 'OpenAI IPO' classified as 'other' due to lack of formal entity type.",
+    "Social media accounts included when quoting or central to claims.",
+    "URLs only included when explicitly known or provided.",
+    "Conservative approach taken to avoid over-tagging generic terms."
+  ]
+}

@@ -1,0 +1,226 @@
+{
+  "episode_id": 1359,
+  "publish_date": "2026-01-19",
+  "title": "How to Make ChatGPT Ads Not Suck",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Make-ChatGPT-Ads-Not-Suck-e3dt4fv",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1359-how-to-make-chatgpt-ads-not-suck.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 10,
+  "mentions": [
+    {
+      "episode_id": 1359,
+      "mention_text": "chat GPT",
+      "canonical_name": "ChatGPT",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "ads are, as they were always inevitably going to, coming to chat GPT.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.98,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "ads_coming_to_chatgpt",
+          "fact_value": true,
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1359,
+      "mention_text": "study",
+      "canonical_name": "study",
+      "entity_type": "report",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "chat GPT traffic converted at 16% as opposed to Google organics 1.76%, a 9x difference in the conversion rate.",
+      "context_snippet": "One study, for example, found that chat GPT traffic converted at 16% as opposed to Google organics 1.76%, a 9x difference in the conversion rate.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "Study source and details not specified",
+      "facts": [
+        {
+          "fact_key": "chatgpt_conversion_rate",
+          "fact_value": 0.16,
+          "confidence": 0.8
+        },
+        {
+          "fact_key": "google_organic_conversion_rate",
+          "fact_value": 0.0176,
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1359,
+      "mention_text": "Sora app",
+      "canonical_name": "Sora app",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "This reflects something that I said back when they launched the Sora app. To anyone watching the numbers, it has been completely inevitable that at some point chat GPT was going to have to be an ad-supported model.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "Sora_app_launch",
+          "fact_value": "OpenAI launched Sora app before ads in ChatGPT",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1359,
+      "mention_text": "You Can With AI podcast",
+      "canonical_name": "You Can With AI",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The challenge right now isn't just about what's possible, it's about what's practical. That's the entire focus of the You Can With AI podcast I host for KPMG.",
+      "context_snippet": "All right, let's talk about the signal versus the noise in enterprise AI. The challenge right now isn't just about what's possible, it's about what's practical. That's the entire focus of the You Can With AI podcast I host for KPMG.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "podcast_focus",
+          "fact_value": "focus on deployment and responsible scaling of AI",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1359,
+      "mention_text": "ZenFlow",
+      "canonical_name": "ZenFlow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://zenflow.free",
+      "quoted_text": "ZenFlow takes you from vibe coding to AI-first engineering. It's the first AI orchestration layer that brings discipline to the chaos. It transforms freeform prompting into spec-driven workflows and multi-agent verification, where agents actually cross-check each other to prevent drift.",
+      "context_snippet": "Enter ZenFlow. ZenFlow takes you from vibe coding to AI-first engineering. It's the first AI orchestration layer that brings discipline to the chaos.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_description",
+          "fact_value": "AI orchestration layer transforming prompting into workflows with multi-agent verification",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1359,
+      "mention_text": "AI Strategy Compass",
+      "canonical_name": "AI Strategy Compass",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://aidailybrief.ai/compass",
+      "quoted_text": "Our forthcoming AI Strategy Compass tool is ready to start to be tested. This is a power tool for anyone who is responsible for AI adoption or AI transformation inside their companies.",
+      "context_snippet": "Our forthcoming AI Strategy Compass tool is ready to start to be tested. This is a power tool for anyone who is responsible for AI adoption or AI transformation inside their companies.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "tool_purpose",
+          "fact_value": "tool for AI adoption and transformation management",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1359,
+      "mention_text": "Gemini",
+      "canonical_name": "Gemini",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "people are going to be like, this sucks, I'll just go to Gemini.",
+      "context_snippet": "Now they're going to have to launch ads and they're going to suck and people are going to be like, this sucks, I'll just go to Gemini.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1359,
+      "mention_text": "American Express Travel Concierge",
+      "canonical_name": "American Express Travel Concierge",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Some of the obvious examples that come to mind are the American Express Travel Concierge or the TurboTax tax prep assistant.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1359,
+      "mention_text": "TurboTax tax prep assistant",
+      "canonical_name": "TurboTax tax prep assistant",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Some of the obvious examples that come to mind are the American Express Travel Concierge or the TurboTax tax prep assistant.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1359,
+      "mention_text": "interviewcoach.ai",
+      "canonical_name": "interviewcoach.ai",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Here we have an example of interviewcoach.ai where the ad unit itself shows you that it's part of the AI founders grant program.",
+      "context_snippet": "Here we have an example of interviewcoach.ai where the ad unit itself shows you that it's part of the AI founders grant program.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "example_ad_unit",
+          "fact_value": "part of AI founders grant program",
+          "confidence": 0.85
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Many mentions are tweets or social posts but without explicit URLs, so source_url is null.",
+    "Some studies mentioned lack clear citation, marked needs_review true.",
+    "Focus was on meaningful references to products, organizations, people central to claims, and social posts with quoted text.",
+    "No media outlets mentioned by name except Business Insider correspondent as person.",
+    "No new entity types proposed as existing taxonomy suffices."
+  ]
+}

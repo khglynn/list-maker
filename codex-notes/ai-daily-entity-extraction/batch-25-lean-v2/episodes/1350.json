@@ -1,0 +1,161 @@
+{
+  "episode_id": 1350,
+  "publish_date": "2026-01-30",
+  "title": "Are Markets Still Worried About an AI Bubble?",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Are-Markets-Still-Worried-About-an-AI-Bubble-e3eco6e",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1350-are-markets-still-worried-about-an-ai-bubble.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 7,
+  "mentions": [
+    {
+      "episode_id": 1350,
+      "mention_text": "Clawd",
+      "canonical_name": "Clawd",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Clawd will also drive their Agent Builder, which allows users to create custom workflows and Vibecode apps.",
+      "context_snippet": "The multi-year deal includes making Clawd the default model across ServiceNow's platform. Clawd will also drive their Agent Builder, which allows users to create custom workflows and Vibecode apps.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "default_model_for_ServiceNow",
+          "fact_value": true,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Gemini",
+      "canonical_name": "Gemini",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Google first added Gemini to Chrome in September, but that iteration kept the AI sandboxed in its own window.",
+      "context_snippet": "Google first added Gemini to Chrome in September, but that iteration kept the AI sandboxed in its own window. With this update, Gemini will be able to use open tabs as context and function as a web agent.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "integration_in_Chrome",
+          "fact_value": true,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Optimus robots",
+      "canonical_name": "Optimus robots",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Tesla will repurpose production lines for Optimus robots and plans to use XAI models to power them.",
+      "context_snippet": "They announced that the Model 3 and Model X will be discontinued, with the production line repurposed for Optimus robots. ... plans to use XAI models to power the Optimus robots.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "Unclear if Optimus robots is a software product, hardware product, or other entity type.",
+      "facts": [
+        {
+          "fact_key": "production_line_repurposed",
+          "fact_value": true,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Rackspace AI Launchpad",
+      "canonical_name": "Rackspace AI Launchpad",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://rackspace.com/ai-launchpad",
+      "quoted_text": "Rackspace AI Launchpad is a fully managed service designed to help enterprises build, test, and scale AI workloads.",
+      "context_snippet": "That's where Rackspace AI Launchpad comes in. It's a fully managed service designed to help enterprises build, test, and scale AI workloads through a guided phased approach.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "service_type",
+          "fact_value": "managed AI infrastructure service",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "ZenFlow",
+      "canonical_name": "ZenFlow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://zenflow.free",
+      "quoted_text": "ZenFlow takes you from vibe coding to AI-first engineering. It's the first AI orchestration layer that brings discipline to the chaos.",
+      "context_snippet": "Enter ZenFlow. ZenFlow takes you from vibe coding to AI-first engineering. It's the first AI orchestration layer that brings discipline to the chaos.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_type",
+          "fact_value": "AI orchestration layer",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "Superintelligent",
+      "canonical_name": "Superintelligent",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Superintelligent is a platform that helps companies figure out how to use AI better by deploying voice agents and providing AI roadmaps.",
+      "context_snippet": "Today's episode is brought to you by Superintelligent. Superintelligent is a platform that very simply put is all about helping your company figure out how to use AI better.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1350,
+      "mention_text": "AI Strategy Compass",
+      "canonical_name": "AI Strategy Compass",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Our forthcoming AI Strategy Compass tool is ready to start to be tested. This is a power tool for anyone responsible for AI adoption or transformation.",
+      "context_snippet": "Our forthcoming AI Strategy Compass tool is ready to start to be tested. This is a power tool for anyone who is responsible for AI adoption or AI transformation inside their companies.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Some organization names like 'SK Hyings' appear to be transcription errors; likely 'SK Hynix'.",
+    "URLs for some reports and news articles are not provided; set to null per instructions.",
+    "Mentions of social posts on X (Twitter) included with quoted text and platform.",
+    "Meta's Ray-Bans AI glasses mentioned as a key product but not extracted as a separate entity due to generic product naming.",
+    "Focus was on meaningful entities central to claims, avoiding generic terms."
+  ]
+}

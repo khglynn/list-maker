@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 """
-Load one extracted entity batch from codex-notes artifacts into Neon ai_* tables.
-
-This script is for schema validation and review visibility in Database Studio.
-It does not alter SOP/TAL tables.
+Load extracted entity batch into lean AI Daily schema (ai_runs, ai_entities, ai_mentions).
 """
 
 from __future__ import annotations
@@ -19,6 +16,22 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
+
+
+VALID_ENTITY_TYPES = {
+    "software_product",
+    "model",
+    "benchmark",
+    "report",
+    "survey",
+    "paper",
+    "account",
+    "social_post",
+    "blog_post",
+    "organization",
+    "person",
+    "other",
+}
 
 
 def get_db_connection():
@@ -63,7 +76,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--prompt-version",
-        default="extract_entities_v1",
+        default="extract_entities_v2_lean",
         help="Prompt version label for run metadata",
     )
     return parser.parse_args()
@@ -91,10 +104,7 @@ def get_transcript_map(conn, episode_ids: list[int]) -> dict[int, int]:
             (episode_ids,),
         )
         rows = cur.fetchall()
-    result: dict[int, int] = {}
-    for row in rows:
-        result[int(row["episode_id"])] = int(row["id"])
-    return result
+    return {int(r["episode_id"]): int(r["id"]) for r in rows}
 
 
 def insert_run(
@@ -109,10 +119,12 @@ def insert_run(
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO ai_extraction_runs (
-              show_id, batch_name, run_type, provider, model, prompt_version, parameters, status, started_at, completed_at, created_at
+            INSERT INTO ai_runs (
+              show_id, batch_name, run_type, provider, model, prompt_version,
+              parameters, status, started_at, completed_at, created_at
             )
-            VALUES (%s, %s, 'entity_extraction', 'openai', %s, %s, %s::jsonb, 'completed', NOW(), NOW(), NOW())
+            VALUES (%s, %s, 'entity_extraction', 'openai', %s, %s, %s::jsonb,
+                    'completed', NOW(), NOW(), NOW())
             RETURNING id;
             """,
             (show_id, batch_name, model, prompt_version, json.dumps(parameters)),
@@ -122,19 +134,41 @@ def insert_run(
     return int(row["id"])
 
 
+def parse_aliases(raw: Any) -> list[str]:
+    if isinstance(raw, list):
+        values = [str(v).strip() for v in raw if str(v).strip()]
+    else:
+        values = []
+    deduped: list[str] = []
+    seen = set()
+    for v in values:
+        key = normalize_name(v)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(v)
+    return deduped
+
+
+def merge_aliases(existing: list[str], additions: list[str]) -> list[str]:
+    return parse_aliases([*existing, *additions])
+
+
 def upsert_entity(
     conn,
     *,
     entity_type: str,
     canonical_name: str,
     platform: str | None,
+    source_alias: str | None,
 ) -> int:
     normalized = normalize_name(canonical_name)
     platform_value = platform or ""
+
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id
+            SELECT id, canonical_name, aliases
             FROM ai_entities
             WHERE entity_type = %s
               AND normalized_name = %s
@@ -144,33 +178,76 @@ def upsert_entity(
             (entity_type, normalized, platform_value),
         )
         row = cur.fetchone()
+
         if row:
             entity_id = int(row["id"])
+            existing_aliases = parse_aliases(row["aliases"])
+            additions = [source_alias] if source_alias else []
+            if canonical_name != row["canonical_name"]:
+                additions.append(row["canonical_name"])
+            merged_aliases = merge_aliases(existing_aliases, additions)
             cur.execute(
                 """
                 UPDATE ai_entities
                 SET canonical_name = %s,
+                    aliases = %s::jsonb,
                     updated_at = NOW()
                 WHERE id = %s;
                 """,
-                (canonical_name, entity_id),
+                (canonical_name, json.dumps(merged_aliases), entity_id),
             )
             conn.commit()
             return entity_id
 
+        aliases = parse_aliases([source_alias] if source_alias else [])
         cur.execute(
             """
             INSERT INTO ai_entities (
-              entity_type, canonical_name, normalized_name, platform, created_at, updated_at
+              entity_type, canonical_name, normalized_name, platform,
+              aliases, attributes, review_status, created_at, updated_at
             )
-            VALUES (%s, %s, %s, %s, NOW(), NOW())
+            VALUES (%s, %s, %s, %s, %s::jsonb, '{}'::jsonb, 'auto', NOW(), NOW())
             RETURNING id;
             """,
-            (entity_type, canonical_name, normalized, platform if platform else None),
+            (entity_type, canonical_name, normalized, platform if platform else None, json.dumps(aliases)),
         )
-        new_row = cur.fetchone()
+        row = cur.fetchone()
     conn.commit()
-    return int(new_row["id"])
+    return int(row["id"])
+
+
+def parse_facts_json(raw: str) -> list[dict[str, Any]]:
+    raw = raw.strip()
+    if not raw:
+        return []
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
+    if isinstance(parsed, list):
+        return [x for x in parsed if isinstance(x, dict)]
+    return []
+
+
+def derive_tags(mention_type: str, platform: str | None, facts: list[dict[str, Any]]) -> dict[str, Any]:
+    tags: dict[str, Any] = {}
+    if platform:
+        tags["platform"] = platform.lower()
+    if mention_type == "account":
+        tags["is_account"] = True
+    if mention_type == "survey":
+        tags["is_survey"] = True
+
+    for fact in facts:
+        key = str(fact.get("fact_key", "")).strip().lower()
+        value = fact.get("fact_value")
+        if not key:
+            continue
+        if key in {"modality", "model_modality", "benchmark_domain", "domain", "category"}:
+            tags[key] = value
+        if key in {"contains_survey_questions", "has_survey_questions"}:
+            tags["contains_survey_questions"] = bool(value)
+    return tags
 
 
 def insert_mention(
@@ -180,137 +257,77 @@ def insert_mention(
     transcript_map: dict[int, int],
     row: dict[str, str],
     entity_id: int,
-) -> int:
+) -> None:
     episode_id = int(row["episode_id"])
     transcript_id = transcript_map.get(episode_id)
+    entity_type = row["entity_type"].strip().lower()
+    if entity_type not in VALID_ENTITY_TYPES:
+        entity_type = "other"
 
     confidence = float(row["confidence"]) if row["confidence"] else None
     is_editorial = row["is_editorial"].strip().lower() == "true"
     needs_review = row["needs_review"].strip().lower() == "true"
-    sentiment = row["sentiment_label"] or "unknown"
+    sentiment = (row["sentiment_label"] or "unknown").strip().lower() or "unknown"
     platform = row["platform"].strip() or None
     source_url = row["source_url"].strip() or None
     quoted_text = row["quoted_text"].strip() or None
     context_snippet = row["context_snippet"].strip()
     review_reason = row["review_reason"].strip() or None
+    facts = parse_facts_json(row.get("facts_json", ""))
+    tags = derive_tags(entity_type, platform, facts)
+
+    link_status = "missing"
+    link_confidence = None
+    if source_url:
+        link_status = "manual_verified"
+        link_confidence = 1.0
 
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO ai_entity_mentions (
-              episode_id, transcript_id, entity_id, run_id,
-              mention_text, mention_type, mention_count,
-              sentiment_label, confidence, needs_review, review_reason,
-              is_editorial, context_snippet, quoted_text, source_url, platform, metadata, created_at
+            INSERT INTO ai_mentions (
+              run_id, episode_id, transcript_id, entity_id,
+              mention_text, canonical_name, mention_type, mention_count, platform,
+              context_snippet, quoted_text, source_url,
+              link_status, link_confidence, link_candidates,
+              sentiment_label, confidence, is_editorial,
+              needs_review, review_reason, review_status,
+              facts, tags, created_at, updated_at
             )
             VALUES (
               %s, %s, %s, %s,
-              %s, %s, 1,
-              %s, %s, %s, %s,
-              %s, %s, %s, %s, %s, '{}'::jsonb, NOW()
-            )
-            RETURNING id;
+              %s, %s, %s, 1, %s,
+              %s, %s, %s,
+              %s, %s, '[]'::jsonb,
+              %s, %s, %s,
+              %s, %s, 'open',
+              %s::jsonb, %s::jsonb, NOW(), NOW()
+            );
             """,
             (
+                run_id,
                 episode_id,
                 transcript_id,
                 entity_id,
-                run_id,
                 row["mention_text"],
-                row["entity_type"],
-                sentiment,
-                confidence,
-                needs_review,
-                review_reason,
-                is_editorial,
+                row["canonical_name"],
+                entity_type,
+                platform,
                 context_snippet,
                 quoted_text,
                 source_url,
-                platform,
+                link_status,
+                link_confidence,
+                sentiment,
+                confidence,
+                is_editorial,
+                needs_review,
+                review_reason,
+                json.dumps(facts),
+                json.dumps(tags),
             ),
         )
-        mention_row = cur.fetchone()
     conn.commit()
-    return int(mention_row["id"])
-
-
-def insert_review_queue_if_needed(conn, mention_id: int, row: dict[str, str]) -> None:
-    needs_review = row["needs_review"].strip().lower() == "true"
-    if not needs_review:
-        return
-    issue_type = row["review_reason"].strip() or "needs_review"
-    issue_type = re.sub(r"\s+", "_", issue_type.lower())
-    issue_type = re.sub(r"[^a-z0-9_]+", "", issue_type)
-    issue_type = issue_type[:64] if issue_type else "needs_review"
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO ai_mention_review_queue (
-              mention_id, issue_type, status, created_at
-            )
-            VALUES (%s, %s, 'open', NOW());
-            """,
-            (mention_id, issue_type),
-        )
-    conn.commit()
-
-
-def parse_facts_json(raw: str) -> list[dict[str, Any]]:
-    raw = raw.strip()
-    if not raw:
-        return []
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        return []
-    if isinstance(data, list):
-        return [x for x in data if isinstance(x, dict)]
-    return []
-
-
-def insert_facts(
-    conn,
-    *,
-    run_id: int,
-    episode_id: int,
-    entity_id: int,
-    mention_id: int,
-    facts: list[dict[str, Any]],
-) -> int:
-    inserted = 0
-    with conn.cursor() as cur:
-        for fact in facts:
-            key = str(fact.get("fact_key", "")).strip()
-            if not key:
-                continue
-            value = fact.get("fact_value")
-            confidence = fact.get("confidence")
-            try:
-                confidence = float(confidence) if confidence is not None else None
-            except (TypeError, ValueError):
-                confidence = None
-
-            cur.execute(
-                """
-                INSERT INTO ai_entity_facts (
-                  entity_id, fact_key, fact_value, confidence,
-                  source_episode_id, source_mention_id, run_id, created_at
-                )
-                VALUES (%s, %s, %s::jsonb, %s, %s, %s, %s, NOW());
-                """,
-                (
-                    entity_id,
-                    key,
-                    json.dumps(value),
-                    confidence,
-                    episode_id,
-                    mention_id,
-                    run_id,
-                ),
-            )
-            inserted += 1
-    conn.commit()
-    return inserted
 
 
 def main() -> None:
@@ -356,15 +373,18 @@ def main() -> None:
         )
 
         mention_inserted = 0
-        fact_inserted = 0
-        review_inserted = 0
+        review_open = 0
         entity_cache: dict[tuple[str, str, str], int] = {}
 
         for row in rows:
-            entity_type = row["entity_type"].strip()
+            entity_type = row["entity_type"].strip().lower()
+            if entity_type not in VALID_ENTITY_TYPES:
+                entity_type = "other"
             canonical_name = row["canonical_name"].strip()
+            mention_text = row["mention_text"].strip()
             platform = row["platform"].strip() or None
             key = (entity_type, normalize_name(canonical_name), platform or "")
+
             entity_id = entity_cache.get(key)
             if entity_id is None:
                 entity_id = upsert_entity(
@@ -372,10 +392,11 @@ def main() -> None:
                     entity_type=entity_type,
                     canonical_name=canonical_name,
                     platform=platform,
+                    source_alias=mention_text if mention_text != canonical_name else None,
                 )
                 entity_cache[key] = entity_id
 
-            mention_id = insert_mention(
+            insert_mention(
                 conn,
                 run_id=run_id,
                 transcript_map=transcript_map,
@@ -383,29 +404,15 @@ def main() -> None:
                 entity_id=entity_id,
             )
             mention_inserted += 1
-
             if row["needs_review"].strip().lower() == "true":
-                insert_review_queue_if_needed(conn, mention_id, row)
-                review_inserted += 1
-
-            facts = parse_facts_json(row.get("facts_json", ""))
-            if facts:
-                fact_inserted += insert_facts(
-                    conn,
-                    run_id=run_id,
-                    episode_id=int(row["episode_id"]),
-                    entity_id=entity_id,
-                    mention_id=mention_id,
-                    facts=facts,
-                )
+                review_open += 1
 
         print(f"Loaded batch: {batch_name}")
         print(f"Run ID: {run_id}")
         print(f"Episodes: {len(episode_ids)}")
         print(f"Entities upserted/used: {len(entity_cache)}")
         print(f"Mentions inserted: {mention_inserted}")
-        print(f"Facts inserted: {fact_inserted}")
-        print(f"Review queue rows inserted: {review_inserted}")
+        print(f"Mentions needing review: {review_open}")
     finally:
         conn.close()
 

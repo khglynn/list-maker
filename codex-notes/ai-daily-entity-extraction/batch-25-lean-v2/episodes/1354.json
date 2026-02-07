@@ -1,0 +1,255 @@
+{
+  "episode_id": 1354,
+  "publish_date": "2026-01-25",
+  "title": "Skills for the Code AGI Era",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Skills-for-the-Code-AGI-Era-e3e4skk",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1354-skills-for-the-code-agi-era.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 11,
+  "mentions": [
+    {
+      "episode_id": 1354,
+      "mention_text": "Gemini 3",
+      "canonical_name": "Gemini 3",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "the set of models that were released at the end of last year, Gemini 3, GPT 5.2, and especially Opus 4.5",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "model",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "GPT 5.2",
+      "canonical_name": "GPT 5.2",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "the set of models that were released at the end of last year, Gemini 3, GPT 5.2, and especially Opus 4.5",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "model",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Opus 4.5",
+      "canonical_name": "Opus 4.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Cloud Code with Opus 4.5 is a watershed moment, moving software creation from an artisanal, craftsman activity to a true industrial process.",
+      "context_snippet": "the set of models that were released at the end of last year, Gemini 3, GPT 5.2, and especially Opus 4.5, in combination with tools like Cloud Code",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.98,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "significance",
+          "fact_value": "Watershed moment moving software creation to industrial process",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Cloud Code",
+      "canonical_name": "Cloud Code",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Cloud Code with Opus 4.5 is a watershed moment, moving software creation from an artisanal, craftsman activity to a true industrial process.",
+      "context_snippet": "in combination with tools like Cloud Code and the vibe coding platforms like Repl.it and Lovable",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "function",
+          "fact_value": "AI coding tool/platform",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Repl.it",
+      "canonical_name": "Replit",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "tools like Cloud Code and the vibe coding platforms like Repl.it and Lovable",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Spelling variant 'Repl.it' vs 'Replit' needs confirmation",
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "software_product",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Lovable",
+      "canonical_name": "Lovable",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "tools like Cloud Code and the vibe coding platforms like Repl.it and Lovable",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Unclear if 'Lovable' is a software product or other entity",
+      "facts": []
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Cloud Code Hits Different",
+      "canonical_name": "Cloud Code Hits Different",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "he wrote an essay called Cloud Code Hits Different",
+      "context_snippet": "Nathan Lambert. A couple of weeks ago, he wrote an essay called Cloud Code Hits Different.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "essay",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Sergey Karayev",
+      "canonical_name": "Sergey Karayev",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Sergey tweeted, Cloud Code with Opus 4.5 is a watershed moment, moving software creation from an artisanal, craftsman activity to a true industrial process.",
+      "context_snippet": "He points to a tweet from Sergey Karayev that in his estimation captures the shift.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": [
+        {
+          "fact_key": "tweet_content",
+          "fact_value": "Cloud Code with Opus 4.5 is a watershed moment, moving software creation from an artisanal, craftsman activity to a true industrial process.",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Get Good at Agents",
+      "canonical_name": "Get Good at Agents",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "his most recent, which he called Get Good at Agents",
+      "context_snippet": "we're going to do with the rest of this episode is read Nathan's latest essay, Get Good at Agents",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "essay",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "Claude Cote",
+      "canonical_name": "Claude Cote",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Claude Cote is taking the AI world by storm",
+      "context_snippet": "Two weeks ago I wrote a review of how Claude Cote is taking the AI world by storm",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "model",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1354,
+      "mention_text": "ZenFlow",
+      "canonical_name": "ZenFlow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://zenflow.free",
+      "quoted_text": "ZenFlow takes you from vibe coding to AI-first engineering. It\u2019s the first AI orchestration layer that brings discipline to the chaos.",
+      "context_snippet": "Enter ZenFlow. ZenFlow takes you from vibe coding to AI-first engineering. It\u2019s the first AI orchestration layer that brings discipline to the chaos.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "function",
+          "fact_value": "AI orchestration layer for multi-agent workflows",
+          "confidence": 0.95
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Repl.it mention likely refers to Replit software product but spelling variant noted.",
+    "Lovable mention is unclear if software product or other entity; needs review.",
+    "No URLs were provided for most models and essays; source_url set to null accordingly.",
+    "Mentions of 'Ralph Wiggum' as AI strategy were not included as it is unclear if a person or concept; needs review if relevant.",
+    "Mentions of general concepts like 'agent-manager' and 'enterprise-operator' were not included as they are not entities per taxonomy."
+  ]
+}

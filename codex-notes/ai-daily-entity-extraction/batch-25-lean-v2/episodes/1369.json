@@ -1,0 +1,189 @@
+{
+  "episode_id": 1369,
+  "publish_date": "2026-01-09",
+  "title": "How People Are Using AI for Health",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/How-People-Are-Using-AI-for-Health-e3dcvau",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1369-how-people-are-using-ai-for-health.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 6,
+  "mentions": [
+    {
+      "episode_id": 1369,
+      "mention_text": "LM Arena",
+      "canonical_name": "LM Arena",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "LM Arena has raised $150 million at a $1.7 billion valuation. This is the second venture round for the model benchmarking company since they decided to become a commercial startup.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "fundraising_amount",
+          "fact_value": 150000000,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "valuation",
+          "fact_value": 1700000000,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "business_type",
+          "fact_value": "model benchmarking platform",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1369,
+      "mention_text": "AI Evaluations",
+      "canonical_name": "AI Evaluations",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "In September, LM Arena launched their first commercial service called AI Evaluations, which allows enterprises, AI labs, and developers to hire LM Arena to perform bespoke evaluations using their community of users.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "service_provider",
+          "fact_value": "LM Arena",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "service_type",
+          "fact_value": "bespoke AI model evaluations",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1369,
+      "mention_text": "AI Strategy Compass",
+      "canonical_name": "AI Strategy Compass",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://aidailybrief.ai/compass",
+      "quoted_text": "AI Strategy Compass is a power tool for anyone who is responsible for AI adoption or AI transformation inside their companies.",
+      "context_snippet": "There is a new option called AI Strategy Compass, join the beta. ... It's going to allow you to do a lot of the things that we do at Superintelligent, but in a much more automated, self-managed way.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1369,
+      "mention_text": "ChatGPT Health",
+      "canonical_name": "ChatGPT Health",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "ChatGPT has introduced ChatGPT Health, ... a dedicated health experience inside the application.",
+      "context_snippet": "ChatGPT has introduced ChatGPT Health, and this is both surprising and not surprising all at once. ... It is a dedicated health experience inside the application.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "feature",
+          "fact_value": "dedicated health experience inside ChatGPT app",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "collaboration_physicians",
+          "fact_value": 260,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "physician_feedback_count",
+          "fact_value": 600000,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1369,
+      "mention_text": "AI as a Healthcare Ally",
+      "canonical_name": "AI as a Healthcare Ally",
+      "entity_type": "report",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "OpenAI released a report called AI as a Healthcare Ally, how Americans are navigating the system with ChatGPT.",
+      "context_snippet": "Earlier in the week, OpenAI released a report called AI as a Healthcare Ally, how Americans are navigating the system with ChatGPT.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "weekly_active_users_healthcare_prompts",
+          "fact_value": 40000000,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "percent_chatgpt_messages_about_healthcare",
+          "fact_value": 5,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "percent_users_using_for_symptoms",
+          "fact_value": 65,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "percent_users_using_for_anytime_questions",
+          "fact_value": 52,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "percent_users_using_for_medical_terms",
+          "fact_value": 48,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "percent_users_using_for_treatment_options",
+          "fact_value": 44,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1369,
+      "mention_text": "What AI Can Do for a Broken System",
+      "canonical_name": "What AI Can Do for a Broken System",
+      "entity_type": "blog_post",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "She expanded on this in a larger blog post called What AI Can Do for a Broken System.",
+      "context_snippet": "OpenAI's CEO of Applications Fiji Simo wrote, The launch of ChatGPT Health is really personal for me. She expanded on this in a larger blog post called What AI Can Do for a Broken System.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Mentions include organizations, software products, persons, reports, and blog posts central to the episode's claims.",
+    "URLs are included only when explicitly mentioned or clearly inferable from context.",
+    "Sentiment labels are based on the tone of the mention in context.",
+    "No invented URLs were created; source_url is null when unknown.",
+    "Conservative approach taken to avoid over-inclusion."
+  ]
+}

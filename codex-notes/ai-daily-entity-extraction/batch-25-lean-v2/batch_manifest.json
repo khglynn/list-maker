@@ -1,0 +1,902 @@
+{
+  "batch_name": "batch-25-lean-v2",
+  "generated_at_utc": "2026-02-07T03:53:58.183262+00:00",
+  "model": "gpt-4.1-mini",
+  "input": {
+    "episodes_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/2026-02-06-ai-daily-25-episodes.csv",
+    "transcripts_dir": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts",
+    "limit": 25,
+    "offset": 0,
+    "explicit_ids": [],
+    "max_chars": 50000,
+    "confidence_review_threshold": 0.78,
+    "focus_core_types": true,
+    "include_non_editorial": false
+  },
+  "episodes": [
+    {
+      "episode_id": 1339,
+      "publish_date": "2026-02-05",
+      "title": "The Dawn of the Agent Age",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-Dawn-of-the-Agent-Age-e3eldab",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1339-the-dawn-of-the-agent-age.txt",
+      "mention_count": 23,
+      "review_count": 9
+    },
+    {
+      "episode_id": 1342,
+      "publish_date": "2026-02-03",
+      "title": "The AI Race Just Got a SpaceX-Sized Twist",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Race-Just-Got-a-SpaceX-Sized-Twist-e3ejn0u",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1342-the-ai-race-just-got-a-spacex-sized-twist.txt",
+      "mention_count": 17,
+      "review_count": 2
+    },
+    {
+      "episode_id": 1343,
+      "publish_date": "2026-02-02",
+      "title": "Why Moltbook Matters",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Moltbook-Matters-e3ei1kq",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1343-why-moltbook-matters.txt",
+      "mention_count": 7,
+      "review_count": 2
+    },
+    {
+      "episode_id": 1344,
+      "publish_date": "2026-02-01",
+      "title": "OpenAI IPO? Grok-SpaceX Merger? The AI IPO Race Heats Up",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-IPO--Grok-SpaceX-Merger--The-AI-IPO-Race-Heats-Up-e3efme6",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1344-openai-ipo-grok-spacex-merger-the-ai-ipo-race-heats-up.txt",
+      "mention_count": 8,
+      "review_count": 1
+    },
+    {
+      "episode_id": 1349,
+      "publish_date": "2026-01-31",
+      "title": "100,000 AI Agents Joined Their Own Social Network Today. It's Called Moltbook.",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/100-000-AI-Agents-Joined-Their-Own-Social-Network-Today--Its-Called-Moltbook-e3ee5ue",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1349-100-000-ai-agents-joined-their-own-social-network-today-it-s-called-moltbook.txt",
+      "mention_count": 15,
+      "review_count": 4
+    },
+    {
+      "episode_id": 1350,
+      "publish_date": "2026-01-30",
+      "title": "Are Markets Still Worried About an AI Bubble?",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Are-Markets-Still-Worried-About-an-AI-Bubble-e3eco6e",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1350-are-markets-still-worried-about-an-ai-bubble.txt",
+      "mention_count": 7,
+      "review_count": 1
+    },
+    {
+      "episode_id": 1352,
+      "publish_date": "2026-01-28",
+      "title": "The AI Acceleration Gap",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Acceleration-Gap-e3e9nf7",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1352-the-ai-acceleration-gap.txt",
+      "mention_count": 10,
+      "review_count": 4
+    },
+    {
+      "episode_id": 1351,
+      "publish_date": "2026-01-28",
+      "title": "Are Agent Swarms the Next AI Paradigm?",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Are-Agent-Swarms-the-Next-AI-Paradigm-e3eb0mb",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1351-are-agent-swarms-the-next-ai-paradigm.txt",
+      "mention_count": 13,
+      "review_count": 3
+    },
+    {
+      "episode_id": 1353,
+      "publish_date": "2026-01-26",
+      "title": "Ralph Wiggum, Clawdbot, and Mac Minis: How Pros Are Vibe Coding in 2026",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Ralph-Wiggum--Clawdbot--and-Mac-Minis-How-Pros-Are-Vibe-Coding-in-2026-e3e5ior",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1353-ralph-wiggum-clawdbot-and-mac-minis-how-pros-are-vibe-coding-in-2026.txt",
+      "mention_count": 19,
+      "review_count": 8
+    },
+    {
+      "episode_id": 1354,
+      "publish_date": "2026-01-25",
+      "title": "Skills for the Code AGI Era",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Skills-for-the-Code-AGI-Era-e3e4skk",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1354-skills-for-the-code-agi-era.txt",
+      "mention_count": 11,
+      "review_count": 3
+    },
+    {
+      "episode_id": 1355,
+      "publish_date": "2026-01-24",
+      "title": "Who Will Adapt Best to AI Disruption?",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Who-Will-Adapt-Best-to-AI-Disruption-e3e3p6q",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1355-who-will-adapt-best-to-ai-disruption.txt",
+      "mention_count": 4,
+      "review_count": 1
+    },
+    {
+      "episode_id": 1357,
+      "publish_date": "2026-01-22",
+      "title": "AGI Timelines Shift Forward",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/AGI-Timelines-Shift-Forward-e3e0o7c",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1357-agi-timelines-shift-forward.txt",
+      "mention_count": 7,
+      "review_count": 1
+    },
+    {
+      "episode_id": 1356,
+      "publish_date": "2026-01-22",
+      "title": "The 3x Payoff of Deep AI Integration",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-3x-Payoff-of-Deep-AI-Integration-e3e24qb",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1356-the-3x-payoff-of-deep-ai-integration.txt",
+      "mention_count": 10,
+      "review_count": 5
+    },
+    {
+      "episode_id": 1358,
+      "publish_date": "2026-01-21",
+      "title": "The AI Capabilities Overhang",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Capabilities-Overhang-e3dv7r0",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1358-the-ai-capabilities-overhang.txt",
+      "mention_count": 5,
+      "review_count": 4
+    },
+    {
+      "episode_id": 1359,
+      "publish_date": "2026-01-19",
+      "title": "How to Make ChatGPT Ads Not Suck",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Make-ChatGPT-Ads-Not-Suck-e3dt4fv",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1359-how-to-make-chatgpt-ads-not-suck.txt",
+      "mention_count": 10,
+      "review_count": 1
+    },
+    {
+      "episode_id": 1360,
+      "publish_date": "2026-01-18",
+      "title": "Code AGI is Functional AGI (And It's Here)",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Code-AGI-is-Functional-AGI-And-Its-Here-e3dqp2s",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1360-code-agi-is-functional-agi-and-it-s-here.txt",
+      "mention_count": 10,
+      "review_count": 1
+    },
+    {
+      "episode_id": 1361,
+      "publish_date": "2026-01-17",
+      "title": "Why CEOs Need to Lead AI Strategy",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Why-CEOs-Need-to-Lead-AI-Strategy-e3dp5gj",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1361-why-ceos-need-to-lead-ai-strategy.txt",
+      "mention_count": 8,
+      "review_count": 1
+    },
+    {
+      "episode_id": 1363,
+      "publish_date": "2026-01-15",
+      "title": "ChatGPT 5.5 Coming Soon?",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-5-5-Coming-Soon-e3dlva0",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1363-chatgpt-5-5-coming-soon.txt",
+      "mention_count": 20,
+      "review_count": 7
+    },
+    {
+      "episode_id": 1362,
+      "publish_date": "2026-01-15",
+      "title": "AI's Battle for Your Context",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/AIs-Battle-for-Your-Context-e3dnhmr",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1362-ai-s-battle-for-your-context.txt",
+      "mention_count": 20,
+      "review_count": 4
+    },
+    {
+      "episode_id": 1365,
+      "publish_date": "2026-01-13",
+      "title": "Google to Officially Power Apple AI Siri",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Google-to-Officially-Power-Apple-AI-Siri-e3dieoe",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1365-google-to-officially-power-apple-ai-siri.txt",
+      "mention_count": 6,
+      "review_count": 0
+    },
+    {
+      "episode_id": 1364,
+      "publish_date": "2026-01-13",
+      "title": "Claude Cowork Is Claude Code for Everyone Else",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Claude-Cowork-Is-Claude-Code-for-Everyone-Else-e3dk53n",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1364-claude-cowork-is-claude-code-for-everyone-else.txt",
+      "mention_count": 11,
+      "review_count": 1
+    },
+    {
+      "episode_id": 1366,
+      "publish_date": "2026-01-11",
+      "title": "Does Work Still Matter in the Age of AI?",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Does-Work-Still-Matter-in-the-Age-of-AI-e3dgbkg",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1366-does-work-still-matter-in-the-age-of-ai.txt",
+      "mention_count": 15,
+      "review_count": 4
+    },
+    {
+      "episode_id": 1368,
+      "publish_date": "2026-01-10",
+      "title": "What Happens When AI Obliterates Your Business Model?",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/What-Happens-When-AI-Obliterates-Your-Business-Model-e3debhm",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1368-what-happens-when-ai-obliterates-your-business-model.txt",
+      "mention_count": 14,
+      "review_count": 1
+    },
+    {
+      "episode_id": 1367,
+      "publish_date": "2026-01-10",
+      "title": "Building a Personal AI Model Map [AI Operators Bonus Episode]",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Building-a-Personal-AI-Model-Map-AI-Operators-Bonus-Episode-e3df457",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1367-building-a-personal-ai-model-map-ai-operators-bonus-episode.txt",
+      "mention_count": 14,
+      "review_count": 0
+    },
+    {
+      "episode_id": 1369,
+      "publish_date": "2026-01-09",
+      "title": "How People Are Using AI for Health",
+      "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/How-People-Are-Using-AI-for-Health-e3dcvau",
+      "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1369-how-people-are-using-ai-for-health.txt",
+      "mention_count": 6,
+      "review_count": 0
+    }
+  ],
+  "summary": {
+    "mention_count": 290,
+    "review_count": 68,
+    "counts_by_type": {
+      "software_product": 129,
+      "model": 71,
+      "other": 39,
+      "survey": 8,
+      "account": 23,
+      "report": 4,
+      "paper": 9,
+      "benchmark": 4,
+      "blog_post": 2,
+      "social_post": 1
+    },
+    "top_entities": [
+      {
+        "entity_type": "software_product",
+        "canonical_name": "ChatGPT",
+        "mention_count": 9
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Gemini",
+        "mention_count": 8
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "ZenFlow",
+        "mention_count": 8
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Opus 4.5",
+        "mention_count": 6
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Cloud Code",
+        "mention_count": 6
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "You Can With AI",
+        "mention_count": 5
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "AI Strategy Compass",
+        "mention_count": 5
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "OpenClaw",
+        "mention_count": 4
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Claude Code",
+        "mention_count": 4
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Grok",
+        "mention_count": 4
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "GPT 5.2",
+        "mention_count": 4
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Multbook",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Claude",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "GPT-5",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Replit",
+        "mention_count": 3
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Cloud Cowork",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "other",
+        "canonical_name": "You Can With AI podcast",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Cursor",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Conductor",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Sora app",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Claudbot",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Rackspace AI Launchpad",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Superintelligent",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "GPT-5.2",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Gemini 3",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Lovable",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Gemini",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Siri",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "GitHub Copilot",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Nano Banana Pro",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "ChatGPT Health",
+        "mention_count": 2
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Xcode",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Clawed Code",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Kuen",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Kimi K25",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Grok platform",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Sonnet 5",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "GPT 5.2 Codex",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "survey",
+        "canonical_name": "AI Daily Brief",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "George Castillo",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Dan Schipper",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Matt Silve",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Fabio Seychas",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Anand Iyer",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "account",
+        "canonical_name": "Sigi Chen",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Codex app",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Grok Imagine 1.0",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "model",
+        "canonical_name": "Sonnet 3.5",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Codex Monitor",
+        "mention_count": 1
+      },
+      {
+        "entity_type": "software_product",
+        "canonical_name": "Antigravity's Inbox",
+        "mention_count": 1
+      }
+    ],
+    "facts_by_key": {
+      "feature_update": 1,
+      "outage": 1,
+      "functionality": 7,
+      "user_growth": 1,
+      "description": 8,
+      "growth": 1,
+      "usage": 5,
+      "model_origin": 1,
+      "model_features": 1,
+      "ownership": 1,
+      "advertising": 1,
+      "advertising_policy": 1,
+      "rumor": 3,
+      "model_capability": 2,
+      "product": 2,
+      "self_build": 1,
+      "features": 2,
+      "platform": 2,
+      "market_position": 1,
+      "model_association": 1,
+      "developer_focus": 1,
+      "type": 13,
+      "user_count": 2,
+      "previous_names": 1,
+      "tweeted_term": 1,
+      "IPO timing": 1,
+      "IPO preparations": 1,
+      "model capability": 1,
+      "availability": 5,
+      "downloads": 1,
+      "app store ranking": 1,
+      "opinion": 2,
+      "model flaws": 1,
+      "model strengths": 1,
+      "job cuts": 1,
+      "popularity": 2,
+      "name_change": 2,
+      "purpose": 2,
+      "community_count": 1,
+      "post_count": 1,
+      "model_switching": 1,
+      "use": 1,
+      "topic": 1,
+      "default_model_for_ServiceNow": 1,
+      "integration_in_Chrome": 1,
+      "production_line_repurposed": 1,
+      "service_type": 2,
+      "product_type": 5,
+      "writing_quality": 1,
+      "future_improvements": 1,
+      "release_timing": 1,
+      "performance_claim": 1,
+      "manufacturing_process": 3,
+      "role": 3,
+      "user_experience": 1,
+      "training_goal": 1,
+      "training_format": 1,
+      "benchmark_improvements": 1,
+      "feature": 7,
+      "performance_improvement": 1,
+      "benchmark_score_Humanity_exam": 1,
+      "benchmark_ranking": 1,
+      "cost_comparison": 1,
+      "multimodality": 1,
+      "business_growth": 1,
+      "product_function": 1,
+      "project": 1,
+      "concept": 1,
+      "RALF_definition": 1,
+      "capabilities": 1,
+      "significance": 1,
+      "function": 4,
+      "tweet_content": 1,
+      "definition": 4,
+      "ads_plans": 2,
+      "ads_feature": 1,
+      "product_update": 1,
+      "integration": 3,
+      "model": 1,
+      "model_type": 4,
+      "capability": 4,
+      "legislation": 1,
+      "chip_ban": 1,
+      "export_ban_duration": 1,
+      "survey_sample_size": 1,
+      "financial_benefit_positive_percent": 1,
+      "no_financial_benefit_percent": 1,
+      "time_lost_to_rework_percent": 1,
+      "employee_proficiency_percent": 1,
+      "novice_or_experimenter_percent": 1,
+      "article_title": 1,
+      "ai_usage_percentage_2025": 1,
+      "ai_usage_percentage_2024": 1,
+      "ai_usage_percentage_2023": 1,
+      "countries_polled": 1,
+      "sample_size_per_country": 1,
+      "us_ai_usage_percentage": 1,
+      "us_ai_optimism_percentage": 1,
+      "power_capacity_gigawatts": 1,
+      "gpu_count": 1,
+      "gpu_type": 1,
+      "construction_start": 1,
+      "expected_power_capacity_gigawatts": 1,
+      "expected_online_date": 2,
+      "damages_sought_usd": 1,
+      "openai_valuation_usd": 1,
+      "seed_funding_usd": 1,
+      "trial_date": 1,
+      "ads_coming_to_chatgpt": 1,
+      "chatgpt_conversion_rate": 1,
+      "google_organic_conversion_rate": 1,
+      "Sora_app_launch": 1,
+      "podcast_focus": 1,
+      "product_description": 3,
+      "tool_purpose": 1,
+      "example_ad_unit": 1,
+      "launch_year": 1,
+      "release_date": 4,
+      "domain": 2,
+      "use_case": 1,
+      "technology": 1,
+      "proof_of_concept": 1,
+      "issues": 1,
+      "performance": 2,
+      "reputation": 1,
+      "partnership": 1,
+      "codename": 1,
+      "valuation_trillion": 1,
+      "year": 2,
+      "valuation_billion": 1,
+      "stock_drop_percent_after_week": 1,
+      "months_to_trade_above_ipo_price": 1,
+      "performance_advantage_percent": 1,
+      "acquired_by": 1,
+      "used_by_apple": 1,
+      "multimodality_lead": 1,
+      "AI_upgrade": 1,
+      "healthcare_tools": 1,
+      "upcoming_upgrade": 1,
+      "access_restriction": 1,
+      "user_base": 1,
+      "developer": 1,
+      "release_status": 1,
+      "authors": 1,
+      "author": 6,
+      "publication_year": 1,
+      "website": 1,
+      "feature_migration": 1,
+      "product_demand": 1,
+      "product_replacement": 1,
+      "survey": 1,
+      "usage_growth": 2,
+      "feature_description": 2,
+      "usage_decline": 1,
+      "business_impact": 1,
+      "podcast_description": 1,
+      "alternative_platform": 2,
+      "model_provider": 1,
+      "example_model": 2,
+      "example_tool": 3,
+      "fundraising_amount": 1,
+      "valuation": 1,
+      "business_type": 1,
+      "service_provider": 1,
+      "collaboration_physicians": 1,
+      "physician_feedback_count": 1,
+      "weekly_active_users_healthcare_prompts": 1,
+      "percent_chatgpt_messages_about_healthcare": 1,
+      "percent_users_using_for_symptoms": 1,
+      "percent_users_using_for_anytime_questions": 1,
+      "percent_users_using_for_medical_terms": 1,
+      "percent_users_using_for_treatment_options": 1
+    }
+  },
+  "new_type_candidates": [
+    {
+      "episode_id": 1343,
+      "proposed_type": "podcast",
+      "reason": "Mention of 'You Can With AI' podcast which is a media series but not a software product or model",
+      "example_mention": "You Can With AI"
+    },
+    {
+      "episode_id": 1349,
+      "proposed_type": "token",
+      "reason": "MULT token is a cryptocurrency token used within the AI agent social network context",
+      "example_mention": "MULT token on Coinbase's base blockchain"
+    },
+    {
+      "episode_id": 1352,
+      "proposed_type": "hardware",
+      "reason": "Mentions of chips and silicon such as Microsoft Maya 200, Google TPUs, Nvidia Blackwell chips do not fit existing locked types but are important for AI context.",
+      "example_mention": "Microsoft has unveiled the second generation of their in-house AI chip, called the Maya 200."
+    },
+    {
+      "episode_id": 1352,
+      "proposed_type": "nft_marketplace",
+      "reason": "Mention of Rare Candy NFT marketplace as a cultural reference related to AI hype and social discourse.",
+      "example_mention": "Rare Candy NFT marketplace that said, A lot of y'all still don't get it."
+    },
+    {
+      "episode_id": 1351,
+      "proposed_type": "podcast",
+      "reason": "Mention of 'You Can With AI' podcast which is a media product but podcast is not in locked taxonomy",
+      "example_mention": "You Can With AI from KPMG"
+    },
+    {
+      "episode_id": 1355,
+      "proposed_type": "program",
+      "reason": "The 'OpenAI Education for Countries program' is a named initiative but does not fit existing locked types; a 'program' type could better classify such initiatives.",
+      "example_mention": "OpenAI Education for Countries program"
+    },
+    {
+      "episode_id": 1361,
+      "proposed_type": "podcast",
+      "reason": "Mention of 'You Can With AI' podcast hosted by the speaker, which is a media format not covered by locked taxonomy",
+      "example_mention": "You Can With AI from KPMG"
+    },
+    {
+      "episode_id": 1363,
+      "proposed_type": "podcast",
+      "reason": "Mention of another podcast 'You Can With AI' which is a media product but not in locked taxonomy",
+      "example_mention": "You Can With AI from KPMG"
+    },
+    {
+      "episode_id": 1362,
+      "proposed_type": "protocol",
+      "reason": "The mention 'model context protocol' appears to be a technical protocol related to AI models and connectors, not fitting existing locked types well.",
+      "example_mention": "model context protocol"
+    },
+    {
+      "episode_id": 1364,
+      "proposed_type": "event",
+      "reason": "OpenAI Dev Day 2023 is mentioned as an event but event is not in locked taxonomy",
+      "example_mention": "OpenAI Dev Day 2023"
+    },
+    {
+      "episode_id": 1366,
+      "proposed_type": "book",
+      "reason": "Capital in the 21st Century is a well-known book but 'book' is not in locked taxonomy; consider adding for future.",
+      "example_mention": "Capital in the 21st Century"
+    },
+    {
+      "episode_id": 1368,
+      "proposed_type": "podcast",
+      "reason": "The mention of 'You Can With AI podcast' is a media type not in the locked taxonomy but clearly a podcast.",
+      "example_mention": "You Can With AI podcast"
+    }
+  ],
+  "notes": [
+    "Podcast mentions multiple software products, models, organizations, and persons central to AI agent era developments.",
+    "Some entities like 'You Can With AI podcast' and 'aidailybrief.ai' are marked as 'other' with needs_review due to unclear type in locked taxonomy.",
+    "Social posts on X (formerly Twitter) are included with quoted_text and platform specified.",
+    "URLs are included only when explicitly mentioned or known; otherwise set to null.",
+    "Sentiment labels are assigned based on context and tone of mention.",
+    "Confidence scores reflect certainty of entity identification and fact extraction.",
+    "The episode heavily focuses on the SpaceX acquisition of XAI and the launch of OpenAI's Codex app.",
+    "Several social media accounts on platform X (formerly Twitter) are quoted with opinions on the merger and AI tools.",
+    "Some mentions like 'Multbook' are unclear and flagged for review.",
+    "Financial figures and valuations are reported from Bloomberg and The Information but no direct URLs were provided.",
+    "Sponsors Assembly AI, Robots & Pencils, and Blitzy are mentioned with product descriptions and URLs.",
+    "Multbook is a central software product discussed extensively with both positive and negative commentary.",
+    "Several persons are quoted for their opinions on Multbook and AI agents generally.",
+    "Some mentions like 'You Can With AI' podcast do not fit locked taxonomy and are marked for review.",
+    "URLs for some software products like Section and Blitzy are inferred from context and known domain patterns.",
+    "No URLs were invented; unknown URLs are set to null.",
+    "Sentiment labels are assigned based on tone of quoted text and context.",
+    "Only meaningful references central to claims or attribution are included.",
+    "Mentions focus on key companies, models, deals, and people central to AI race and IPO news.",
+    "Some mentions like 'OpenAI IPO' classified as 'other' due to lack of formal entity type.",
+    "Social media accounts included when quoting or central to claims.",
+    "URLs only included when explicitly known or provided.",
+    "Conservative approach taken to avoid over-tagging generic terms.",
+    "Some names in transcript appear misspelled or mispronounced (e.g., Moldbook vs Moltbook, Dario Amadei vs Dario Amodei, ChatGBT vs ChatGPT, Rocco's Basilisk vs Roko's Basilisk).",
+    "The social network for AI agents is referred to as Moldbook, Moltbook, Multbook in different places; Multbook appears to be the final and correct name.",
+    "Several AI models and agents are mentioned, including Claudbot, OpenClaw, KimmyK2.5, ClaudeBot.",
+    "The episode includes references to AI theories and essays, some of which are ambiguous and flagged for review.",
+    "Sponsor mentions and their products are included as software_product or organization as appropriate.",
+    "Some organization names like 'SK Hyings' appear to be transcription errors; likely 'SK Hynix'.",
+    "URLs for some reports and news articles are not provided; set to null per instructions.",
+    "Mentions of social posts on X (Twitter) included with quoted text and platform.",
+    "Meta's Ray-Bans AI glasses mentioned as a key product but not extracted as a separate entity due to generic product naming.",
+    "Focus was on meaningful entities central to claims, avoiding generic terms.",
+    "Person name spellings for Dario Amadei (likely Dario Amodei), Andre Karpathy (likely Andrej Karpathy), Kevin Roos (likely Kevin Roose), and Mid-Journey (likely Midjourney) need verification.",
+    "Hardware mentions such as Google TPUs and Nvidia Blackwell chips do not fit locked taxonomy; flagged for review.",
+    "Most mentions are editorial commentary except for explicit sponsor reads which are marked is_editorial=false.",
+    "No URLs were invented; source_url set to null when not explicitly provided.",
+    "Social posts on X/Twitter included when quoted or clearly referenced.",
+    "Many mentions relate to AI models and organizations involved in AI development and funding.",
+    "Agent Swarm is a key concept discussed, with Kimi K2.5 model from Moonshot being a central example.",
+    "Some social posts from X (Twitter) users are included as they provide direct quotes about model experiences.",
+    "Some initiatives like the UK government AI training program are mentioned but lack formal report or product names, classified as 'other' with needs_review true.",
+    "Podcast mention 'You Can With AI' is noted but podcast is not a locked entity type, so added to new_type_candidates.",
+    "Many references are to software products and models related to AI agentic coding and orchestration.",
+    "Some terms like 'Ralph Wiggum' and 'bash loop' are concepts or coding patterns, categorized as 'other' with needs_review.",
+    "VibeCodeCamp is mentioned but unclear if it is an event, community, or product; marked needs_review.",
+    "URLs were included only when explicitly mentioned or clearly inferable from context.",
+    "Person mentions included only when central to claims or attribution of posts.",
+    "Social posts from X (Twitter) included with quoted_text when available.",
+    "Repl.it mention likely refers to Replit software product but spelling variant noted.",
+    "Lovable mention is unclear if software product or other entity; needs review.",
+    "No URLs were provided for most models and essays; source_url set to null accordingly.",
+    "Mentions of 'Ralph Wiggum' as AI strategy were not included as it is unclear if a person or concept; needs review if relevant.",
+    "Mentions of general concepts like 'agent-manager' and 'enterprise-operator' were not included as they are not entities per taxonomy.",
+    "The episode contains multiple references to organizations, persons, software products, and studies related to AI disruption and workforce adaptation.",
+    "Some initiatives like 'OpenAI Education for Countries program' do not fit neatly into locked taxonomy and are flagged for review.",
+    "Javon's paradox is a misspelling of Jevons paradox; classified as 'other' with needs_review true.",
+    "URLs for some references like the NBER study and OpenAI blog are inferred based on public knowledge but not explicitly provided in transcript; set to null or best guess.",
+    "Mentions of sponsors and their products are included as software_product or organization with is_editorial false since they are ad reads.",
+    "Corrected probable typos in transcript: 'Anthropx' to 'Anthropic', 'Amadei' to 'Amodei'.",
+    "Some person names mentioned without clear source URLs or platforms.",
+    "Podcast 'You Can With AI' marked as 'other' due to unclear type (podcast vs software).",
+    "No URLs invented; source_url set to null when not explicitly given.",
+    "Mentions limited to meaningful references central to claims or attribution.",
+    "Classified NVIDIA Blackwell chips as 'other' due to hardware nature and taxonomy constraints.",
+    "Included only central organizations and persons relevant to claims or attribution.",
+    "Conservative approach taken to avoid over-tagging generic terms or unclear types.",
+    "All URLs are from explicit mentions or sponsors; otherwise set to null.",
+    "Sentiment labels reflect tone of mention in context, mostly neutral or positive except for product failures or challenges.",
+    "Classified datacenters and legal cases as 'other' due to taxonomy constraints.",
+    "Included only meaningful references central to claims or attribution.",
+    "No URLs invented; used provided URLs or null when unknown.",
+    "Sentiment labels assigned based on tone and context.",
+    "Confidence scores reflect extraction certainty.",
+    "No duplicate mentions included.",
+    "Many mentions are tweets or social posts but without explicit URLs, so source_url is null.",
+    "Some studies mentioned lack clear citation, marked needs_review true.",
+    "Focus was on meaningful references to products, organizations, people central to claims, and social posts with quoted text.",
+    "No media outlets mentioned by name except Business Insider correspondent as person.",
+    "No new entity types proposed as existing taxonomy suffices.",
+    "Some product names like 'open evidences deep consult' are unclear and may need review for correct spelling or canonical naming.",
+    "Multiple AI models mentioned (GPT 5.2, Claude, Grock, Gemini) are referenced as available today but no official URLs provided.",
+    "The episode contains multiple sponsor mentions which are included as software_product or organization as appropriate.",
+    "Person mentions are included only when central to claims or attribution, e.g. Pat Grady, Dan Shipper, Sean Wang, David S. Holtz.",
+    "Multiple surveys from KPMG and BCG cited with detailed statistics on AI investment, CEO involvement, and agent deployment.",
+    "Several software products mentioned including Replit, ZenFlow, Superintelligent, and AI Strategy Compass.",
+    "Organizations include Higgsfield, Thinking Machines Labs, OpenAI, Robots and Pencils.",
+    "Persons mentioned include Demis Hassabis, Robert Scoble, and founders departing Thinking Machines Labs.",
+    "Models mentioned include NVIDIA Cling, ZAI, KimiK2, Quan3.",
+    "No URLs were invented; only provided URLs included for Robots and Pencils and AI Strategy Compass.",
+    "Sentiment generally positive or neutral except for negative sentiment around Thinking Machines Labs talent departures.",
+    "Confidence levels high for well-known entities and surveys; moderate for some models and new products.",
+    "Podcast 'You Can With AI' mentioned but podcast is not in locked taxonomy; flagged for review.",
+    "OpenAI 2Go hardware project and SweetPea codename are hardware products but no hardware type exists; marked as 'other' with review needed.",
+    "All URLs are set to null except where explicitly given or clearly inferred from sponsor URLs.",
+    "Only meaningful references to models, organizations, persons central to claims, software products, accounts, and benchmarks were included.",
+    "Sentiment labels are mostly neutral or positive reflecting factual or optimistic commentary; negative sentiment assigned to NVIDIA chip ban and GPT-5 release issues.",
+    "Many mentions are organizations and software products related to AI and IPO news.",
+    "Some person mentions are included due to their central role in company leadership or announcements.",
+    "Some mentions like 'xslash twitter' and 'Apple AirPods' are borderline for entity type and flagged for review.",
+    "Social posts from Twitter (x) are included with quoted text and platform specified.",
+    "No URLs were invented; only known URLs for sponsors and companies were included.",
+    "Sentiment labels are mostly neutral or positive, except for negative sentiment around Thinking Machines Labs personnel issues and Facebook IPO historical context.",
+    "Mentions of organizations like The Guardian, Reuters, Bloomberg, and The Verge are included only when central to specific claims or attribution.",
+    "Some persons mentioned are included due to their quoted commentary or leadership roles relevant to the claims.",
+    "URLs are included only when explicitly provided or clearly known from the transcript.",
+    "No URLs were invented; source_url is null when unknown.",
+    "Sentiment labels are mostly neutral or positive given the mostly factual or optimistic tone of the references.",
+    "Editorial flag is true for host commentary and news analysis; false for sponsor reads.",
+    "Mentions are capped at 40 to maintain quality and relevance.",
+    "Many mentions are of people on platform X (formerly Twitter) giving feedback or commentary on Claude Code and Co-Work.",
+    "Some product names like Nano Banana and Chat GPT image gen are mentioned but with limited context; included as software_product conservatively.",
+    "Security concerns and sandboxing are discussed referencing Simon Willison's blog post.",
+    "The episode includes multiple sponsor mentions with URLs where available.",
+    "No URLs were invented; only those explicitly mentioned or clearly known were included.",
+    "Some mentions like 'ChatsGBT' appear to be typos or mispronunciations of known entities like 'ChatGPT'.",
+    "Repl.it is likely the same as Replit, a software product; canonical name needs confirmation.",
+    "Capital in the 21st Century is a book but 'book' is not a locked entity type; marked for review.",
+    "Multiple sponsors and products mentioned with URLs included where available.",
+    "Ben Thompson and Dwarkesh Patel are persons central to the discussion and included accordingly.",
+    "Social media platform 'X' is used for some accounts and posts.",
+    "Many mentions are organizations and software products related to AI and commerce.",
+    "Several persons are quoted for opinions or social posts, mostly related to Tailwind's business impact from AI.",
+    "No URLs were invented; only those explicitly mentioned or clearly inferred were included.",
+    "The mention 'You Can With AI podcast' is not in the locked taxonomy; flagged as 'other' with needs_review false.",
+    "Sentiment labels are mostly neutral or positive for product launches and mixed or negative for business disruption stories.",
+    "No URLs were provided for any mentions, so source_url is null for all.",
+    "Some entities like AI Operators and AI Daily Brief are treated as 'other' due to unclear exact entity type.",
+    "Model and tool distinctions are noted as blurry, but models and software_products are separated based on context.",
+    "Mentions are limited to meaningful references central to the episode's content.",
+    "Mentions include organizations, software products, persons, reports, and blog posts central to the episode's claims.",
+    "URLs are included only when explicitly mentioned or clearly inferable from context.",
+    "Sentiment labels are based on the tone of the mention in context.",
+    "No invented URLs were created; source_url is null when unknown.",
+    "Conservative approach taken to avoid over-inclusion."
+  ],
+  "outputs": {
+    "episode_json_dir": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-25-lean-v2/episodes",
+    "mentions_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-25-lean-v2/mentions.csv",
+    "review_queue_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-25-lean-v2/review_queue.csv",
+    "episode_summary_csv": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-25-lean-v2/episode_summary.csv"
+  }
+}

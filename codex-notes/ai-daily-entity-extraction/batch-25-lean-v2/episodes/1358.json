@@ -1,0 +1,195 @@
+{
+  "episode_id": 1358,
+  "publish_date": "2026-01-21",
+  "title": "The AI Capabilities Overhang",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Capabilities-Overhang-e3dv7r0",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1358-the-ai-capabilities-overhang.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 5,
+  "mentions": [
+    {
+      "episode_id": 1358,
+      "mention_text": "Google and Ipsos survey",
+      "canonical_name": "Google and Ipsos AI Usage Survey 2025",
+      "entity_type": "survey",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "According to a new survey commissioned by Google and conducted by Ipsos, AI users are now in the majority. 66% of respondents said they had used AI in the past 12 months.",
+      "context_snippet": "The survey polled around 1,000 adults from each of 21 countries in late September 2025.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "ai_usage_percentage_2025",
+          "fact_value": 66,
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "ai_usage_percentage_2024",
+          "fact_value": 48,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "ai_usage_percentage_2023",
+          "fact_value": 28,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "countries_polled",
+          "fact_value": 21,
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "sample_size_per_country",
+          "fact_value": 1000,
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "us_ai_usage_percentage",
+          "fact_value": 40,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "us_ai_optimism_percentage",
+          "fact_value": 33,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1358,
+      "mention_text": "XAI's Colossus 2",
+      "canonical_name": "Colossus 2",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "XAI's Colossus 2 has now reached 1 gigawatt of capacity, becoming the first training cluster to cross that threshold.",
+      "context_snippet": "Colossus 2 datacenter draws more power than the city of San Francisco and contains 550,000 Blackwell GPUs.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Unclear if Colossus 2 is a software product, model, or hardware infrastructure; classified as 'other'.",
+      "facts": [
+        {
+          "fact_key": "power_capacity_gigawatts",
+          "fact_value": 1,
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "gpu_count",
+          "fact_value": 550000,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "gpu_type",
+          "fact_value": "Blackwell GPUs",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "construction_start",
+          "fact_value": "March 2025",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1358,
+      "mention_text": "Anthropic and Amazon's Carlisle datacenter",
+      "canonical_name": "Carlisle datacenter",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic and Amazon's new Carlisle datacenter is expected to hit 1 gigawatt sometime in the first quarter of this year.",
+      "context_snippet": "Carlisle datacenter is close to Colossus 2 in power capacity and expected to reach 1 gigawatt soon.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "Unclear if datacenter is software or hardware infrastructure; classified as 'other'.",
+      "facts": [
+        {
+          "fact_key": "expected_power_capacity_gigawatts",
+          "fact_value": 1,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "expected_online_date",
+          "fact_value": "Q1 2026",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1358,
+      "mention_text": "OpenAI's Stargate Abilene",
+      "canonical_name": "Stargate Abilene",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "OpenAI's Stargate Abilene is expected to come online over the summer.",
+      "context_snippet": "Stargate Abilene is an upcoming OpenAI datacenter expected in summer 2026.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "Unclear if Stargate Abilene is software or hardware infrastructure; classified as 'other'.",
+      "facts": [
+        {
+          "fact_key": "expected_online_date",
+          "fact_value": "Summer 2026",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1358,
+      "mention_text": "Elon Musk lawsuit",
+      "canonical_name": "Elon Musk lawsuit against OpenAI and Microsoft",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Elon Musk is seeking up to $134 billion in damages from OpenAI and Microsoft as his lawsuit heads to a trial.",
+      "context_snippet": "Musk's lawyers argue entitlement to a portion of OpenAI's $500 billion valuation due to $38 million seed funding donation in 2015.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Legal case, not a typical entity type; classified as 'other'.",
+      "facts": [
+        {
+          "fact_key": "damages_sought_usd",
+          "fact_value": 134000000000,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "openai_valuation_usd",
+          "fact_value": 500000000000,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "seed_funding_usd",
+          "fact_value": 38000000,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "trial_date",
+          "fact_value": "April 2026",
+          "confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Classified datacenters and legal cases as 'other' due to taxonomy constraints.",
+    "Included only meaningful references central to claims or attribution.",
+    "No URLs invented; used provided URLs or null when unknown.",
+    "Sentiment labels assigned based on tone and context.",
+    "Confidence scores reflect extraction certainty.",
+    "No duplicate mentions included."
+  ]
+}

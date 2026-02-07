@@ -1,0 +1,238 @@
+{
+  "episode_id": 1360,
+  "publish_date": "2026-01-18",
+  "title": "Code AGI is Functional AGI (And It's Here)",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Code-AGI-is-Functional-AGI-And-Its-Here-e3dqp2s",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1360-code-agi-is-functional-agi-and-it-s-here.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 10,
+  "mentions": [
+    {
+      "episode_id": 1360,
+      "mention_text": "ChatGPT",
+      "canonical_name": "ChatGPT",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The first ingredient, knowledge and pre-training, is what fueled the original ChatGPT moment in 2022.",
+      "context_snippet": "The first ingredient, knowledge and pre-training, is what fueled the original ChatGPT moment in 2022.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "launch_year",
+          "fact_value": 2022,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1360,
+      "mention_text": "O1",
+      "canonical_name": "O1",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The second, reasoning and inference-time compute, came with the release of O1 in late 2024.",
+      "context_snippet": "The second, reasoning and inference-time compute, came with the release of O1 in late 2024.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "release_date",
+          "fact_value": "late 2024",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1360,
+      "mention_text": "Cloud Code",
+      "canonical_name": "Cloud Code",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The third, iteration and long-horizon agents, came in the last few weeks with Cloud Code and other coding agents crossing a capability threshold.",
+      "context_snippet": "The third, iteration and long-horizon agents, came in the last few weeks with Cloud Code and other coding agents crossing a capability threshold.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "capability",
+          "fact_value": "long-horizon agent iteration",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1360,
+      "mention_text": "GPT 5.2",
+      "canonical_name": "GPT 5.2",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "You can hire GPT 5.2 or Claude or Grock or Gemini today.",
+      "context_snippet": "So what? Well, soon, they say, you'll be able to hire an agent. Which, with a hat-tip to Sarah Guo, they call one litmus test for AGI. You can hire GPT 5.2 or Claude or Grock or Gemini today.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "availability",
+          "fact_value": "available today",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1360,
+      "mention_text": "Claude",
+      "canonical_name": "Claude",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "You can hire GPT 5.2 or Claude or Grock or Gemini today.",
+      "context_snippet": "So what? Well, soon, they say, you'll be able to hire an agent. Which, with a hat-tip to Sarah Guo, they call one litmus test for AGI. You can hire GPT 5.2 or Claude or Grock or Gemini today.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "availability",
+          "fact_value": "available today",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1360,
+      "mention_text": "Grock",
+      "canonical_name": "Grock",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "You can hire GPT 5.2 or Claude or Grock or Gemini today.",
+      "context_snippet": "So what? Well, soon, they say, you'll be able to hire an agent. Which, with a hat-tip to Sarah Guo, they call one litmus test for AGI. You can hire GPT 5.2 or Claude or Grock or Gemini today.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "availability",
+          "fact_value": "available today",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1360,
+      "mention_text": "Gemini",
+      "canonical_name": "Gemini",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "You can hire GPT 5.2 or Claude or Grock or Gemini today.",
+      "context_snippet": "So what? Well, soon, they say, you'll be able to hire an agent. Which, with a hat-tip to Sarah Guo, they call one litmus test for AGI. You can hire GPT 5.2 or Claude or Grock or Gemini today.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "availability",
+          "fact_value": "available today",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1360,
+      "mention_text": "open evidences deep consult",
+      "canonical_name": "Open Evidence Deep Consult",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "In medicine, open evidences deep consult functions as a specialist.",
+      "context_snippet": "In medicine, open evidences deep consult functions as a specialist.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": true,
+      "review_reason": "Unclear exact product name and spelling",
+      "facts": [
+        {
+          "fact_key": "domain",
+          "fact_value": "medicine",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1360,
+      "mention_text": "Harvey's agents",
+      "canonical_name": "Harvey",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "In law, Harvey's agents function as an associate.",
+      "context_snippet": "In law, Harvey's agents function as an associate.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "domain",
+          "fact_value": "law",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1360,
+      "mention_text": "GitHub Copilot",
+      "canonical_name": "GitHub Copilot",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "When GPT-3 first came out, the primary use case for AI was the GitHub Copilot.",
+      "context_snippet": "When GPT-3 first came out, the primary use case for AI was the GitHub Copilot. The best it could do was complete the line of code you were already writing.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "use_case",
+          "fact_value": "code completion",
+          "confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Some product names like 'open evidences deep consult' are unclear and may need review for correct spelling or canonical naming.",
+    "Multiple AI models mentioned (GPT 5.2, Claude, Grock, Gemini) are referenced as available today but no official URLs provided.",
+    "The episode contains multiple sponsor mentions which are included as software_product or organization as appropriate.",
+    "Person mentions are included only when central to claims or attribution, e.g. Pat Grady, Dan Shipper, Sean Wang, David S. Holtz."
+  ]
+}

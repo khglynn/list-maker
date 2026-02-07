@@ -1,0 +1,181 @@
+{
+  "episode_id": 1361,
+  "publish_date": "2026-01-17",
+  "title": "Why CEOs Need to Lead AI Strategy",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Why-CEOs-Need-to-Lead-AI-Strategy-e3dp5gj",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1361-why-ceos-need-to-lead-ai-strategy.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 8,
+  "mentions": [
+    {
+      "episode_id": 1361,
+      "mention_text": "NVIDIA Cling",
+      "canonical_name": "NVIDIA Cling",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "NVIDIA, Cling is arguably leading the field with their new motion control technology.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "technology",
+          "fact_value": "New motion control technology",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1361,
+      "mention_text": "ZAI",
+      "canonical_name": "ZAI",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "ZAI, KimiK2, Quan3 are all in the same ballpark as the best models from the West.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1361,
+      "mention_text": "KimiK2",
+      "canonical_name": "KimiK2",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "ZAI, KimiK2, Quan3 are all in the same ballpark as the best models from the West.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1361,
+      "mention_text": "Quan3",
+      "canonical_name": "Quan3",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "ZAI, KimiK2, Quan3 are all in the same ballpark as the best models from the West.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1361,
+      "mention_text": "Huawei chips and software",
+      "canonical_name": "Huawei AI development stack",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "ZAI unveiled their new first model trained entirely on Huawei chips and software. The announcement was a proof of concept that Huawei now has a fully capable AI development stack.",
+      "context_snippet": "Earlier this week, ZAI unveiled their new first model trained entirely on Huawei chips and software.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "proof_of_concept",
+          "fact_value": "Huawei has a fully capable AI development stack",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1361,
+      "mention_text": "You Can With AI",
+      "canonical_name": "You Can With AI",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Another podcast that I have had the privilege to host, which is called You Can With AI from KPMG. Season one was designed to be a set of real stories from real leaders making AI work in their organizations.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "podcast type not in locked taxonomy",
+      "facts": []
+    },
+    {
+      "episode_id": 1361,
+      "mention_text": "Superintelligent",
+      "canonical_name": "Superintelligent",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Superintelligent is a platform that helps your company figure out how to use AI better. We deploy voice agents to interview people across your company and give recommendations.",
+      "context_snippet": "Superintelligent deploys voice agents to interview people and combines proprietary intelligence to give AI roadmap recommendations.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "functionality",
+          "fact_value": "Voice agents interview company employees and provide AI use case recommendations",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1361,
+      "mention_text": "AI Strategy Compass",
+      "canonical_name": "AI Strategy Compass",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://aidailybrief.ai/compass",
+      "quoted_text": "Our forthcoming AI Strategy Compass tool is ready to start to be tested. It's a power tool for anyone responsible for AI adoption or transformation inside companies.",
+      "context_snippet": "The AI Strategy Compass tool from Superintelligent allows automated, self-managed AI adoption and transformation with a different cost structure.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "purpose",
+          "fact_value": "Tool for AI adoption and transformation management",
+          "confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [
+    {
+      "episode_id": 1361,
+      "proposed_type": "podcast",
+      "reason": "Mention of 'You Can With AI' podcast hosted by the speaker, which is a media format not covered by locked taxonomy",
+      "example_mention": "You Can With AI from KPMG"
+    }
+  ],
+  "notes": [
+    "Multiple surveys from KPMG and BCG cited with detailed statistics on AI investment, CEO involvement, and agent deployment.",
+    "Several software products mentioned including Replit, ZenFlow, Superintelligent, and AI Strategy Compass.",
+    "Organizations include Higgsfield, Thinking Machines Labs, OpenAI, Robots and Pencils.",
+    "Persons mentioned include Demis Hassabis, Robert Scoble, and founders departing Thinking Machines Labs.",
+    "Models mentioned include NVIDIA Cling, ZAI, KimiK2, Quan3.",
+    "No URLs were invented; only provided URLs included for Robots and Pencils and AI Strategy Compass.",
+    "Sentiment generally positive or neutral except for negative sentiment around Thinking Machines Labs talent departures.",
+    "Confidence levels high for well-known entities and surveys; moderate for some models and new products."
+  ]
+}

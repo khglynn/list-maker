@@ -1,0 +1,149 @@
+{
+  "episode_id": 1357,
+  "publish_date": "2026-01-22",
+  "title": "AGI Timelines Shift Forward",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/AGI-Timelines-Shift-Forward-e3e0o7c",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1357-agi-timelines-shift-forward.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 7,
+  "mentions": [
+    {
+      "episode_id": 1357,
+      "mention_text": "Gemini",
+      "canonical_name": "Gemini",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Google's AI lead says that there are no plans for ads in Gemini.",
+      "context_snippet": "Google's AI lead says that there are no plans for ads in Gemini.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "ads_plans",
+          "fact_value": false,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1357,
+      "mention_text": "Chat GPT",
+      "canonical_name": "ChatGPT",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "One of the big conversations for the past week or so has been OpenAI's plans to introduce ads into Chat GPT.",
+      "context_snippet": "One of the big conversations for the past week or so has been OpenAI's plans to introduce ads into Chat GPT.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "ads_plans",
+          "fact_value": true,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1357,
+      "mention_text": "Direct Offers",
+      "canonical_name": "Direct Offers",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Google is already offering ads in AI Search, including a new feature called Direct Offers that presents a personalized discount in AI mode.",
+      "context_snippet": "Google is already offering ads in AI Search, including a new feature called Direct Offers that presents a personalized discount in AI mode.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "ads_feature",
+          "fact_value": "personalized discount in AI mode",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1357,
+      "mention_text": "ServiceNow",
+      "canonical_name": "ServiceNow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "ServiceNow users would be able to choose OpenAI's models within the platform.",
+      "context_snippet": "ServiceNow users would be able to choose OpenAI's models within the platform.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1357,
+      "mention_text": "You Can With AI",
+      "canonical_name": "You Can With AI",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Another podcast that I've had the privilege to host, which is called You Can With AI from KPMG.",
+      "context_snippet": "Another podcast that I've had the privilege to host, which is called You Can With AI from KPMG.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Unclear if podcast or software product",
+      "facts": []
+    },
+    {
+      "episode_id": 1357,
+      "mention_text": "Section",
+      "canonical_name": "Section",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://sectionai.com",
+      "quoted_text": "Section is a platform that helps you manage AI transformation across your entire organization.",
+      "context_snippet": "Section is a platform that helps you manage AI transformation across your entire organization.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1357,
+      "mention_text": "ZenFlow",
+      "canonical_name": "ZenFlow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "ZenFlow takes you from vibe coding to AI-first engineering.",
+      "context_snippet": "ZenFlow takes you from vibe coding to AI-first engineering.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Corrected probable typos in transcript: 'Anthropx' to 'Anthropic', 'Amadei' to 'Amodei'.",
+    "Some person names mentioned without clear source URLs or platforms.",
+    "Podcast 'You Can With AI' marked as 'other' due to unclear type (podcast vs software).",
+    "No URLs invented; source_url set to null when not explicitly given.",
+    "Mentions limited to meaningful references central to claims or attribution."
+  ]
+}

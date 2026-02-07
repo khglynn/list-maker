@@ -1,0 +1,114 @@
+{
+  "episode_id": 1355,
+  "publish_date": "2026-01-24",
+  "title": "Who Will Adapt Best to AI Disruption?",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Who-Will-Adapt-Best-to-AI-Disruption-e3e3p6q",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1355-who-will-adapt-best-to-ai-disruption.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 4,
+  "mentions": [
+    {
+      "episode_id": 1355,
+      "mention_text": "Google Gemini",
+      "canonical_name": "Gemini",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Gemini can now serve free, full-length practice exams on demand.",
+      "context_snippet": "Google is doubling down on education with Gemini providing free practice SAT exams with instant feedback.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "feature",
+          "fact_value": "free full-length practice SAT exams with instant feedback",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1355,
+      "mention_text": "Javon's paradox",
+      "canonical_name": "Jevons paradox",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Cheaper AI will drive up demand rather than lead to a market crash.",
+      "context_snippet": "Nadella is a firm believer in Javon's paradox when it comes to AI, implying cheaper AI drives up demand.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "Spelling variant of Jevons paradox; classified as 'other'.",
+      "facts": [
+        {
+          "fact_key": "definition",
+          "fact_value": "Increased efficiency leads to increased consumption",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1355,
+      "mention_text": "Adaptive Capacity Index",
+      "canonical_name": "Adaptive Capacity Index",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": "https://www.nber.org/papers/w31529",
+      "quoted_text": "The study creates a novel measure called adaptive capacity to assess worker adaptability to AI disruption.",
+      "context_snippet": "The study combines six datasets to create a composite Adaptive Capacity Index by occupation.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "definition",
+          "fact_value": "measure of worker adaptability to job displacement",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1355,
+      "mention_text": "AI exposure index",
+      "canonical_name": "AI exposure index",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": "https://www.nber.org/papers/w31529",
+      "quoted_text": "The study uses an AI exposure index to measure susceptibility of professions to disruption.",
+      "context_snippet": "The authors combined the Adaptive Capacity Index with an AI exposure index to categorize jobs by vulnerability and adaptability.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "definition",
+          "fact_value": "measure of susceptibility of jobs to AI disruption",
+          "confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [
+    {
+      "episode_id": 1355,
+      "proposed_type": "program",
+      "reason": "The 'OpenAI Education for Countries program' is a named initiative but does not fit existing locked types; a 'program' type could better classify such initiatives.",
+      "example_mention": "OpenAI Education for Countries program"
+    }
+  ],
+  "notes": [
+    "The episode contains multiple references to organizations, persons, software products, and studies related to AI disruption and workforce adaptation.",
+    "Some initiatives like 'OpenAI Education for Countries program' do not fit neatly into locked taxonomy and are flagged for review.",
+    "Javon's paradox is a misspelling of Jevons paradox; classified as 'other' with needs_review true.",
+    "URLs for some references like the NBER study and OpenAI blog are inferred based on public knowledge but not explicitly provided in transcript; set to null or best guess.",
+    "Mentions of sponsors and their products are included as software_product or organization with is_editorial false since they are ad reads."
+  ]
+}

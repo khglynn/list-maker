@@ -1,32 +1,26 @@
-# AI Daily Brief Transcript Pipeline
+# AI Daily Brief Pipeline (Lean Schema)
 
-*Created: 2026-02-05*
+*Created: 2026-02-05*  
 *Last updated: 2026-02-07*
 
-This script pulls recent episodes, gets full transcripts, and saves them in two places:
-- Neon table: `episode_transcripts`
-- Local files: `pipeline/_cache/ai_daily/transcripts/`
+This version intentionally keeps Neon simple:
+- `ai_runs`
+- `ai_entities`
+- `ai_mentions`
+
+No required custom views and no extra AI review/link tables.
 
 ## Scripts
 
-- `transcripts.py`
-- `extract_entities.py`
-- `init_entity_schema.py`
-- `load_entity_batch.py`
-- `normalize_aliases.py`
-- `discover_links.py`
-- `report_summary.py`
-- `dedupe_links.py`
+- `transcripts.py` (pulls/saves transcripts)
+- `extract_entities.py` (creates batch artifacts from transcripts)
+- `init_entity_schema.py` (creates/reset lean schema)
+- `load_entity_batch.py` (loads batch into lean schema)
+- `normalize_aliases.py` (merges obvious duplicates)
+- `discover_links.py` (finds URLs and writes back to mentions)
+- `report_summary.py` (prints quality summary)
 
-## What it does
-
-1. Reads latest episodes from RSS.
-2. Upserts show + episodes in Neon.
-3. Uses official transcript URL when available.
-4. Otherwise generates transcript from audio with OpenAI STT.
-5. Saves transcript text to both database and local cache files.
-
-## Required env vars
+## Required Env Vars
 
 - `DATABASE_URL` (or `NEON_DATABASE_URL`)
 - `OPENAI_API_KEY`
@@ -34,127 +28,57 @@ This script pulls recent episodes, gets full transcripts, and saves them in two 
 Optional:
 - `FIRECRAWL_API_KEY` (used by `discover_links.py`)
 
-## Run
+## End-to-End Flow
 
 From repo root:
 
-```bash
-cd pipeline/scrapers/ai_daily
-python3 transcripts.py --limit 25 --dry-run
-```
-
-Then real run:
+### 1) Build/Reset Lean AI Schema
 
 ```bash
 cd pipeline/scrapers/ai_daily
-python3 transcripts.py --limit 25
+python3 init_entity_schema.py --reset
 ```
 
-## Useful options
-
-- `--force` overwrite existing transcripts for the selected episodes
-- `--model` choose STT model (default: `whisper-1`)
-- `--feed-url` override podcast feed URL
-
-## Entity Extraction Test (5-episode batches)
-
-This is a schema-validation step (does not write schema tables yet).
-
-From repo root:
-
-```bash
-cd pipeline/scrapers/ai_daily
-python3 extract_entities.py --limit 5 --offset 0
-```
-
-Then next batch after prompt/schema tweaks:
-
-```bash
-cd pipeline/scrapers/ai_daily
-python3 extract_entities.py --limit 5 --offset 5
-```
-
-Current defaults in extraction:
-- Focuses on core types (software_product/model/report/survey/benchmark/account/etc.)
-- Excludes non-editorial sponsor/ad mentions unless `--include-non-editorial` is set
-
-Output artifacts are saved under:
-
-- `codex-notes/ai-daily-entity-extraction/<batch-name>/`
-  - `summary.md`
-  - `mentions.csv`
-  - `review_queue.csv`
-  - `episode_summary.csv`
-  - `episodes/*.json`
-
-## Neon Draft Tables (for review)
-
-Create the draft AI Daily entity tables (`ai_*`):
-
-```bash
-cd pipeline/scrapers/ai_daily
-python3 init_entity_schema.py
-```
-
-Load one extraction batch into those tables:
+### 2) Load a Batch (5-episode sanity pass)
 
 ```bash
 cd pipeline/scrapers/ai_daily
 python3 load_entity_batch.py \
-  --batch-dir /Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-initial
+  --batch-dir /Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-focused-mini \
+  --prompt-version extract_entities_v2_lean
 ```
 
-This creates reviewable rows in Neon tables like:
-- `ai_entity_type_definitions`
-- `ai_entities`
-- `ai_entity_mentions`
-- `ai_entity_facts`
-- `ai_mention_review_queue`
-
-Review-first views (recommended in Neon UI):
-- `ai_v_run_summary`
-- `ai_v_priority_entity_counts`
-- `ai_v_priority_mentions`
-- `ai_v_link_hunt_queue`
-- `ai_v_open_review_items`
-
-Note on empty tables at this stage:
-- `ai_entity_aliases` stays empty until we start alias normalization.
-- `ai_reference_link_candidates` stays empty until URL discovery is running.
-- `ai_episode_reference_links` stays empty until URLs are verified and promoted.
-
-## Alias + Link Enrichment (current quality pass)
-
-Run alias normalization:
+### 3) Normalize Aliases
 
 ```bash
 cd pipeline/scrapers/ai_daily
 python3 normalize_aliases.py
 ```
 
-Run link discovery for selected runs:
+### 4) Discover Missing Links
 
 ```bash
 cd pipeline/scrapers/ai_daily
-python3 discover_links.py --run-ids 4,3 --limit 200
+python3 discover_links.py --run-ids 1 --limit 300
 ```
 
-Generate an easy quality summary:
+### 5) Quick Quality Summary
 
 ```bash
 cd pipeline/scrapers/ai_daily
-python3 report_summary.py --run-id 3 --top 20
+python3 report_summary.py --run-id 1 --top 25
 ```
 
-Clean duplicate promoted links if needed:
+## Transcript Output Location
 
-```bash
-cd pipeline/scrapers/ai_daily
-python3 dedupe_links.py
-```
+- `pipeline/_cache/ai_daily/transcripts/*.txt`
+- `pipeline/_cache/ai_daily/transcripts/*.json`
 
-## Output location
+## Extraction Batch Output Location
 
-- Local text + metadata files:
-  - `pipeline/_cache/ai_daily/transcripts/*.txt`
-  - `pipeline/_cache/ai_daily/transcripts/*.json`
+- `codex-notes/ai-daily-entity-extraction/<batch-name>/`
+  - `batch_manifest.json`
+  - `mentions.csv`
+  - `review_queue.csv`
+  - `episode_summary.csv`
+  - `episodes/*.json`

@@ -1,0 +1,256 @@
+{
+  "episode_id": 1352,
+  "publish_date": "2026-01-28",
+  "title": "The AI Acceleration Gap",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Acceleration-Gap-e3e9nf7",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1352-the-ai-acceleration-gap.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 10,
+  "mentions": [
+    {
+      "episode_id": 1352,
+      "mention_text": "GPT-5.2",
+      "canonical_name": "GPT-5.2",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Altman acknowledged, for example, that the latest model has a writing style that can be unwieldy and difficult to read. He said, I think we just screwed that up. We will make future versions of GPT-5.X hopefully much better at writing than 4.5 was.",
+      "context_snippet": "Altman acknowledged that the latest model has a writing style that can be unwieldy and difficult to read. He said, I think we just screwed that up. We will make future versions of GPT-5.X hopefully much better at writing than 4.5 was.",
+      "sentiment_label": "mixed",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "writing_quality",
+          "fact_value": "GPT-5.2 writing style is currently unwieldy and difficult to read",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "future_improvements",
+          "fact_value": "Future GPT-5.X versions expected to improve writing quality",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Garlic",
+      "canonical_name": "Garlic",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Rumors suggest that the next model, codenamed Garlic, is weeks or even days away.",
+      "context_snippet": "Rumors suggest that the next model, codenamed Garlic, is weeks or even days away.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "release_timing",
+          "fact_value": "Garlic model expected soon, within weeks or days",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Microsoft Maya 200",
+      "canonical_name": "Maya 200",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Microsoft has unveiled the second generation of their in-house AI chip, called the Maya 200.",
+      "context_snippet": "Microsoft has unveiled the second generation of their in-house AI chip, taking aim at custom silicon from Google and Amazon. Called the Maya 200, Microsoft claims the chip is the quote most performant first-party silicon from any hyperscaler.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "performance_claim",
+          "fact_value": "Microsoft claims Maya 200 is most performant first-party silicon from any hyperscaler",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "manufacturing_process",
+          "fact_value": "Built using TSMC's latest 3nm process",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Google 7th generation TPUs",
+      "canonical_name": "Google TPU v7",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Google is also using the 3nm process for their 7th generation TPUs.",
+      "context_snippet": "Google is also using the 3nm process for their 7th generation TPUs.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Hardware mention not clearly fitting locked taxonomy; classified as 'hardware' which is not a locked type",
+      "facts": [
+        {
+          "fact_key": "manufacturing_process",
+          "fact_value": "Google 7th gen TPUs use 3nm process",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Nvidia Blackwell chips",
+      "canonical_name": "Nvidia Blackwell",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Nvidia chose to stick with 4nm manufacturing on their latest generation Blackwell chips.",
+      "context_snippet": "Nvidia chose to stick with 4nm manufacturing on their latest generation Blackwell chips.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Hardware mention not clearly fitting locked taxonomy; classified as 'hardware' which is not a locked type",
+      "facts": [
+        {
+          "fact_key": "manufacturing_process",
+          "fact_value": "Nvidia Blackwell chips use 4nm process",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Mid-Journey",
+      "canonical_name": "Midjourney",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Mid-Journey founder David Hulls wrote, I've done more personal coding projects over Christmas break than I have in the last ten years.",
+      "context_snippet": "Mid-Journey founder David Hulls wrote, I've done more personal coding projects over Christmas break than I have in the last ten years.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Name variant uncertain, likely Midjourney",
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "David Hulls is founder of Midjourney",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Rare Candy NFT marketplace",
+      "canonical_name": "Rare Candy NFT marketplace",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Rare Candy NFT marketplace that said, A lot of y'all still don't get it.",
+      "context_snippet": "Rare Candy NFT marketplace that said, A lot of y'all still don't get it.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "NFT marketplace mention; no locked type fits well",
+      "facts": []
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Notebook LM",
+      "canonical_name": "Notebook LM",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Notebook LM co-creator Reza Martin wrote about AI reaching peak saturation.",
+      "context_snippet": "Notebook LM co-creator Reza Martin wrote about AI reaching peak saturation.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "role",
+          "fact_value": "Reza Martin is co-creator of Notebook LM",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Claude Bot",
+      "canonical_name": "Claude Bot",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Olivia Moore wrote, Claude Bot is Amazing and I Don't Think Consumers Should Use It.",
+      "context_snippet": "Olivia Moore wrote, Claude Bot is Amazing and I Don't Think Consumers Should Use It.",
+      "sentiment_label": "mixed",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "user_experience",
+          "fact_value": "Claude Bot is powerful but setup is technical and has security implications",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1352,
+      "mention_text": "Multi",
+      "canonical_name": "Multi",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Claude Bot is being renamed Multi because of trademark concerns from Anthropic.",
+      "context_snippet": "Claude Bot is being renamed Multi because of trademark concerns from Anthropic.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "name_change",
+          "fact_value": "Claude Bot renamed to Multi",
+          "confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [
+    {
+      "episode_id": 1352,
+      "proposed_type": "hardware",
+      "reason": "Mentions of chips and silicon such as Microsoft Maya 200, Google TPUs, Nvidia Blackwell chips do not fit existing locked types but are important for AI context.",
+      "example_mention": "Microsoft has unveiled the second generation of their in-house AI chip, called the Maya 200."
+    },
+    {
+      "episode_id": 1352,
+      "proposed_type": "nft_marketplace",
+      "reason": "Mention of Rare Candy NFT marketplace as a cultural reference related to AI hype and social discourse.",
+      "example_mention": "Rare Candy NFT marketplace that said, A lot of y'all still don't get it."
+    }
+  ],
+  "notes": [
+    "Person name spellings for Dario Amadei (likely Dario Amodei), Andre Karpathy (likely Andrej Karpathy), Kevin Roos (likely Kevin Roose), and Mid-Journey (likely Midjourney) need verification.",
+    "Hardware mentions such as Google TPUs and Nvidia Blackwell chips do not fit locked taxonomy; flagged for review.",
+    "Most mentions are editorial commentary except for explicit sponsor reads which are marked is_editorial=false.",
+    "No URLs were invented; source_url set to null when not explicitly provided.",
+    "Social posts on X/Twitter included when quoted or clearly referenced."
+  ]
+}

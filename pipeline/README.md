@@ -124,12 +124,15 @@ python3 extract_entities.py --limit 5 --offset 0
 This creates review artifacts under:
 - `codex-notes/ai-daily-entity-extraction/<batch-name>/`
 
-To make the draft schema visible in Neon Database Studio:
+To make the AI Daily schema visible in Neon Database Studio:
 
 ```bash
 cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/scrapers/ai_daily
-python3 init_entity_schema.py
-python3 load_entity_batch.py --batch-dir /Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-initial
+python3 init_entity_schema.py --reset
+python3 load_entity_batch.py --batch-dir /Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-focused-mini
+python3 normalize_aliases.py
+python3 discover_links.py --run-ids 1 --limit 300
+python3 report_summary.py --run-id 1 --top 25
 ```
 
 ---

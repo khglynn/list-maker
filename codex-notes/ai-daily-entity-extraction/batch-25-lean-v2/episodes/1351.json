@@ -1,0 +1,310 @@
+{
+  "episode_id": 1351,
+  "publish_date": "2026-01-28",
+  "title": "Are Agent Swarms the Next AI Paradigm?",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Are-Agent-Swarms-the-Next-AI-Paradigm-e3eb0mb",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1351-are-agent-swarms-the-next-ai-paradigm.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 13,
+  "mentions": [
+    {
+      "episode_id": 1351,
+      "mention_text": "UK government AI training initiative",
+      "canonical_name": "UK government AI training initiative",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "free AI training will be made available to every adult worker... 20-minute online courses with modules covering use cases like drafting text, content creation, and automation of administrative tasks.",
+      "context_snippet": "The UK government has expanded their AI training initiative with an ambitious new goal to upskill every worker in the country.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Initiative named but no formal report or program name given; classified as 'other'.",
+      "facts": [
+        {
+          "fact_key": "training_goal",
+          "fact_value": "upskill every adult worker in the UK",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "training_format",
+          "fact_value": "20-minute online courses",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1351,
+      "mention_text": "Quen 3 Max Thinking",
+      "canonical_name": "Quen 3 Max Thinking",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Quen 3 Max Thinking comes in at around the same cost as Claude Haiku 4.5, meaning that it's still much cheaper than models like Gemini 3 Pro or GPT-5.2, but about 10 times more expensive than DeepSeek v3.2.",
+      "context_snippet": "Alibaba's Quen team also released a new model earlier this week, specifically called Quen 3 Max Thinking.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "benchmark_improvements",
+          "fact_value": {
+            "GPQA": {
+              "before": 90.3,
+              "after": 92.8
+            },
+            "LiveCodeBench": {
+              "before": 88,
+              "after": 91.4
+            }
+          },
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1351,
+      "mention_text": "Claude Haiku 4.5",
+      "canonical_name": "Claude Haiku 4.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Quen 3 Max Thinking comes in at around the same cost as Claude Haiku 4.5.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1351,
+      "mention_text": "Gemini 3 Pro",
+      "canonical_name": "Gemini 3 Pro",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Google has released a new feature for Gemini 3 Flash called Agentic Vision.",
+      "context_snippet": "Gemini 3 Pro is mentioned as a premier Western model and Gemini 3 Flash has a new feature called Agentic Vision.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "feature",
+          "fact_value": "Agentic Vision - agentic think-act-observe loop for image understanding",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1351,
+      "mention_text": "Gemini 3 Flash",
+      "canonical_name": "Gemini 3 Flash",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Google has released a new feature for Gemini 3 Flash called Agentic Vision.",
+      "context_snippet": "Google has released a new feature for Gemini 3 Flash called Agentic Vision.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "feature",
+          "fact_value": "Agentic Vision - think-act-observe loop for image tasks",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1351,
+      "mention_text": "Agentic Vision",
+      "canonical_name": "Agentic Vision",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Agentic Vision introduces an agentic think-act-observe loop into image understanding tasks.",
+      "context_snippet": "Google has released a new feature for Gemini 3 Flash called Agentic Vision.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "functionality",
+          "fact_value": "image analysis with think-act-observe loop using Python code generation",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "performance_improvement",
+          "fact_value": "5-10% across most vision benchmarks",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1351,
+      "mention_text": "Kimi K2.5",
+      "canonical_name": "Kimi K2.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Moonshot's Kimi K2.5 is the new leading open weights model, now closer than ever to the frontier, with only OpenAI, Anthropic, and Google models ahead.",
+      "context_snippet": "The most significant model release of 2026 so far is Moonshot's Kimi K2.5 with Agent Swarm features.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "benchmark_score_Humanity_exam",
+          "fact_value": 50.2,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "benchmark_ranking",
+          "fact_value": "5th overall on Artificial Analysis Index",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "cost_comparison",
+          "fact_value": "4x cheaper than Opus 4.5 or GPT-5.2, more expensive than DeepSeek v3.2",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "multimodality",
+          "fact_value": "supports image and video inputs",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1351,
+      "mention_text": "Artificial Analysis",
+      "canonical_name": "Artificial Analysis",
+      "entity_type": "benchmark",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Artificial Analysis sums up the shift when they write, Moonshot's Kimi K2.5 is the new leading open weights model...",
+      "context_snippet": "Artificial Analysis provides benchmark analysis and ranking of Kimi K2.5.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "benchmark_retyped_from_context",
+      "facts": []
+    },
+    {
+      "episode_id": 1351,
+      "mention_text": "Cloud Code",
+      "canonical_name": "Cloud Code",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "There are other solutions out there for agents to work together on tasks, but everything I've seen is too technical for the average user, requiring you to use the terminal or too rigid, requiring you to pre-build workflows.",
+      "context_snippet": "Cloud Code's new task system is mentioned in the context of agent swarm architectures.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1351,
+      "mention_text": "Lang chain",
+      "canonical_name": "Lang chain",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Lang chain developer Sydney Runkle is also talking about this sub-agents architecture.",
+      "context_snippet": "Lang chain mentioned in relation to sub-agent architectures and agent swarms.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1351,
+      "mention_text": "You Can With AI",
+      "canonical_name": "You Can With AI",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "You Can With AI from KPMG is a podcast focused on driving AI change inside enterprises.",
+      "context_snippet": "Another podcast hosted by the speaker called You Can With AI from KPMG.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Podcast mentioned but podcast is not a locked entity type; needs review.",
+      "facts": []
+    },
+    {
+      "episode_id": 1351,
+      "mention_text": "ZenFlow",
+      "canonical_name": "ZenFlow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://zenflow.free",
+      "quoted_text": "ZenFlow takes you from vibe coding to AI-first engineering. It transforms freeform prompting into spec-driven workflows and multi-agent verification.",
+      "context_snippet": "ZenFlow is described as the first AI orchestration layer that brings discipline to the chaos of prompting.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "functionality",
+          "fact_value": "AI orchestration layer for spec-driven workflows and multi-agent verification",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1351,
+      "mention_text": "Lindy Agent Swarm tool",
+      "canonical_name": "Lindy Agent Swarm tool",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Lindy released their Agent Swarm tool back in April of 2025.",
+      "context_snippet": "Lindy released an Agent Swarm tool in April 2025 related to AI agent coordination.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    }
+  ],
+  "new_type_candidates": [
+    {
+      "episode_id": 1351,
+      "proposed_type": "podcast",
+      "reason": "Mention of 'You Can With AI' podcast which is a media product but podcast is not in locked taxonomy",
+      "example_mention": "You Can With AI from KPMG"
+    }
+  ],
+  "notes": [
+    "Many mentions relate to AI models and organizations involved in AI development and funding.",
+    "Agent Swarm is a key concept discussed, with Kimi K2.5 model from Moonshot being a central example.",
+    "Some social posts from X (Twitter) users are included as they provide direct quotes about model experiences.",
+    "Some initiatives like the UK government AI training program are mentioned but lack formal report or product names, classified as 'other' with needs_review true.",
+    "Podcast mention 'You Can With AI' is noted but podcast is not a locked entity type, so added to new_type_candidates."
+  ]
+}

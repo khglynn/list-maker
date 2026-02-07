@@ -1,0 +1,337 @@
+{
+  "episode_id": 1342,
+  "publish_date": "2026-02-03",
+  "title": "The AI Race Just Got a SpaceX-Sized Twist",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Race-Just-Got-a-SpaceX-Sized-Twist-e3ejn0u",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1342-the-ai-race-just-got-a-spacex-sized-twist.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 17,
+  "mentions": [
+    {
+      "episode_id": 1342,
+      "mention_text": "Codex app",
+      "canonical_name": "Codex app",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Codex app is a powerful new interface designed to effortlessly manage multiple agents at once, run work in parallel, and collaborate with agents over long-running tasks.",
+      "context_snippet": "OpenAI is making a bet on graphical user interfaces with the release of the Codex app for macOS",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "features",
+          "fact_value": {
+            "manage_multiple_agents": true,
+            "run_work_in_parallel": true,
+            "collaborate_long_running_tasks": true,
+            "built_in_work_trees": true,
+            "automation_cron_jobs": true,
+            "skills_library": true
+          },
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "platform",
+          "fact_value": "macOS",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Grok Imagine 1.0",
+      "canonical_name": "Grok Imagine 1.0",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Grok Imagine 1.0 brings 10 second video generation, 720p resolution, and dramatically better audio",
+      "context_snippet": "XAI officially launched Grok Imagine 1.0 with video generation and improved audio",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "features",
+          "fact_value": {
+            "video_generation_seconds": 10,
+            "resolution": "720p",
+            "audio_quality": "dramatically better"
+          },
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Claude Code",
+      "canonical_name": "Claude Code",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Anthropic's Claude Code has been a dominant coding AI tool",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "market_position",
+          "fact_value": "dominant coding AI tool",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Sonnet 3.5",
+      "canonical_name": "Sonnet 3.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Anthropic and Claude have seemed like an unassailable juggernaut going back to Sonnet 3.5",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model_association",
+          "fact_value": "Anthropic",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "GPT-5",
+      "canonical_name": "GPT-5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Since the launch of GPT-5, OpenAI has been competing strongly in coding AI",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "developer_focus",
+          "fact_value": "coding use case prioritized",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Cursor",
+      "canonical_name": "Cursor",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Theo called Codex app a Cursor killer",
+      "context_snippet": "Theo compared Codex app favorably to Cursor",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Conductor",
+      "canonical_name": "Conductor",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "XAI's Codex app is compared to Conductor and Codex Monitor",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Codex Monitor",
+      "canonical_name": "Codex Monitor",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "XAI's Codex app is compared to Conductor and Codex Monitor",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Antigravity's Inbox",
+      "canonical_name": "Antigravity's Inbox",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "XAI's Codex app is compared to Antigravity's Inbox",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.75,
+      "needs_review": true,
+      "review_reason": "low_confidence",
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Kobayashi letter",
+      "canonical_name": "Kobayashi letter",
+      "entity_type": "report",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The biggest IPO in history just got even bigger.",
+      "context_snippet": "The Kobayashi letter commented on the size of the upcoming IPO",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Grok",
+      "canonical_name": "Grok",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "XAI is on the verge of some big Grok updates",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Multbook",
+      "canonical_name": "Multbook",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "On the same day that Multbook started going off and Google launched Genie 3",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Unclear what Multbook refers to; possibly a product or event",
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Genie 3",
+      "canonical_name": "Genie 3",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Google launched Genie 3",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Swix",
+      "canonical_name": "Swix",
+      "entity_type": "account",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "We almost did not give OpenAI the title story today...",
+      "context_snippet": "Swix and Latent Space commented on OpenAI's Codex app launch",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "OpenClaw",
+      "canonical_name": "OpenClaw",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Peter Steinberger is creator of Claudebot / Moltbot / OpenClaw",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Opus 4.5",
+      "canonical_name": "Opus 4.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Opus 4.5 is still the daily driver for programming tasks requiring taste, empathy, and speed",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1342,
+      "mention_text": "Claude Sonnet 5",
+      "canonical_name": "Claude Sonnet 5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "All signs point to Claude Sonnet 5 coming very soon",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "The episode heavily focuses on the SpaceX acquisition of XAI and the launch of OpenAI's Codex app.",
+    "Several social media accounts on platform X (formerly Twitter) are quoted with opinions on the merger and AI tools.",
+    "Some mentions like 'Multbook' are unclear and flagged for review.",
+    "Financial figures and valuations are reported from Bloomberg and The Information but no direct URLs were provided.",
+    "Sponsors Assembly AI, Robots & Pencils, and Blitzy are mentioned with product descriptions and URLs."
+  ]
+}

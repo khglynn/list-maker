@@ -1,0 +1,450 @@
+{
+  "episode_id": 1363,
+  "publish_date": "2026-01-15",
+  "title": "ChatGPT 5.5 Coming Soon?",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-5-5-Coming-Soon-e3dlva0",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1363-chatgpt-5-5-coming-soon.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 20,
+  "mentions": [
+    {
+      "episode_id": 1363,
+      "mention_text": "Torch",
+      "canonical_name": "Torch",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Torch operates a platform to unify medical records including lab results, prescriptions, and appointment notes while storing them in a format that's easily discoverable for AI.",
+      "context_snippet": "OpenAI acquired Torch, a health tech startup unifying medical records for AI use.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "function",
+          "fact_value": "Platform to unify medical records for AI discoverability",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "You Can With AI",
+      "canonical_name": "You Can With AI",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "You Can With AI from KPMG. Season one was designed to be a set of real stories from real leaders making AI work in their organizations.",
+      "context_snippet": "Another podcast hosted by the speaker called You Can With AI from KPMG.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "Podcast mentioned but podcast is not in locked taxonomy; needs review if podcast is acceptable or should be 'other'.",
+      "facts": []
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "GPT-5",
+      "canonical_name": "GPT-5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Things started pretty inauspiciously in August with the release of GPT-5.",
+      "context_snippet": "Discussion of GPT-5 release and its problems including deprecation and perception issues.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "release_date",
+          "fact_value": "August 2025",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "issues",
+          "fact_value": "Deprecation and poor perception of performance jump",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "Gemini 3",
+      "canonical_name": "Gemini 3",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "When Gemini 3 came out, people were extremely excited about it.",
+      "context_snippet": "Google released Gemini 3 in November, impressing many with its intellectual and work task performance.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "release_date",
+          "fact_value": "November 2025",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "performance",
+          "fact_value": "Strong performance on intellectual and work tasks",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "Nano Banana Pro",
+      "canonical_name": "Nano Banana Pro",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Nano Banana Pro's ability to make infographics opened up all sorts of totally new possible use cases.",
+      "context_snippet": "Part of Google's Gemini 3 model family with strong image generation capabilities.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "capability",
+          "fact_value": "Infographic generation",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "GPT 5.2",
+      "canonical_name": "GPT 5.2",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "That got us to GPT 5.2, as well as the new chat GPT images model.",
+      "context_snippet": "OpenAI released GPT 5.2 and a new chat GPT images model as part of their core feature focus.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model_type",
+          "fact_value": "Reasoning model update and image generation 1.5 model",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "Claude Opus 4.5",
+      "canonical_name": "Claude Opus 4.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The opinion on this model has done nothing but go up and up and up and up.",
+      "context_snippet": "Claude Opus 4.5 is considered by some to be the most important model release of 2025.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "reputation",
+          "fact_value": "Increasingly positive reception and importance",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "Cowork",
+      "canonical_name": "Cowork",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic released Cowork, tripling down in that way on their source of narrative momentum.",
+      "context_snippet": "Cowork is a product released by Anthropic to broaden access to Claude Code.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "function",
+          "fact_value": "Product to bring Claude Code to more users",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "Apple Intelligence",
+      "canonical_name": "Apple Intelligence",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Forthcoming versions of Apple Intelligence will be powered by Gemini models.",
+      "context_snippet": "Google and Apple announced a deal that Apple Intelligence will use Gemini models.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "partnership",
+          "fact_value": "Apple Intelligence to be powered by Gemini models",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "Dan Mack",
+      "canonical_name": "Dan Mack",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "GPT 5.3 codenamed Garlic coming soon according to a source, a very reliable source, batting 1000.",
+      "context_snippet": "Dan Mack tweeted rumors about GPT 5.3 codenamed Garlic coming soon.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": [
+        {
+          "fact_key": "rumor",
+          "fact_value": "GPT 5.3 Garlic model expected soon with stronger pre-training and reasoning",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "I Rule the World",
+      "canonical_name": "I Rule the World",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "The 5.2 model that we got was a rushed early checkpoint and that the full model is going to drop in January.",
+      "context_snippet": "AI leaker account I Rule the World shared info about GPT 5.2 being rushed and full model dropping soon.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "rumor",
+          "fact_value": "GPT 5.2 was rushed early checkpoint; full model expected in January",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "Andrew Curran",
+      "canonical_name": "Andrew Curran",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "My chat is acting quite differently as of last night. I assumed it was part of a new personality test group.",
+      "context_snippet": "Andrew Curran tweeted about chat acting differently, possibly due to new personality test group.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": []
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "VB from OpenAI's developer experience team",
+      "canonical_name": "VB",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "VB from OpenAI's developer experience team posted the eyes emoji getting everyone talking.",
+      "context_snippet": "VB's eyes emoji post sparked speculation about upcoming OpenAI model updates.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.75,
+      "needs_review": true,
+      "review_reason": "low_confidence",
+      "facts": []
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "OpenAI 2Go hardware project",
+      "canonical_name": "OpenAI 2Go hardware project",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Hearing fresh detail on OpenAI 2Go hardware project from last report. Now confirmed it's a special audio product to replace AirPod.",
+      "context_snippet": "Chinese consumer electronics blogger leaked details about OpenAI 2Go hardware project codenamed SweetPea.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Unclear if this is a software product, hardware product, or other; no locked type fits well.",
+      "facts": [
+        {
+          "fact_key": "product_type",
+          "fact_value": "Audio hardware product to replace AirPods, codename SweetPea",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "SweetPea",
+      "canonical_name": "SweetPea",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Internal codename is SweetPea. A manufacturing Foxconn has been told to prepare for a total of 5 devices by Q4 2028.",
+      "context_snippet": "SweetPea is the codename for the OpenAI 2Go hardware audio product.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Hardware codename, unclear if product or project; no locked type fits well.",
+      "facts": [
+        {
+          "fact_key": "codename",
+          "fact_value": "OpenAI 2Go audio hardware product",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "DeepSeek v4",
+      "canonical_name": "DeepSeek v4",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "DeepSeek v4 will be released in mid-February and will have a heavy focus on coding performance.",
+      "context_snippet": "DeepSeek v4 is the successor to v3 and reportedly outperforms models like Anthropx Quad and OpenAI's GPT series in coding.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "release_date",
+          "fact_value": "mid-February 2026",
+          "confidence": 0.8
+        },
+        {
+          "fact_key": "performance",
+          "fact_value": "Outperforms Anthropx Quad and OpenAI GPT series in coding",
+          "confidence": 0.8
+        },
+        {
+          "fact_key": "feature",
+          "fact_value": "Handles extremely long context windows",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "Anthropx Quad",
+      "canonical_name": "Anthropx Quad",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "DeepSeek v4 outperformed existing models such as Anthropx Quad and OpenAI's GPT series in coding.",
+      "context_snippet": "Anthropx Quad is a coding model benchmarked against by DeepSeek v4.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "LM Arena",
+      "canonical_name": "LM Arena",
+      "entity_type": "benchmark",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "A model codenamed Beluga on LM Arena is our first look at the whale's next release.",
+      "context_snippet": "LM Arena is a benchmark platform where the model Beluga was posted.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "Beluga",
+      "canonical_name": "Beluga",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Beluga is our first look at the whale's next release.",
+      "context_snippet": "Beluga is a rumored codename for DeepSeek's next model release.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.75,
+      "needs_review": true,
+      "review_reason": "low_confidence",
+      "facts": []
+    },
+    {
+      "episode_id": 1363,
+      "mention_text": "VO31 ingredients to video",
+      "canonical_name": "VO31 ingredients to video",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "VO31 ingredients to video allows users to upload reference images for characters, props and background to guide the video generation.",
+      "context_snippet": "Google announced VO31 ingredients to video feature upgrade for more expressive and consistent video generation.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "feature",
+          "fact_value": "Upload reference images to guide video generation with better visual consistency",
+          "confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [
+    {
+      "episode_id": 1363,
+      "proposed_type": "podcast",
+      "reason": "Mention of another podcast 'You Can With AI' which is a media product but not in locked taxonomy",
+      "example_mention": "You Can With AI from KPMG"
+    }
+  ],
+  "notes": [
+    "Podcast 'You Can With AI' mentioned but podcast is not in locked taxonomy; flagged for review.",
+    "OpenAI 2Go hardware project and SweetPea codename are hardware products but no hardware type exists; marked as 'other' with review needed.",
+    "All URLs are set to null except where explicitly given or clearly inferred from sponsor URLs.",
+    "Only meaningful references to models, organizations, persons central to claims, software products, accounts, and benchmarks were included.",
+    "Sentiment labels are mostly neutral or positive reflecting factual or optimistic commentary; negative sentiment assigned to NVIDIA chip ban and GPT-5 release issues."
+  ]
+}

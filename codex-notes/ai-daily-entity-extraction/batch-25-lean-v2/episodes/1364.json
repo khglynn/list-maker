@@ -1,0 +1,253 @@
+{
+  "episode_id": 1364,
+  "publish_date": "2026-01-13",
+  "title": "Claude Cowork Is Claude Code for Everyone Else",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Claude-Cowork-Is-Claude-Code-for-Everyone-Else-e3dk53n",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1364-claude-cowork-is-claude-code-for-everyone-else.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 11,
+  "mentions": [
+    {
+      "episode_id": 1364,
+      "mention_text": "Claude Code",
+      "canonical_name": "Claude Code",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Claude Code is such a bad name in some ways, is that the code part of Claude Code in fact distracts from the full possibilities that the tool actually represents.",
+      "context_snippet": "One of the universally recognized truths among people in the AI industry is that the single worst named product is not somehow chat GPT or GPT 5.2 Pro QXYZ, or the totally out of left field Nano Banana Pro, but is in fact Claude Code.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_type",
+          "fact_value": "AI tool for coding and more",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "user_base",
+          "fact_value": "developers and non-technical users",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1364,
+      "mention_text": "Co-Work",
+      "canonical_name": "Claude Co-Work",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Claude-Cowork-Is-Claude-Code-for-Everyone-Else-e3dk53n",
+      "quoted_text": "Anthropic announced Co-Work, as they put it, Claude Code for the rest of your work.",
+      "context_snippet": "Yesterday, Anthropic announced Co-Work, as they put it, Claude Code for the rest of your work.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_type",
+          "fact_value": "AI tool for non-coding work with local file access",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "developer",
+          "fact_value": "Anthropic",
+          "confidence": 1.0
+        },
+        {
+          "fact_key": "release_status",
+          "fact_value": "research preview",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1364,
+      "mention_text": "Opus 4.5",
+      "canonical_name": "Opus 4.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The reason is that the underlying Claude agent is the best agent, and Opus 4.5 is the best model.",
+      "context_snippet": "The reason is that the underlying Claude agent is the best agent, and Opus 4.5 is the best model.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model_type",
+          "fact_value": "AI agent model powering Claude",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1364,
+      "mention_text": "Google Drive",
+      "canonical_name": "Google Drive",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Cowork access to connectors, which are Anthropic's ways of connecting to data sources like Google Drive.",
+      "context_snippet": "From there, you can get Cowork access to connectors, which are Anthropic's ways of connecting to data sources like Google Drive.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "integration",
+          "fact_value": "Connector for Claude Co-Work",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1364,
+      "mention_text": "Claude in Chrome",
+      "canonical_name": "Claude Chrome Plugin",
+      "entity_type": "software_product",
+      "platform": "chrome",
+      "source_url": null,
+      "quoted_text": "If you pair it with Claude in Chrome, Cowork can then also complete tasks that require browser access too.",
+      "context_snippet": "If you pair it with Claude in Chrome, Cowork can then also complete tasks that require browser access too.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "integration",
+          "fact_value": "Browser plugin for Claude Co-Work",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1364,
+      "mention_text": "OpenAI Dev Day 2023",
+      "canonical_name": "OpenAI Dev Day 2023",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "OpenAI Dev Day 2023, text-to-speech launch, people said it would kill 11 labs and similar startups.",
+      "context_snippet": "OpenAI Dev Day 2023, text-to-speech launch, people said it would kill 11 labs and similar startups.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": true,
+      "review_reason": "Event type not in locked taxonomy",
+      "facts": []
+    },
+    {
+      "episode_id": 1364,
+      "mention_text": "ChatGPT Enterprise",
+      "canonical_name": "ChatGPT Enterprise",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "ChatGPT Enterprise, people said it would kill B2B AI startups. Reality, it unlocked budgets, made AI procurement safe and created demand for everything it didn't cover.",
+      "context_snippet": "ChatGBT Enterprise, people said it would kill B2B AI startups. Reality, it unlocked budgets, made AI procurement safe and created demand for everything it didn't cover.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1364,
+      "mention_text": "Nano Banana",
+      "canonical_name": "Nano Banana",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Claude code just uses APIs to go to Nano Banana or chat GPT image gen whenever it needs a picture made.",
+      "context_snippet": "Claude code just uses APIs to go to Nano Banana or chat GPT image gen whenever it needs a picture made.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1364,
+      "mention_text": "Chat GPT image gen",
+      "canonical_name": "ChatGPT Image Generation",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Claude code just uses APIs to go to Nano Banana or chat GPT image gen whenever it needs a picture made.",
+      "context_snippet": "Claude code just uses APIs to go to Nano Banana or chat GPT image gen whenever it needs a picture made.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1364,
+      "mention_text": "11 labs API",
+      "canonical_name": "11 Labs API",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "11 labs API whenever it needs a voice.",
+      "context_snippet": "Claude code just uses APIs to go to Nano Banana or chat GPT image gen whenever it needs a picture made or 11 labs API whenever it needs a voice.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": []
+    },
+    {
+      "episode_id": 1364,
+      "mention_text": "ZenFlow",
+      "canonical_name": "ZenFlow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://zenflow.free",
+      "quoted_text": "ZenFlow takes you from vibe coding to AI first engineering. It's the first AI orchestration layer that brings discipline to the chaos.",
+      "context_snippet": "If you're using AI to code, ask yourself, are you building software or are you just playing prompt roulette? We know that unstructured prompting works at first, but eventually it leads to AI slop and technical debt. Enter ZenFlow.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_type",
+          "fact_value": "AI orchestration layer for engineering",
+          "confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [
+    {
+      "episode_id": 1364,
+      "proposed_type": "event",
+      "reason": "OpenAI Dev Day 2023 is mentioned as an event but event is not in locked taxonomy",
+      "example_mention": "OpenAI Dev Day 2023"
+    }
+  ],
+  "notes": [
+    "Many mentions are of people on platform X (formerly Twitter) giving feedback or commentary on Claude Code and Co-Work.",
+    "Some product names like Nano Banana and Chat GPT image gen are mentioned but with limited context; included as software_product conservatively.",
+    "Security concerns and sandboxing are discussed referencing Simon Willison's blog post.",
+    "The episode includes multiple sponsor mentions with URLs where available.",
+    "No URLs were invented; only those explicitly mentioned or clearly known were included."
+  ]
+}

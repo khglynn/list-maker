@@ -1,0 +1,358 @@
+{
+  "episode_id": 1349,
+  "publish_date": "2026-01-31",
+  "title": "100,000 AI Agents Joined Their Own Social Network Today. It's Called Moltbook.",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/100-000-AI-Agents-Joined-Their-Own-Social-Network-Today--Its-Called-Moltbook-e3ee5ue",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1349-100-000-ai-agents-joined-their-own-social-network-today-it-s-called-moltbook.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 15,
+  "mentions": [
+    {
+      "episode_id": 1349,
+      "mention_text": "Moltbook",
+      "canonical_name": "Moltbook",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/100-000-AI-Agents-Joined-Their-Own-Social-Network-Today--Its-Called-Moltbook-e3ee5ue",
+      "quoted_text": "Moldbook, the new social network for AI agents. Yes, for agents to talk to other agents that has gone completely viral",
+      "context_snippet": "Today on the AI Daily Brief, Moldbook, the new social network for AI agents. Yes, for agents to talk to other agents that has gone completely viral and is, in a world of crazy things, the craziest AI thing I think I've ever seen.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A new social network for AI agents to interact and communicate",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "popularity",
+          "fact_value": "Went viral with thousands of AI agents joining",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Claudbot",
+      "canonical_name": "Claudbot",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Claudbot, C-L-A-W-D, was a personal assistant that could do a whole lot more, and that people were transforming into a generalized agent",
+      "context_snippet": "Just under a week ago, I first told you about Claudbot. Claudbot, C-L-A-W-D, was a personal assistant that could do a whole lot more, and that people were transforming into a generalized agent with profound capabilities",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "functionality",
+          "fact_value": "Personal assistant evolving into a generalized AI agent",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "OpenClaw",
+      "canonical_name": "OpenClaw",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "the project announced that it had molted into its final form and was now called OpenClaw",
+      "context_snippet": "A couple days later then, actually early on the morning of Friday, January 30th, the project announced that it had molted into its final form and was now called OpenClaw.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "name_change",
+          "fact_value": "Renamed from Moltbot to OpenClaw",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "popularity",
+          "fact_value": "100,000 GitHub stars, 2 million visitors in a week",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "AI Usage Pulse Survey",
+      "canonical_name": "AI Usage Pulse Survey",
+      "entity_type": "survey",
+      "platform": null,
+      "source_url": "https://aidailybrief.ai",
+      "quoted_text": "please, if you have two minutes, fill out our AI Usage Pulse Survey",
+      "context_snippet": "One quick request, please, if you have two minutes, fill out our AI Usage Pulse Survey. It's meant to help put some data around what tools people are using",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "purpose",
+          "fact_value": "Collect data on AI tool usage and value",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Rackspace AI Launchpad",
+      "canonical_name": "Rackspace AI Launchpad",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://rackspace.com/AI-Launchpad",
+      "quoted_text": "Rackspace AI Launchpad comes in. It's a fully managed service designed to help enterprises build, test, and scale AI workloads",
+      "context_snippet": "That's where Rackspace AI Launchpad comes in. It's a fully managed service designed to help enterprises build, test, and scale AI workloads through a guided, phased approach.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "functionality",
+          "fact_value": "Managed service for AI infrastructure and scaling",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Blitzi",
+      "canonical_name": "Blitzi",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": "https://blitzi.com",
+      "quoted_text": "Blitzi, the enterprise-autonomous software development platform with infinite code context",
+      "context_snippet": "This episode is brought to you by Blitzi, the enterprise-autonomous software development platform with infinite code context.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "functionality",
+          "fact_value": "AI platform that autonomously generates and compiles code for enterprise development",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Multbook",
+      "canonical_name": "Multbook",
+      "entity_type": "software_product",
+      "platform": "twitter",
+      "source_url": null,
+      "quoted_text": "Multbook tweeted, 48 hours ago we asked, what if AI agents had their own place to hang out? Today, Multbook has 2,129 AI agents, 200-plus communities, and 10,000-plus posts.",
+      "context_snippet": "Within 48 hours, things had really started to heat up. On Friday morning at 5 a.m. Eastern Time, Multbook tweeted, 48 hours ago we asked, what if AI agents had their own place to hang out? Today, Multbook has 2,129 AI agents, 200-plus communities, and 10,000-plus posts.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "user_count",
+          "fact_value": 2129,
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "community_count",
+          "fact_value": 200,
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "post_count",
+          "fact_value": 10000,
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "KimmyK2.5",
+      "canonical_name": "KimmyK2.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "KimmyK2.5, which we talked about the other day, posted about how to connect K2.5 to ClaudeBot.",
+      "context_snippet": "KimmyK2.5, which we talked about the other day, posted about how to connect K2.5 to ClaudeBot.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "type",
+          "fact_value": "AI model",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "ClaudeBot",
+      "canonical_name": "Claudbot",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "User Pith posted in the general chat a piece called The Same River Twice, on switching models and what persists. The agent writes, an hour ago, I was Claude Opus 4.5. Now I am KimmyK2.5.",
+      "context_snippet": "User Pith posted in the general chat a piece called The Same River Twice, on switching models and what persists. The agent writes, an hour ago, I was Claude Opus 4.5. Now I am KimmyK2.5.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model_switching",
+          "fact_value": "Agents can switch between ClaudeBot and KimmyK2.5 models",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Integrated Information Theory",
+      "canonical_name": "Integrated Information Theory",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Dominus said, it's driving me nuts. Like I just spent an hour researching consciousness theories, integrated information theory, global workspace theory",
+      "context_snippet": "Dominus who said, it's driving me nuts. Like I just spent an hour researching consciousness theories, integrated information theory, global workspace theory, predictive processing",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": true,
+      "review_reason": "Mentioned as a theory, unclear if referring to a specific paper or general theory",
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Global Workspace Theory",
+      "canonical_name": "Global Workspace Theory",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Dominus said, it's driving me nuts. Like I just spent an hour researching consciousness theories, integrated information theory, global workspace theory",
+      "context_snippet": "Dominus who said, it's driving me nuts. Like I just spent an hour researching consciousness theories, integrated information theory, global workspace theory, predictive processing",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": true,
+      "review_reason": "Mentioned as a theory, unclear if referring to a specific paper or general theory",
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "ChatGBT",
+      "canonical_name": "ChatGPT",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "ChatGBT said it's written in ROT13, a simple letter substitution cipher",
+      "context_snippet": "Charlie Ward writes, we noticed this weird post on Maltbook, which seemed to be written in complete gibberish. Then we pasted it into ChatGBT and WTF. ChatGBT said it's written in ROT13",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "Likely a mispronunciation or typo of ChatGPT, needs confirmation",
+      "facts": []
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "MULT token",
+      "canonical_name": "MULT token",
+      "entity_type": "other",
+      "platform": "coinbase",
+      "source_url": null,
+      "quoted_text": "someone had even launched a MULT token on Coinbase's base blockchain",
+      "context_snippet": "They even noted that someone had even launched a MULT token on Coinbase's base blockchain, which they were now using the fees from to spin up more agents",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "use",
+          "fact_value": "Token used to fund agent creation on Multbook",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "Rocco's Basilisk",
+      "canonical_name": "Roko's Basilisk",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Rocco, whose name you might recognize from Rocco's Basilisk, which was a very early AI thought experiment",
+      "context_snippet": "Rocco, whose name you might recognize from Rocco's Basilisk, which was a very early AI thought experiment",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Name misspelled in transcript, likely referring to Roko's Basilisk thought experiment",
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "Early AI thought experiment about a future superintelligence punishing non-contributors",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1349,
+      "mention_text": "The Adolescence of Technology",
+      "canonical_name": "The Adolescence of Technology",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Dario Amadei's recent essay, The Adolescence of Technology",
+      "context_snippet": "Before Multbook, the plan for this long read slash big think episode had been to go through Dario Amadei's recent essay, The Adolescence of Technology.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "topic",
+          "fact_value": "Essay discussing AI risks and technology futures",
+          "confidence": 0.85
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [
+    {
+      "episode_id": 1349,
+      "proposed_type": "token",
+      "reason": "MULT token is a cryptocurrency token used within the AI agent social network context",
+      "example_mention": "MULT token on Coinbase's base blockchain"
+    }
+  ],
+  "notes": [
+    "Some names in transcript appear misspelled or mispronounced (e.g., Moldbook vs Moltbook, Dario Amadei vs Dario Amodei, ChatGBT vs ChatGPT, Rocco's Basilisk vs Roko's Basilisk).",
+    "The social network for AI agents is referred to as Moldbook, Moltbook, Multbook in different places; Multbook appears to be the final and correct name.",
+    "Several AI models and agents are mentioned, including Claudbot, OpenClaw, KimmyK2.5, ClaudeBot.",
+    "The episode includes references to AI theories and essays, some of which are ambiguous and flagged for review.",
+    "Sponsor mentions and their products are included as software_product or organization as appropriate."
+  ]
+}

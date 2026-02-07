@@ -1,19 +1,10 @@
 #!/usr/bin/env python3
 """
-Lightweight link discovery for unresolved AI Daily mentions.
+Link discovery for unresolved AI Daily mentions in lean schema.
 
-Targets:
-- account
-- report
-- survey
-- paper
-- blog_post
-- social_post
-
-Writes:
-- ai_reference_link_candidates (all candidates)
-- ai_entity_mentions.source_url (only high-confidence auto_verified)
-- ai_episode_reference_links (promoted high-confidence links)
+Writes directly to ai_mentions:
+- link_candidates (JSON array)
+- source_url / link_status / link_confidence (for strong matches)
 """
 
 from __future__ import annotations
@@ -25,16 +16,17 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Iterable, Optional
-from urllib.parse import parse_qs, quote_plus, unquote, urlparse
+from typing import Optional
+from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
 from dotenv import load_dotenv
 
 
 REQUEST_TIMEOUT = 25
-TARGET_TYPES = ("account", "report", "survey", "paper", "blog_post", "social_post")
 FIRECRAWL_SEARCH_URL = "https://api.firecrawl.dev/v1/search"
+TARGET_TYPES = ("account", "report", "survey", "paper", "blog_post", "social_post")
+ACCOUNT_STOPWORDS = {"the", "and", "for", "with", "from", "ai", "official"}
 
 
 def load_environment(repo_root: Path) -> None:
@@ -77,7 +69,6 @@ def extract_domain(url: str) -> str:
 
 
 def decode_ddg_redirect(url: str) -> str:
-    # DuckDuckGo often wraps real URLs in /l/?uddg=...
     try:
         parsed = urlparse(url)
         if "duckduckgo.com" in parsed.netloc and parsed.path.startswith("/l/"):
@@ -101,8 +92,6 @@ def search_duckduckgo(query: str, max_results: int = 5) -> list[dict]:
     body = resp.text
 
     results: list[dict] = []
-    # Parse result anchors from html endpoint.
-    # Example: <a rel="nofollow" class="result__a" href="...">Title</a>
     for m in re.finditer(
         r'<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>(.*?)</a>',
         body,
@@ -150,21 +139,18 @@ def search_firecrawl(query: str, max_results: int = 5) -> list[dict]:
 
 
 def search_web(query: str, max_results: int = 5) -> tuple[str, list[dict]]:
-    # Firecrawl is primary because DuckDuckGo often times out in this environment.
     try:
-        firecrawl_results = search_firecrawl(query, max_results=max_results)
-        if firecrawl_results:
-            return "firecrawl", firecrawl_results
+        data = search_firecrawl(query, max_results=max_results)
+        if data:
+            return "firecrawl", data
     except Exception:
         pass
-
     try:
-        ddg_results = search_duckduckgo(query, max_results=max_results)
-        if ddg_results:
-            return "duckduckgo", ddg_results
+        data = search_duckduckgo(query, max_results=max_results)
+        if data:
+            return "duckduckgo", data
     except Exception:
         pass
-
     return "none", []
 
 
@@ -177,7 +163,6 @@ def build_queries(mention: dict) -> list[str]:
 
     queries: list[str] = []
     if mention_type == "account":
-        # Strong platform-specific query first.
         if platform in ("x", "twitter"):
             queries.append(f'site:x.com "{canonical}"')
             queries.append(f'site:twitter.com "{canonical}"')
@@ -198,7 +183,6 @@ def build_queries(mention: dict) -> list[str]:
     else:
         queries.append(f'"{canonical}"')
 
-    # Deduplicate while preserving order.
     deduped: list[str] = []
     seen = set()
     for q in queries:
@@ -220,7 +204,6 @@ def score_candidate(mention: dict, candidate_url: str, candidate_title: str) -> 
     url_tokens = set(normalize_tokens(candidate_url))
     overlap = len(canonical_tokens.intersection(title_tokens.union(url_tokens)))
     token_ratio = overlap / max(1, len(canonical_tokens))
-
     score += 0.45 * token_ratio
 
     if mention_type == "account":
@@ -229,13 +212,15 @@ def score_candidate(mention: dict, candidate_url: str, candidate_title: str) -> 
         if platform in ("x", "twitter") and domain in ("x.com", "twitter.com"):
             score += 0.1
     elif mention_type in ("survey", "report", "paper", "blog_post"):
-        if any(domain.endswith(d) for d in ("aidailybrief.ai", "openai.com", "anthropic.com", "arxiv.org", "wikipedia.org")):
+        if any(
+            domain.endswith(d)
+            for d in ("aidailybrief.ai", "openai.com", "anthropic.com", "arxiv.org", "wikipedia.org")
+        ):
             score += 0.15
     elif mention_type == "social_post":
         if domain in ("x.com", "twitter.com"):
             score += 0.25
 
-    # Penalize obviously low-value pages.
     if any(x in candidate_url.lower() for x in ("/search?", "/status", "/explore")):
         score -= 0.2
 
@@ -253,93 +238,67 @@ def mention_platform_from_url(url: str) -> Optional[str]:
     return None
 
 
-def candidate_exists(conn, mention_id: int, url: str) -> bool:
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT 1
-            FROM ai_reference_link_candidates
-            WHERE mention_id = %s AND candidate_url = %s
-            LIMIT 1;
-            """,
-            (mention_id, url),
-        )
-        return cur.fetchone() is not None
+def extract_handle_from_url(url: str) -> str:
+    try:
+        parsed = urlparse(url)
+        parts = [p for p in parsed.path.split("/") if p]
+    except Exception:
+        return ""
+    if not parts:
+        return ""
+    return parts[0].lstrip("@").lower()
 
 
-def insert_candidate(
-    conn,
-    *,
-    mention_id: int,
-    entity_id: Optional[int],
-    url: str,
-    score: float,
-    verification_status: str,
-    evidence: dict,
-) -> None:
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO ai_reference_link_candidates (
-              mention_id, entity_id, candidate_url, discovery_method,
-              match_confidence, verification_status, evidence, created_at
-            )
-            VALUES (%s, %s, %s, 'duckduckgo', %s, %s, %s::jsonb, NOW());
-            """,
-            (mention_id, entity_id, url, score, verification_status, json.dumps(evidence)),
-        )
+def is_acronym(text: str) -> bool:
+    clean = re.sub(r"[^A-Za-z]", "", text)
+    return len(clean) >= 3 and clean.isupper()
 
 
-def promote_candidate(
-    conn,
-    *,
+def is_safe_auto_match(
     mention: dict,
-    url: str,
-    platform: Optional[str],
+    candidate_url: str,
+    candidate_title: str,
     score: float,
-) -> None:
-    mention_id = mention["mention_id"]
-    run_id = mention["run_id"]
-    episode_id = mention["episode_id"]
-    entity_id = mention["entity_id"]
+    threshold: float,
+) -> bool:
+    if score < threshold:
+        return False
 
-    with conn.cursor() as cur:
-        # Update mention source_url only if empty.
-        cur.execute(
-            """
-            UPDATE ai_entity_mentions
-            SET source_url = %s,
-                platform = COALESCE(platform, %s)
-            WHERE id = %s
-              AND (source_url IS NULL OR BTRIM(source_url) = '');
-            """,
-            (url, platform, mention_id),
-        )
+    mention_type = mention["mention_type"]
+    canonical = mention["canonical_name"]
+    domain = extract_domain(candidate_url)
+    title_tokens = set(normalize_tokens(candidate_title))
+    canonical_tokens = [t for t in normalize_tokens(canonical) if t not in ACCOUNT_STOPWORDS]
 
-        # Insert into episode reference links only once per episode/entity/url.
-        cur.execute(
-            """
-            SELECT 1
-            FROM ai_episode_reference_links
-            WHERE episode_id = %s
-              AND source_kind = 'link_discovery'
-              AND url = %s
-              AND COALESCE(linked_entity_id, 0) = COALESCE(%s, 0)
-            LIMIT 1;
-            """,
-            (episode_id, url, entity_id),
-        )
-        if cur.fetchone() is None:
-            cur.execute(
-                """
-                INSERT INTO ai_episode_reference_links (
-                  episode_id, run_id, url, platform, linked_entity_id,
-                  source_kind, verification_status, created_at
-                )
-                VALUES (%s, %s, %s, %s, %s, 'link_discovery', 'auto_verified', NOW());
-                """,
-                (episode_id, run_id, url, platform, entity_id),
-            )
+    if mention_type == "account":
+        if domain not in ("x.com", "twitter.com"):
+            return False
+        handle = extract_handle_from_url(candidate_url)
+        if not handle:
+            return False
+
+        if len(canonical_tokens) >= 2:
+            long_tokens = [t for t in canonical_tokens if len(t) >= 3]
+            if not long_tokens:
+                return False
+            in_handle = sum(1 for t in long_tokens if t in handle)
+            in_title = sum(1 for t in long_tokens if t in title_tokens)
+            return in_handle >= 1 and in_title >= 1
+
+        # Single-token account names are ambiguous. Only allow acronym-style exact-ish matches.
+        single = canonical_tokens[0] if canonical_tokens else ""
+        if not single:
+            return False
+        if is_acronym(canonical) and len(single) >= 3:
+            return single in handle and single in title_tokens
+        return False
+
+    if mention_type == "social_post":
+        if domain in ("x.com", "twitter.com"):
+            return "/status/" in candidate_url
+        return score >= (threshold + 0.03)
+
+    return True
 
 
 def fetch_mentions_for_link_hunt(conn, run_ids: list[int], limit: int) -> list[dict]:
@@ -360,13 +319,12 @@ def fetch_mentions_for_link_hunt(conn, run_ids: list[int], limit: int) -> list[d
                m.entity_id,
                m.mention_type,
                m.mention_text,
+               m.canonical_name,
                m.platform,
                m.context_snippet,
-               COALESCE(e2.canonical_name, m.mention_text) AS canonical_name,
                e.title AS episode_title
-        FROM ai_entity_mentions m
+        FROM ai_mentions m
         JOIN episodes e ON e.id = m.episode_id
-        LEFT JOIN ai_entities e2 ON e2.id = m.entity_id
         WHERE {' AND '.join(conditions)}
         ORDER BY m.run_id, m.id
         LIMIT %s;
@@ -379,9 +337,10 @@ def fetch_mentions_for_link_hunt(conn, run_ids: list[int], limit: int) -> list[d
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Discover candidate links for AI mentions")
-    p.add_argument("--run-ids", type=str, default="4,3", help="Comma-separated run IDs to process")
-    p.add_argument("--limit", type=int, default=200, help="Max mentions to process")
+    p.add_argument("--run-ids", type=str, default="", help="Comma-separated run IDs to process")
+    p.add_argument("--limit", type=int, default=300, help="Max mentions to process")
     p.add_argument("--max-candidates-per-mention", type=int, default=3)
+    p.add_argument("--auto-threshold", type=float, default=0.90)
     p.add_argument("--dry-run", action="store_true")
     return p.parse_args()
 
@@ -399,6 +358,68 @@ def parse_run_ids(value: str) -> list[int]:
     return out
 
 
+def apply_mention_updates(
+    conn,
+    *,
+    mention_id: int,
+    candidates: list[dict],
+    promoted_url: Optional[str],
+    promoted_platform: Optional[str],
+    promoted_score: Optional[float],
+) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE ai_mentions
+            SET link_candidates = %s::jsonb,
+                source_url = CASE
+                  WHEN %s IS NOT NULL THEN %s
+                  ELSE source_url
+                END,
+                platform = CASE
+                  WHEN %s IS NOT NULL AND (platform IS NULL OR BTRIM(platform) = '') THEN %s
+                  ELSE platform
+                END,
+                link_status = CASE
+                  WHEN %s IS NOT NULL THEN 'auto_verified'
+                  ELSE link_status
+                END,
+                link_confidence = CASE
+                  WHEN %s IS NOT NULL THEN %s
+                  ELSE link_confidence
+                END,
+                updated_at = NOW()
+            WHERE id = %s;
+            """,
+            (
+                json.dumps(candidates),
+                promoted_url,
+                promoted_url,
+                promoted_platform,
+                promoted_platform,
+                promoted_url,
+                promoted_url,
+                promoted_score,
+                mention_id,
+            ),
+        )
+
+
+def update_entity_primary_url(conn, entity_id: Optional[int], url: str) -> None:
+    if not entity_id:
+        return
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE ai_entities
+            SET primary_url = COALESCE(primary_url, %s),
+                updated_at = NOW()
+            WHERE id = %s;
+            """,
+            (url, int(entity_id)),
+        )
+
+
 def main() -> None:
     args = parse_args()
     repo_root = Path(__file__).resolve().parents[3]
@@ -413,10 +434,11 @@ def main() -> None:
     try:
         mentions = fetch_mentions_for_link_hunt(conn, run_ids=run_ids, limit=args.limit)
         print(f"mentions_to_process={len(mentions)}")
+
         for mention in mentions:
             processed += 1
             queries = build_queries(mention)
-            kept = 0
+            candidates_by_url: dict[str, dict] = {}
             best_auto = None
             best_score = -1.0
 
@@ -429,67 +451,79 @@ def main() -> None:
                     url = item["url"]
                     title = item["title"]
                     score = score_candidate(mention, url, title)
-                    status = "auto_verified" if score >= 0.86 else "unverified"
-                    evidence = {
-                        "search_backend": backend,
-                        "query": query,
+                    candidate = {
+                        "url": url,
                         "title": title,
+                        "query": query,
                         "rank": rank,
-                        "mention_type": mention["mention_type"],
-                        "canonical_name": mention["canonical_name"],
+                        "backend": backend,
+                        "score": round(score, 4),
                     }
-                    if candidate_exists(conn, mention["mention_id"], url):
-                        continue
 
-                    if not args.dry_run:
-                        insert_candidate(
-                            conn,
-                            mention_id=mention["mention_id"],
-                            entity_id=mention["entity_id"],
-                            url=url,
-                            score=score,
-                            verification_status=status,
-                            evidence=evidence,
-                        )
+                    existing = candidates_by_url.get(url)
+                    if existing is None or score > float(existing["score"]):
+                        candidates_by_url[url] = candidate
                     inserted_candidates += 1
-                    kept += 1
 
                     if score > best_score:
                         best_score = score
                         best_auto = (url, mention_platform_from_url(url), score)
 
-                    if kept >= args.max_candidates_per_mention:
+                    if len(candidates_by_url) >= args.max_candidates_per_mention:
                         break
-                if kept >= args.max_candidates_per_mention:
+                if len(candidates_by_url) >= args.max_candidates_per_mention:
                     break
 
-            # Promote only strongest hit.
-            if best_auto and best_auto[2] >= 0.90:
-                url, platform, score = best_auto
-                if not args.dry_run:
-                    promote_candidate(
-                        conn,
-                        mention=mention,
-                        url=url,
-                        platform=platform,
-                        score=score,
-                    )
-                promoted_links += 1
+            candidates = sorted(
+                candidates_by_url.values(),
+                key=lambda c: (-float(c["score"]), c["url"]),
+            )
+            promoted_url = None
+            promoted_platform = None
+            promoted_score = None
+            if best_auto:
+                auto_url, auto_platform, auto_score = best_auto
+                # Find title for best candidate so we can apply stricter safety checks.
+                best_title = ""
+                for c in candidates:
+                    if c["url"] == auto_url:
+                        best_title = c.get("title", "")
+                        break
+                if is_safe_auto_match(
+                    mention,
+                    candidate_url=auto_url,
+                    candidate_title=best_title,
+                    score=auto_score,
+                    threshold=args.auto_threshold,
+                ):
+                    promoted_url, promoted_platform, promoted_score = best_auto
+                    promoted_links += 1
+
+            if not args.dry_run:
+                apply_mention_updates(
+                    conn,
+                    mention_id=int(mention["mention_id"]),
+                    candidates=candidates,
+                    promoted_url=promoted_url,
+                    promoted_platform=promoted_platform,
+                    promoted_score=promoted_score,
+                )
+                if promoted_url:
+                    update_entity_primary_url(conn, mention.get("entity_id"), promoted_url)
+                conn.commit()
 
             if processed % 25 == 0:
                 print(
-                    f"processed={processed}/{len(mentions)} candidates={inserted_candidates} promoted={promoted_links}",
+                    f"processed={processed}/{len(mentions)} candidates_seen={inserted_candidates} "
+                    f"auto_promoted={promoted_links}",
                     flush=True,
                 )
 
         if args.dry_run:
             conn.rollback()
-        else:
-            conn.commit()
-
         print(
-            f"done processed={processed} candidates_inserted={inserted_candidates} "
-            f"promoted_links={promoted_links} dry_run={args.dry_run}"
+            f"done processed={processed} candidates_seen={inserted_candidates} "
+            f"auto_promoted={promoted_links} dry_run={args.dry_run}"
         )
     finally:
         conn.close()

@@ -1,0 +1,331 @@
+{
+  "episode_id": 1367,
+  "publish_date": "2026-01-10",
+  "title": "Building a Personal AI Model Map [AI Operators Bonus Episode]",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Building-a-Personal-AI-Model-Map-AI-Operators-Bonus-Episode-e3df457",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1367-building-a-personal-ai-model-map-ai-operators-bonus-episode.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 14,
+  "mentions": [
+    {
+      "episode_id": 1367,
+      "mention_text": "AI Operators",
+      "canonical_name": "AI Operators",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "One of the things that I was contemplating at the end of last year was actually doing a spin-off podcast called AI Operators.",
+      "context_snippet": "One of the things that I was contemplating at the end of last year was actually doing a spin-off podcast called AI Operators. The idea of AI Operators would basically be what I was calling a skills cast, where instead of focusing on the AI news, it would be all about using AI tools, building AI projects.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "A proposed spin-off podcast focused on AI tools and building AI projects.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1367,
+      "mention_text": "AI Daily Brief",
+      "canonical_name": "AI Daily Brief",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "It's still something that's very much on the table. But where I wanted to start it first was to experiment with it in the context of the existing AI Daily Brief community.",
+      "context_snippet": "But where I wanted to start it first was to experiment with it in the context of the existing AI Daily Brief community.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "An existing community related to AI news and projects.",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1367,
+      "mention_text": "Model Map Builder",
+      "canonical_name": "Model Map Builder",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "And thus was born the Model Map Builder application.",
+      "context_snippet": "And thus was born the Model Map Builder application. Now I'm using Lovable for this, but you could use Repl.it, you could use Claude Code.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "An application to contain and organize personalized AI model recommendations and test results.",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1367,
+      "mention_text": "Lovable",
+      "canonical_name": "Lovable",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Now I'm using Lovable for this, but you could use Repl.it, you could use Claude Code.",
+      "context_snippet": "And thus was born the Model Map Builder application. Now I'm using Lovable for this, but you could use Repl.it, you could use Claude Code.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "usage",
+          "fact_value": "Used as the platform for building the Model Map Builder application.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1367,
+      "mention_text": "Repl.it",
+      "canonical_name": "Replit",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Now I'm using Lovable for this, but you could use Repl.it, you could use Claude Code.",
+      "context_snippet": "Now I'm using Lovable for this, but you could use Repl.it, you could use Claude Code.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "alternative_platform",
+          "fact_value": "Suggested as an alternative platform to build the Model Map Builder application.",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1367,
+      "mention_text": "Claude Code",
+      "canonical_name": "Claude Code",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Now I'm using Lovable for this, but you could use Repl.it, you could use Claude Code.",
+      "context_snippet": "Now I'm using Lovable for this, but you could use Repl.it, you could use Claude Code.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "alternative_platform",
+          "fact_value": "Suggested as an alternative platform to build the Model Map Builder application.",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1367,
+      "mention_text": "11v3",
+      "canonical_name": "11v3",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "11v3, the most recent model, is here in the models list.",
+      "context_snippet": "11 Labs exists both as a tool, but also 11v3, the most recent model, is here in the models list.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model_provider",
+          "fact_value": "11 Labs",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1367,
+      "mention_text": "GPT image 1.5",
+      "canonical_name": "GPT image 1.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "We'll do GPT image 1.5, Nano Banana Pro, and then we'll head on over to tools and add Gamma, GenSpark, and Manus.",
+      "context_snippet": "We'll do GPT image 1.5, Nano Banana Pro, and then we'll head on over to tools and add Gamma, GenSpark, and Manus.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "example_model",
+          "fact_value": true,
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1367,
+      "mention_text": "Nano Banana Pro",
+      "canonical_name": "Nano Banana Pro",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "We'll do GPT image 1.5, Nano Banana Pro, and then we'll head on over to tools and add Gamma, GenSpark, and Manus.",
+      "context_snippet": "We'll do GPT image 1.5, Nano Banana Pro, and then we'll head on over to tools and add Gamma, GenSpark, and Manus.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "example_model",
+          "fact_value": true,
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1367,
+      "mention_text": "Gamma",
+      "canonical_name": "Gamma",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "We'll head on over to tools and add Gamma, GenSpark, and Manus.",
+      "context_snippet": "We'll head on over to tools and add Gamma, GenSpark, and Manus.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "example_tool",
+          "fact_value": true,
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1367,
+      "mention_text": "GenSpark",
+      "canonical_name": "GenSpark",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "We'll head on over to tools and add Gamma, GenSpark, and Manus.",
+      "context_snippet": "We'll head on over to tools and add Gamma, GenSpark, and Manus.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "example_tool",
+          "fact_value": true,
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1367,
+      "mention_text": "Manus",
+      "canonical_name": "Manus",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "We'll head on over to tools and add Gamma, GenSpark, and Manus.",
+      "context_snippet": "We'll head on over to tools and add Gamma, GenSpark, and Manus.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "example_tool",
+          "fact_value": true,
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1367,
+      "mention_text": "The Modern AI PM in the Age of Agents",
+      "canonical_name": "The Modern AI PM in the Age of Agents",
+      "entity_type": "paper",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "This essay from Google's senior AI product manager Shobham Sabu called the Modern AI PM in the Age of Agents.",
+      "context_snippet": "One thing that I wanted to share related to all of this is this essay from Google's senior AI product manager Shobham Sabu called the Modern AI PM in the Age of Agents.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "author",
+          "fact_value": "Shobham Sabu",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "type",
+          "fact_value": "essay",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1367,
+      "mention_text": "WhisperFlow",
+      "canonical_name": "WhisperFlow",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "I'm going to use WhisperFlow so you can see how that works too.",
+      "context_snippet": "Actually, you know what? Let's do this just so you can see how a fast feature goes. I'm going to use WhisperFlow so you can see how that works too.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "usage",
+          "fact_value": "Used to demonstrate a fast feature implementation.",
+          "confidence": 0.85
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "No URLs were provided for any mentions, so source_url is null for all.",
+    "Some entities like AI Operators and AI Daily Brief are treated as 'other' due to unclear exact entity type.",
+    "Model and tool distinctions are noted as blurry, but models and software_products are separated based on context.",
+    "Mentions are limited to meaningful references central to the episode's content."
+  ]
+}

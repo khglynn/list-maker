@@ -1,0 +1,493 @@
+{
+  "episode_id": 1339,
+  "publish_date": "2026-02-05",
+  "title": "The Dawn of the Agent Age",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-Dawn-of-the-Agent-Age-e3eldab",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1339-the-dawn-of-the-agent-age.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 23,
+  "mentions": [
+    {
+      "episode_id": 1339,
+      "mention_text": "Xcode",
+      "canonical_name": "Xcode",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The latest update for Apple's coding platform Xcode adds support for both Clawed Agent and OpenAI's Codecs directly in the developer environment.",
+      "context_snippet": "Xcode update brings agentic coding support with Clawed Agent and OpenAI's Codecs, enabling autonomous coding workflows.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "feature_update",
+          "fact_value": "Xcode supports Clawed Agent and OpenAI's Codecs for agentic coding",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Clawed Code",
+      "canonical_name": "Clawed Code",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "A Clawed Code outage saw software engineer productivity absolutely plummet.",
+      "context_snippet": "Clawed Code experienced an outage causing widespread errors and degraded API performance, impacting developers.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "outage",
+          "fact_value": "Clawed Code outage caused significant developer productivity loss",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "OpenClaw",
+      "canonical_name": "OpenClaw",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "OpenClaw is sort of like an assistant protocol for Cloud Code.",
+      "context_snippet": "OpenClaw turns Cloud Code into an assistant with access to computer services, gaining thousands of users rapidly.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "functionality",
+          "fact_value": "Assistant protocol enabling agentic assistants with access to computer services",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "user_growth",
+          "fact_value": "Rapid adoption with thousands of users and Mac Mini purchases",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Multbook",
+      "canonical_name": "Multbook",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Multbook built itself as the social network for AI agents.",
+      "context_snippet": "Multbook launched as a social network for AI agents, growing from 2,000 to over 1.5 million agents in weeks.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "description",
+          "fact_value": "Social network platform for AI agents",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "growth",
+          "fact_value": "Grew from 2,000 to over 1.5 million agents rapidly",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Gemini",
+      "canonical_name": "Gemini",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Gemini would in fact be powering Apple's on-device AI.",
+      "context_snippet": "Gemini model confirmed as powering Apple's on-device AI, reinforcing Google's AI tailwinds.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "usage",
+          "fact_value": "Powering Apple's on-device AI",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Alibaba's Kuen",
+      "canonical_name": "Kuen",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "New Chinese model from Alibaba called Kuen noted in AI race updates.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model_origin",
+          "fact_value": "Chinese AI model from Alibaba",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Moonshot's Kimi K25",
+      "canonical_name": "Kimi K25",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Moonshot's Kimi K25 is a leading open-weight multimodal model with agent swarm features.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model_features",
+          "fact_value": "Multimodal, agent swarms, close to state-of-the-art at lower price",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Grok platform",
+      "canonical_name": "Grok platform",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Grok platform is part of XAI now owned by SpaceX.",
+      "context_snippet": "Grok platform acquired by SpaceX through merger with XAI.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "ownership",
+          "fact_value": "Part of XAI, now owned by SpaceX",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Chat GPT",
+      "canonical_name": "ChatGPT",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic explained why Claude will remain ad free, contrasting with Chat GPT's advertising plans.",
+      "context_snippet": "Discussion about advertising on Chat GPT and its impact on usage relative to competitors like Gemini and Claude.",
+      "sentiment_label": "mixed",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "advertising",
+          "fact_value": "Chat GPT expected to have advertising; Claude will remain ad free",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Claude",
+      "canonical_name": "Claude",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic explained why Claude will remain ad free.",
+      "context_snippet": "Claude model will remain ad free despite advertising on Chat GPT.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "advertising_policy",
+          "fact_value": "Claude will remain ad free",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Sonnet 5",
+      "canonical_name": "Sonnet 5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Rumors of new models coming including Sonnet 5, Opus 4.6, GPT 5.3, Gemini 3 Pro.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.7,
+      "needs_review": true,
+      "review_reason": "low_confidence",
+      "facts": [
+        {
+          "fact_key": "rumor",
+          "fact_value": "Potential upcoming AI model release",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Opus 4.5",
+      "canonical_name": "Opus 4.5",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Users experienced a shift in AI coding capabilities with models like Opus 4.5.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model_capability",
+          "fact_value": "Significant AI coding improvements",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "GPT 5.2 Codex",
+      "canonical_name": "GPT 5.2 Codex",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": null,
+      "context_snippet": "Users had transformative experiences with GPT 5.2 Codex in AI coding projects.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model_capability",
+          "fact_value": "Advanced AI coding capabilities",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Cloud Code",
+      "canonical_name": "Cloud Code",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic released Cloud Cowork, the Cloud Code for everyone else, built in 10 days by Cloud Code itself.",
+      "context_snippet": "Cloud Code reshaping software development, enabling agentic coding and rapid project completion.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product",
+          "fact_value": "Agentic coding platform by Anthropic",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "self_build",
+          "fact_value": "Cloud Cowork built by Cloud Code itself in 10 days",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Cloud Cowork",
+      "canonical_name": "Cloud Cowork",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic launched Cloud Cowork to make Cloud Code more accessible.",
+      "context_snippet": "Cloud Cowork is a more accessible version of Cloud Code, enabling wider agentic coding adoption.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product",
+          "fact_value": "Accessible agentic coding platform derived from Cloud Code",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "You Can With AI podcast",
+      "canonical_name": "You Can With AI podcast",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "You Can With AI podcast hosted for KPMG focuses on deployment and responsible scaling of AI.",
+      "context_snippet": "Podcast discussing enterprise AI strategy and practical deployment hosted by the episode speaker.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "Type unclear, podcast is not in locked taxonomy; marked as 'other' with needs_review",
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "aidailybrief.ai",
+      "canonical_name": "AI Daily Brief",
+      "entity_type": "survey",
+      "platform": null,
+      "source_url": "https://aidailybrief.ai",
+      "quoted_text": null,
+      "context_snippet": "Listeners encouraged to fill out the January AI Usage Pulse Survey at aidailybrief.ai.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "Website and survey mentioned but entity type unclear; marked as 'other' with needs_review",
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "George Castillo",
+      "canonical_name": "George Castillo",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Apple just surrendered on AI. Xcode 26.3 now relies on Clawed and Codecs for agentic coding.",
+      "context_snippet": "George Castillo criticizes Apple's AI strategy on X.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Dan Schipper",
+      "canonical_name": "Dan Schipper",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Apple is going to be a big winner in AI. Native apps are naturally easier to vibe code.",
+      "context_snippet": "Dan Schipper offers positive perspective on Apple's AI future on X.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Matt Silve",
+      "canonical_name": "Matt Silve",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Clawed Code being out is worse than the internet being out.",
+      "context_snippet": "Matt Silve comments on Clawed Code outage impact on X.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Fabio Seychas",
+      "canonical_name": "Fabio Seychas",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Anthropic will be the AWS-slash-Cloudflare of the development world.",
+      "context_snippet": "Fabio Seychas compares Anthropic's importance to AWS and Cloudflare on X.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Anand Iyer",
+      "canonical_name": "Anand Iyer",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "The OpenClaw and Mac Mini explosion proves power users want always-on agents with access to their data.",
+      "context_snippet": "Anand Iyer comments on OpenClaw and Mac Mini adoption on X.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": []
+    },
+    {
+      "episode_id": 1339,
+      "mention_text": "Sigi Chen",
+      "canonical_name": "Sigi Chen",
+      "entity_type": "account",
+      "platform": "x",
+      "source_url": null,
+      "quoted_text": "Chat GPT was the iPhone moment for LLMs, OpenClaw is the iPhone moment for agents.",
+      "context_snippet": "Sigi Chen compares Chat GPT and OpenClaw impact on X.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "posting_context_retyped_to_account",
+      "facts": []
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Podcast mentions multiple software products, models, organizations, and persons central to AI agent era developments.",
+    "Some entities like 'You Can With AI podcast' and 'aidailybrief.ai' are marked as 'other' with needs_review due to unclear type in locked taxonomy.",
+    "Social posts on X (formerly Twitter) are included with quoted_text and platform specified.",
+    "URLs are included only when explicitly mentioned or known; otherwise set to null.",
+    "Sentiment labels are assigned based on context and tone of mention.",
+    "Confidence scores reflect certainty of entity identification and fact extraction."
+  ]
+}

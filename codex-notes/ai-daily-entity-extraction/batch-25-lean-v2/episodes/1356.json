@@ -1,0 +1,279 @@
+{
+  "episode_id": 1356,
+  "publish_date": "2026-01-22",
+  "title": "The 3x Payoff of Deep AI Integration",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/The-3x-Payoff-of-Deep-AI-Integration-e3e24qb",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1356-the-3x-payoff-of-deep-ai-integration.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 10,
+  "mentions": [
+    {
+      "episode_id": 1356,
+      "mention_text": "Siri",
+      "canonical_name": "Siri",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The chatbot, codenamed Campos, will be embedded deeply into the iPhone, iPad, and Mac operating systems and replace the current Siri interface.",
+      "context_snippet": "Bloomberg's Apple insider Mark Gurman reports that Siri will be turned into a ChatGPT-style chatbot codenamed Campos, embedded deeply into Apple devices, replacing the current interface.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "product_update",
+          "fact_value": "Siri to become ChatGPT-style chatbot codenamed Campos",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "integration",
+          "fact_value": "Deep integration with iPhone, iPad, Mac OS; accepts speech and text inputs",
+          "confidence": 0.85
+        },
+        {
+          "fact_key": "model",
+          "fact_value": "Driven by custom version of Gemini under Apple-Google partnership",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1356,
+      "mention_text": "Gemini",
+      "canonical_name": "Gemini",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Siri will be driven by a custom version of Gemini under Apple's new partnership with Google.",
+      "context_snippet": "Gurman reports that Siri will be driven by a custom version of Gemini under Apple's new partnership with Google.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "usage",
+          "fact_value": "Custom Gemini model powers new Siri chatbot",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1356,
+      "mention_text": "Avocado",
+      "canonical_name": "Avocado",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Meta was developing two models. Avocado, a language model that reportedly excels at coding tasks.",
+      "context_snippet": "Meta was developing two models: Avocado, a language model excelling at coding tasks, and Mango, a visual model with image and video capabilities.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model_type",
+          "fact_value": "language model",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "capability",
+          "fact_value": "excels at coding tasks",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1356,
+      "mention_text": "Mango",
+      "canonical_name": "Mango",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Mango, a visual model with image and video capabilities.",
+      "context_snippet": "Meta was developing two models: Avocado, a language model excelling at coding tasks, and Mango, a visual model with image and video capabilities.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "model_type",
+          "fact_value": "visual model",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "capability",
+          "fact_value": "image and video capabilities",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1356,
+      "mention_text": "AI Overwatch Act",
+      "canonical_name": "AI Overwatch Act",
+      "entity_type": "report",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The House Oversight Committee has advanced a bill to seize power on chip export controls called the AI Overwatch Act.",
+      "context_snippet": "The House Oversight Committee has advanced a bill called the AI Overwatch Act to grant Congress power to review and block chip export licenses, including a two-year ban on NVIDIA's Blackwell chips.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "legislation",
+          "fact_value": "Bill grants Congress power to review and block chip export licenses",
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "chip_ban",
+          "fact_value": "Two-year ban on export of NVIDIA Blackwell chips included",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1356,
+      "mention_text": "NVIDIA Blackwell chips",
+      "canonical_name": "NVIDIA Blackwell",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The bill includes a two-year ban on the export of NVIDIA's top-of-the-line Blackwell chips.",
+      "context_snippet": "The AI Overwatch Act includes a two-year ban on the export of NVIDIA's top-of-the-line Blackwell chips.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": true,
+      "review_reason": "NVIDIA Blackwell chips are hardware products but no exact software_product or model type; classified as 'other' conservatively.",
+      "facts": [
+        {
+          "fact_key": "export_ban_duration",
+          "fact_value": "2 years",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1356,
+      "mention_text": "PWC",
+      "canonical_name": "PricewaterhouseCoopers",
+      "entity_type": "survey",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "A new PWC survey of CEOs released to coincide with the WEF in Davos showed just 12% of CEOs said AI had delivered both cost and revenue benefits.",
+      "context_snippet": "PWC survey of nearly 4,500 CEOs found 12% saw both cost and revenue benefits from AI, while 56% saw no significant financial benefit.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "survey_retyped_from_context",
+      "facts": [
+        {
+          "fact_key": "survey_sample_size",
+          "fact_value": 4500,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "financial_benefit_positive_percent",
+          "fact_value": 12,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "no_financial_benefit_percent",
+          "fact_value": 56,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1356,
+      "mention_text": "Workday",
+      "canonical_name": "Workday",
+      "entity_type": "survey",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Workday research found that 37% of the time saved through AI is lost to rework, creating an AI tax on productivity.",
+      "context_snippet": "Workday survey found employees spend significant time correcting AI-generated content, losing 37% of AI time savings to rework.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "survey_retyped_from_context",
+      "facts": [
+        {
+          "fact_key": "time_lost_to_rework_percent",
+          "fact_value": 37,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1356,
+      "mention_text": "Section",
+      "canonical_name": "Section",
+      "entity_type": "survey",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Section survey found just 3% of employees are using AI proficiently, with 97% being novices or experimenters.",
+      "context_snippet": "Section report on AI proficiency shows 3% of employees proficient, 97% novices or experimenters, with many lacking tools or training.",
+      "sentiment_label": "negative",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "survey_retyped_from_context",
+      "facts": [
+        {
+          "fact_key": "employee_proficiency_percent",
+          "fact_value": 3,
+          "confidence": 0.9
+        },
+        {
+          "fact_key": "novice_or_experimenter_percent",
+          "fact_value": 97,
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1356,
+      "mention_text": "Wall Street Journal",
+      "canonical_name": "The Wall Street Journal",
+      "entity_type": "survey",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "The Wall Street Journal article titled 'CEOs say AI is making work more efficient, employees tell a different story' was referenced.",
+      "context_snippet": "The Wall Street Journal summarized surveys showing a gap between executive and employee perceptions of AI efficiency and impact.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": true,
+      "review_reason": "survey_retyped_from_context",
+      "facts": [
+        {
+          "fact_key": "article_title",
+          "fact_value": "CEOs say AI is making work more efficient, employees tell a different story",
+          "confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Classified NVIDIA Blackwell chips as 'other' due to hardware nature and taxonomy constraints.",
+    "Included only central organizations and persons relevant to claims or attribution.",
+    "Conservative approach taken to avoid over-tagging generic terms or unclear types.",
+    "All URLs are from explicit mentions or sponsors; otherwise set to null.",
+    "Sentiment labels reflect tone of mention in context, mostly neutral or positive except for product failures or challenges."
+  ]
+}

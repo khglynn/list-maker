@@ -1,0 +1,158 @@
+{
+  "episode_id": 1365,
+  "publish_date": "2026-01-13",
+  "title": "Google to Officially Power Apple AI Siri",
+  "episode_url": "https://podcasters.spotify.com/pod/show/nlw/episodes/Google-to-Officially-Power-Apple-AI-Siri-e3dieoe",
+  "transcript_path": "/Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline/_cache/ai_daily/transcripts/1365-google-to-officially-power-apple-ai-siri.txt",
+  "model": "gpt-4.1-mini",
+  "mention_count": 6,
+  "mentions": [
+    {
+      "episode_id": 1365,
+      "mention_text": "Gemini",
+      "canonical_name": "Gemini",
+      "entity_type": "model",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Apple and Google have entered into a multi-year collaboration under which the next generation of Apple Foundation models will be based on Google's Gemini models and cloud technology.",
+      "context_snippet": "Apple Foundation models will be based on Google's Gemini models and cloud technology.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "used_by_apple",
+          "fact_value": "Gemini models will power future Apple Intelligence features including a more personalized Siri.",
+          "confidence": 0.95
+        },
+        {
+          "fact_key": "multimodality_lead",
+          "fact_value": "Gemini leads in multimodality and is better at using cameras than OpenAI's models.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1365,
+      "mention_text": "Siri",
+      "canonical_name": "Siri",
+      "entity_type": "software_product",
+      "platform": "Apple",
+      "source_url": null,
+      "quoted_text": "Apple is finally going to fix Siri, and more broadly, it seems, maybe take AI seriously, and they're going to do so with Google as their partner.",
+      "context_snippet": "Apple is finally going to fix Siri with Google powering its AI models.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.95,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "AI_upgrade",
+          "fact_value": "Siri will be upgraded with AI powered by Google's Gemini models.",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "episode_id": 1365,
+      "mention_text": "Clawed",
+      "canonical_name": "Clawed",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic announced the launch of Clawed for Healthcare.",
+      "context_snippet": "Clawed is used by Anthropic for healthcare and life sciences applications.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "healthcare_tools",
+          "fact_value": "Clawed for Healthcare provides HIPAA-ready products and connectors for healthcare databases.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "episode_id": 1365,
+      "mention_text": "Grok",
+      "canonical_name": "Grok",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Elon Musk posted about a major upgrade to Grok code coming next month.",
+      "context_snippet": "Grok code will one-shot many complex coding tasks after upgrade.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.85,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "upcoming_upgrade",
+          "fact_value": "Grok code will have a major upgrade enabling one-shot complex coding tasks.",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "episode_id": 1365,
+      "mention_text": "OpenCode",
+      "canonical_name": "OpenCode",
+      "entity_type": "software_product",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Anthropic's crackdown affected popular open-source coding agent OpenCode.",
+      "context_snippet": "OpenCode was affected by Anthropic's new technical controls to prevent spoofing of Clawed code.",
+      "sentiment_label": "neutral",
+      "is_editorial": true,
+      "confidence": 0.8,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "access_restriction",
+          "fact_value": "OpenCode's access to Anthropic models was restricted due to new technical controls.",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "episode_id": 1365,
+      "mention_text": "Universal Commerce Protocol",
+      "canonical_name": "Universal Commerce Protocol",
+      "entity_type": "other",
+      "platform": null,
+      "source_url": null,
+      "quoted_text": "Google has launched their new agentic shopping standard called the Universal Commerce Protocol (UCP).",
+      "context_snippet": "UCP is an open-source standard for shopping agents to gather product info and navigate checkout.",
+      "sentiment_label": "positive",
+      "is_editorial": true,
+      "confidence": 0.9,
+      "needs_review": false,
+      "review_reason": null,
+      "facts": [
+        {
+          "fact_key": "definition",
+          "fact_value": "UCP is an open-source, non-proprietary protocol developed by Google and retail partners for agentic shopping interoperability.",
+          "confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "new_type_candidates": [],
+  "notes": [
+    "Mentions of organizations like The Guardian, Reuters, Bloomberg, and The Verge are included only when central to specific claims or attribution.",
+    "Some persons mentioned are included due to their quoted commentary or leadership roles relevant to the claims.",
+    "URLs are included only when explicitly provided or clearly known from the transcript.",
+    "No URLs were invented; source_url is null when unknown.",
+    "Sentiment labels are mostly neutral or positive given the mostly factual or optimistic tone of the references.",
+    "Editorial flag is true for host commentary and news analysis; false for sponsor reads.",
+    "Mentions are capped at 40 to maintain quality and relevance."
+  ]
+}
