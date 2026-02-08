@@ -23,8 +23,10 @@ import argparse
 import csv
 import json
 import os
+import random
 import re
 import sys
+import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -65,8 +67,16 @@ CORE_TYPES = {
     "blog_post",
 }
 REQUEST_TIMEOUT_SECONDS = 180
+OPENAI_MAX_RETRIES = 6
+OPENAI_INITIAL_BACKOFF_SECONDS = 2.0
+OPENAI_MAX_BACKOFF_SECONDS = 60.0
+OPENAI_RETRY_STATUS_CODES = {408, 409, 429, 500, 502, 503, 504}
 DEFAULT_MODEL = "gpt-4.1-mini"
 DEFAULT_CONFIDENCE_REVIEW_THRESHOLD = 0.78
+MODEL_PRICING_USD_PER_M_TOKENS: dict[str, dict[str, float]] = {
+    # Pricing reference: OpenAI API pricing for GPT-4.1 mini.
+    "gpt-4.1-mini": {"input": 0.40, "output": 1.60},
+}
 SURVEY_TERMS = {"survey", "poll", "barometer", "census", "questionnaire"}
 MEDIA_OUTLET_TERMS = {
     "wall street journal",
@@ -86,6 +96,16 @@ class EpisodeInput:
     title: str
     episode_url: str
     transcript_path: Path
+
+
+@dataclass
+class UsageInfo:
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    estimated_input_cost_usd: Optional[float]
+    estimated_output_cost_usd: Optional[float]
+    estimated_total_cost_usd: Optional[float]
 
 
 def load_environment(repo_root: Path) -> None:
@@ -187,12 +207,27 @@ def parse_json_object(raw: str) -> dict[str, Any]:
     raise ValueError("Model response was not valid JSON object")
 
 
+def parse_retry_after_seconds(value: Optional[str]) -> Optional[float]:
+    if not value:
+        return None
+    value = value.strip()
+    if not value:
+        return None
+    try:
+        parsed = float(value)
+    except ValueError:
+        return None
+    if parsed < 0:
+        return None
+    return parsed
+
+
 def openai_extract(
     api_key: str,
     model: str,
     episode: EpisodeInput,
     transcript_text: str,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], UsageInfo]:
     type_list = ", ".join(LOCKED_TYPES)
 
     system_prompt = (
@@ -274,18 +309,86 @@ def openai_extract(
         "Content-Type": "application/json",
     }
 
-    resp = requests.post(
-        OPENAI_CHAT_COMPLETIONS_ENDPOINT,
-        headers=headers,
-        json=payload,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
-    if resp.status_code >= 400:
+    resp = None
+    for attempt in range(1, OPENAI_MAX_RETRIES + 1):
+        try:
+            resp = requests.post(
+                OPENAI_CHAT_COMPLETIONS_ENDPOINT,
+                headers=headers,
+                json=payload,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+        except requests.RequestException as exc:
+            if attempt >= OPENAI_MAX_RETRIES:
+                raise RuntimeError(
+                    f"OpenAI request failed after {attempt} attempts: {exc}"
+                ) from exc
+            sleep_s = min(
+                OPENAI_MAX_BACKOFF_SECONDS,
+                OPENAI_INITIAL_BACKOFF_SECONDS * (2 ** (attempt - 1)) + random.uniform(0, 1.0),
+            )
+            print(
+                f"OpenAI request error (attempt {attempt}/{OPENAI_MAX_RETRIES}); "
+                f"retrying in {sleep_s:.1f}s: {exc}",
+                file=sys.stderr,
+                flush=True,
+            )
+            time.sleep(sleep_s)
+            continue
+
+        if resp.status_code < 400:
+            break
+
+        if resp.status_code in OPENAI_RETRY_STATUS_CODES and attempt < OPENAI_MAX_RETRIES:
+            retry_after = parse_retry_after_seconds(resp.headers.get("Retry-After"))
+            backoff = min(
+                OPENAI_MAX_BACKOFF_SECONDS,
+                OPENAI_INITIAL_BACKOFF_SECONDS * (2 ** (attempt - 1)) + random.uniform(0, 1.0),
+            )
+            sleep_s = retry_after if retry_after is not None else backoff
+            print(
+                f"OpenAI transient error {resp.status_code} (attempt {attempt}/{OPENAI_MAX_RETRIES}); "
+                f"retrying in {sleep_s:.1f}s",
+                file=sys.stderr,
+                flush=True,
+            )
+            time.sleep(sleep_s)
+            continue
+
         raise RuntimeError(f"OpenAI error {resp.status_code}: {resp.text[:800]}")
+
+    if resp is None:
+        raise RuntimeError("OpenAI request failed with no response")
 
     data = resp.json()
     content = data["choices"][0]["message"]["content"]
-    return parse_json_object(content)
+
+    usage_raw = data.get("usage") if isinstance(data, dict) else {}
+    if not isinstance(usage_raw, dict):
+        usage_raw = {}
+    prompt_tokens = int(usage_raw.get("prompt_tokens") or 0)
+    completion_tokens = int(usage_raw.get("completion_tokens") or 0)
+    total_tokens = int(usage_raw.get("total_tokens") or (prompt_tokens + completion_tokens))
+
+    rates = MODEL_PRICING_USD_PER_M_TOKENS.get(model)
+    input_cost: Optional[float] = None
+    output_cost: Optional[float] = None
+    total_cost: Optional[float] = None
+    if rates:
+        input_cost = (prompt_tokens / 1_000_000.0) * rates["input"]
+        output_cost = (completion_tokens / 1_000_000.0) * rates["output"]
+        total_cost = input_cost + output_cost
+
+    usage = UsageInfo(
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=total_tokens,
+        estimated_input_cost_usd=input_cost,
+        estimated_output_cost_usd=output_cost,
+        estimated_total_cost_usd=total_cost,
+    )
+
+    return parse_json_object(content), usage
 
 
 def sanitize_fact(fact: Any) -> Optional[dict[str, Any]]:
@@ -446,9 +549,24 @@ def postprocess_mention_types(mention: dict[str, Any]) -> dict[str, Any]:
             mention["needs_review"] = True
             mention["review_reason"] = mention["review_reason"] or "survey_retyped_from_context"
 
-    # Recover benchmarks from common benchmark keywords.
+    # Recover benchmarks only when explicit benchmark names appear.
+    # Avoid generic "benchmark" context, which can misclassify people/orgs.
     if mention["entity_type"] in {"other", "organization", "person"}:
-        if any(x in text_blob for x in ["benchmark", "gpqa", "mmlu", "swe-bench", "lmarena", "lm arena", "livecodebench"]):
+        if any(
+            x in text_blob
+            for x in [
+                "gpqa",
+                "mmlu",
+                "swe-bench",
+                "swebench",
+                "lm arena",
+                "lmarena",
+                "livecodebench",
+                "terminal bench",
+                "humanitys last exam",
+                "hellaswag",
+            ]
+        ):
             mention["entity_type"] = "benchmark"
             mention["needs_review"] = True
             mention["review_reason"] = mention["review_reason"] or "benchmark_retyped_from_context"
@@ -466,6 +584,10 @@ def postprocess_mention_types(mention: dict[str, Any]) -> dict[str, Any]:
         mention["entity_type"] = "other"
         mention["needs_review"] = True
         mention["review_reason"] = mention["review_reason"] or "postprocess_unknown_type"
+
+    if mention["entity_type"] == "other":
+        mention["needs_review"] = True
+        mention["review_reason"] = mention["review_reason"] or "other_type_needs_review"
 
     return mention
 
@@ -558,6 +680,7 @@ def build_summary_markdown(
     model: str,
     episodes: list[EpisodeInput],
     summary: dict[str, Any],
+    usage_summary: dict[str, Any],
     output_dir: Path,
 ) -> str:
     lines: list[str] = []
@@ -570,6 +693,14 @@ def build_summary_markdown(
     lines.append(f"- Episodes processed: {len(episodes)}")
     lines.append(f"- Total mentions: {summary['mention_count']}")
     lines.append(f"- Mentions flagged for review: {summary['review_count']}")
+    lines.append(f"- Prompt tokens: {usage_summary.get('prompt_tokens', 0)}")
+    lines.append(f"- Completion tokens: {usage_summary.get('completion_tokens', 0)}")
+    lines.append(f"- Total tokens: {usage_summary.get('total_tokens', 0)}")
+    estimated_cost = usage_summary.get("estimated_total_cost_usd")
+    if estimated_cost is not None:
+        lines.append(f"- Estimated OpenAI API cost: `${estimated_cost:.6f}`")
+    else:
+        lines.append("- Estimated OpenAI API cost: n/a (model pricing not configured)")
     lines.append("")
     lines.append("## Episodes")
     lines.append("")
@@ -652,6 +783,12 @@ def main() -> None:
     per_episode_results: list[dict[str, Any]] = []
     all_new_type_candidates: list[dict[str, Any]] = []
     all_notes: list[str] = []
+    total_prompt_tokens = 0
+    total_completion_tokens = 0
+    total_tokens = 0
+    total_input_cost_usd = 0.0
+    total_output_cost_usd = 0.0
+    has_cost_estimate = False
 
     for idx, episode in enumerate(episodes, start=1):
         transcript_text = episode.transcript_path.read_text(encoding="utf-8", errors="ignore")
@@ -663,12 +800,19 @@ def main() -> None:
             flush=True,
         )
 
-        raw = openai_extract(
+        raw, usage = openai_extract(
             api_key=api_key,
             model=args.model,
             episode=episode,
             transcript_text=transcript_text,
         )
+        total_prompt_tokens += usage.prompt_tokens
+        total_completion_tokens += usage.completion_tokens
+        total_tokens += usage.total_tokens
+        if usage.estimated_input_cost_usd is not None and usage.estimated_output_cost_usd is not None:
+            has_cost_estimate = True
+            total_input_cost_usd += usage.estimated_input_cost_usd
+            total_output_cost_usd += usage.estimated_output_cost_usd
 
         mentions_raw = raw.get("mentions", [])
         sanitized_mentions: list[dict[str, Any]] = []
@@ -730,6 +874,14 @@ def main() -> None:
             "mentions": sanitized_mentions,
             "new_type_candidates": normalized_new_type_candidates,
             "notes": notes,
+            "usage": {
+                "prompt_tokens": usage.prompt_tokens,
+                "completion_tokens": usage.completion_tokens,
+                "total_tokens": usage.total_tokens,
+                "estimated_input_cost_usd": usage.estimated_input_cost_usd,
+                "estimated_output_cost_usd": usage.estimated_output_cost_usd,
+                "estimated_total_cost_usd": usage.estimated_total_cost_usd,
+            },
         }
         write_json(episodes_dir / f"{episode.episode_id}.json", episode_payload)
 
@@ -745,6 +897,12 @@ def main() -> None:
                 "transcript_path": str(episode.transcript_path),
                 "mention_count": len(sanitized_mentions),
                 "review_count": sum(1 for m in sanitized_mentions if m["needs_review"]),
+                "prompt_tokens": usage.prompt_tokens,
+                "completion_tokens": usage.completion_tokens,
+                "total_tokens": usage.total_tokens,
+                "estimated_total_cost_usd": (
+                    f"{usage.estimated_total_cost_usd:.8f}" if usage.estimated_total_cost_usd is not None else ""
+                ),
             }
         )
 
@@ -831,8 +989,25 @@ def main() -> None:
             "transcript_path",
             "mention_count",
             "review_count",
+            "prompt_tokens",
+            "completion_tokens",
+            "total_tokens",
+            "estimated_total_cost_usd",
         ],
     )
+
+    usage_summary = {
+        "model": args.model,
+        "prompt_tokens": total_prompt_tokens,
+        "completion_tokens": total_completion_tokens,
+        "total_tokens": total_tokens,
+        "estimated_input_cost_usd": total_input_cost_usd if has_cost_estimate else None,
+        "estimated_output_cost_usd": total_output_cost_usd if has_cost_estimate else None,
+        "estimated_total_cost_usd": (
+            (total_input_cost_usd + total_output_cost_usd) if has_cost_estimate else None
+        ),
+        "pricing_usd_per_m_tokens": MODEL_PRICING_USD_PER_M_TOKENS.get(args.model),
+    }
 
     batch_manifest = {
         "batch_name": batch_name,
@@ -851,6 +1026,7 @@ def main() -> None:
             },
         "episodes": per_episode_results,
         "summary": summary,
+        "usage_summary": usage_summary,
         "new_type_candidates": all_new_type_candidates,
         "notes": all_notes,
         "outputs": {
@@ -867,6 +1043,7 @@ def main() -> None:
         model=args.model,
         episodes=episodes,
         summary=summary,
+        usage_summary=usage_summary,
         output_dir=output_dir,
     )
     (output_dir / "summary.md").write_text(summary_markdown, encoding="utf-8")
@@ -876,6 +1053,13 @@ def main() -> None:
     print(f"Batch: {batch_name}", flush=True)
     print(f"Mentions: {summary['mention_count']}", flush=True)
     print(f"Needs review: {summary['review_count']}", flush=True)
+    print(f"Prompt tokens: {usage_summary['prompt_tokens']}", flush=True)
+    print(f"Completion tokens: {usage_summary['completion_tokens']}", flush=True)
+    print(f"Total tokens: {usage_summary['total_tokens']}", flush=True)
+    if usage_summary["estimated_total_cost_usd"] is not None:
+        print(f"Estimated API cost (USD): {usage_summary['estimated_total_cost_usd']:.6f}", flush=True)
+    else:
+        print("Estimated API cost (USD): n/a", flush=True)
     print(f"Output: {output_dir}", flush=True)
 
 
