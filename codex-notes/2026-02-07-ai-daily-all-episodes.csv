@@ -1,0 +1,889 @@
+episode_id,publish_date,title,episode_url
+2835,2023-04-04,Introducing The AI Breakdown,https://podcasters.spotify.com/pod/show/nlw/episodes/Introducing-The-AI-Breakdown-e2l1buc
+2833,2023-04-12,What is AutoGPT and Why is Everyone Talking About It?,https://podcasters.spotify.com/pod/show/nlw/episodes/What-is-AutoGPT-and-Why-is-Everyone-Talking-About-It-e2l1bv5
+2834,2023-04-12,Should the US Gov't Have to Review and License AI Tools?,https://podcasters.spotify.com/pod/show/nlw/episodes/Should-the-US-Govt-Have-to-Review-and-License-AI-Tools-e2l1brd
+2832,2023-04-13,5 Ways AutoGPT is Already Being Used,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Ways-AutoGPT-is-Already-Being-Used-e2l1brt
+2831,2023-04-15,Is AutoGPT Dangerous?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-AutoGPT-Dangerous-e2l1c4j
+2830,2023-04-17,The AI Arms Race: Where the World's Biggest Companies Stand,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Arms-Race-Where-the-Worlds-Biggest-Companies-Stand-e2l1brg
+2829,2023-04-18,"Can Open Source AI Compete with Big Tech? A Look at TruthGPT, RedPajama and MiniGPT",https://podcasters.spotify.com/pod/show/nlw/episodes/Can-Open-Source-AI-Compete-with-Big-Tech--A-Look-at-TruthGPT--RedPajama-and-MiniGPT-e2l1bvo
+2828,2023-04-19,AI that Can See the World? Meet MiniGPT-4 an Open Source Image-to-Text Model,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-that-Can-See-the-World--Meet-MiniGPT-4-an-Open-Source-Image-to-Text-Model-e2l1bra
+2827,2023-04-20,The AI Data Wars: Elon Threatens to Sue Microsoft While Viral AI Drake Track Stuns Music Industry,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Data-Wars-Elon-Threatens-to-Sue-Microsoft-While-Viral-AI-Drake-Track-Stuns-Music-Industry-e2l1c1e
+2826,2023-04-21,I Asked ChatGPT and Its New Open Source Competitor StableLM if AI Should Be Open Source. Here's What They Said.,https://podcasters.spotify.com/pod/show/nlw/episodes/I-Asked-ChatGPT-and-Its-New-Open-Source-Competitor-StableLM-if-AI-Should-Be-Open-Source--Heres-What-They-Said-e2l1bsk
+2825,2023-04-22,The Problems with AutoGPT and BabyAGI: How Useful Are They Really?,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Problems-with-AutoGPT-and-BabyAGI-How-Useful-Are-They-Really-e2l1bso
+2824,2023-04-24,Why GPT-4-32k Will Totally Transform What We Can Do With AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-GPT-4-32k-Will-Totally-Transform-What-We-Can-Do-With-AI-e2l1bsd
+2823,2023-04-25,Profit or Piracy? How AI Disrupts Industries,https://podcasters.spotify.com/pod/show/nlw/episodes/Profit-or-Piracy--How-AI-Disrupts-Industries-e2l1bsf
+2822,2023-04-26,ChatGPT Adds Private Mode as HuggingFace Launches Open Source Competitor,https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-Adds-Private-Mode-as-HuggingFace-Launches-Open-Source-Competitor-e2l1btf
+2821,2023-04-27,The Latest on AutoGPT and BabyAGI: Semi-Autonomous Specialized Agents (SASAs),https://podcasters.spotify.com/pod/show/nlw/episodes/The-Latest-on-AutoGPT-and-BabyAGI-Semi-Autonomous-Specialized-Agents-SASAs-e2l1brk
+2820,2023-04-28,"The Most Important AI News This Week: ChatGPT Browse, Apple Quartz, GPT Robot Dogs",https://podcasters.spotify.com/pod/show/nlw/episodes/The-Most-Important-AI-News-This-Week-ChatGPT-Browse--Apple-Quartz--GPT-Robot-Dogs-e2l1bsb
+2819,2023-04-29,"Real Life ""Her""? A Chat with AI Avatar Call Annie About AI Alignment and More",https://podcasters.spotify.com/pod/show/nlw/episodes/Real-Life-Her--A-Chat-with-AI-Avatar-Call-Annie-About-AI-Alignment-and-More-e2l1bt0
+2817,2023-05-01,Text-to-Image AI That Can Actually Spell!? Meet DeepFloyd IF,https://podcasters.spotify.com/pod/show/nlw/episodes/Text-to-Image-AI-That-Can-Actually-Spell---Meet-DeepFloyd-IF-e2l1c33
+2818,2023-05-01,Raoul Pal: AI is the Most Disinflationary Force in Our Lifetimes,https://podcasters.spotify.com/pod/show/nlw/episodes/Raoul-Pal-AI-is-the-Most-Disinflationary-Force-in-Our-Lifetimes-e2l1c1g
+2816,2023-05-02,Mind-Reading AI? Scientists Use GPT-Like AI to Accurately Translate Thoughts into Text,https://podcasters.spotify.com/pod/show/nlw/episodes/Mind-Reading-AI--Scientists-Use-GPT-Like-AI-to-Accurately-Translate-Thoughts-into-Text-e2l1bt8
+2815,2023-05-03,The First Anti-AI Strike: The Writers Guild of America Protests AI Writing,https://podcasters.spotify.com/pod/show/nlw/episodes/The-First-Anti-AI-Strike-The-Writers-Guild-of-America-Protests-AI-Writing-e2l1btj
+2814,2023-05-04,6 Ways ChatGPT Code Interpreter Is Already Being Used,https://podcasters.spotify.com/pod/show/nlw/episodes/6-Ways-ChatGPT-Code-Interpreter-Is-Already-Being-Used-e2l1bue
+2813,2023-05-05,"Google Losing to Open Source AI? ""We Have No Moat, And Neither Does OpenAI""",https://podcasters.spotify.com/pod/show/nlw/episodes/Google-Losing-to-Open-Source-AI--We-Have-No-Moat--And-Neither-Does-OpenAI-e2l1bsj
+2812,2023-05-06,AI Just Quietly Had One of It's Most Important Weeks in Recent History,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Just-Quietly-Had-One-of-Its-Most-Important-Weeks-in-Recent-History-e2l1bvi
+2811,2023-05-08,Warren Buffett Compares AI to the Invention of the Atom Bomb,https://podcasters.spotify.com/pod/show/nlw/episodes/Warren-Buffett-Compares-AI-to-the-Invention-of-the-Atom-Bomb-e2l1c1j
+2810,2023-05-09,How to Get AutoGPT on Your Phone (And What People Are Actually Finding it Useful For),https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Get-AutoGPT-on-Your-Phone-And-What-People-Are-Actually-Finding-it-Useful-For-e2l1brq
+2809,2023-05-10,What Comes After ChatGPT? A Preview of the Future of LLMs,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Comes-After-ChatGPT--A-Preview-of-the-Future-of-LLMs-e2l1bvf
+2808,2023-05-11,The Top 5 AI Announcements from Google I/O,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Top-5-AI-Announcements-from-Google-IO-e2l1bsn
+2807,2023-05-12,"""How I Went from Non-Technical to Building an Andrew Tate LLM Chatbot in 3 Months""",https://podcasters.spotify.com/pod/show/nlw/episodes/How-I-Went-from-Non-Technical-to-Building-an-Andrew-Tate-LLM-Chatbot-in-3-Months-e2l1bvc
+2806,2023-05-13,The Most Important AI News From A Week Where We Glimpsed The Future,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Most-Important-AI-News-From-A-Week-Where-We-Glimpsed-The-Future-e2l1bv6
+2805,2023-05-14,Can Blockchains Solve Deep Fakes and Other AI Challenges?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-Blockchains-Solve-Deep-Fakes-and-Other-AI-Challenges-e2l1c2a
+2804,2023-05-15,Is Google's New Bard Really the ChatGPT Killer?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Googles-New-Bard-Really-the-ChatGPT-Killer-e2l1bs5
+2803,2023-05-16,7 Takeaways from the Senate's AI Hearing,https://podcasters.spotify.com/pod/show/nlw/episodes/7-Takeaways-from-the-Senates-AI-Hearing-e2l1c0f
+2802,2023-05-17,The 10 Most Interesting and Useful ChatGPT Plugins So Far,https://podcasters.spotify.com/pod/show/nlw/episodes/The-10-Most-Interesting-and-Useful-ChatGPT-Plugins-So-Far-e2l1c1m
+2801,2023-05-18,Yuval Noah Harari on the Challenge of AI and the Future of Humanity,https://podcasters.spotify.com/pod/show/nlw/episodes/Yuval-Noah-Harari-on-the-Challenge-of-AI-and-the-Future-of-Humanity-e2l1c2q
+2800,2023-05-19,The Official ChatGPT Mobile App Will Change How We Use AI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Official-ChatGPT-Mobile-App-Will-Change-How-We-Use-AI-e2l1c0u
+2799,2023-05-20,Are OpenAI Trying for Regulatory Capture?,https://podcasters.spotify.com/pod/show/nlw/episodes/Are-OpenAI-Trying-for-Regulatory-Capture-e2l1c0b
+2798,2023-05-21,How Bad Will AI Jobs Loss Be?,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Bad-Will-AI-Jobs-Loss-Be-e2l1bs6
+2797,2023-05-22,Can ChatGPT Outperform Wall Street?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-ChatGPT-Outperform-Wall-Street-e2l1c04
+2796,2023-05-23,This Massive New AI Model is 5.7x Bigger than ChatGPT's Dataset,https://podcasters.spotify.com/pod/show/nlw/episodes/This-Massive-New-AI-Model-is-5-7x-Bigger-than-ChatGPTs-Dataset-e2l1c4i
+2795,2023-05-24,Mind-Reading AI Generates Videos from Brainwaves,https://podcasters.spotify.com/pod/show/nlw/episodes/Mind-Reading-AI-Generates-Videos-from-Brainwaves-e2l1c4c
+2794,2023-05-25,NVIDIA Sets Off An AI Stock Frenzy While Elon Warns of the Terminator Scenario,https://podcasters.spotify.com/pod/show/nlw/episodes/NVIDIA-Sets-Off-An-AI-Stock-Frenzy-While-Elon-Warns-of-the-Terminator-Scenario-e2l1bt1
+2793,2023-05-26,The 9 AI Tools I Actually Use Every Day As A Content Creator,https://podcasters.spotify.com/pod/show/nlw/episodes/The-9-AI-Tools-I-Actually-Use-Every-Day-As-A-Content-Creator-e2l1bsa
+2792,2023-05-27,The 5 Biggest AI News Stories This Week,https://podcasters.spotify.com/pod/show/nlw/episodes/The-5-Biggest-AI-News-Stories-This-Week-e2l1c0h
+2791,2023-05-28,AI Alignment and AGI - How Worried Should We Actually Be?,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Alignment-and-AGI---How-Worried-Should-We-Actually-Be-e2l1bsc
+2790,2023-05-30,Nvidia Is Building an AI Supercomputer and Gaming Platform,https://podcasters.spotify.com/pod/show/nlw/episodes/Nvidia-Is-Building-an-AI-Supercomputer-and-Gaming-Platform-e2l1c2j
+2789,2023-05-31,Are ChatGPT Plugins Overhyped?,https://podcasters.spotify.com/pod/show/nlw/episodes/Are-ChatGPT-Plugins-Overhyped-e2l1c4l
+2788,2023-06-01,Can OpenAI's New GPT Training Model Solve Math and AI Alignment At the Same Time?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-OpenAIs-New-GPT-Training-Model-Solve-Math-and-AI-Alignment-At-the-Same-Time-e2l1bs8
+2787,2023-06-02,An AI Drone Killed Its Operator In A USAF Simulation -- Except That's Not Actually What Happened,https://podcasters.spotify.com/pod/show/nlw/episodes/An-AI-Drone-Killed-Its-Operator-In-A-USAF-Simulation----Except-Thats-Not-Actually-What-Happened-e2l1bv3
+2785,2023-06-03,TIME Asks: Is AI the End of Humanity?,https://podcasters.spotify.com/pod/show/nlw/episodes/TIME-Asks-Is-AI-the-End-of-Humanity-e2l1bvb
+2786,2023-06-03,BONUS: Riley Goodside on The Art of Prompting ChatGPT [The Cognitive Revolution preview],https://podcasters.spotify.com/pod/show/nlw/episodes/BONUS-Riley-Goodside-on-The-Art-of-Prompting-ChatGPT-The-Cognitive-Revolution-preview-e2l1c4e
+2784,2023-06-04,AI Gaming Lights Up: The Biggest AI News This Week,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Gaming-Lights-Up-The-Biggest-AI-News-This-Week-e2l1br9
+2783,2023-06-05,"Apple AI? Apple Didn't Say ""Artificial Intelligence"" Once at WWDC",https://podcasters.spotify.com/pod/show/nlw/episodes/Apple-AI--Apple-Didnt-Say-Artificial-Intelligence-Once-at-WWDC-e2l1c4v
+2782,2023-06-06,Can SuperAGI Be What People Wanted from AutoGPT?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-SuperAGI-Be-What-People-Wanted-from-AutoGPT-e2l1bt6
+2781,2023-06-07,OpenAI's 6 Strategies For Better ChatGPT Prompting,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAIs-6-Strategies-For-Better-ChatGPT-Prompting-e2l1bts
+2780,2023-06-08,Are We In An AI Bubble?,https://podcasters.spotify.com/pod/show/nlw/episodes/Are-We-In-An-AI-Bubble-e2l1c00
+2779,2023-06-09,The 5 Most Exciting AI Tools Launched This Week,https://podcasters.spotify.com/pod/show/nlw/episodes/The-5-Most-Exciting-AI-Tools-Launched-This-Week-e2l1c0e
+2778,2023-06-10,Creating Worlds From Words: The Most Essential AI News This Week,https://podcasters.spotify.com/pod/show/nlw/episodes/Creating-Worlds-From-Words-The-Most-Essential-AI-News-This-Week-e2l1bt4
+2777,2023-06-11,Will AI Save The World?,https://podcasters.spotify.com/pod/show/nlw/episodes/Will-AI-Save-The-World-e2l1bu1
+2776,2023-06-12,New ChatGPT Features Leaked?,https://podcasters.spotify.com/pod/show/nlw/episodes/New-ChatGPT-Features-Leaked-e2l1bt7
+2775,2023-06-13,AI at Work: Is Enterprise AI the Next Big Trend?,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-at-Work-Is-Enterprise-AI-the-Next-Big-Trend-e2l1bre
+2774,2023-06-14,Why OpenAI's API Updates Will Change How We Use ChatGPT,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-OpenAIs-API-Updates-Will-Change-How-We-Use-ChatGPT-e2l1c3v
+2773,2023-06-15,"EU Passes AI Act, But Generative AI Provisions Remain Controversial",https://podcasters.spotify.com/pod/show/nlw/episodes/EU-Passes-AI-Act--But-Generative-AI-Provisions-Remain-Controversial-e2l1brr
+2772,2023-06-16,How Worried About China AI Should We Be?,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Worried-About-China-AI-Should-We-Be-e2l1bvm
+2771,2023-06-17,"A Critique of Marc Andreessen's ""Why AI Will Save The World""",https://podcasters.spotify.com/pod/show/nlw/episodes/A-Critique-of-Marc-Andreessens-Why-AI-Will-Save-The-World-e2l1bt5
+2770,2023-06-18,The Most Interesting AI Research This Week,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Most-Interesting-AI-Research-This-Week-e2l1c44
+2769,2023-06-19,GPT Engineer Generates An Entire Codebase Based On A Prompt,https://podcasters.spotify.com/pod/show/nlw/episodes/GPT-Engineer-Generates-An-Entire-Codebase-Based-On-A-Prompt-e2l1bri
+2768,2023-06-20,The Faux Outrage Around OpenAI's EU Lobbying,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Faux-Outrage-Around-OpenAIs-EU-Lobbying-e2l1btg
+2767,2023-06-21,Biden Meets AI Safety Experts As White House Promises Decisive Action,https://podcasters.spotify.com/pod/show/nlw/episodes/Biden-Meets-AI-Safety-Experts-As-White-House-Promises-Decisive-Action-e2l1bvh
+2766,2023-06-22,AI is the First UI Paradigm Shift in 60 Years,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-is-the-First-UI-Paradigm-Shift-in-60-Years-e2l1bve
+2765,2023-06-23,Multi-On is What You Wanted AutoGPT to Be - Interview with Founder Div Garg,https://podcasters.spotify.com/pod/show/nlw/episodes/Multi-On-is-What-You-Wanted-AutoGPT-to-Be---Interview-with-Founder-Div-Garg-e2l1bv8
+2764,2023-06-24,"""AI Will Modify Our Interface For Information"" A Conversation with Maven CEO Gagan Biyani",https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Will-Modify-Our-Interface-For-Information-A-Conversation-with-Maven-CEO-Gagan-Biyani-e2l1c02
+2763,2023-06-25,What the Head of the New UK AI Foundation Model Taskforce Thinks of AI,https://podcasters.spotify.com/pod/show/nlw/episodes/What-the-Head-of-the-New-UK-AI-Foundation-Model-Taskforce-Thinks-of-AI-e2l1c10
+2762,2023-06-26,"Is AI ""Alien Intelligence?"" Emerson Spartz on Mental Models for AI",https://podcasters.spotify.com/pod/show/nlw/episodes/Is-AI-Alien-Intelligence--Emerson-Spartz-on-Mental-Models-for-AI-e2l1c0m
+2761,2023-06-27,DragGAN's Amazing Drag-to-Edit Photo AI Releases Source Code,https://podcasters.spotify.com/pod/show/nlw/episodes/DragGANs-Amazing-Drag-to-Edit-Photo-AI-Releases-Source-Code-e2l1bst
+2760,2023-06-28,AI M&A: Billion Dollar Acquisitions Reshape AI Landscape,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-MA-Billion-Dollar-Acquisitions-Reshape-AI-Landscape-e2l1bqq
+2759,2023-06-29,The AI Arms Race Heats Up: US Considers Blocking AI Chip Exports,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Arms-Race-Heats-Up-US-Considers-Blocking-AI-Chip-Exports-e2l1bvl
+2758,2023-06-30,Inflection Raises Monster $1.3 Billion Round to Build One of World's Biggest AI Clusters,https://podcasters.spotify.com/pod/show/nlw/episodes/Inflection-Raises-Monster-1-3-Billion-Round-to-Build-One-of-Worlds-Biggest-AI-Clusters-e2l1bqm
+2757,2023-07-01,60 Possible AGI Futures,https://podcasters.spotify.com/pod/show/nlw/episodes/60-Possible-AGI-Futures-e2l1bun
+2756,2023-07-02,Translating Brainwaves to Images and Other Cutting Edge AI Research,https://podcasters.spotify.com/pod/show/nlw/episodes/Translating-Brainwaves-to-Images-and-Other-Cutting-Edge-AI-Research-e2l1bul
+2755,2023-07-03,The AI Data Wars: Why Elon Musk's Rate Limits Are About More Than Twitter,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Data-Wars-Why-Elon-Musks-Rate-Limits-Are-About-More-Than-Twitter-e2l1bum
+2754,2023-07-04,Will AI Increase Freedom or Help Authoritarians?,https://podcasters.spotify.com/pod/show/nlw/episodes/Will-AI-Increase-Freedom-or-Help-Authoritarians-e2l1c22
+2753,2023-07-05,Will AI Replace All Coders Within 5 Years?,https://podcasters.spotify.com/pod/show/nlw/episodes/Will-AI-Replace-All-Coders-Within-5-Years-e2l1c0n
+2752,2023-07-06,OpenAI Sets Moonshot Goal of AI Superalignment in 4 Years,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Sets-Moonshot-Goal-of-AI-Superalignment-in-4-Years-e2l1bsg
+2751,2023-07-07,ChatGPT Code Interpreter Is Finally Coming Next Week!,https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-Code-Interpreter-Is-Finally-Coming-Next-Week-e2l1brn
+2750,2023-07-08,"Forget Alignment, Here's Why Every AI Needs an Individual ""Soul""",https://podcasters.spotify.com/pod/show/nlw/episodes/Forget-Alignment--Heres-Why-Every-AI-Needs-an-Individual-Soul-e2l1bt3
+2749,2023-07-09,5 Ways AI Could Destroy Humanity,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Ways-AI-Could-Destroy-Humanity-e2l1bs0
+2748,2023-07-10,5 Ways AI Could Improve Humanity,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Ways-AI-Could-Improve-Humanity-e2l1bsr
+2747,2023-07-11,Why Google Is Intentionally Limiting the Power of Bard AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Google-Is-Intentionally-Limiting-the-Power-of-Bard-AI-e2l1bug
+2746,2023-07-12,ChatGPT's First True Competitor? Anthropic Releases Claude 2,https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPTs-First-True-Competitor--Anthropic-Releases-Claude-2-e2l1bs3
+2745,2023-07-13,Elon Musk Announces xAI: Here's Everything We Know So Far,https://podcasters.spotify.com/pod/show/nlw/episodes/Elon-Musk-Announces-xAI-Heres-Everything-We-Know-So-Far-e2l1c1f
+2744,2023-07-14,OpenAI Investigated by FTC for ChatGPT Harms,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Investigated-by-FTC-for-ChatGPT-Harms-e2l1bs7
+2743,2023-07-15,Bill Gates on Why Humans Can Handle AI Risks,https://podcasters.spotify.com/pod/show/nlw/episodes/Bill-Gates-on-Why-Humans-Can-Handle-AI-Risks-e2l1bs9
+2742,2023-07-16,Bard vs. Bing vs. Claude vs. ChatGPT: The Right LLM For Every Task,https://podcasters.spotify.com/pod/show/nlw/episodes/Bard-vs--Bing-vs--Claude-vs--ChatGPT-The-Right-LLM-For-Every-Task-e2l1bqp
+2741,2023-07-17,AI Bubble? Layoffs Hit AI Companies,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Bubble--Layoffs-Hit-AI-Companies-e2l1bua
+2740,2023-07-18,Where Are All the Aliens: Does AI Explain the Fermi Paradox?,https://podcasters.spotify.com/pod/show/nlw/episodes/Where-Are-All-the-Aliens-Does-AI-Explain-the-Fermi-Paradox-e2l1bru
+2739,2023-07-19,Meta Llama 2 Is Here! Everything You Need to Know About OpenAI's Biggest Open Source Competitor,https://podcasters.spotify.com/pod/show/nlw/episodes/Meta-Llama-2-Is-Here--Everything-You-Need-to-Know-About-OpenAIs-Biggest-Open-Source-Competitor-e2l1bvs
+2738,2023-07-20,AppleGPT? Apple Has Been Secretly Working on a ChatGPT Competitor,https://podcasters.spotify.com/pod/show/nlw/episodes/AppleGPT--Apple-Has-Been-Secretly-Working-on-a-ChatGPT-Competitor-e2l1c40
+2737,2023-07-21,"White House Secures Responsible AI Commitment from OpenAI, Meta, Google, Anthropic and Others",https://podcasters.spotify.com/pod/show/nlw/episodes/White-House-Secures-Responsible-AI-Commitment-from-OpenAI--Meta--Google--Anthropic-and-Others-e2l1bv1
+2736,2023-07-22,5 Ways People Are Using ChatGPT's Powerful New Custom Instructions Feature,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Ways-People-Are-Using-ChatGPTs-Powerful-New-Custom-Instructions-Feature-e2l1br6
+2735,2023-07-23,Is Open Source AI Dangerous?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Open-Source-AI-Dangerous-e2l1c12
+2734,2023-07-24,Can Worldcoin Help Solve AI's Big Economic Problems?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-Worldcoin-Help-Solve-AIs-Big-Economic-Problems-e2l1c0g
+2733,2023-07-25,Does This Research Prove That ChatGPT Has Gotten Worse?,https://podcasters.spotify.com/pod/show/nlw/episodes/Does-This-Research-Prove-That-ChatGPT-Has-Gotten-Worse-e2l1bqo
+2732,2023-07-26,Can OpenAI and Anthropic's Frontier Model Forum Improve AI Safety?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-OpenAI-and-Anthropics-Frontier-Model-Forum-Improve-AI-Safety-e2l1c03
+2731,2023-07-27,Better Than Midjourney? Stable Diffusion XL 1.0 Can Generate Words,https://podcasters.spotify.com/pod/show/nlw/episodes/Better-Than-Midjourney--Stable-Diffusion-XL-1-0-Can-Generate-Words-e2l1c0q
+2730,2023-07-28,A Mysterious GPU Startup Sets Up In The Middle East,https://podcasters.spotify.com/pod/show/nlw/episodes/A-Mysterious-GPU-Startup-Sets-Up-In-The-Middle-East-e2l1bto
+2729,2023-07-29,AI for War? Debating the Military Use of AI,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-for-War--Debating-the-Military-Use-of-AI-e2l1c38
+2728,2023-07-30,The 5 Most Important AI News Stories Last Month,https://podcasters.spotify.com/pod/show/nlw/episodes/The-5-Most-Important-AI-News-Stories-Last-Month-e2l1bqc
+2727,2023-07-31,The AI-Robotics Revolution: Robots That Think Like LLMs,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Robotics-Revolution-Robots-That-Think-Like-LLMs-e2l1bu7
+2726,2023-08-01,Is GPT-5 On the Way? OpenAI Files Trademark,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-GPT-5-On-the-Way--OpenAI-Files-Trademark-e2l1btm
+2725,2023-08-02,Has Open Source Screwed a Whole Generation of AI Startups?,https://podcasters.spotify.com/pod/show/nlw/episodes/Has-Open-Source-Screwed-a-Whole-Generation-of-AI-Startups-e2l1c43
+2724,2023-08-03,The Frontier of AI-Generated Music Models,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Frontier-of-AI-Generated-Music-Models-e2l1brs
+2723,2023-08-04,Code Interpreter is GPT-4.5: A Summer AI Technical Roundup [feat. Swyx and Alessio of Latent Space],https://podcasters.spotify.com/pod/show/nlw/episodes/Code-Interpreter-is-GPT-4-5-A-Summer-AI-Technical-Roundup-feat--Swyx-and-Alessio-of-Latent-Space-e2l1btq
+2722,2023-08-05,Why Do People Who Think AI Could Kill Us All Still Work on AI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Do-People-Who-Think-AI-Could-Kill-Us-All-Still-Work-on-AI-e2l1bps
+2721,2023-08-06,Why We're Radically Underestimating the Political Implications of AI Job Displacement,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Were-Radically-Underestimating-the-Political-Implications-of-AI-Job-Displacement-e2l1c0k
+2720,2023-08-07,Apple Reveals It Spent Billions on AI R&D,https://podcasters.spotify.com/pod/show/nlw/episodes/Apple-Reveals-It-Spent-Billions-on-AI-RD-e2l1bq0
+2719,2023-08-08,GPTBot AI Data Controversy and the Remaining Challenges of LLMs,https://podcasters.spotify.com/pod/show/nlw/episodes/GPTBot-AI-Data-Controversy-and-the-Remaining-Challenges-of-LLMs-e2l1btc
+2718,2023-08-09,The LLM for Coding Competition Heats Up!,https://podcasters.spotify.com/pod/show/nlw/episodes/The-LLM-for-Coding-Competition-Heats-Up-e2l1but
+2717,2023-08-10,76% of Americans Think AI Might Kill Us,https://podcasters.spotify.com/pod/show/nlw/episodes/76-of-Americans-Think-AI-Might-Kill-Us-e2l1bvu
+2716,2023-08-11,The Alignment Problem: How To Tell If An LLM Is Trustworthy,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Alignment-Problem-How-To-Tell-If-An-LLM-Is-Trustworthy-e2l1brv
+2715,2023-08-12,AI and the Turning Point Moment in Human History,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-and-the-Turning-Point-Moment-in-Human-History-e2l1brj
+2714,2023-08-13,"As WormGPT Goes White Hat, Evil-GPT Emerges",https://podcasters.spotify.com/pod/show/nlw/episodes/As-WormGPT-Goes-White-Hat--Evil-GPT-Emerges-e2l1bs2
+2713,2023-08-14,How The AI Backlash Killed This Literary Startup,https://podcasters.spotify.com/pod/show/nlw/episodes/How-The-AI-Backlash-Killed-This-Literary-Startup-e2l1c2g
+2712,2023-08-15,AGI By 2032? The Most Interesting AI Predictions,https://podcasters.spotify.com/pod/show/nlw/episodes/AGI-By-2032--The-Most-Interesting-AI-Predictions-e2l1bub
+2711,2023-08-16,Why AI Hype Has Peaked (And Why That's A Good Thing),https://podcasters.spotify.com/pod/show/nlw/episodes/Why-AI-Hype-Has-Peaked-And-Why-Thats-A-Good-Thing-e2l1c4a
+2710,2023-08-17,Snapchat Users Freaked Out as My AI Goes Rogue,https://podcasters.spotify.com/pod/show/nlw/episodes/Snapchat-Users-Freaked-Out-as-My-AI-Goes-Rogue-e2l1bsv
+2709,2023-08-18,Meta to Launch Open Source Coding AI as Latest Assault on OpenAI,https://podcasters.spotify.com/pod/show/nlw/episodes/Meta-to-Launch-Open-Source-Coding-AI-as-Latest-Assault-on-OpenAI-e2l1btd
+2708,2023-08-19,Could AI End Up Being Good for Democracy?,https://podcasters.spotify.com/pod/show/nlw/episodes/Could-AI-End-Up-Being-Good-for-Democracy-e2l1c1a
+2707,2023-08-20,Could Google's Gemini Be A ChatGPT Killer?,https://podcasters.spotify.com/pod/show/nlw/episodes/Could-Googles-Gemini-Be-A-ChatGPT-Killer-e2l1bud
+2706,2023-08-21,Should the US Nationalize the Artificial Intelligence Industry?,https://podcasters.spotify.com/pod/show/nlw/episodes/Should-the-US-Nationalize-the-Artificial-Intelligence-Industry-e2l1c1p
+2705,2023-08-22,The Future of AI Music: YouTube and Universal Partner,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Future-of-AI-Music-YouTube-and-Universal-Partner-e2l1c20
+2703,2023-08-24,Was Nvidia's Earnings Call A '1995 Internet Moment'?,https://podcasters.spotify.com/pod/show/nlw/episodes/Was-Nvidias-Earnings-Call-A-1995-Internet-Moment-e2l1c3r
+2704,2023-08-24,How Big A Deal Is GPT-3.5 Fine-Tuning From OpenAI?,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Big-A-Deal-Is-GPT-3-5-Fine-Tuning-From-OpenAI-e2l1c28
+2702,2023-08-25,Code Llama Kicks LLM for Code Battle Into Overdrive,https://podcasters.spotify.com/pod/show/nlw/episodes/Code-Llama-Kicks-LLM-for-Code-Battle-Into-Overdrive-e2l1c0a
+2701,2023-08-26,The Peril and Potential of AutoGPT,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Peril-and-Potential-of-AutoGPT-e2l1bqi
+2700,2023-08-27,How Will We Know When AI Becomes Conscious?,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Will-We-Know-When-AI-Becomes-Conscious-e2l1bsm
+2699,2023-08-28,Was Elon's Tesla FSD Demo the ChatGPT Moment For Self-Driving Cars?,https://podcasters.spotify.com/pod/show/nlw/episodes/Was-Elons-Tesla-FSD-Demo-the-ChatGPT-Moment-For-Self-Driving-Cars-e2l1bro
+2698,2023-08-29,ChatGPT Enterprise Is Here - How It Shapes the AI Competitive Landscape,https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-Enterprise-Is-Here---How-It-Shapes-the-AI-Competitive-Landscape-e2l1brp
+2697,2023-08-30,OpenAI Is Now On A Billion Dollar Revenue Pace,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Is-Now-On-A-Billion-Dollar-Revenue-Pace-e2l1c26
+2696,2023-08-31,The Geopolitics of Artificial Intelligence,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Geopolitics-of-Artificial-Intelligence-e2l1brb
+2695,2023-09-01,Are Educators Ready for a ChatGPT School Year?,https://podcasters.spotify.com/pod/show/nlw/episodes/Are-Educators-Ready-for-a-ChatGPT-School-Year-e2l1c2b
+2694,2023-09-02,Should AI Make Us Want A National Privacy Law?,https://podcasters.spotify.com/pod/show/nlw/episodes/Should-AI-Make-Us-Want-A-National-Privacy-Law-e2l1brm
+2693,2023-09-03,Who Will Create and Capture the Most Value in AI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Who-Will-Create-and-Capture-the-Most-Value-in-AI-e2l1bq1
+2692,2023-09-04,Is OpenAI Secretly Training GPT-5?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-OpenAI-Secretly-Training-GPT-5-e2l1bqb
+2691,2023-09-05,Study: Reinforcement Learning from AI Feedback Performs As Well As Human Feedback,https://podcasters.spotify.com/pod/show/nlw/episodes/Study-Reinforcement-Learning-from-AI-Feedback-Performs-As-Well-As-Human-Feedback-e2l1c21
+2690,2023-09-06,An Open GPT-4 Level Model? Meet Falcon 180B,https://podcasters.spotify.com/pod/show/nlw/episodes/An-Open-GPT-4-Level-Model--Meet-Falcon-180B-e2l1bqv
+2689,2023-09-07,Apple Spending Millions Each Day Training AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Apple-Spending-Millions-Each-Day-Training-AI-e2l1c01
+2687,2023-09-09,Don't Believe the Lull: AI Is Screaming Forward,https://podcasters.spotify.com/pod/show/nlw/episodes/Dont-Believe-the-Lull-AI-Is-Screaming-Forward-e2l1bvj
+2688,2023-09-09,AI's 100 Most Influential (According to TIME),https://podcasters.spotify.com/pod/show/nlw/episodes/AIs-100-Most-Influential-According-to-TIME-e2l1bv4
+2686,2023-09-10,How Elon Musk Became Consumed with AI Safety,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Elon-Musk-Became-Consumed-with-AI-Safety-e2l1c41
+2685,2023-09-11,Meta is Working on a ChatGPT Killer,https://podcasters.spotify.com/pod/show/nlw/episodes/Meta-is-Working-on-a-ChatGPT-Killer-e2l1br2
+2684,2023-09-12,Open Interpreter: How People Are Using Github's Hottest AI Project,https://podcasters.spotify.com/pod/show/nlw/episodes/Open-Interpreter-How-People-Are-Using-Githubs-Hottest-AI-Project-e2l1bu8
+2683,2023-09-13,Apple's AI Strategy Revealed?,https://podcasters.spotify.com/pod/show/nlw/episodes/Apples-AI-Strategy-Revealed-e2l1br4
+2682,2023-09-14,$550B In Net Worth Met In D.C. To Talk AI: Did Anything Get Done?,https://podcasters.spotify.com/pod/show/nlw/episodes/550B-In-Net-Worth-Met-In-D-C--To-Talk-AI-Did-Anything-Get-Done-e2l1c4k
+2681,2023-09-15,SCOOP: Google Testing Gemini With Partners -- Launch Soon?,https://podcasters.spotify.com/pod/show/nlw/episodes/SCOOP-Google-Testing-Gemini-With-Partners----Launch-Soon-e2l1buh
+2680,2023-09-16,Should OpenAI Have Been A Government Program?,https://podcasters.spotify.com/pod/show/nlw/episodes/Should-OpenAI-Have-Been-A-Government-Program-e2l1c0d
+2679,2023-09-17,GPT-4 More Creative Than the Average Person According to Recent Study,https://podcasters.spotify.com/pod/show/nlw/episodes/GPT-4-More-Creative-Than-the-Average-Person-According-to-Recent-Study-e2l1c1k
+2678,2023-09-18,Knowledge Workers Produce 40% Better Results When Using AI - Study,https://podcasters.spotify.com/pod/show/nlw/episodes/Knowledge-Workers-Produce-40-Better-Results-When-Using-AI---Study-e2l1bsi
+2677,2023-09-19,Google Bard Gets Major Update While OpenAI Races to Multimodal,https://podcasters.spotify.com/pod/show/nlw/episodes/Google-Bard-Gets-Major-Update-While-OpenAI-Races-to-Multimodal-e2l1c47
+2676,2023-09-20,Will Intel's New Chip Usher in the 'Age of the AI PC'?,https://podcasters.spotify.com/pod/show/nlw/episodes/Will-Intels-New-Chip-Usher-in-the-Age-of-the-AI-PC-e2l1c0v
+2675,2023-09-21,5 Reasons DALL-E 3 in ChatGPT is a Huge Deal,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Reasons-DALL-E-3-in-ChatGPT-is-a-Huge-Deal-e2l1bqg
+2674,2023-09-22,Is This The First AI-Powered Operating System?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-This-The-First-AI-Powered-Operating-System-e2l1bqd
+2673,2023-09-23,"6 Months After the ""6-Month Pause"" Letter, Has the AI Safety Conversation Changed?",https://podcasters.spotify.com/pod/show/nlw/episodes/6-Months-After-the-6-Month-Pause-Letter--Has-the-AI-Safety-Conversation-Changed-e2l1bte
+2672,2023-09-24,Americans Are Getting Less Trustful of Artificial Intelligence,https://podcasters.spotify.com/pod/show/nlw/episodes/Americans-Are-Getting-Less-Trustful-of-Artificial-Intelligence-e2l1bpc
+2671,2023-09-25,ChatGPT Can Now See and Hear,https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-Can-Now-See-and-Hear-e2l1btu
+2670,2023-09-26,"Automated AI Translations Come to Spotify, Undermining Numerous AI Startups",https://podcasters.spotify.com/pod/show/nlw/episodes/Automated-AI-Translations-Come-to-Spotify--Undermining-Numerous-AI-Startups-e2l1bta
+2669,2023-09-27,"OpenAI Raising at $90B and Trolls Everyone, Saying AGI Has Been Achieved",https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Raising-at-90B-and-Trolls-Everyone--Saying-AGI-Has-Been-Achieved-e2l1br7
+2668,2023-09-28,The 5 Most Important AI Announcements from Meta Connect,https://podcasters.spotify.com/pod/show/nlw/episodes/The-5-Most-Important-AI-Announcements-from-Meta-Connect-e2l1c2n
+2666,2023-09-30,Are Copyright Battles Against AI Destined to Fail?,https://podcasters.spotify.com/pod/show/nlw/episodes/Are-Copyright-Battles-Against-AI-Destined-to-Fail-e2l1bv0
+2667,2023-09-30,ChatGPT Vision: 8 Ways People Are Using It Already,https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-Vision-8-Ways-People-Are-Using-It-Already-e2l1bpu
+2665,2023-10-01,"Warriors, Doomsayers, Reformers: Understanding the Factions in AI",https://podcasters.spotify.com/pod/show/nlw/episodes/Warriors--Doomsayers--Reformers-Understanding-the-Factions-in-AI-e2l1buq
+2664,2023-10-02,Mobile LLMs? The Battle to Get AI on Our Phones,https://podcasters.spotify.com/pod/show/nlw/episodes/Mobile-LLMs--The-Battle-to-Get-AI-on-Our-Phones-e2l1bu0
+2663,2023-10-03,The AI Wearable Wars,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Wearable-Wars-e2l1c3t
+2662,2023-10-04,Anthropic Raising at a $20B-$30B Valuation,https://podcasters.spotify.com/pod/show/nlw/episodes/Anthropic-Raising-at-a-20B-30B-Valuation-e2l1bq4
+2661,2023-10-05,AI's Integration Phase: Canva Launches Slate of AI Features,https://podcasters.spotify.com/pod/show/nlw/episodes/AIs-Integration-Phase-Canva-Launches-Slate-of-AI-Features-e2l1bq9
+2660,2023-10-06,The Epik AI Yearbook Trend Taking Over Social Media,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Epik-AI-Yearbook-Trend-Taking-Over-Social-Media-e2l1bsh
+2659,2023-10-07,The End of the First Phase of Generative AI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-End-of-the-First-Phase-of-Generative-AI-e2l1brl
+2658,2023-10-08,What's Next in Phase Two of Generative AI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Whats-Next-in-Phase-Two-of-Generative-AI-e2l1c3i
+2657,2023-10-09,AI Operations and AI Engineer: The New Careers AI Is Creating,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Operations-and-AI-Engineer-The-New-Careers-AI-Is-Creating-e2l1bti
+2656,2023-10-10,The Latest AutoGPT and AI Agent Developments,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Latest-AutoGPT-and-AI-Agent-Developments-e2l1bpt
+2655,2023-10-11,"AI Chip Wars: Tesla Building ""Bunkerlike"" Home for Dojo Supercomputer",https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Chip-Wars-Tesla-Building-Bunkerlike-Home-for-Dojo-Supercomputer-e2l1bpg
+2654,2023-10-12,"The State of AI Report: Research, Industry, Politics and Safety",https://podcasters.spotify.com/pod/show/nlw/episodes/The-State-of-AI-Report-Research--Industry--Politics-and-Safety-e2l1bqt
+2653,2023-10-13,The US Wants To Block China's Access to Advanced AI Models,https://podcasters.spotify.com/pod/show/nlw/episodes/The-US-Wants-To-Block-Chinas-Access-to-Advanced-AI-Models-e2l1c23
+2652,2023-10-14,Can AI Detect AI? And Other Frequently Asked Questions,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-AI-Detect-AI--And-Other-Frequently-Asked-Questions-e2l1bq5
+2651,2023-10-15,The 7 Use Case Categories of ChatGPT-4 Vision,https://podcasters.spotify.com/pod/show/nlw/episodes/The-7-Use-Case-Categories-of-ChatGPT-4-Vision-e2l1bpl
+2650,2023-10-16,The Techno-Optimist Manifesto,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Techno-Optimist-Manifesto-e2l1c30
+2649,2023-10-17,AI Agents Coming to OpenAI Dev Event?,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Agents-Coming-to-OpenAI-Dev-Event-e2l1bqu
+2648,2023-10-18,China-US AI Tensions and AI Safety Summit Controversy,https://podcasters.spotify.com/pod/show/nlw/episodes/China-US-AI-Tensions-and-AI-Safety-Summit-Controversy-e2l1bth
+2647,2023-10-19,Which AI Model is the Most Transparent?,https://podcasters.spotify.com/pod/show/nlw/episodes/Which-AI-Model-is-the-Most-Transparent-e2l1c05
+2646,2023-10-20,OpenAI Quietly Abandoned Arrakis Model Earlier This Year,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Quietly-Abandoned-Arrakis-Model-Earlier-This-Year-e2l1brh
+2645,2023-10-21,AI Leaders Call for International Panel on AI Safety,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Leaders-Call-for-International-Panel-on-AI-Safety-e2l1bq8
+2644,2023-10-22,The AI Competitive Landscape One Year After ChatGPT,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Competitive-Landscape-One-Year-After-ChatGPT-e2l1bpi
+2643,2023-10-23,Can We Have AI Progress and AI Safety at the Same Time?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-We-Have-AI-Progress-and-AI-Safety-at-the-Same-Time-e2l1c0c
+2642,2023-10-24,LEAKED: First Look at Gemini Multimodal?,https://podcasters.spotify.com/pod/show/nlw/episodes/LEAKED-First-Look-at-Gemini-Multimodal-e2l1bvd
+2641,2023-10-25,Midjourney vs. DALL-E-3: Can Midjourney's New Website Compete with ChatGPT Integration?,https://podcasters.spotify.com/pod/show/nlw/episodes/Midjourney-vs--DALL-E-3-Can-Midjourneys-New-Website-Compete-with-ChatGPT-Integration-e2l1bqn
+2640,2023-10-26,White House AI Executive Order Coming Monday,https://podcasters.spotify.com/pod/show/nlw/episodes/White-House-AI-Executive-Order-Coming-Monday-e2l1c2k
+2639,2023-10-27,OpenAI Forms Catastrophic Risk Preparedness Team,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Forms-Catastrophic-Risk-Preparedness-Team-e2l1bqj
+2638,2023-10-28,Hinton and Bengio on Managing AI Risks,https://podcasters.spotify.com/pod/show/nlw/episodes/Hinton-and-Bengio-on-Managing-AI-Risks-e2l1c0r
+2636,2023-10-30,Biden's AI Executive Order: Everything You Need to Know,https://podcasters.spotify.com/pod/show/nlw/episodes/Bidens-AI-Executive-Order-Everything-You-Need-to-Know-e2l1bq2
+2637,2023-10-30,The State of AI Regulation in the USA,https://podcasters.spotify.com/pod/show/nlw/episodes/The-State-of-AI-Regulation-in-the-USA-e2l1bss
+2635,2023-10-31,AI Proxy War: Google Invests $2B in Anthropic,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Proxy-War-Google-Invests-2B-in-Anthropic-e2l1br0
+2634,2023-11-01,Apple is FINALLY Talking About AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Apple-is-FINALLY-Talking-About-AI-e2l1btn
+2633,2023-11-02,Judge Delivers Blow to Artists AI Copyright Lawsuit,https://podcasters.spotify.com/pod/show/nlw/episodes/Judge-Delivers-Blow-to-Artists-AI-Copyright-Lawsuit-e2l1bv9
+2632,2023-11-03,"Regulatory Capture? Meta AI Chief Accuses OpenAI, Anthropic of Stoking Fears",https://podcasters.spotify.com/pod/show/nlw/episodes/Regulatory-Capture--Meta-AI-Chief-Accuses-OpenAI--Anthropic-of-Stoking-Fears-e2l1br8
+2630,2023-11-04,BREAKING: Elon Announces xAI ChatGPT Competitor Grok,https://podcasters.spotify.com/pod/show/nlw/episodes/BREAKING-Elon-Announces-xAI-ChatGPT-Competitor-Grok-e2l1bnl
+2631,2023-11-04,"An OpenAI Researcher on ""Techno-Humanism""",https://podcasters.spotify.com/pod/show/nlw/episodes/An-OpenAI-Researcher-on-Techno-Humanism-e2l1c0o
+2629,2023-11-05,ChatGPT All Tools and What OpenAI Is Really Building,https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-All-Tools-and-What-OpenAI-Is-Really-Building-e2l1br1
+2628,2023-11-06,The AI Stack for Content Creators (aka the AI Tools I Actually Use),https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Stack-for-Content-Creators-aka-the-AI-Tools-I-Actually-Use-e2l1bur
+2627,2023-11-07,OpenAI DevDay: Everything You Need To Know,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-DevDay-Everything-You-Need-To-Know-e2l1c4q
+2626,2023-11-08,Samsung Gauss and the AI Phone Wars,https://podcasters.spotify.com/pod/show/nlw/episodes/Samsung-Gauss-and-the-AI-Phone-Wars-e2l1c06
+2625,2023-11-09,"2X Bigger than GPT-4!? Amazon Is Training ""Olympus""",https://podcasters.spotify.com/pod/show/nlw/episodes/2X-Bigger-than-GPT-4---Amazon-Is-Training-Olympus-e2l1c0t
+2624,2023-11-10,The Significance of OpenAI's New Data Partnerships Program,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Significance-of-OpenAIs-New-Data-Partnerships-Program-e2l1bp9
+2623,2023-11-11,Humane Ai Pin: The Future of Computing or Solution in Search of a Problem?,https://podcasters.spotify.com/pod/show/nlw/episodes/Humane-Ai-Pin-The-Future-of-Computing-or-Solution-in-Search-of-a-Problem-e2l1bom
+2622,2023-11-12,How Close to Agents Are GPTs?,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Close-to-Agents-Are-GPTs-e2l1bu6
+2621,2023-11-13,OpenAI Is Officially Training GPT-5,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Is-Officially-Training-GPT-5-e2l1c2c
+2620,2023-11-14,Which LLMs Hallucinate Least?,https://podcasters.spotify.com/pod/show/nlw/episodes/Which-LLMs-Hallucinate-Least-e2l1bv2
+2619,2023-11-15,OpenAI's AGI Committee,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAIs-AGI-Committee-e2l1bpm
+2618,2023-11-16,The Biggest AI Announcements from Microsoft Ignite,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Biggest-AI-Announcements-from-Microsoft-Ignite-e2l1bql
+2616,2023-11-17,BREAKING: Sam Altman FIRED from OpenAI,https://podcasters.spotify.com/pod/show/nlw/episodes/BREAKING-Sam-Altman-FIRED-from-OpenAI-e2l1brc
+2617,2023-11-17,Gemini Delayed: Is Google In the Innovator's Dilemma?,https://podcasters.spotify.com/pod/show/nlw/episodes/Gemini-Delayed-Is-Google-In-the-Innovators-Dilemma-e2l1c0s
+2615,2023-11-18,What REALLY Happened at OpenAI?,https://podcasters.spotify.com/pod/show/nlw/episodes/What-REALLY-Happened-at-OpenAI-e2l1c1n
+2614,2023-11-19,Sam Altman and Greg Brockman COMING BACK to OpenAI?!,https://podcasters.spotify.com/pod/show/nlw/episodes/Sam-Altman-and-Greg-Brockman-COMING-BACK-to-OpenAI-e2l1bpb
+2613,2023-11-20,"Latest OpenAI Drama: Altman/Brockman to Microsoft, Board Hires Former Twitch CEO; Employees Rebel",https://podcasters.spotify.com/pod/show/nlw/episodes/Latest-OpenAI-Drama-AltmanBrockman-to-Microsoft--Board-Hires-Former-Twitch-CEO-Employees-Rebel-e2l1bvk
+2612,2023-11-21,OpenAI Board Asked Anthropic For Merger,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Board-Asked-Anthropic-For-Merger-e2l1bpq
+2611,2023-11-22,IT'S OVER! Sam Altman BACK as CEO of OpenAI,https://podcasters.spotify.com/pod/show/nlw/episodes/ITS-OVER--Sam-Altman-BACK-as-CEO-of-OpenAI-e2l1bt9
+2610,2023-11-23,Stability AI Releases Stunning Stable Video Diffusion Model,https://podcasters.spotify.com/pod/show/nlw/episodes/Stability-AI-Releases-Stunning-Stable-Video-Diffusion-Model-e2l1c46
+2609,2023-11-24,The Winners and Losers Following the OpenAI Power Struggle,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Winners-and-Losers-Following-the-OpenAI-Power-Struggle-e2l1bsp
+2608,2023-11-25,Self-Regulation vs. More Regulation: The Right Approach for AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Self-Regulation-vs--More-Regulation-The-Right-Approach-for-AI-e2l1bpa
+2607,2023-11-26,How Close Are We To True AI Agents?,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Close-Are-We-To-True-AI-Agents-e2l1c18
+2606,2023-11-27,Q*: Was This New Advance the Reason for Sam Altman's Firing?,https://podcasters.spotify.com/pod/show/nlw/episodes/Q-Was-This-New-Advance-the-Reason-for-Sam-Altmans-Firing-e2l1bqh
+2605,2023-11-28,Is Pika 1.0 AI Video's Breakout Moment?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Pika-1-0-AI-Videos-Breakout-Moment-e2l1bqf
+2604,2023-11-29,Amazon Launches Q Chatbot: Is It A Disappointment or AI On Trend?,https://podcasters.spotify.com/pod/show/nlw/episodes/Amazon-Launches-Q-Chatbot-Is-It-A-Disappointment-or-AI-On-Trend-e2l1bus
+2603,2023-11-30,ChatGPT Launched 1 Year Ago Today: A Retrospective,https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-Launched-1-Year-Ago-Today-A-Retrospective-e2l1bpo
+2602,2023-12-01,Did Google DeepMind Just Revolutionize Materials Science?,https://podcasters.spotify.com/pod/show/nlw/episodes/Did-Google-DeepMind-Just-Revolutionize-Materials-Science-e2l1brf
+2601,2023-12-02,The Fight for AI's Soul Following OpenAI's Leadership Battle,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Fight-for-AIs-Soul-Following-OpenAIs-Leadership-Battle-e2l1c2v
+2600,2023-12-03,Predictions for Generative AI Year 2,https://podcasters.spotify.com/pod/show/nlw/episodes/Predictions-for-Generative-AI-Year-2-e2l1bov
+2599,2023-12-04,How Clashing Egos and Disagreements Shaped the AI Field,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Clashing-Egos-and-Disagreements-Shaped-the-AI-Field-e2l1br3
+2598,2023-12-05,"Meta, IBM Form AI Alliance to Counter OpenAI with More Open AI",https://podcasters.spotify.com/pod/show/nlw/episodes/Meta--IBM-Form-AI-Alliance-to-Counter-OpenAI-with-More-Open-AI-e2l1c1t
+2597,2023-12-06,BREAKING: Google Launches Gemini,https://podcasters.spotify.com/pod/show/nlw/episodes/BREAKING-Google-Launches-Gemini-e2l1c3k
+2596,2023-12-07,OpenAI's COO Says AI for Business is Overhyped. Is He Right?,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAIs-COO-Says-AI-for-Business-is-Overhyped--Is-He-Right-e2l1bp7
+2595,2023-12-08,"Meta Launches Midjourney, Dall-E-3 Competitor",https://podcasters.spotify.com/pod/show/nlw/episodes/Meta-Launches-Midjourney--Dall-E-3-Competitor-e2l1c1s
+2594,2023-12-09,China Drives D.C. to Be More AI Ambitious,https://podcasters.spotify.com/pod/show/nlw/episodes/China-Drives-D-C--to-Be-More-AI-Ambitious-e2l1btr
+2593,2023-12-10,The Significance of Sam Altman as TIME CEO of the Year,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Significance-of-Sam-Altman-as-TIME-CEO-of-the-Year-e2l1c2m
+2592,2023-12-11,RUMOR: GPT-4.5 Coming Before EOY (Maybe Even This Week?),https://podcasters.spotify.com/pod/show/nlw/episodes/RUMOR-GPT-4-5-Coming-Before-EOY-Maybe-Even-This-Week-e2l1bph
+2591,2023-12-12,AI Startups Are Having More Trouble Fundraising. Here's What It Means.,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Startups-Are-Having-More-Trouble-Fundraising--Heres-What-It-Means-e2l1btv
+2590,2023-12-13,Is ChatGPT Acting Lazy Because of the Holidays?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-ChatGPT-Acting-Lazy-Because-of-the-Holidays-e2l1c2d
+2589,2023-12-14,"Is the GPT-4.5 ""Leak"" Real?",https://podcasters.spotify.com/pod/show/nlw/episodes/Is-the-GPT-4-5-Leak-Real-e2l1c4o
+2588,2023-12-15,The Latest Developments in Superalignment,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Latest-Developments-in-Superalignment-e2l1c2p
+2587,2023-12-16,Can AI Be Regulated In A Way That Preserves Freedom?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-AI-Be-Regulated-In-A-Way-That-Preserves-Freedom-e2l1c36
+2586,2023-12-17,2024 Generative AI Trend: Moving Beyond Chat Interfaces,https://podcasters.spotify.com/pod/show/nlw/episodes/2024-Generative-AI-Trend-Moving-Beyond-Chat-Interfaces-e2l1boi
+2585,2023-12-18,Will AI Girlfriends Destroy the Fabric of Society?,https://podcasters.spotify.com/pod/show/nlw/episodes/Will-AI-Girlfriends-Destroy-the-Fabric-of-Society-e2l1bpr
+2584,2023-12-19,"The More Workers Use AI, The More They Fear for Their Jobs",https://podcasters.spotify.com/pod/show/nlw/episodes/The-More-Workers-Use-AI--The-More-They-Fear-for-Their-Jobs-e2l1c32
+2583,2023-12-20,GPT-Engineer Launches App as Text-to-Code Platforms On the Rise,https://podcasters.spotify.com/pod/show/nlw/episodes/GPT-Engineer-Launches-App-as-Text-to-Code-Platforms-On-the-Rise-e2l1bpk
+2581,2023-12-22,The 10 Biggest AI Events of 2023,https://podcasters.spotify.com/pod/show/nlw/episodes/The-10-Biggest-AI-Events-of-2023-e2l1c3g
+2582,2023-12-22,Anthropic Raising Another $750M at $15B-$20B Valuation,https://podcasters.spotify.com/pod/show/nlw/episodes/Anthropic-Raising-Another-750M-at-15B-20B-Valuation-e2l1c1i
+2580,2023-12-23,8 Predictions for AI in 2024,https://podcasters.spotify.com/pod/show/nlw/episodes/8-Predictions-for-AI-in-2024-e2l1bu3
+2579,2023-12-24,Testing Suno.ai: The Viral AI Music Generator,https://podcasters.spotify.com/pod/show/nlw/episodes/Testing-Suno-ai-The-Viral-AI-Music-Generator-e2l1c0l
+2578,2023-12-28,New York Times Sues OpenAI In What Could Be A Landmark Lawsuit,https://podcasters.spotify.com/pod/show/nlw/episodes/New-York-Times-Sues-OpenAI-In-What-Could-Be-A-Landmark-Lawsuit-e2l1c1d
+2577,2023-12-29,How AI Will Impact Jobs in 2024,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AI-Will-Impact-Jobs-in-2024-e2l1boq
+2576,2024-01-02,The State of AI in 2024,https://podcasters.spotify.com/pod/show/nlw/episodes/The-State-of-AI-in-2024-e2l1c2e
+2575,2024-01-03,Is AI Headed for a Trough of Disillusionment?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-AI-Headed-for-a-Trough-of-Disillusionment-e2l1boe
+2574,2024-01-04,AI Researchers Put Risk of Human Extinction from AI at 5%,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Researchers-Put-Risk-of-Human-Extinction-from-AI-at-5-e2l1bs4
+2573,2024-01-05,5 Predictions for the GPT Store Coming Next Week,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Predictions-for-the-GPT-Store-Coming-Next-Week-e2l1bqe
+2572,2024-01-06,What Roles Should Government Play in AI?,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Roles-Should-Government-Play-in-AI-e2l1c5n
+2571,2024-01-08,Andrej Karpathy Tries to Rebrand AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Andrej-Karpathy-Tries-to-Rebrand-AI-e2l1c35
+2570,2024-01-10,Duolingo Replaces 10% of Contractors With AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Duolingo-Replaces-10-of-Contractors-With-AI-e2l1c0p
+2569,2024-01-11,The GPT Store is LIVE! (But Does Anyone Care?),https://podcasters.spotify.com/pod/show/nlw/episodes/The-GPT-Store-is-LIVE--But-Does-Anyone-Care-e2l1c1v
+2568,2024-01-12,What an OpenAI AMA Tells Us About the Future of GPTs and the GPT Store,https://podcasters.spotify.com/pod/show/nlw/episodes/What-an-OpenAI-AMA-Tells-Us-About-the-Future-of-GPTs-and-the-GPT-Store-e2l1bq6
+2566,2024-01-13,The Things We Know About AI So Far,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Things-We-Know-About-AI-So-Far-e2l1c1q
+2567,2024-01-13,The AI Assistant and Agent Battle Heats Up,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Assistant-and-Agent-Battle-Heats-Up-e2l1bsq
+2565,2024-01-14,The Four Wars of the AI Stack: The Battles Shaping the Development of AI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Four-Wars-of-the-AI-Stack-The-Battles-Shaping-the-Development-of-AI-e2l1c16
+2564,2024-01-16,60% of US Jobs Could Be Impacted by AI,https://podcasters.spotify.com/pod/show/nlw/episodes/60-of-US-Jobs-Could-Be-Impacted-by-AI-e2l1btb
+2563,2024-01-17,"Altman Says AGI Soon, But Will Change the World Less Than We Think",https://podcasters.spotify.com/pod/show/nlw/episodes/Altman-Says-AGI-Soon--But-Will-Change-the-World-Less-Than-We-Think-e2l1bpv
+2561,2024-01-19,Mark Zuckerberg Wants to Make Open Source AGI,https://podcasters.spotify.com/pod/show/nlw/episodes/Mark-Zuckerberg-Wants-to-Make-Open-Source-AGI-e2l1c1u
+2562,2024-01-19,Google's AlphaGeometry Breakthrough,https://podcasters.spotify.com/pod/show/nlw/episodes/Googles-AlphaGeometry-Breakthrough-e2l1btp
+2560,2024-01-20,An Optimistic Take on AI and Inequality,https://podcasters.spotify.com/pod/show/nlw/episodes/An-Optimistic-Take-on-AI-and-Inequality-e2l1bvq
+2559,2024-01-22,Sam Altman's Secret Quest to Build AI Chip Plants,https://podcasters.spotify.com/pod/show/nlw/episodes/Sam-Altmans-Secret-Quest-to-Build-AI-Chip-Plants-e2l1bva
+2558,2024-01-23,The Surprising Reason AI Won't Steal Your Job,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Surprising-Reason-AI-Wont-Steal-Your-Job-e2l1buj
+2557,2024-01-24,Google’s Announcements Show 2 Key 2024 AI Trends,https://podcasters.spotify.com/pod/show/nlw/episodes/Googles-Announcements-Show-2-Key-2024-AI-Trends-e2l1c5e
+2556,2024-01-25,Can Viral NSFW Taylor Swift AI Images Make Deepfake Issues Go Mainstream?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-Viral-NSFW-Taylor-Swift-AI-Images-Make-Deepfake-Issues-Go-Mainstream-e2l1bu5
+2555,2024-01-26,Google and HuggingFace Partner in Boost to Open Source AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Google-and-HuggingFace-Partner-in-Boost-to-Open-Source-AI-e2l1bpj
+2554,2024-01-27,"Train Humans, Not AI",https://podcasters.spotify.com/pod/show/nlw/episodes/Train-Humans--Not-AI-e2l1bo1
+2552,2024-01-30,OpenAI Launches Education and Safety Initiative,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Launches-Education-and-Safety-Initiative-e2l1bp0
+2553,2024-01-30,US Gov't Says AI Labs Need to Notify Them Around LLM Training,https://podcasters.spotify.com/pod/show/nlw/episodes/US-Govt-Says-AI-Labs-Need-to-Notify-Them-Around-LLM-Training-e2l1btl
+2551,2024-01-31,These Are the Most Used AI Applications,https://podcasters.spotify.com/pod/show/nlw/episodes/These-Are-the-Most-Used-AI-Applications-e2l1c58
+2550,2024-02-01,The FCC Wants AI Robocalls to Be Illegal,https://podcasters.spotify.com/pod/show/nlw/episodes/The-FCC-Wants-AI-Robocalls-to-Be-Illegal-e2l1c3h
+2549,2024-02-02,Tim Cook Is FINALLY Hyping Apple AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Tim-Cook-Is-FINALLY-Hyping-Apple-AI-e2l1bo5
+2548,2024-02-03,How AI Will Change Organized Labor,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AI-Will-Change-Organized-Labor-e2l1bui
+2547,2024-02-05,LEAK: Google Gemini Ultra Coming This Week?,https://podcasters.spotify.com/pod/show/nlw/episodes/LEAK-Google-Gemini-Ultra-Coming-This-Week-e2l1c09
+2546,2024-02-06,AI Unlocks Ancient Greek Scrolls Destroyed by Mt Vesuvius,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Unlocks-Ancient-Greek-Scrolls-Destroyed-by-Mt-Vesuvius-e2l1c11
+2545,2024-02-07,AI is Personal: On Microsoft's Copilot Super Bowl Ad,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-is-Personal-On-Microsofts-Copilot-Super-Bowl-Ad-e2l1c13
+2544,2024-02-08,OpenAI Building AI Agents as Google Launches Gemini Advanced,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Building-AI-Agents-as-Google-Launches-Gemini-Advanced-e2l1bvv
+2542,2024-02-10,Why the Impact of AI Will Be Even Weirder Than We Think,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-the-Impact-of-AI-Will-Be-Even-Weirder-Than-We-Think-e2l1bno
+2543,2024-02-10,Sam Altman Wants to Raise $5-$7 TRILLION for AI Chip Plants,https://podcasters.spotify.com/pod/show/nlw/episodes/Sam-Altman-Wants-to-Raise-5-7-TRILLION-for-AI-Chip-Plants-e2l1bob
+2541,2024-02-11,"Is Ukraine the First ""AI War""?",https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Ukraine-the-First-AI-War-e2l1c1h
+2540,2024-02-12,Nvidia Surges Past Amazon's Market Cap and is Creeping on Google,https://podcasters.spotify.com/pod/show/nlw/episodes/Nvidia-Surges-Past-Amazons-Market-Cap-and-is-Creeping-on-Google-e2l1bpd
+2539,2024-02-13,OpenAI Hits $2B Revenue Run Rate,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Hits-2B-Revenue-Run-Rate-e2l1c3q
+2538,2024-02-14,Karpathy Leaves OpenAI as OpenAI Launches Memory for ChatGPT,https://podcasters.spotify.com/pod/show/nlw/episodes/Karpathy-Leaves-OpenAI-as-OpenAI-Launches-Memory-for-ChatGPT-e2l1bnv
+2537,2024-02-15,Google Launches Gemini 1.5 with ONE MILLION Token Context Window,https://podcasters.spotify.com/pod/show/nlw/episodes/Google-Launches-Gemini-1-5-with-ONE-MILLION-Token-Context-Window-e2l1bpe
+2536,2024-02-16,OpenAI's Stunning New Video Model SORA Shocks the AI World,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAIs-Stunning-New-Video-Model-SORA-Shocks-the-AI-World-e2l1c17
+2535,2024-02-17,"The Surprising Way AI Will Make Us Value ""Soft Skills""",https://podcasters.spotify.com/pod/show/nlw/episodes/The-Surprising-Way-AI-Will-Make-Us-Value-Soft-Skills-e2l1bvg
+2534,2024-02-18,"The Science Behind Sora, OpenAI's Game Changing Video Model",https://podcasters.spotify.com/pod/show/nlw/episodes/The-Science-Behind-Sora--OpenAIs-Game-Changing-Video-Model-e2l1c14
+2533,2024-02-19,Why Are People So Scared of Sora?,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Are-People-So-Scared-of-Sora-e2l1bot
+2532,2024-02-20,Groq is 10x Faster than ChatGPT and Gemini,https://podcasters.spotify.com/pod/show/nlw/episodes/Groq-is-10x-Faster-than-ChatGPT-and-Gemini-e2l1bp8
+2531,2024-02-21,Is Elon Musk Bringing Midjourney to X?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Elon-Musk-Bringing-Midjourney-to-X-e2l1c39
+2530,2024-02-22,Why Nvidia's Earnings Show AI is Still Just Beginning,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Nvidias-Earnings-Show-AI-is-Still-Just-Beginning-e2l1bop
+2528,2024-02-24,The Next Phase of Generative AI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Next-Phase-of-Generative-AI-e2l1c24
+2529,2024-02-24,"After Seeing OpenAI’s Sora, Tyler Perry Cancelled Building an $800m Studio",https://podcasters.spotify.com/pod/show/nlw/episodes/After-Seeing-OpenAIs-Sora--Tyler-Perry-Cancelled-Building-an-800m-Studio-e2l1c53
+2527,2024-02-25,Google Gemini Anti-Woke Backlash: Culture War or AI Fear?,https://podcasters.spotify.com/pod/show/nlw/episodes/Google-Gemini-Anti-Woke-Backlash-Culture-War-or-AI-Fear-e2l1bnt
+2526,2024-02-26,Mistral Launches Close-to-GPT-4-Level Model with Microsoft Partnership,https://podcasters.spotify.com/pod/show/nlw/episodes/Mistral-Launches-Close-to-GPT-4-Level-Model-with-Microsoft-Partnership-e2l1c31
+2525,2024-02-27,"Bing’s Sydney is Back, Unhinged and Very Unaligned",https://podcasters.spotify.com/pod/show/nlw/episodes/Bings-Sydney-is-Back--Unhinged-and-Very-Unaligned-e2l1c5g
+2524,2024-02-28,Work Disruption? Klarna's AI Assistant Does Work of 700 Full Time Agents,https://podcasters.spotify.com/pod/show/nlw/episodes/Work-Disruption--Klarnas-AI-Assistant-Does-Work-of-700-Full-Time-Agents-e2l1c3m
+2523,2024-02-29,REPORT: Llama 3 Coming in July (with Fewer Guardrails),https://podcasters.spotify.com/pod/show/nlw/episodes/REPORT-Llama-3-Coming-in-July-with-Fewer-Guardrails-e2l1bnu
+2522,2024-03-01,The 10 Biggest AI News Stories of the Past Month,https://podcasters.spotify.com/pod/show/nlw/episodes/The-10-Biggest-AI-News-Stories-of-the-Past-Month-e2l1bqr
+2521,2024-03-02,AI Is Transforming How We Interact With Computers,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Is-Transforming-How-We-Interact-With-Computers-e2l1bnd
+2520,2024-03-04,AI's Threat to History,https://podcasters.spotify.com/pod/show/nlw/episodes/AIs-Threat-to-History-e2l1c45
+2518,2024-03-05,Elon Musk Sues OpenAI and Sam Altman,https://podcasters.spotify.com/pod/show/nlw/episodes/Elon-Musk-Sues-OpenAI-and-Sam-Altman-e2l1boo
+2519,2024-03-05,5 Things To Know About Claude 3 - Anthropic’s Would-Be GPT-4 Killer,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Things-To-Know-About-Claude-3---Anthropics-Would-Be-GPT-4-Killer-e2l1c25
+2517,2024-03-06,OpenAI Publishes Emails Showing Elon Pushed For-Profit Conversion,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Publishes-Emails-Showing-Elon-Pushed-For-Profit-Conversion-e2l1c3e
+2516,2024-03-07,Google Engineer Arrested for Selling AI Secrets to Chinese Companies,https://podcasters.spotify.com/pod/show/nlw/episodes/Google-Engineer-Arrested-for-Selling-AI-Secrets-to-Chinese-Companies-e2l1bol
+2515,2024-03-08,"Inflection-2.5 Is a ""Personal"" AI at Near GPT-4 Levels",https://podcasters.spotify.com/pod/show/nlw/episodes/Inflection-2-5-Is-a-Personal-AI-at-Near-GPT-4-Levels-e2l1bu2
+2514,2024-03-10,Does AI Have a Capital Concentration Problem?,https://podcasters.spotify.com/pod/show/nlw/episodes/Does-AI-Have-a-Capital-Concentration-Problem-e2l1c15
+2513,2024-03-11,The Questions That Remain Around OpenAI's Board,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Questions-That-Remain-Around-OpenAIs-Board-e2l1c19
+2512,2024-03-13,A New AI Safety Report (and Why the Media Loves the AI Extinction Narrative),https://podcasters.spotify.com/pod/show/nlw/episodes/A-New-AI-Safety-Report-and-Why-the-Media-Loves-the-AI-Extinction-Narrative-e2l1bnh
+2510,2024-03-14,ChatGPT Gets a Body with the Figure 01 Robot,https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-Gets-a-Body-with-the-Figure-01-Robot-e2l1bor
+2511,2024-03-14,GPT-4.5 - Does a Cached Announcement Blog Prove It’s Coming?,https://podcasters.spotify.com/pod/show/nlw/episodes/GPT-4-5---Does-a-Cached-Announcement-Blog-Prove-Its-Coming-e2l1bo9
+2509,2024-03-15,Should AI Gains Mean a 32-Hour Workweek?,https://podcasters.spotify.com/pod/show/nlw/episodes/Should-AI-Gains-Mean-a-32-Hour-Workweek-e2l1c08
+2508,2024-03-17,The AI Revolution Through an Economic Lens,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Revolution-Through-an-Economic-Lens-e2l1bn8
+2507,2024-03-18,"Wait, Apple is Putting Google Gemini AI on iPhones?!",https://podcasters.spotify.com/pod/show/nlw/episodes/Wait--Apple-is-Putting-Google-Gemini-AI-on-iPhones-e2l1bnk
+2506,2024-03-19,Nvidia’s Blackwell is Radically More Powerful AI Compute,https://podcasters.spotify.com/pod/show/nlw/episodes/Nvidias-Blackwell-is-Radically-More-Powerful-AI-Compute-e2l1bon
+2504,2024-03-21,U.S. Gov't Grants Intel $8.5B for AI Chip Production,https://podcasters.spotify.com/pod/show/nlw/episodes/U-S--Govt-Grants-Intel-8-5B-for-AI-Chip-Production-e2l1bn7
+2505,2024-03-21,Bye Bye Pi? Inflection CEO and Team Head to Microsoft,https://podcasters.spotify.com/pod/show/nlw/episodes/Bye-Bye-Pi--Inflection-CEO-and-Team-Head-to-Microsoft-e2l1bpp
+2503,2024-03-22,The 5 Most Important Stories in AI This Week,https://podcasters.spotify.com/pod/show/nlw/episodes/The-5-Most-Important-Stories-in-AI-This-Week-e2l1bnq
+2502,2024-03-24,Why Boring AI is Driving Adoption,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Boring-AI-is-Driving-Adoption-e2l1bp1
+2501,2024-03-25,How AI Is Shifting with Nathan Labenz,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AI-Is-Shifting-with-Nathan-Labenz-e2l1bpf
+2500,2024-03-26,How Businesses Are Using AI Right Now with Greg Kamradt,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Businesses-Are-Using-AI-Right-Now-with-Greg-Kamradt-e2l1c3o
+2499,2024-03-27,A Report from the AI Frontlines with The Neuron's Pete Huang,https://podcasters.spotify.com/pod/show/nlw/episodes/A-Report-from-the-AI-Frontlines-with-The-Neurons-Pete-Huang-e2l1c37
+2498,2024-03-28,The Four Wars of the AI Stack - An Update with Swyx and Alessio of Latent Space,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Four-Wars-of-the-AI-Stack---An-Update-with-Swyx-and-Alessio-of-Latent-Space-e2l1bp2
+2497,2024-03-29,"What AI Developers Are Building Next, with Swyx and Alessio of Latent Space",https://podcasters.spotify.com/pod/show/nlw/episodes/What-AI-Developers-Are-Building-Next--with-Swyx-and-Alessio-of-Latent-Space-e2l1c2l
+2496,2024-03-30,How to Redesign Organizations for the AI Era,https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Redesign-Organizations-for-the-AI-Era-e2l1bn1
+2495,2024-04-02,The Most Important AI Stories Last Week,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Most-Important-AI-Stories-Last-Week-e2l1bo6
+2494,2024-04-03,30% of Young Americans Have Used ChatGPT at Work,https://podcasters.spotify.com/pod/show/nlw/episodes/30-of-Young-Americans-Have-Used-ChatGPT-at-Work-e2l1bo3
+2493,2024-04-05,Debating GPT-4 Reduced Conspiracy Theories,https://podcasters.spotify.com/pod/show/nlw/episodes/Debating-GPT-4-Reduced-Conspiracy-Theories-e2l1bni
+2492,2024-04-06,Can AI Help Restore the Middle Class?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-AI-Help-Restore-the-Middle-Class-e2l1bnn
+2491,2024-04-08,The Ethical Gray Area of AI Labs and Data,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Ethical-Gray-Area-of-AI-Labs-and-Data-e2l1bna
+2490,2024-04-09,8 Questions on the Future of AI,https://podcasters.spotify.com/pod/show/nlw/episodes/8-Questions-on-the-Future-of-AI-e2l1bnb
+2488,2024-04-11,The 5 Important AI Models Released This Week,https://podcasters.spotify.com/pod/show/nlw/episodes/The-5-Important-AI-Models-Released-This-Week-e2l1bn6
+2489,2024-04-11,Al Is The Biggest Work Disruption Of Our Lifetimes,https://podcasters.spotify.com/pod/show/nlw/episodes/Al-Is-The-Biggest-Work-Disruption-Of-Our-Lifetimes-e2l1c07
+2487,2024-04-12,"Game of Thrones, but for AI Chips",https://podcasters.spotify.com/pod/show/nlw/episodes/Game-of-Thrones--but-for-AI-Chips-e2l1bn5
+2486,2024-04-13,What AI Is Capable Of Today,https://podcasters.spotify.com/pod/show/nlw/episodes/What-AI-Is-Capable-Of-Today-e2l1bmu
+2485,2024-04-15,AI Wearables: Is There a There There?,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Wearables-Is-There-a-There-There-e2l1bn0
+2484,2024-04-16,Microsoft's $1.5B AI Geopolitical Gambit in the UAE,https://podcasters.spotify.com/pod/show/nlw/episodes/Microsofts-1-5B-AI-Geopolitical-Gambit-in-the-UAE-e2l1c49
+2483,2024-04-17,The State of AI In 13 Stats,https://podcasters.spotify.com/pod/show/nlw/episodes/The-State-of-AI-In-13-Stats-e2l1buo
+2482,2024-04-18,Llama 3 Is Here (And Seemingly Better Than Expected),https://podcasters.spotify.com/pod/show/nlw/episodes/Llama-3-Is-Here-And-Seemingly-Better-Than-Expected-e2l1bnm
+2481,2024-04-19,Boston Dynamics Shows Next Frontier in Robotics,https://podcasters.spotify.com/pod/show/nlw/episodes/Boston-Dynamics-Shows-Next-Frontier-in-Robotics-e2l1c5j
+2480,2024-04-20,Will Big Tech's AI Needs Solve Energy Issues?,https://podcasters.spotify.com/pod/show/nlw/episodes/Will-Big-Techs-AI-Needs-Solve-Energy-Issues-e2l1boa
+2479,2024-04-22,Tucker Carlson Says We Should Bomb the Data Centers and Kill AI Before It's Too Late,https://podcasters.spotify.com/pod/show/nlw/episodes/Tucker-Carlson-Says-We-Should-Bomb-the-Data-Centers-and-Kill-AI-Before-Its-Too-Late-e2l1bse
+2478,2024-04-23,A Preview of the AI Agent Future,https://podcasters.spotify.com/pod/show/nlw/episodes/A-Preview-of-the-AI-Agent-Future-e2l1c2o
+2477,2024-04-25,What Perplexity's Raise Says About the State of AI Hype,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Perplexitys-Raise-Says-About-the-State-of-AI-Hype-e2l1bp3
+2475,2024-04-26,Does xAI's $6B Raise for Grok Make Sense?,https://podcasters.spotify.com/pod/show/nlw/episodes/Does-xAIs-6B-Raise-for-Grok-Make-Sense-e2l1bns
+2476,2024-04-26,How Moderna's ChatGPT Use Shows the Future of Corporate AI,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Modernas-ChatGPT-Use-Shows-the-Future-of-Corporate-AI-e2l1bq7
+2474,2024-04-27,AI Doesn't Have to Automate Away All the Jobs,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Doesnt-Have-to-Automate-Away-All-the-Jobs-e2l1bsl
+2473,2024-04-30,Why Everyone is Angry About the AI Safety Board,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Everyone-is-Angry-About-the-AI-Safety-Board-e2l1bok
+2472,2024-05-01,Is Mysterious GPT2-Chatbot Actually GPT5?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Mysterious-GPT2-Chatbot-Actually-GPT5-e2l1bo2
+2470,2024-05-02,Anthropic Launches iOS App and Teams as Altman Says He'd Burn $50B a Year to Get to AGI,https://podcasters.spotify.com/pod/show/nlw/episodes/Anthropic-Launches-iOS-App-and-Teams-as-Altman-Says-Hed-Burn-50B-a-Year-to-Get-to-AGI-e2l1c3u
+2471,2024-05-02,"Biden's AI Executive Order, 6 Months Later",https://podcasters.spotify.com/pod/show/nlw/episodes/Bidens-AI-Executive-Order--6-Months-Later-e2l1bo0
+2469,2024-05-03,RUMOR: Is ChatGPT About to Launch Search?,https://podcasters.spotify.com/pod/show/nlw/episodes/RUMOR-Is-ChatGPT-About-to-Launch-Search-e2l1bo4
+2468,2024-05-04,How Worried About AI Should Professionals Be?,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Worried-About-AI-Should-Professionals-Be-e2l1bou
+2467,2024-05-08,"With MAI-1, Is Microsoft Trying to Compete with OpenAI?",https://podcasters.spotify.com/pod/show/nlw/episodes/With-MAI-1--Is-Microsoft-Trying-to-Compete-with-OpenAI-e2l1bmr
+2465,2024-05-09,Microsoft's Top Secret AI for Spy Agencies,https://podcasters.spotify.com/pod/show/nlw/episodes/Microsofts-Top-Secret-AI-for-Spy-Agencies-e2l1c2t
+2466,2024-05-09,The gpt2 Chatbot is Back as OpenAI Talks Data,https://podcasters.spotify.com/pod/show/nlw/episodes/The-gpt2-Chatbot-is-Back-as-OpenAI-Talks-Data-e2l1bog
+2464,2024-05-11,We're Thinking About AI Adoption Completely Wrong,https://podcasters.spotify.com/pod/show/nlw/episodes/Were-Thinking-About-AI-Adoption-Completely-Wrong-e2l1bo7
+2462,2024-05-14,7 Use Cases for GPT-4o,https://podcasters.spotify.com/pod/show/nlw/episodes/7-Use-Cases-for-GPT-4o-e2l1boh
+2463,2024-05-14,Why OpenAI's Announcement Was A Bigger Deal Than People Think,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-OpenAIs-Announcement-Was-A-Bigger-Deal-Than-People-Think-e2l1c1c
+2461,2024-05-15,Who Won the Week: Google or OpenAI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Who-Won-the-Week-Google-or-OpenAI-e2l1bme
+2460,2024-05-17,Senators Debut a New US AI Roadmap,https://podcasters.spotify.com/pod/show/nlw/episodes/Senators-Debut-a-New-US-AI-Roadmap-e2l1boj
+2459,2024-05-18,The Significance of Ilya Sutskever Leaving OpenAI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Significance-of-Ilya-Sutskever-Leaving-OpenAI-e2l1bnc
+2458,2024-05-19,95 Theses on AI Safety,https://podcasters.spotify.com/pod/show/nlw/episodes/95-Theses-on-AI-Safety-e2l1bmc
+2457,2024-05-20,5 Things to Watch at Microsoft Build,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Things-to-Watch-at-Microsoft-Build-e2l1bof
+2456,2024-05-22,Scarlett Johansson vs. OpenAI,https://podcasters.spotify.com/pod/show/nlw/episodes/Scarlett-Johansson-vs--OpenAI-e2l1bn4
+2455,2024-05-23,"After Rough Launch, is Humane AI Pin Looking to Sell?",https://podcasters.spotify.com/pod/show/nlw/episodes/After-Rough-Launch--is-Humane-AI-Pin-Looking-to-Sell-e2l1bnp
+2453,2024-05-24,The Big Shift in AI Safety Discourse,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Big-Shift-in-AI-Safety-Discourse-e2l1bnr
+2454,2024-05-24,Anthropic Begins to Unlock the Mystery of LLMs,https://podcasters.spotify.com/pod/show/nlw/episodes/Anthropic-Begins-to-Unlock-the-Mystery-of-LLMs-e2l1bnf
+2451,2024-05-29,What Actually Matters with the Latest OpenAI Controversy,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Actually-Matters-with-the-Latest-OpenAI-Controversy-e2l1bnj
+2452,2024-05-29,AI Competition Heats Up as xAI Closes Biggest Series B of All Time,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Competition-Heats-Up-as-xAI-Closes-Biggest-Series-B-of-All-Time-e2l1buf
+2449,2024-05-31,How Disinformation Agents Are Using ChatGPT,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Disinformation-Agents-Are-Using-ChatGPT-e2l1bmf
+2450,2024-05-31,"The ""Most Influential"" AI Companies",https://podcasters.spotify.com/pod/show/nlw/episodes/The-Most-Influential-AI-Companies-e2l1bod
+2448,2024-06-02,Dueling Letters from the OpenAI Board,https://podcasters.spotify.com/pod/show/nlw/episodes/Dueling-Letters-from-the-OpenAI-Board-e2l1bn9
+2447,2024-06-03,Is the AI Revolution Losing Steam?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-the-AI-Revolution-Losing-Steam-e2l1bmv
+2446,2024-06-06,"Do AI Lab Employees Have a ""Right to Warn"" The Public About AGI Risk?",https://podcasters.spotify.com/pod/show/nlw/episodes/Do-AI-Lab-Employees-Have-a-Right-to-Warn-The-Public-About-AGI-Risk-e2l1bms
+2445,2024-06-07,"How US Antitrust Investigations Into Nvidia, OpenAI and MSFT Could Make Things Worse Not Better",https://podcasters.spotify.com/pod/show/nlw/episodes/How-US-Antitrust-Investigations-Into-Nvidia--OpenAI-and-MSFT-Could-Make-Things-Worse-Not-Better-e2l1bmn
+2444,2024-06-08,The Danger of an AI Counterreaction,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Danger-of-an-AI-Counterreaction-e2l1bmm
+2442,2024-06-11,Can Apple Intelligence Actually Protect Your Privacy?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-Apple-Intelligence-Actually-Protect-Your-Privacy-e2l1bmb
+2443,2024-06-11,7 Takeaways from Apple's AI Announcement at WWDC,https://podcasters.spotify.com/pod/show/nlw/episodes/7-Takeaways-from-Apples-AI-Announcement-at-WWDC-e2l1bu9
+2441,2024-06-13,AI Makes Apple World's Most Valuable Company Again,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Makes-Apple-Worlds-Most-Valuable-Company-Again-e2l1bma
+2439,2024-06-14,The Top 5 AI Stories This Week,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Top-5-AI-Stories-This-Week-e2l1bm9
+2440,2024-06-14,Meet the AI Avatars Running for Elected Office,https://podcasters.spotify.com/pod/show/nlw/episodes/Meet-the-AI-Avatars-Running-for-Elected-Office-e2l1bos
+2438,2024-06-17,Just How Different is Apple's AI Strategy?,https://podcasters.spotify.com/pod/show/nlw/episodes/Just-How-Different-is-Apples-AI-Strategy-e2l1bm7
+2437,2024-06-18,What Runway Gen-3 and Luma Say About the State of AI,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Runway-Gen-3-and-Luma-Say-About-the-State-of-AI-e2l1gs7
+2436,2024-06-19,Nvidia Becomes World's Biggest Company: Bubble or Destiny?,https://podcasters.spotify.com/pod/show/nlw/episodes/Nvidia-Becomes-Worlds-Biggest-Company-Bubble-or-Destiny-e2l332u
+2435,2024-06-20,Ilya Sutskever is Back Building Safe Superintelligence,https://podcasters.spotify.com/pod/show/nlw/episodes/Ilya-Sutskever-is-Back-Building-Safe-Superintelligence-e2l4fro
+2434,2024-06-21,Early Uses for Anthropic's Claude 3.5 and Artifacts,https://podcasters.spotify.com/pod/show/nlw/episodes/Early-Uses-for-Anthropics-Claude-3-5-and-Artifacts-e2l5n3e
+2432,2024-06-25,The Record Labels Are Coming for Suno and Udio,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Record-Labels-Are-Coming-for-Suno-and-Udio-e2lab3l
+2433,2024-06-25,Apple Intelligence Powered by…Meta?,https://podcasters.spotify.com/pod/show/nlw/episodes/Apple-Intelligence-Powered-byMeta-e2l94h1
+2431,2024-06-26,What OpenAI's RecentAcquisitions Tell Us About Their Strategy,https://podcasters.spotify.com/pod/show/nlw/episodes/What-OpenAIs-RecentAcquisitions-Tell-Us-About-Their-Strategy-e2lbmns
+2429,2024-06-28,The Most Important AI Product Launches This Week,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Most-Important-AI-Product-Launches-This-Week-e2led1n
+2430,2024-06-28,7 Observations From the AI Engineer World's Fair,https://podcasters.spotify.com/pod/show/nlw/episodes/7-Observations-From-the-AI-Engineer-Worlds-Fair-e2lddia
+2428,2024-07-01,AI and Autonomous Weapons,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-and-Autonomous-Weapons-e2lhcjg
+2427,2024-07-02,Will AI Acqui-hires Avoid Antitrust Scrutiny?,https://podcasters.spotify.com/pod/show/nlw/episodes/Will-AI-Acqui-hires-Avoid-Antitrust-Scrutiny-e2lj0ns
+2426,2024-07-04,Apple is Getting an OpenAI Board Observer Seat,https://podcasters.spotify.com/pod/show/nlw/episodes/Apple-is-Getting-an-OpenAI-Board-Observer-Seat-e2ll5fm
+2425,2024-07-05,"Privacy, Censorship and AI: A Conversation with Venice.ai",https://podcasters.spotify.com/pod/show/nlw/episodes/Privacy--Censorship-and-AI-A-Conversation-with-Venice-ai-e2lm9lp
+2424,2024-07-07,How AI Could Accelerate Digital Nations,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AI-Could-Accelerate-Digital-Nations-e2lo9qt
+2423,2024-07-08,Can AI Keep Propping Up the Stock Market?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-AI-Keep-Propping-Up-the-Stock-Market-e2lq7qn
+2421,2024-07-10,Goldman Sachs Is Wrong About AI (Why AI Isn't A Bubble),https://podcasters.spotify.com/pod/show/nlw/episodes/Goldman-Sachs-Is-Wrong-About-AI-Why-AI-Isnt-A-Bubble-e2lt0ug
+2422,2024-07-10,What Everyone Is Getting Wrong About Sequoia's $600B AI Gap Argument,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Everyone-Is-Getting-Wrong-About-Sequoias-600B-AI-Gap-Argument-e2lrrbp
+2420,2024-07-11,Marc Andreessen Gives a Meme-Obsessed AI Agent $50k in BTC,https://podcasters.spotify.com/pod/show/nlw/episodes/Marc-Andreessen-Gives-a-Meme-Obsessed-AI-Agent-50k-in-BTC-e2lu6sk
+2419,2024-07-12,OpenAI's New System for Determining How Close AGI Is,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAIs-New-System-for-Determining-How-Close-AGI-Is-e2lv3v1
+2418,2024-07-13,"AI Is The Fastest Adopted Work Tech Ever, But Still Not Fast Enough for Some",https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Is-The-Fastest-Adopted-Work-Tech-Ever--But-Still-Not-Fast-Enough-for-Some-e2m04mi
+2417,2024-07-16,"OpenAI's Q* Reasoning AI is Now Code-Named ""Strawberry""",https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAIs-Q-Reasoning-AI-is-Now-Code-Named-Strawberry-e2m2m8j
+2416,2024-07-17,Why Republican VP Nominee JD Vance is Loudly For Open Source AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Republican-VP-Nominee-JD-Vance-is-Loudly-For-Open-Source-AI-e2m43vg
+2415,2024-07-18,"A Draft Republican Exec Order Calls for AI ""Manhattan Projects""",https://podcasters.spotify.com/pod/show/nlw/episodes/A-Draft-Republican-Exec-Order-Calls-for-AI-Manhattan-Projects-e2m5fkn
+2414,2024-07-21,AI and the Necessary Transformation of Education,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-and-the-Necessary-Transformation-of-Education-e2m986e
+2412,2024-07-22,"GPT-4o Mini and the Rise of Smaller, Low Cost AI Models",https://podcasters.spotify.com/pod/show/nlw/episodes/GPT-4o-Mini-and-the-Rise-of-Smaller--Low-Cost-AI-Models-e2m8ck6
+2413,2024-07-22,"Elon Turns On ""Most Powerful AI Training Cluster In the World""",https://podcasters.spotify.com/pod/show/nlw/episodes/Elon-Turns-On-Most-Powerful-AI-Training-Cluster-In-the-World-e2mb4qh
+2411,2024-07-24,Llama 3.1 405B Eliminates Gap Between Open and Closed Source AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Llama-3-1-405B-Eliminates-Gap-Between-Open-and-Closed-Source-AI-e2mck1v
+2410,2024-07-25,What the Senate Wants to Know About OpenAI,https://podcasters.spotify.com/pod/show/nlw/episodes/What-the-Senate-Wants-to-Know-About-OpenAI-e2me1b4
+2409,2024-07-26,OpenAI's Potential $5B Hole,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAIs-Potential-5B-Hole-e2mf9cq
+2408,2024-07-27,Zuckerberg on Why Open Source AI is the Path Forward,https://podcasters.spotify.com/pod/show/nlw/episodes/Zuckerberg-on-Why-Open-Source-AI-is-the-Path-Forward-e2mgtme
+2407,2024-07-30,Report: Apple Delays Release of AI Features,https://podcasters.spotify.com/pod/show/nlw/episodes/Report-Apple-Delays-Release-of-AI-Features-e2mjpu6
+2406,2024-07-31,Canva Acquires Leonardo - Is a Wave of AI M&A Coming?,https://podcasters.spotify.com/pod/show/nlw/episodes/Canva-Acquires-Leonardo---Is-a-Wave-of-AI-MA-Coming-e2ml1uv
+2404,2024-08-01,The Picks and Shovels Businesses Quietly Driving the AI Build Out,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Picks-and-Shovels-Businesses-Quietly-Driving-the-AI-Build-Out-e2mnhnh
+2405,2024-08-01,"ChatGPT Launches Voice, Midjourney Launches 6.1",https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-Launches-Voice--Midjourney-Launches-6-1-e2mmgo7
+2403,2024-08-05,"Another AI Sorta Acquisition as Character AI Founders Head (Back) to Google""",https://podcasters.spotify.com/pod/show/nlw/episodes/Another-AI-Sorta-Acquisition-as-Character-AI-Founders-Head-Back-to-Google-e2mrspl
+2402,2024-08-06,Point-Counterpoint on Open Source AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Point-Counterpoint-on-Open-Source-AI-e2msqoe
+2401,2024-08-07,OpenAI Has More High Profile Executive Departures,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Has-More-High-Profile-Executive-Departures-e2mtcfn
+2400,2024-08-08,The Latest in AI + Humanoid Robots,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Latest-in-AI--Humanoid-Robots-e2mum3e
+2399,2024-08-09,SB1047: The World's Most Important and Problematic AI Policy Debate,https://podcasters.spotify.com/pod/show/nlw/episodes/SB1047-The-Worlds-Most-Important-and-Problematic-AI-Policy-Debate-e2mvutf
+2398,2024-08-10,The Most Important Events in Open vs. Closed AI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Most-Important-Events-in-Open-vs--Closed-AI-e2n1440
+2397,2024-08-12,AI and How To Plan for Unknowable Futures,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-and-How-To-Plan-for-Unknowable-Futures-e2n3bj5
+2396,2024-08-13,A New OpenAI Model Coming?,https://podcasters.spotify.com/pod/show/nlw/episodes/A-New-OpenAI-Model-Coming-e2n4msp
+2395,2024-08-14,Financial Data Shows Business AI Usage is Way Up,https://podcasters.spotify.com/pod/show/nlw/episodes/Financial-Data-Shows-Business-AI-Usage-is-Way-Up-e2n607m
+2394,2024-08-15,Google Beats OpenAI to Full Voice Mode Release,https://podcasters.spotify.com/pod/show/nlw/episodes/Google-Beats-OpenAI-to-Full-Voice-Mode-Release-e2n7bl6
+2393,2024-08-16,The Controversy Surrounding Elon Musk's New Image Generation AI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Controversy-Surrounding-Elon-Musks-New-Image-Generation-AI-e2n8jg7
+2392,2024-08-18,Why We Shouldn't Fear AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-We-Shouldnt-Fear-AI-e2nagqg
+2391,2024-08-20,Nancy Pelosi Urges SB1047 Veto,https://podcasters.spotify.com/pod/show/nlw/episodes/Nancy-Pelosi-Urges-SB1047-Veto-e2ncngu
+2389,2024-08-21,473.5% Increase in Fortune 500's Citing AI as a Business Risk,https://podcasters.spotify.com/pod/show/nlw/episodes/473-5-Increase-in-Fortune-500s-Citing-AI-as-a-Business-Risk-e2nfcsv
+2390,2024-08-21,The Next Phase of Generative AI Adoption,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Next-Phase-of-Generative-AI-Adoption-e2ne6na
+2388,2024-08-23,"For the Hyperscalers, There's No Such Thing as ""Spending Too Much on AI""",https://podcasters.spotify.com/pod/show/nlw/episodes/For-the-Hyperscalers--Theres-No-Such-Thing-as-Spending-Too-Much-on-AI-e2ngrst
+2387,2024-08-24,The 5 Most Important Stories in AI This Week,https://podcasters.spotify.com/pod/show/nlw/episodes/The-5-Most-Important-Stories-in-AI-This-Week-e2nih4c
+2386,2024-08-25,The Debate About and Consequences of AI Regulation,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Debate-About-and-Consequences-of-AI-Regulation-e2njqie
+2385,2024-08-27,10 Observations About the Top 100 AI Apps,https://podcasters.spotify.com/pod/show/nlw/episodes/10-Observations-About-the-Top-100-AI-Apps-e2nm6qm
+2384,2024-08-28,OpenAI's Next Big Model is Called Orion,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAIs-Next-Big-Model-is-Called-Orion-e2nnrmo
+2383,2024-08-29,5 Questions Shaping the Near Future of GenAI,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Questions-Shaping-the-Near-Future-of-GenAI-e2nom7b
+2382,2024-08-30,What Nvidia's Stock Says About the State of AI,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Nvidias-Stock-Says-About-the-State-of-AI-e2nq5le
+2381,2024-08-31,"US Gov't to Get Advanced Access to OpenAI, Anthropic Models",https://podcasters.spotify.com/pod/show/nlw/episodes/US-Govt-to-Get-Advanced-Access-to-OpenAI--Anthropic-Models-e2nr82c
+2380,2024-09-02,What Happens After the Homework Apocalypse?,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Happens-After-the-Homework-Apocalypse-e2nt9f3
+2379,2024-09-04,67% of Enterprises Scaling Generative AI Pilots,https://podcasters.spotify.com/pod/show/nlw/episodes/67-of-Enterprises-Scaling-Generative-AI-Pilots-e2nvo29
+2378,2024-09-05,Ilya Sutskever Raises $1B for Safe Superintelligence,https://podcasters.spotify.com/pod/show/nlw/episodes/Ilya-Sutskever-Raises-1B-for-Safe-Superintelligence-e2o11rj
+2377,2024-09-06,Multibillion Dollar AI Infrastructure Build Out Coming to the US,https://podcasters.spotify.com/pod/show/nlw/episodes/Multibillion-Dollar-AI-Infrastructure-Build-Out-Coming-to-the-US-e2o302n
+2376,2024-09-07,What TIME's AI100 List Says About the State of AI,https://podcasters.spotify.com/pod/show/nlw/episodes/What-TIMEs-AI100-List-Says-About-the-State-of-AI-e2o401i
+2375,2024-09-09,Dealing with AI's Sycophancy Problem,https://podcasters.spotify.com/pod/show/nlw/episodes/Dealing-with-AIs-Sycophancy-Problem-e2o67gg
+2374,2024-09-10,Why OpenAI's $2000/Month Model Isn't Crazy,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-OpenAIs-2000Month-Model-Isnt-Crazy-e2o7kk0
+2373,2024-09-11,Apple Intelligence - Everything You Need to Know,https://podcasters.spotify.com/pod/show/nlw/episodes/Apple-Intelligence---Everything-You-Need-to-Know-e2o9041
+2372,2024-09-12,Is AI Going to Eat SaaS?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-AI-Going-to-Eat-SaaS-e2oabg7
+2371,2024-09-14,How to Get The Most Out of ChatGPT's New o1 Model,https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Get-The-Most-Out-of-ChatGPTs-New-o1-Model-e2od7a7
+2370,2024-09-16,From Cointelligence to Agent,https://podcasters.spotify.com/pod/show/nlw/episodes/From-Cointelligence-to-Agent-e2og119
+2369,2024-09-18,What Freedom Means In the Age of AI [feat. Venice.ai Founder Erik Voorhees],https://podcasters.spotify.com/pod/show/nlw/episodes/What-Freedom-Means-In-the-Age-of-AI-feat--Venice-ai-Founder-Erik-Voorhees-e2oh9ic
+2368,2024-09-19,AI Agents -- The Latest Push from Microsoft and Salesforce,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Agents----The-Latest-Push-from-Microsoft-and-Salesforce-e2oj0b2
+2367,2024-09-20,AI Video Comes to Hollywood and Youtube; Controversy Ensues,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Video-Comes-to-Hollywood-and-Youtube-Controversy-Ensues-e2olb0k
+2366,2024-09-21,OpenAI Raising $6.5B at $150B Valuation with $250M Minimum,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Raising-6-5B-at-150B-Valuation-with-250M-Minimum-e2omc96
+2365,2024-09-23,Is the EU Doomed to Miss Out on AI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-the-EU-Doomed-to-Miss-Out-on-AI-e2ookgn
+2364,2024-09-24,iPhone Designer Jony Ive and Sam Altman Working on AI iPhone Alternative,https://podcasters.spotify.com/pod/show/nlw/episodes/iPhone-Designer-Jony-Ive-and-Sam-Altman-Working-on-AI-iPhone-Alternative-e2oq9ot
+2363,2024-09-25,"Prosperity and Promise in ""The Intelligence Age”",https://podcasters.spotify.com/pod/show/nlw/episodes/Prosperity-and-Promise-in-The-Intelligence-Age-e2oro15
+2362,2024-09-26,A Manhattan Project for AI Infrastructure,https://podcasters.spotify.com/pod/show/nlw/episodes/A-Manhattan-Project-for-AI-Infrastructure-e2ot0ej
+2361,2024-09-27,Is Zuckerberg the New Jobs?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Zuckerberg-the-New-Jobs-e2oud65
+2360,2024-09-28,What’s Really Going on at OpenAI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Whats-Really-Going-on-at-OpenAI-e2ovla7
+2359,2024-10-01,"Newsom Vetoes SB-1047, Sending Controversial AI Regulation Fight National",https://podcasters.spotify.com/pod/show/nlw/episodes/Newsom-Vetoes-SB-1047--Sending-Controversial-AI-Regulation-Fight-National-e2p2paj
+2358,2024-10-02,How AI Fits Into the Longshoreman Strike,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AI-Fits-Into-the-Longshoreman-Strike-e2p4c55
+2357,2024-10-03,OpenAI's DevDay And A Preview Of Our Agentic Future,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAIs-DevDay-And-A-Preview-Of-Our-Agentic-Future-e2p5v0t
+2356,2024-10-04,OpenAI Closes Largest Venture Round of All Time,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Closes-Largest-Venture-Round-of-All-Time-e2p77kv
+2355,2024-10-05,GenAI is Being Adopted Faster than PCs or the Internet,https://podcasters.spotify.com/pod/show/nlw/episodes/GenAI-is-Being-Adopted-Faster-than-PCs-or-the-Internet-e2p8hd3
+2354,2024-10-07,The AI Automation Blues [Featuring NotebookLM],https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Automation-Blues-Featuring-NotebookLM-e2paisp
+2352,2024-10-09,The Challenge of Enterprise AI Adoption,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Challenge-of-Enterprise-AI-Adoption-e2pefcc
+2353,2024-10-09,Meta's New Movie Gen Model Could Change AI Video,https://podcasters.spotify.com/pod/show/nlw/episodes/Metas-New-Movie-Gen-Model-Could-Change-AI-Video-e2pc5d8
+2351,2024-10-10,What Most Companies Will Get Wrong About AI At First,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Most-Companies-Will-Get-Wrong-About-AI-At-First-e2pg3g5
+2350,2024-10-11,AI Wins Not One But Two Different Nobel Prizes,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Wins-Not-One-But-Two-Different-Nobel-Prizes-e2phcp8
+2349,2024-10-13,The AI Agent Era Begins,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Agent-Era-Begins-e2piirf
+2348,2024-10-16,Is AI Optimism In the Air?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-AI-Optimism-In-the-Air-e2pnq12
+2347,2024-10-17,How AI Is Fundamentally Reshaping the Web,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AI-Is-Fundamentally-Reshaping-the-Web-e2ppagf
+2346,2024-10-18,Amazon Joins Google and Microsoft in AI Nuclear Buildout,https://podcasters.spotify.com/pod/show/nlw/episodes/Amazon-Joins-Google-and-Microsoft-in-AI-Nuclear-Buildout-e2pqq44
+2345,2024-10-19,5 Business Uses for NotebookLM,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Business-Uses-for-NotebookLM-e2ps6b4
+2344,2024-10-21,AI and the Looming Economic Challenge,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-and-the-Looming-Economic-Challenge-e2pvj9s
+2343,2024-10-23,The AGI-Sized Hole in the Microsoft-OpenAI Partnership,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AGI-Sized-Hole-in-the-Microsoft-OpenAI-Partnership-e2q18iq
+2342,2024-10-24,The Next Step in Our Journey to AI Agents: Anthropic's Computer Use,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Next-Step-in-Our-Journey-to-AI-Agents-Anthropics-Computer-Use-e2q2l15
+2341,2024-10-25,xAI Releases AI API,https://podcasters.spotify.com/pod/show/nlw/episodes/xAI-Releases-AI-API-e2q40e9
+2340,2024-10-26,GPT-5 Coming In December,https://podcasters.spotify.com/pod/show/nlw/episodes/GPT-5-Coming-In-December-e2q6d1c
+2339,2024-10-28,Hands on with Our Agentic Future,https://podcasters.spotify.com/pod/show/nlw/episodes/Hands-on-with-Our-Agentic-Future-e2q7gnm
+2338,2024-10-29,"No GPT-5 This Year, But Maybe Gemini 2.0",https://podcasters.spotify.com/pod/show/nlw/episodes/No-GPT-5-This-Year--But-Maybe-Gemini-2-0-e2q92ib
+2337,2024-10-30,"Apple Intelligence is Here, But Is It Any Good?",https://podcasters.spotify.com/pod/show/nlw/episodes/Apple-Intelligence-is-Here--But-Is-It-Any-Good-e2qaoa3
+2336,2024-10-31,More Than 1/4 of Google's Code Now Generated by AI,https://podcasters.spotify.com/pod/show/nlw/episodes/More-Than-14-of-Googles-Code-Now-Generated-by-AI-e2qc6kl
+2335,2024-11-01,The 9 Most Important AI Stories from October,https://podcasters.spotify.com/pod/show/nlw/episodes/The-9-Most-Important-AI-Stories-from-October-e2qdidj
+2334,2024-11-03,ChatGPT Search and the AI Search Arms Race,https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-Search-and-the-AI-Search-Arms-Race-e2qg75k
+2333,2024-11-04,Who is the Better Candidate for AI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Who-is-the-Better-Candidate-for-AI-e2qhqlu
+2332,2024-11-05,OpenAI's o1 Accidentally Released,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAIs-o1-Accidentally-Released-e2qimp4
+2331,2024-11-06,Why AI Didn't Impact the 2024 Elections,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-AI-Didnt-Impact-the-2024-Elections-e2qk6ls
+2330,2024-11-07,The Implications of Trump's Win for AI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Implications-of-Trumps-Win-for-AI-e2qljaa
+2329,2024-11-09,Meta's National Security Play and ChatGPT's 8-Figure Domain Acquisition,https://podcasters.spotify.com/pod/show/nlw/episodes/Metas-National-Security-Play-and-ChatGPTs-8-Figure-Domain-Acquisition-e2qolbo
+2328,2024-11-10,AI Artwork Sells for $1M,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Artwork-Sells-for-1M-e2qolds
+2327,2024-11-11,3 Takes On What Trump Means for AI,https://podcasters.spotify.com/pod/show/nlw/episodes/3-Takes-On-What-Trump-Means-for-AI-e2qrnag
+2326,2024-11-13,Is AI Slowing Down?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-AI-Slowing-Down-e2qtfkc
+2325,2024-11-14,DOGE and How AI Could Infiltrate the US Government,https://podcasters.spotify.com/pod/show/nlw/episodes/DOGE-and-How-AI-Could-Infiltrate-the-US-Government-e2qv5a7
+2324,2024-11-15,"OpenAI Agent ""Operator"" Coming In January?",https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Agent-Operator-Coming-In-January-e2r0tfb
+2323,2024-11-16,A Promising Alternative Way to Improve LLM Performance,https://podcasters.spotify.com/pod/show/nlw/episodes/A-Promising-Alternative-Way-to-Improve-LLM-Performance-e2r2ms1
+2322,2024-11-17,Why AI Agents Will Do for the Enterprise What RPA Never Could,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-AI-Agents-Will-Do-for-the-Enterprise-What-RPA-Never-Could-e2r3m2e
+2321,2024-11-19,How Close Are We to Self-Improving AI?,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Close-Are-We-to-Self-Improving-AI-e2r65ts
+2320,2024-11-20,The Best Take on AI and Hollywood is from Ben Affleck,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Best-Take-on-AI-and-Hollywood-is-from-Ben-Affleck-e2r7uhq
+2319,2024-11-21,Study Finds 370% ROI for Enterprise Generative AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Study-Finds-370-ROI-for-Enterprise-Generative-AI-e2r9kc1
+2318,2024-11-22,Self-Evolving LLMs,https://podcasters.spotify.com/pod/show/nlw/episodes/Self-Evolving-LLMs-e2rb994
+2317,2024-11-23,The 2024 State of Enterprise AI Report,https://podcasters.spotify.com/pod/show/nlw/episodes/The-2024-State-of-Enterprise-AI-Report-e2rcm2v
+2316,2024-11-24,"The Enterprise Opportunity in the ""AI Slowdown""",https://podcasters.spotify.com/pod/show/nlw/episodes/The-Enterprise-Opportunity-in-the-AI-Slowdown-e2re3mo
+2315,2024-11-26,"With New Deal, Anthropic Becomes Even More Key to Amazon's AI Strategy",https://podcasters.spotify.com/pod/show/nlw/episodes/With-New-Deal--Anthropic-Becomes-Even-More-Key-to-Amazons-AI-Strategy-e2rgmko
+2314,2024-11-27,OpenAI Sora Has Leaked,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Sora-Has-Leaked-e2ri5rd
+2313,2024-11-28,Anthropic Has (Maybe) Solved a Holy Grail of Business AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Anthropic-Has-Maybe-Solved-a-Holy-Grail-of-Business-AI-e2rjmsg
+2312,2024-11-29,Who's Winning the AI Race,https://podcasters.spotify.com/pod/show/nlw/episodes/Whos-Winning-the-AI-Race-e2rlhpn
+2311,2024-12-02,Predictions on How AI Agents Will Actually Be Used,https://podcasters.spotify.com/pod/show/nlw/episodes/Predictions-on-How-AI-Agents-Will-Actually-Be-Used-e2robdh
+2309,2024-12-04,Amazon Hedging Anthropic Reliance?,https://podcasters.spotify.com/pod/show/nlw/episodes/Amazon-Hedging-Anthropic-Reliance-e2rro5t
+2310,2024-12-04,OpenAI Debates Advertising,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Debates-Advertising-e2rro2g
+2308,2024-12-05,Amazon Gets In On AI Foundation Model Game with Nova,https://podcasters.spotify.com/pod/show/nlw/episodes/Amazon-Gets-In-On-AI-Foundation-Model-Game-with-Nova-e2rteoi
+2307,2024-12-06,Altman Says AGI Coming Faster Than We Think,https://podcasters.spotify.com/pod/show/nlw/episodes/Altman-Says-AGI-Coming-Faster-Than-We-Think-e2rv1n7
+2306,2024-12-07,The White House Gets an AI Czar,https://podcasters.spotify.com/pod/show/nlw/episodes/The-White-House-Gets-an-AI-Czar-e2s0cdt
+2305,2024-12-08,What World Models Could Mean for AGI,https://podcasters.spotify.com/pod/show/nlw/episodes/What-World-Models-Could-Mean-for-AGI-e2s1pgc
+2304,2024-12-10,How AI Job Replacement Will Actually Play Out,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AI-Job-Replacement-Will-Actually-Play-Out-e2s4f18
+2303,2024-12-11,How Just Released Sora Stacks Up to Other AI Video Generators,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Just-Released-Sora-Stacks-Up-to-Other-AI-Video-Generators-e2s61a1
+2302,2024-12-12,AI Agents and the Transforming Software Business Model,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Agents-and-the-Transforming-Software-Business-Model-e2s7hic
+2301,2024-12-13,"With Gemini 2.0, is Google So Back Baby?",https://podcasters.spotify.com/pod/show/nlw/episodes/With-Gemini-2-0--is-Google-So-Back-Baby-e2sa4h3
+2300,2024-12-14,Vision and Voice Are Now LLM Table Stakes,https://podcasters.spotify.com/pod/show/nlw/episodes/Vision-and-Voice-Are-Now-LLM-Table-Stakes-e2saoik
+2299,2024-12-15,20 Uses (or Not) for AI,https://podcasters.spotify.com/pod/show/nlw/episodes/20-Uses-or-Not-for-AI-e2sbmnh
+2298,2024-12-17,Ilya Sutskever Calls Peak Data and the End of Pretraining,https://podcasters.spotify.com/pod/show/nlw/episodes/Ilya-Sutskever-Calls-Peak-Data-and-the-End-of-Pretraining-e2sdq0o
+2297,2024-12-18,5 Use Cases for Veo 2,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Use-Cases-for-Veo-2-e2sfbov
+2296,2024-12-20,Does Databricks' $10B Raise Point to an AI IPO Boom?,https://podcasters.spotify.com/pod/show/nlw/episodes/Does-Databricks-10B-Raise-Point-to-an-AI-IPO-Boom-e2si66q
+2295,2024-12-21,"2025 AI Battlelines: Agents, Reasoning, and World Models",https://podcasters.spotify.com/pod/show/nlw/episodes/2025-AI-Battlelines-Agents--Reasoning--and-World-Models-e2sjr97
+2294,2024-12-22,AI's Future is Here Now,https://podcasters.spotify.com/pod/show/nlw/episodes/AIs-Future-is-Here-Now-e2skq4k
+2292,2024-12-24,17 Reflections on Enterprise AI in 2024,https://podcasters.spotify.com/pod/show/nlw/episodes/17-Reflections-on-Enterprise-AI-in-2024-e2sn62a
+2293,2024-12-24,AGI for Christmas,https://podcasters.spotify.com/pod/show/nlw/episodes/AGI-for-Christmas-e2smqn8
+2291,2024-12-26,25 Agent Predictions for 2025 - Part 1,https://podcasters.spotify.com/pod/show/nlw/episodes/25-Agent-Predictions-for-2025---Part-1-e2soo0f
+2290,2024-12-27,25 Agent Predictions for 2025 - Part 2,https://podcasters.spotify.com/pod/show/nlw/episodes/25-Agent-Predictions-for-2025---Part-2-e2sq671
+2289,2024-12-29,The Most Important AI Essays of 2024,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Most-Important-AI-Essays-of-2024-e2srkm5
+2288,2024-12-30,The 15 Most Important AI Products of 2024,https://podcasters.spotify.com/pod/show/nlw/episodes/The-15-Most-Important-AI-Products-of-2024-e2ssksv
+2287,2024-12-31,The Most Important AI Story From Each Month of 2024,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Most-Important-AI-Story-From-Each-Month-of-2024-e2stp2b
+2286,2025-01-04,OpenAI Reveals Controversial For-Profit Conversion Plans,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Reveals-Controversial-For-Profit-Conversion-Plans-e2t24qr
+2285,2025-01-07,Is AGI Coming Sooner Than We Think?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-AGI-Coming-Sooner-Than-We-Think-e2t5jsh
+2284,2025-01-08,5 Ways Companies Are Using AI Agents Today,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Ways-Companies-Are-Using-AI-Agents-Today-e2t7344
+2282,2025-01-09,2025 Is the Year of Scaling AI,https://podcasters.spotify.com/pod/show/nlw/episodes/2025-Is-the-Year-of-Scaling-AI-e2t91k1
+2283,2025-01-09,"""The Age of AI Agentics Is Here"" - Nvidia CEO",https://podcasters.spotify.com/pod/show/nlw/episodes/The-Age-of-AI-Agentics-Is-Here---Nvidia-CEO-e2t8ere
+2281,2025-01-10,Was CES Really Just a Parade of AI Slop?,https://podcasters.spotify.com/pod/show/nlw/episodes/Was-CES-Really-Just-a-Parade-of-AI-Slop-e2tb4am
+2280,2025-01-12,Anthropic CEO Urges Trump to Win AI vs. China,https://podcasters.spotify.com/pod/show/nlw/episodes/Anthropic-CEO-Urges-Trump-to-Win-AI-vs--China-e2tculu
+2279,2025-01-14,OpenAI's Economic Blueprint for America,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAIs-Economic-Blueprint-for-America-e2tfp24
+2278,2025-01-15,What Companies Should Be Doing With AI and Agents Right Now,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Companies-Should-Be-Doing-With-AI-and-Agents-Right-Now-e2tgk1n
+2277,2025-01-16,The Battle Over AI Diffusion,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Battle-Over-AI-Diffusion-e2tiede
+2276,2025-01-17,8 Ways Agents Will Improve This Year,https://podcasters.spotify.com/pod/show/nlw/episodes/8-Ways-Agents-Will-Improve-This-Year-e2tkb97
+2275,2025-01-18,Is the TikTok Ban Actually About AI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-the-TikTok-Ban-Actually-About-AI-e2tlffr
+2274,2025-01-19,AI and Jobs Disruption,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-and-Jobs-Disruption-e2tmlfl
+2273,2025-01-22,The o3-to-AGI-Hype Pipeline,https://podcasters.spotify.com/pod/show/nlw/episodes/The-o3-to-AGI-Hype-Pipeline-e2tqer0
+2272,2025-01-23,"Stargate: A $500B US AI Initiative Announced by Altman, Ellison and Trump",https://podcasters.spotify.com/pod/show/nlw/episodes/Stargate-A-500B-US-AI-Initiative-Announced-by-Altman--Ellison-and-Trump-e2ts4u4
+2271,2025-01-24,Will AI Surpass Human Intelligence in 2 Years?,https://podcasters.spotify.com/pod/show/nlw/episodes/Will-AI-Surpass-Human-Intelligence-in-2-Years-e2ttjtb
+2270,2025-01-25,7 Ways to Use OpenAI's Operator,https://podcasters.spotify.com/pod/show/nlw/episodes/7-Ways-to-Use-OpenAIs-Operator-e2tv1ok
+2269,2025-01-26,Just How Fast is AI Evolving?,https://podcasters.spotify.com/pod/show/nlw/episodes/Just-How-Fast-is-AI-Evolving-e2u0db0
+2268,2025-01-27,"Yes, DeepSeek IS Actually a Massive Deal for AI",https://podcasters.spotify.com/pod/show/nlw/episodes/Yes--DeepSeek-IS-Actually-a-Massive-Deal-for-AI-e2u2em9
+2267,2025-01-29,Separating DeepSeek Hype and Hyperbole,https://podcasters.spotify.com/pod/show/nlw/episodes/Separating-DeepSeek-Hype-and-Hyperbole-e2u4gth
+2266,2025-01-30,A Conversation with NotebookLM's Founding Engineer,https://podcasters.spotify.com/pod/show/nlw/episodes/A-Conversation-with-NotebookLMs-Founding-Engineer-e2u61bq
+2265,2025-01-31,A Blueprint for Enterprise Agent Adoption,https://podcasters.spotify.com/pod/show/nlw/episodes/A-Blueprint-for-Enterprise-Agent-Adoption-e2u7c34
+2264,2025-02-01,The Week Where AI Changed (Or Did It?),https://podcasters.spotify.com/pod/show/nlw/episodes/The-Week-Where-AI-Changed-Or-Did-It-e2u8msk
+2263,2025-02-02,Which AI Models You Should Be Using Right Now,https://podcasters.spotify.com/pod/show/nlw/episodes/Which-AI-Models-You-Should-Be-Using-Right-Now-e2ua26s
+2262,2025-02-04,Can OpenAI's Deep Research Really Do 1% of All Work?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-OpenAIs-Deep-Research-Really-Do-1-of-All-Work-e2ucqlv
+2261,2025-02-05,What Comes Next In AI & Agents (According to Y Combinator),https://podcasters.spotify.com/pod/show/nlw/episodes/What-Comes-Next-In-AI--Agents-According-to-Y-Combinator-e2uei43
+2054,2025-02-06,Jevons Intelligence: Why Agent Coders Will Turn Everyone Into Software Developers,https://podcasters.spotify.com/pod/show/nlw/episodes/Jevons-Intelligence-Why-Agent-Coders-Will-Turn-Everyone-Into-Software-Developers-e2ugg14
+2053,2025-02-07,How AGI Will Impact The Economy,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AGI-Will-Impact-The-Economy-e2ui1mq
+2052,2025-02-08,How Google's Latest Gemini Model Stacks Up,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Googles-Latest-Gemini-Model-Stacks-Up-e2ujedc
+2051,2025-02-09,Why Open Source AI is the New Soft Power,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Open-Source-AI-is-the-New-Soft-Power-e2uki5b
+2050,2025-02-11,Sam Altman's Wild 2035 Prediction,https://podcasters.spotify.com/pod/show/nlw/episodes/Sam-Altmans-Wild-2035-Prediction-e2umto8
+2049,2025-02-12,Is Elon's Bid to Buy OpenAI Serious?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Elons-Bid-to-Buy-OpenAI-Serious-e2uogpp
+2048,2025-02-13,The Accelerationist Age of American AI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Accelerationist-Age-of-American-AI-e2uq6r7
+2047,2025-02-14,OpenAI Just Told Us All About GPT-5,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Just-Told-Us-All-About-GPT-5-e2urnql
+2046,2025-02-15,Which Jobs Will AI Disrupt Most?,https://podcasters.spotify.com/pod/show/nlw/episodes/Which-Jobs-Will-AI-Disrupt-Most-e2uthb6
+2045,2025-02-17,The Push for America to Open Source AI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Push-for-America-to-Open-Source-AI-e2v0530
+2044,2025-02-18,Just How Good is Grok-3?,https://podcasters.spotify.com/pod/show/nlw/episodes/Just-How-Good-is-Grok-3-e2v2ht3
+2043,2025-02-20,What AI Coding Agents Can Do Right Now,https://podcasters.spotify.com/pod/show/nlw/episodes/What-AI-Coding-Agents-Can-Do-Right-Now-e2v4b2e
+2042,2025-02-21,Why Microsoft's CEO Doesn't Believe in AGI,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Microsofts-CEO-Doesnt-Believe-in-AGI-e2v5qpb
+2041,2025-02-22,Google's AI Co Scientist and the True Power of Multi-Agent Systems,https://podcasters.spotify.com/pod/show/nlw/episodes/Googles-AI-Co-Scientist-and-the-True-Power-of-Multi-Agent-Systems-e2v7k82
+2040,2025-02-23,Agentic AI as a Tool of US Diplomacy?,https://podcasters.spotify.com/pod/show/nlw/episodes/Agentic-AI-as-a-Tool-of-US-Diplomacy-e2v87hd
+2039,2025-02-24,NLW on the Future of AI Agents,https://podcasters.spotify.com/pod/show/nlw/episodes/NLW-on-the-Future-of-AI-Agents-e2vatiq
+2038,2025-02-26,First Reactions: Claude 3.7 Sonnet and Claude Code,https://podcasters.spotify.com/pod/show/nlw/episodes/First-Reactions-Claude-3-7-Sonnet-and-Claude-Code-e2vcu3v
+2037,2025-02-27,Faster/Slower: Where AI Is Moving Ahead of Expectations and Where its Lagging,https://podcasters.spotify.com/pod/show/nlw/episodes/FasterSlower-Where-AI-Is-Moving-Ahead-of-Expectations-and-Where-its-Lagging-e2vejdu
+2036,2025-02-28,Why AI Compute Consumption Isn't Slowing Down,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-AI-Compute-Consumption-Isnt-Slowing-Down-e2vgfjp
+2035,2025-03-01,What GPT-4.5 Should Be Used For,https://podcasters.spotify.com/pod/show/nlw/episodes/What-GPT-4-5-Should-Be-Used-For-e2vi7vs
+2034,2025-03-02,The Dr. Strange Theory of AI Agent Work,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Dr--Strange-Theory-of-AI-Agent-Work-e2vi82c
+2033,2025-03-04,The AI Cold War Heats Up,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Cold-War-Heats-Up-e2vlt2j
+2032,2025-03-05,Are Voice Agents the Next Big Computing Platform?,https://podcasters.spotify.com/pod/show/nlw/episodes/Are-Voice-Agents-the-Next-Big-Computing-Platform-e2vnhb7
+2031,2025-03-06,The US Government Knows AGI Is Near,https://podcasters.spotify.com/pod/show/nlw/episodes/The-US-Government-Knows-AGI-Is-Near-e2vpqqv
+2030,2025-03-07,Can OpenAI Really Charge $20k/Month for Agents?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-OpenAI-Really-Charge-20kMonth-for-Agents-e2vracq
+2029,2025-03-08,The Top GenAI Apps Right Now,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Top-GenAI-Apps-Right-Now-e2vsj6s
+2028,2025-03-09,Is AI Weird Enough to Actually Make Scientific Discoveries?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-AI-Weird-Enough-to-Actually-Make-Scientific-Discoveries-e2vtkg9
+2027,2025-03-11,Is the Manus AI Agent Another DeepSeek Moment?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-the-Manus-AI-Agent-Another-DeepSeek-Moment-e300b46
+2026,2025-03-12,How the OpenAI-Microsoft Frenemy-Ship is Shaping AI Development,https://podcasters.spotify.com/pod/show/nlw/episodes/How-the-OpenAI-Microsoft-Frenemy-Ship-is-Shaping-AI-Development-e301rql
+2025,2025-03-13,AI to Write 90% of All Code Soon?,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-to-Write-90-of-All-Code-Soon-e304a98
+2024,2025-03-14,The State of AI for Robotics,https://podcasters.spotify.com/pod/show/nlw/episodes/The-State-of-AI-for-Robotics-e3051h3
+2023,2025-03-15,What the AI Action Plan for the USA Should Be,https://podcasters.spotify.com/pod/show/nlw/episodes/What-the-AI-Action-Plan-for-the-USA-Should-Be-e306uug
+2022,2025-03-16,The Rise of Vibecoding,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Rise-of-Vibecoding-e307vp1
+2021,2025-03-18,How the AI Price Wars Will Impact You,https://podcasters.spotify.com/pod/show/nlw/episodes/How-the-AI-Price-Wars-Will-Impact-You-e30aj40
+2020,2025-03-19,The Big Challenge with Agents Today,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Big-Challenge-with-Agents-Today-e30c559
+2019,2025-03-20,"The ""AI Super Bowl"" Previews the Future",https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Super-Bowl-Previews-the-Future-e30dmaq
+2018,2025-03-21,AI Agent Capabilities Are Doubling Every Three Months,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Agent-Capabilities-Are-Doubling-Every-Three-Months-e30f8gv
+2017,2025-03-22,6 Hail Mary's to Get Apple Back in the AI Game,https://podcasters.spotify.com/pod/show/nlw/episodes/6-Hail-Marys-to-Get-Apple-Back-in-the-AI-Game-e30gs1u
+2016,2025-03-23,Why AGI is a Useless Term for Businesses,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-AGI-is-a-Useless-Term-for-Businesses-e30ht4f
+2015,2025-03-24,Where AI is Driving Revenue Growth Today,https://podcasters.spotify.com/pod/show/nlw/episodes/Where-AI-is-Driving-Revenue-Growth-Today-e30k52i
+2014,2025-03-26,Is China Outcompeting the US on AI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-China-Outcompeting-the-US-on-AI-e30m1nr
+2013,2025-03-27,ChatGPT's New Image Model Brings Magic Back to AI,https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPTs-New-Image-Model-Brings-Magic-Back-to-AI-e30ngu8
+2011,2025-03-28,Should Anyone Learn to Code Anymore?,https://podcasters.spotify.com/pod/show/nlw/episodes/Should-Anyone-Learn-to-Code-Anymore-e30qbg6
+2012,2025-03-28,Why MCP Won the Agent Tooling Wars (And How It Will Speed Up Agents),https://podcasters.spotify.com/pod/show/nlw/episodes/Why-MCP-Won-the-Agent-Tooling-Wars-And-How-It-Will-Speed-Up-Agents-e30p52m
+2010,2025-03-30,10 Things Transformed by ChatGPT's New Image Generation Model,https://podcasters.spotify.com/pod/show/nlw/episodes/10-Things-Transformed-by-ChatGPTs-New-Image-Generation-Model-e30qr5o
+2009,2025-04-01,Grok's xAI Acquires X.com,https://podcasters.spotify.com/pod/show/nlw/episodes/Groks-xAI-Acquires-X-com-e30uc2e
+2008,2025-04-02,Is OpenAI Actually Going to Be Open Again?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-OpenAI-Actually-Going-to-Be-Open-Again-e31045e
+2007,2025-04-03,5 Fast-Changing AI Transformations To Keep You Up At Night,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Fast-Changing-AI-Transformations-To-Keep-You-Up-At-Night-e311he1
+2006,2025-04-04,5 New Startups That Explain AI's Most Important Trends,https://podcasters.spotify.com/pod/show/nlw/episodes/5-New-Startups-That-Explain-AIs-Most-Important-Trends-e3134u2
+2005,2025-04-05,"OpenAI Says Next Reasoning Model Coming in a ""Couple of Weeks""",https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Says-Next-Reasoning-Model-Coming-in-a-Couple-of-Weeks-e314u7n
+2004,2025-04-06,Why AI Will Take Over the $20T Professional Services Industry,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-AI-Will-Take-Over-the-20T-Professional-Services-Industry-e315vb3
+2003,2025-04-08,How Big a Deal is Llama 4's 10M Token Context Window?,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Big-a-Deal-is-Llama-4s-10M-Token-Context-Window-e318ebc
+2002,2025-04-09,Shopify's AI Memo Shows the Future of AI at Work,https://podcasters.spotify.com/pod/show/nlw/episodes/Shopifys-AI-Memo-Shows-the-Future-of-AI-at-Work-e319vni
+2001,2025-04-10,How Will Tariffs Impact the AI Industry?,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Will-Tariffs-Impact-the-AI-Industry-e31bf3h
+2000,2025-04-11,Google Cloud Next is All About Agents [Shocker!],https://podcasters.spotify.com/pod/show/nlw/episodes/Google-Cloud-Next-is-All-About-Agents-Shocker-e31d4m1
+1999,2025-04-12,The 2025 AI Index,https://podcasters.spotify.com/pod/show/nlw/episodes/The-2025-AI-Index-e31epaq
+1998,2025-04-14,Andrej Karpathy on How AI Empowers,https://podcasters.spotify.com/pod/show/nlw/episodes/Andrej-Karpathy-on-How-AI-Empowers-e31gd8p
+1997,2025-04-15,How Vibecoding Unlocks AI feat. Riley Brown,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Vibecoding-Unlocks-AI-feat--Riley-Brown-e31i16u
+1996,2025-04-16,The 7 Biggest Mistakes Companies Are Making with AI and Agent Adoption,https://podcasters.spotify.com/pod/show/nlw/episodes/The-7-Biggest-Mistakes-Companies-Are-Making-with-AI-and-Agent-Adoption-e31ji6i
+1995,2025-04-17,"MCP, Agents and What AI Engineers Are Thinking About Right Now feat. Swyx",https://podcasters.spotify.com/pod/show/nlw/episodes/MCP--Agents-and-What-AI-Engineers-Are-Thinking-About-Right-Now-feat--Swyx-e31kuob
+1994,2025-04-18,The Agent Use Cases Most Ready for Primetime,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Agent-Use-Cases-Most-Ready-for-Primetime-e31maph
+1993,2025-04-19,Building a Voice Agent: A Case Study,https://podcasters.spotify.com/pod/show/nlw/episodes/Building-a-Voice-Agent-A-Case-Study-e31nsvc
+1992,2025-04-20,Is o3 Functionally AGI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-o3-Functionally-AGI-e31nt5j
+1991,2025-04-21,Agent Pilots Nearly Doubled Last Quarter,https://podcasters.spotify.com/pod/show/nlw/episodes/Agent-Pilots-Nearly-Doubled-Last-Quarter-e31qp66
+1990,2025-04-23,"Is the Future of AI ""Cheating on Everything?""",https://podcasters.spotify.com/pod/show/nlw/episodes/Is-the-Future-of-AI-Cheating-on-Everything-e31sigf
+1989,2025-04-24,Agent Performance Is Accelerating...Fast,https://podcasters.spotify.com/pod/show/nlw/episodes/Agent-Performance-Is-Accelerating---Fast-e31u52l
+1988,2025-04-25,"How Every Employee Becomes an ""Agent Boss""",https://podcasters.spotify.com/pod/show/nlw/episodes/How-Every-Employee-Becomes-an-Agent-Boss-e31vpr3
+1987,2025-04-26,How to Price AI Agents (And Why It Matters),https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Price-AI-Agents-And-Why-It-Matters-e321f05
+1986,2025-04-27,Why Agency Could Be The Most Important Attribute in the AI Economy,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Agency-Could-Be-The-Most-Important-Attribute-in-the-AI-Economy-e322c0k
+1985,2025-04-29,The Problem with GPT-4o Sycophancy,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Problem-with-GPT-4o-Sycophancy-e324np2
+1984,2025-04-30,What Are People Actually Using AI For?,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Are-People-Actually-Using-AI-For-e326a5k
+1983,2025-05-01,Is Open Source AI Falling Behind?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Open-Source-AI-Falling-Behind-e327nrh
+1982,2025-05-02,Half of Employees Still Hiding AI from Their Bosses (And It's Their Bosses Faults),https://podcasters.spotify.com/pod/show/nlw/episodes/Half-of-Employees-Still-Hiding-AI-from-Their-Bosses-And-Its-Their-Bosses-Faults-e329618
+1981,2025-05-03,Nvidia and Anthropic Trade Barbs Around AI Chip Rules,https://podcasters.spotify.com/pod/show/nlw/episodes/Nvidia-and-Anthropic-Trade-Barbs-Around-AI-Chip-Rules-e32askt
+1980,2025-05-04,The AGI Company of the Future,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AGI-Company-of-the-Future-e32bt93
+1979,2025-05-06,7 Lessons for Enterprise AI,https://podcasters.spotify.com/pod/show/nlw/episodes/7-Lessons-for-Enterprise-AI-e32egpp
+1978,2025-05-07,OpenAI Gives Up On For-Profit Conversion,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Gives-Up-On-For-Profit-Conversion-e32g711
+1977,2025-05-08,The Era of AI Experimentation is Over,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Era-of-AI-Experimentation-is-Over-e32hs38
+1975,2025-05-09,13 Ways AI Will Change Consulting and Professional Services,https://podcasters.spotify.com/pod/show/nlw/episodes/13-Ways-AI-Will-Change-Consulting-and-Professional-Services-e32ksok
+1976,2025-05-09,Does AI Search Threaten the Business Model of the Internet?,https://podcasters.spotify.com/pod/show/nlw/episodes/Does-AI-Search-Threaten-the-Business-Model-of-the-Internet-e32jffg
+1974,2025-05-11,How AI Will Force Education to (Finally) Change,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AI-Will-Force-Education-to-Finally-Change-e32me9p
+1973,2025-05-13,AI Competition Shifts From Model to App Layer,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Competition-Shifts-From-Model-to-App-Layer-e32omjs
+1972,2025-05-14,What to Use Different AI Models For,https://podcasters.spotify.com/pod/show/nlw/episodes/What-to-Use-Different-AI-Models-For-e32qdog
+1971,2025-05-15,The Age of AI Diplomacy,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Age-of-AI-Diplomacy-e32s2r4
+1970,2025-05-16,How AI Is Already Changing Jobs,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AI-Is-Already-Changing-Jobs-e32tpm2
+1969,2025-05-17,"The ""Wave of Crazy New AI Stuff"" Coming Next Month",https://podcasters.spotify.com/pod/show/nlw/episodes/The-Wave-of-Crazy-New-AI-Stuff-Coming-Next-Month-e32v5hk
+1968,2025-05-18,The Vibe Coding Landscape 2025,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Vibe-Coding-Landscape-2025-e330ffh
+1967,2025-05-20,The Five Vectors of AI Competition,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Five-Vectors-of-AI-Competition-e3331vk
+1966,2025-05-21,Here Comes the Internet of Agents,https://podcasters.spotify.com/pod/show/nlw/episodes/Here-Comes-the-Internet-of-Agents-e334qb1
+1965,2025-05-22,The Push to Productize AI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Push-to-Productize-AI-e336jl8
+1963,2025-05-23,"Rick Rubin on Art, Life and Vibe Coding",https://podcasters.spotify.com/pod/show/nlw/episodes/Rick-Rubin-on-Art--Life-and-Vibe-Coding-e33793o
+1964,2025-05-23,OpenA-IPhone? Legendary Designer Joins OpenAI,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenA-IPhone--Legendary-Designer-Joins-OpenAI-e3385ns
+1962,2025-05-25,How to Make AI Work at Work,https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Make-AI-Work-at-Work-e33at49
+1961,2025-05-28,What to Use Claude 4 For,https://podcasters.spotify.com/pod/show/nlw/episodes/What-to-Use-Claude-4-For-e33f1it
+1960,2025-05-29,Is AI Already Shrinking Entry-Level Tech Jobs?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-AI-Already-Shrinking-Entry-Level-Tech-Jobs-e33gm3u
+1959,2025-05-30,The 6 AI Use Case Primitives,https://podcasters.spotify.com/pod/show/nlw/episodes/The-6-AI-Use-Case-Primitives-e33i67k
+1958,2025-05-31,Nvidia CEO Says China AI is Catching Up Fast,https://podcasters.spotify.com/pod/show/nlw/episodes/Nvidia-CEO-Says-China-AI-is-Catching-Up-Fast-e33k2bh
+1957,2025-06-01,"Does ""AI First"" Mean Replacing People?",https://podcasters.spotify.com/pod/show/nlw/episodes/Does-AI-First-Mean-Replacing-People-e33l3cl
+1956,2025-06-03,5 Ways AI is Different Than Past Tech Trends,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Ways-AI-is-Different-Than-Past-Tech-Trends-e33n377
+1955,2025-06-04,Inside the White-Hot AI Rollup Trend,https://podcasters.spotify.com/pod/show/nlw/episodes/Inside-the-White-Hot-AI-Rollup-Trend-e33ovgo
+1954,2025-06-05,How AI Solved a Massive Coding Challenge for Morgan Stanley,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AI-Solved-a-Massive-Coding-Challenge-for-Morgan-Stanley-e33qpfd
+1953,2025-06-06,Is OpenAI Going to Kill Your Startup?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-OpenAI-Going-to-Kill-Your-Startup-e33sbim
+1952,2025-06-07,The Biggest Trends from the AI Engineer World's Fair,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Biggest-Trends-from-the-AI-Engineer-Worlds-Fair-e33tn2g
+1951,2025-06-08,Why AI Skeptics Are Nuts,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-AI-Skeptics-Are-Nuts-e33uu6h
+1950,2025-06-09,How to Design an AI-Native Engineering Organization,https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Design-an-AI-Native-Engineering-Organization-e34100b
+1949,2025-06-10,"No, Apple's New AI Paper Doesn't Undermine Reasoning Models",https://podcasters.spotify.com/pod/show/nlw/episodes/No--Apples-New-AI-Paper-Doesnt-Undermine-Reasoning-Models-e342mfk
+1948,2025-06-11,What's the Bigger Deal for AI: o3 Pro or o3's 80% Price Drop?,https://podcasters.spotify.com/pod/show/nlw/episodes/Whats-the-Bigger-Deal-for-AI-o3-Pro-or-o3s-80-Price-Drop-e3447h6
+1947,2025-06-12,How This Totally Unhinged AI Ad Shows the Future of Advertising,https://podcasters.spotify.com/pod/show/nlw/episodes/How-This-Totally-Unhinged-AI-Ad-Shows-the-Future-of-Advertising-e345ta7
+1946,2025-06-13,Why Your Company Needs to Move Faster on AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Your-Company-Needs-to-Move-Faster-on-AI-e3477s1
+1945,2025-06-15,Sam Altman on The Singularity,https://podcasters.spotify.com/pod/show/nlw/episodes/Sam-Altman-on-The-Singularity-e349h1i
+1944,2025-06-17,16 Ways Enterprise AI is Changing,https://podcasters.spotify.com/pod/show/nlw/episodes/16-Ways-Enterprise-AI-is-Changing-e34bh0k
+1943,2025-06-18,Should You Build Single Agents or Multi Agent Systems?,https://podcasters.spotify.com/pod/show/nlw/episodes/Should-You-Build-Single-Agents-or-Multi-Agent-Systems-e34d581
+1942,2025-06-19,20+ New Jobs that AI Will Create,https://podcasters.spotify.com/pod/show/nlw/episodes/20-New-Jobs-that-AI-Will-Create-e34epqh
+1941,2025-06-21,10 AI Video Trends Taking Over the Internet,https://podcasters.spotify.com/pod/show/nlw/episodes/10-AI-Video-Trends-Taking-Over-the-Internet-e34hg4v
+1940,2025-06-22,3 Ways To Get Better at AI Right Now,https://podcasters.spotify.com/pod/show/nlw/episodes/3-Ways-To-Get-Better-at-AI-Right-Now-e34iclt
+1939,2025-06-24,Can Buying Perplexity Save Apple on AI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-Buying-Perplexity-Save-Apple-on-AI-e34l47d
+1938,2025-06-25,The Quest for the One-Person One-Billion Dollar Company,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Quest-for-the-One-Person-One-Billion-Dollar-Company-e34mm01
+1937,2025-06-26,Context Engineering: What It Is and Why It Matters,https://podcasters.spotify.com/pod/show/nlw/episodes/Context-Engineering-What-It-Is-and-Why-It-Matters-e34o948
+1936,2025-06-27,Everything is Now a Vibe Coding App,https://podcasters.spotify.com/pod/show/nlw/episodes/Everything-is-Now-a-Vibe-Coding-App-e34plpg
+1935,2025-06-28,Agent Deployments Tripled Last Quarter,https://podcasters.spotify.com/pod/show/nlw/episodes/Agent-Deployments-Tripled-Last-Quarter-e34r442
+1934,2025-06-29,"AI, Agents and Software 3.0",https://podcasters.spotify.com/pod/show/nlw/episodes/AI--Agents-and-Software-3-0-e34s8ve
+1933,2025-07-01,How the War for Talent Will Shape AI,https://podcasters.spotify.com/pod/show/nlw/episodes/How-the-War-for-Talent-Will-Shape-AI-e34ukqm
+1932,2025-07-02,How AI Eats Consulting,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AI-Eats-Consulting-e35063p
+1931,2025-07-03,How AI Companies Are Using AI,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AI-Companies-Are-Using-AI-e3528dt
+1930,2025-07-04,"Velvet Sundown, or, How Scared Should We Be of AI Music?",https://podcasters.spotify.com/pod/show/nlw/episodes/Velvet-Sundown--or--How-Scared-Should-We-Be-of-AI-Music-e3538sh
+1929,2025-07-06,The State of AI - Mid-2025,https://podcasters.spotify.com/pod/show/nlw/episodes/The-State-of-AI---Mid-2025-e355ocn
+1928,2025-07-08,The Latest AI Job Loss Predictions,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Latest-AI-Job-Loss-Predictions-e35882v
+1927,2025-07-09,The 7 Types of AI Agents,https://podcasters.spotify.com/pod/show/nlw/episodes/The-7-Types-of-AI-Agents-e35a7cp
+1776,2025-07-10,Everything We Know About GPT-5 So Far,https://podcasters.spotify.com/pod/show/nlw/episodes/Everything-We-Know-About-GPT-5-So-Far-e35bq2k
+1768,2025-07-11,Is Grok 4 the Best LLM Yet?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Grok-4-the-Best-LLM-Yet-e35dbni
+1761,2025-07-12,Are AI Browsers the Next Big AI Trend?,https://podcasters.spotify.com/pod/show/nlw/episodes/Are-AI-Browsers-the-Next-Big-AI-Trend-e35em5d
+1753,2025-07-13,15 Ways I Use AI (And the Models I Use for Each),https://podcasters.spotify.com/pod/show/nlw/episodes/15-Ways-I-Use-AI-And-the-Models-I-Use-for-Each-e35fpoi
+1744,2025-07-15,Are AI Acquihires Screwing Up Startups?,https://podcasters.spotify.com/pod/show/nlw/episodes/Are-AI-Acquihires-Screwing-Up-Startups-e35iftk
+1732,2025-07-16,Does AI Secretly Slow Developers Down?,https://podcasters.spotify.com/pod/show/nlw/episodes/Does-AI-Secretly-Slow-Developers-Down-e35jv1u
+1723,2025-07-17,How Much AI Do Workers Actually Want?,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Much-AI-Do-Workers-Actually-Want-e35ljjt
+1716,2025-07-18,All the Cool Things People are Vibe Coding,https://podcasters.spotify.com/pod/show/nlw/episodes/All-the-Cool-Things-People-are-Vibe-Coding-e35o4hh
+1720,2025-07-18,5 Uses for the New ChatGPT Agent,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Uses-for-the-New-ChatGPT-Agent-e35mui8
+1712,2025-07-20,A Free Course on Using Agents Created by ChatGPT Agent,https://podcasters.spotify.com/pod/show/nlw/episodes/A-Free-Course-on-Using-Agents-Created-by-ChatGPT-Agent-e35po9f
+1692,2025-07-22,Are World Models the Key to AGI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Are-World-Models-the-Key-to-AGI-e35t336
+1704,2025-07-22,AI Just Achieved Something No One Thought it Would Until Years From Now,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Just-Achieved-Something-No-One-Thought-it-Would-Until-Years-From-Now-e35rndi
+1676,2025-07-24,America's AI Action Plan,https://podcasters.spotify.com/pod/show/nlw/episodes/Americas-AI-Action-Plan-e35ulh5
+1668,2025-07-25,"How One Company Saved 213,000 Hours with AI",https://podcasters.spotify.com/pod/show/nlw/episodes/How-One-Company-Saved-213-000-Hours-with-AI-e3603ce
+1664,2025-07-26,9 AI Predictions from Jensen Huang,https://podcasters.spotify.com/pod/show/nlw/episodes/9-AI-Predictions-from-Jensen-Huang-e361gk6
+1661,2025-07-27,Ambient Agents and 6 Other Big Ideas Coming Out of AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Ambient-Agents-and-6-Other-Big-Ideas-Coming-Out-of-AI-e363bv8
+1653,2025-07-29,Is Global AI Cooperation Even Possible?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Global-AI-Cooperation-Even-Possible-e36711c
+1657,2025-07-29,Walmart Blasts Past Agent Experimentation,https://podcasters.spotify.com/pod/show/nlw/episodes/Walmart-Blasts-Past-Agent-Experimentation-e365iec
+1645,2025-07-31,Can AI Trade Stocks?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-AI-Trade-Stocks-e36a2u0
+1649,2025-07-31,AI Starting to Self-Improve Says Zuckerberg,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Starting-to-Self-Improve-Says-Zuckerberg-e368pvm
+1636,2025-08-02,The AI Model Wars Just Heated WAY Up,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Model-Wars-Just-Heated-WAY-Up-e36bhre
+1623,2025-08-03,Where AI Is Right Now: 15 Charts in 15 Minutes,https://podcasters.spotify.com/pod/show/nlw/episodes/Where-AI-Is-Right-Now-15-Charts-in-15-Minutes-e36cnor
+1608,2025-08-04,Welcome to the AI Economy,https://podcasters.spotify.com/pod/show/nlw/episodes/Welcome-to-the-AI-Economy-e36evhh
+1605,2025-08-06,"3 Major New AI Model Releases: GPT-OSS, Claude Opus 4.1, Genie 3",https://podcasters.spotify.com/pod/show/nlw/episodes/3-Major-New-AI-Model-Releases-GPT-OSS--Claude-Opus-4-1--Genie-3-e36gh38
+1600,2025-08-07,GPT-5: Everything You Need to Know,https://podcasters.spotify.com/pod/show/nlw/episodes/GPT-5-Everything-You-Need-to-Know-e36jc1c
+1603,2025-08-07,Is GPT-OSS Actually Any Good?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-GPT-OSS-Actually-Any-Good-e36i1ch
+1597,2025-08-09,The Most Important AI Stories This Week,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Most-Important-AI-Stories-This-Week-e36kogl
+1594,2025-08-10,10 Things GPT-5 Changes,https://podcasters.spotify.com/pod/show/nlw/episodes/10-Things-GPT-5-Changes-e36lujk
+1588,2025-08-12,Who Thinks There's an AI Bubble?,https://podcasters.spotify.com/pod/show/nlw/episodes/Who-Thinks-Theres-an-AI-Bubble-e36phjl
+1591,2025-08-12,A ChatGPT Rebellion Wins Back GPT-4o,https://podcasters.spotify.com/pod/show/nlw/episodes/A-ChatGPT-Rebellion-Wins-Back-GPT-4o-e36o6iq
+1585,2025-08-13,How to Prompt GPT-5,https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Prompt-GPT-5-e36r1lb
+1583,2025-08-15,Everyone's Using AI But No One's Quite Sure What to Think About It,https://podcasters.spotify.com/pod/show/nlw/episodes/Everyones-Using-AI-But-No-Ones-Quite-Sure-What-to-Think-About-It-e36segd
+1578,2025-08-16,BONUS EPISODE: Enterprise AI Trends and Predictions (You can with AI.),https://podcasters.spotify.com/pod/show/nlw/episodes/BONUS-EPISODE-Enterprise-AI-Trends-and-Predictions-You-can-with-AI-e36u2o2
+1581,2025-08-16,The Claude Code Problem,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Claude-Code-Problem-e36tnah
+1576,2025-08-17,Will AI Destroy or Reinvent Education?,https://podcasters.spotify.com/pod/show/nlw/episodes/Will-AI-Destroy-or-Reinvent-Education-e36uter
+1573,2025-08-19,Everything Sam Altman Is Thinking About Right Now,https://podcasters.spotify.com/pod/show/nlw/episodes/Everything-Sam-Altman-Is-Thinking-About-Right-Now-e3714n4
+1567,2025-08-20,What AI Builders Are Actually Excited About,https://podcasters.spotify.com/pod/show/nlw/episodes/What-AI-Builders-Are-Actually-Excited-About-e3740nt
+1570,2025-08-20,Can AI Predict the Future?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-AI-Predict-the-Future-e372kh4
+1561,2025-08-22,"No, 95% of AI Pilots Aren't Failing",https://podcasters.spotify.com/pod/show/nlw/episodes/No--95-of-AI-Pilots-Arent-Failing-e376sdd
+1564,2025-08-22,Is Pixel 10 the AI Phone iPhone Never Was?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Pixel-10-the-AI-Phone-iPhone-Never-Was-e375il9
+1559,2025-08-24,The Problem of AI That Seems Alive,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Problem-of-AI-That-Seems-Alive-e3786fe
+1557,2025-08-26,What AI Backlash at YouTube Can Teach Other Companies,https://podcasters.spotify.com/pod/show/nlw/episodes/What-AI-Backlash-at-YouTube-Can-Teach-Other-Companies-e37akfj
+1555,2025-08-27,The New Politics of AI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-New-Politics-of-AI-e37ce5g
+1553,2025-08-28,7 AI Use Cases Unlocked By Nano Banana,https://podcasters.spotify.com/pod/show/nlw/episodes/7-AI-Use-Cases-Unlocked-By-Nano-Banana-e37dpao
+1552,2025-08-29,The Most Used GenAI Tools,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Most-Used-GenAI-Tools-e37g0og
+1550,2025-08-30,Workers Don't Trust Their Companies on AI,https://podcasters.spotify.com/pod/show/nlw/episodes/Workers-Dont-Trust-Their-Companies-on-AI-e37h0au
+1548,2025-08-31,The Era of AI Mass Intelligence Arrives,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Era-of-AI-Mass-Intelligence-Arrives-e37i5e1
+1546,2025-09-03,My Autumn AI Predictions,https://podcasters.spotify.com/pod/show/nlw/episodes/My-Autumn-AI-Predictions-e37m4rd
+1544,2025-09-04,Is Google Now the AI Leader?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Google-Now-the-AI-Leader-e37nkdo
+1540,2025-09-05,OpenAI Launches Jobs and Certifications,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Launches-Jobs-and-Certifications-e37rq82
+1542,2025-09-05,How to Be An AI Leader (According to OpenAI),https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Be-An-AI-Leader-According-to-OpenAI-e37q6uj
+1538,2025-09-07,"For the Agent Era, Work Charts Beat Org Charts",https://podcasters.spotify.com/pod/show/nlw/episodes/For-the-Agent-Era--Work-Charts-Beat-Org-Charts-e37t86o
+1536,2025-09-09,5 Debates Shaping AI,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Debates-Shaping-AI-e37vkf3
+1534,2025-09-10,AI Generated Code Reaching 50% in Some Companies,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Generated-Code-Reaching-50-in-Some-Companies-e3817eb
+1531,2025-09-11,AI Skepticism is CANCELLED,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Skepticism-is-CANCELLED-e3844r4
+1533,2025-09-11,Why You Need Different AIs for Different Jobs,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-You-Need-Different-AIs-for-Different-Jobs-e382mlj
+1529,2025-09-13,The AI Office Tools That Actually Work,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Office-Tools-That-Actually-Work-e385i4h
+1527,2025-09-14,The AI Slopocalypse,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Slopocalypse-e386r4r
+1525,2025-09-15,How to Get to AGI,https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Get-to-AGI-e38990s
+1523,2025-09-17,GPT-5-Codex and the Year of Agentic Coding,https://podcasters.spotify.com/pod/show/nlw/episodes/GPT-5-Codex-and-the-Year-of-Agentic-Coding-e38ark1
+1521,2025-09-18,How People Actually Use ChatGPT,https://podcasters.spotify.com/pod/show/nlw/episodes/How-People-Actually-Use-ChatGPT-e38ce74
+1517,2025-09-19,AI Agent Deployments Quadruple in 2025,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Agent-Deployments-Quadruple-in-2025-e38fcsr
+1519,2025-09-19,AI Just Beat the World's Best Coders,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Just-Beat-the-Worlds-Best-Coders-e38dou5
+1515,2025-09-21,The Truth About the AI Bubble,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Truth-About-the-AI-Bubble-e38gnno
+1514,2025-09-23,How Apple Could Get Their AI Revenge,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Apple-Could-Get-Their-AI-Revenge-e38j32p
+1513,2025-09-24,Nvidia and OpenAI Up the AI Stakes with $100B Deal,https://podcasters.spotify.com/pod/show/nlw/episodes/Nvidia-and-OpenAI-Up-the-AI-Stakes-with-100B-Deal-e38kp45
+1512,2025-09-25,AI Adoption Lessons from 5000 Devs,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Adoption-Lessons-from-5000-Devs-e38m269
+1511,2025-09-26,Could Gemini 3.0 and Claude 4.5 Be Coming Soon?,https://podcasters.spotify.com/pod/show/nlw/episodes/Could-Gemini-3-0-and-Claude-4-5-Be-Coming-Soon-e38nfrc
+1510,2025-09-27,How ChatGPT Pulse Could Change AI,https://podcasters.spotify.com/pod/show/nlw/episodes/How-ChatGPT-Pulse-Could-Change-AI-e38pd5c
+1509,2025-09-28,Don't Blame AI for Workslop,https://podcasters.spotify.com/pod/show/nlw/episodes/Dont-Blame-AI-for-Workslop-e38qbf7
+1508,2025-09-29,"Learn AI or Be Replaced - Accenture’s 11,000 Layoffs Are a Warning",https://podcasters.spotify.com/pod/show/nlw/episodes/Learn-AI-or-Be-Replaced---Accentures-11-000-Layoffs-Are-a-Warning-e38sevd
+1507,2025-09-30,Claude Sonnet 4.5 Can Code Autonomously for 30 Hours 🤯,https://podcasters.spotify.com/pod/show/nlw/episodes/Claude-Sonnet-4-5-Can-Code-Autonomously-for-30-Hours-e38u1gj
+1505,2025-10-02,When Will AI Make Scientific Discoveries?,https://podcasters.spotify.com/pod/show/nlw/episodes/When-Will-AI-Make-Scientific-Discoveries-e39161h
+1506,2025-10-02,Sora 2 and the Brainrot Rebellion,https://podcasters.spotify.com/pod/show/nlw/episodes/Sora-2-and-the-Brainrot-Rebellion-e38vknq
+1504,2025-10-03,The Era of Agentic Shopping,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Era-of-Agentic-Shopping-e392kat
+1503,2025-10-05,I Tested ChatGPT As My Cofounder for a Week - Here's Everything I Learned,https://podcasters.spotify.com/pod/show/nlw/episodes/I-Tested-ChatGPT-As-My-Cofounder-for-a-Week---Heres-Everything-I-Learned-e393ld6
+1501,2025-10-06,Did OpenAI Just Kill a Bunch of Agent Startups? OpenAI DevDay 2025 First Reactions,https://podcasters.spotify.com/pod/show/nlw/episodes/Did-OpenAI-Just-Kill-a-Bunch-of-Agent-Startups--OpenAI-DevDay-2025-First-Reactions-e396bpt
+1502,2025-10-06,The Top 50 AI For Work Apps You Haven't Tried Yet,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Top-50-AI-For-Work-Apps-You-Havent-Tried-Yet-e395v3k
+1500,2025-10-07,Why OpenAI's AMD Deal Could Be Bigger News than DevDay,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-OpenAIs-AMD-Deal-Could-Be-Bigger-News-than-DevDay-e397scs
+1499,2025-10-08,5 Reasons AI is a Bubble (And 5 It’s Not),https://podcasters.spotify.com/pod/show/nlw/episodes/5-Reasons-AI-is-a-Bubble-And-5-Its-Not-e399a6l
+1498,2025-10-09,How to Use Sora 2 For Business + Prompting Guide,https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Use-Sora-2-For-Business--Prompting-Guide-e39ava1
+1497,2025-10-10,Why the Future of AI Has a Body,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-the-Future-of-AI-Has-a-Body-e39c7ms
+1496,2025-10-12,"What 1,000+ Executives Told Us About AI Agents",https://podcasters.spotify.com/pod/show/nlw/episodes/What-1-000-Executives-Told-Us-About-AI-Agents-e39ddv4
+1495,2025-10-13,These Are the Jobs People Actually WANT AI to Automate,https://podcasters.spotify.com/pod/show/nlw/episodes/These-Are-the-Jobs-People-Actually-WANT-AI-to-Automate-e39g1i1
+1494,2025-10-14,The Next AI Platform Isn't a Model -- It's Your Context,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Next-AI-Platform-Isnt-a-Model----Its-Your-Context-e39hnte
+1493,2025-10-15,The Problem with ChatGPT Erotica,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Problem-with-ChatGPT-Erotica-e39j9ub
+1491,2025-10-17,15 Business Model Questions for OpenAI and Anthropic,https://podcasters.spotify.com/pod/show/nlw/episodes/15-Business-Model-Questions-for-OpenAI-and-Anthropic-e39m3ft
+1492,2025-10-17,Maybe AI Will Cure Cancer After All,https://podcasters.spotify.com/pod/show/nlw/episodes/Maybe-AI-Will-Cure-Cancer-After-All-e39l4d2
+1490,2025-10-18,How to Build an AI-Ready Culture: A Practical Guide,https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Build-an-AI-Ready-Culture-A-Practical-Guide-e39mrtf
+1489,2025-10-19,5 Prompting Tricks to Make Your AI Less Average,https://podcasters.spotify.com/pod/show/nlw/episodes/5-Prompting-Tricks-to-Make-Your-AI-Less-Average-e39nq5b
+1487,2025-10-21,GPT-5 is 58% AGI,https://podcasters.spotify.com/pod/show/nlw/episodes/GPT-5-is-58-AGI-e39s29i
+1488,2025-10-21,Why an AGI Delay Doesn't Mean an AI Bubble,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-an-AGI-Delay-Doesnt-Mean-an-AI-Bubble-e39qmgf
+1486,2025-10-22,ChatGPT Just Launched Atlas — Here’s How Get Value From Your AI Browser,https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-Just-Launched-Atlas--Heres-How-Get-Value-From-Your-AI-Browser-e39toc9
+1484,2025-10-24,AI Context Gets a Major Upgrade,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Context-Gets-a-Major-Upgrade-e3a0m4e
+1485,2025-10-24,Why Electricity is AI's Biggest Problem,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Electricity-is-AIs-Biggest-Problem-e39ve7k
+1483,2025-10-25,Why Data is the Biggest Barrier to AI Readiness (And What to Do About It),https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Data-is-the-Biggest-Barrier-to-AI-Readiness-And-What-to-Do-About-It-e3a1j2s
+1482,2025-10-26,Workers Are Excited About AI Agents — So Why Are Companies Screwing It Up?,https://podcasters.spotify.com/pod/show/nlw/episodes/Workers-Are-Excited-About-AI-Agents--So-Why-Are-Companies-Screwing-It-Up-e3a2fps
+1481,2025-10-27,The Surprising Way AI Expands Markets Instead of Capturing Them,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Surprising-Way-AI-Expands-Markets-Instead-of-Capturing-Them-e3a4hv6
+1480,2025-10-29,Where AI Spend is Already ROI Positive,https://podcasters.spotify.com/pod/show/nlw/episodes/Where-AI-Spend-is-Already-ROI-Positive-e3a6fjk
+1479,2025-10-30,OpenAI is Now Officially a For-Profit Company,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-is-Now-Officially-a-For-Profit-Company-e3a84ln
+1478,2025-10-31,Why OpenAI’s $1 Trillion IPO Can’t Come Soon Enough,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-OpenAIs-1-Trillion-IPO-Cant-Come-Soon-Enough-e3a9q0l
+1477,2025-11-01,"So Far, AI Can Only Automate 2.5% of Jobs",https://podcasters.spotify.com/pod/show/nlw/episodes/So-Far--AI-Can-Only-Automate-2-5-of-Jobs-e3ab96n
+1476,2025-11-02,The 5 Biggest AI Stories to Watch in November,https://podcasters.spotify.com/pod/show/nlw/episodes/The-5-Biggest-AI-Stories-to-Watch-in-November-e3aco3a
+1475,2025-11-03,RIP Vibe Coding. Feb 2025-Oct 2025.,https://podcasters.spotify.com/pod/show/nlw/episodes/RIP-Vibe-Coding--Feb-2025-Oct-2025-e3ae9u2
+1474,2025-11-04,Is OpenAI Becoming Too Big to Fail?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-OpenAI-Becoming-Too-Big-to-Fail-e3agml6
+1472,2025-11-06,Why OpenAI’s CFO Just Sparked an AI Bailout Debate,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-OpenAIs-CFO-Just-Sparked-an-AI-Bailout-Debate-e3ak5q5
+1473,2025-11-06,How Consulting Reveals the Real Pattern of AI Disruption,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Consulting-Reveals-the-Real-Pattern-of-AI-Disruption-e3aiqqc
+1471,2025-11-08,The AI ROI Surprise: Wharton Finds 75% of Enterprises Seeing Positive ROI from AI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-ROI-Surprise-Wharton-Finds-75-of-Enterprises-Seeing-Positive-ROI-from-AI-e3am6g8
+1470,2025-11-09,A Framework for Choosing Winning AI Use Cases [Agent Readiness Part 3],https://podcasters.spotify.com/pod/show/nlw/episodes/A-Framework-for-Choosing-Winning-AI-Use-Cases-Agent-Readiness-Part-3-e3an7c7
+1469,2025-11-10,What Should the Government’s Role in AI Be?,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Should-the-Governments-Role-in-AI-Be-e3apgvm
+1468,2025-11-11,The Open Source AI Model Beating GPT-5 on Agents,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Open-Source-AI-Model-Beating-GPT-5-on-Agents-e3ar66h
+1467,2025-11-12,Are World Models AI’s Next Big Frontier?,https://podcasters.spotify.com/pod/show/nlw/episodes/Are-World-Models-AIs-Next-Big-Frontier-e3asu6p
+1465,2025-11-14,Apps vs Models: Who Wins AI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Apps-vs-Models-Who-Wins-AI-e3avt1m
+1466,2025-11-14,6 Things GPT-5.1 Does Better,https://podcasters.spotify.com/pod/show/nlw/episodes/6-Things-GPT-5-1-Does-Better-e3aum2e
+1464,2025-11-16,Can AI Be Normal and Transformative at the Same Time?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-AI-Be-Normal-and-Transformative-at-the-Same-Time-e3b1fhg
+1463,2025-11-17,The AI Scientist That Does 6 Months of Work in a Day,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Scientist-That-Does-6-Months-of-Work-in-a-Day-e3b3noq
+1462,2025-11-18,How Gemini 3 Changes the AI Race,https://podcasters.spotify.com/pod/show/nlw/episodes/How-Gemini-3-Changes-the-AI-Race-e3b5dke
+1461,2025-11-20,AI Winners and Losers After Gemini 3,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Winners-and-Losers-After-Gemini-3-e3b7bik
+1460,2025-11-21,A Huge Week for AI Models Gets Even Bigger,https://podcasters.spotify.com/pod/show/nlw/episodes/A-Huge-Week-for-AI-Models-Gets-Even-Bigger-e3b8rhk
+1459,2025-11-22,25 Things Nano Banana Pro Does That AI Couldn't Before,https://podcasters.spotify.com/pod/show/nlw/episodes/25-Things-Nano-Banana-Pro-Does-That-AI-Couldnt-Before-e3ba9f3
+1458,2025-11-23,The 7 Most Important Things We Learned About AI This Week,https://podcasters.spotify.com/pod/show/nlw/episodes/The-7-Most-Important-Things-We-Learned-About-AI-This-Week-e3bbmk7
+1457,2025-11-24,Why the AI Bubble Debate is Useless,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-the-AI-Bubble-Debate-is-Useless-e3bdrvf
+1455,2025-11-26,Can AI Really Automate 57 Percent of Work?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-AI-Really-Automate-57-Percent-of-Work-e3bh2bs
+1456,2025-11-26,Why Opus 4.5 Changes Vibe Coding,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Opus-4-5-Changes-Vibe-Coding-e3bftl2
+1454,2025-11-27,10 Holiday-Themed Kids AI Activities,https://podcasters.spotify.com/pod/show/nlw/episodes/10-Holiday-Themed-Kids-AI-Activities-e3bi0ut
+1453,2025-11-28,10 AI Projects to Learn Gemini 3 Nano Banana and Opus 4.5,https://podcasters.spotify.com/pod/show/nlw/episodes/10-AI-Projects-to-Learn-Gemini-3-Nano-Banana-and-Opus-4-5-e3bjjb5
+1452,2025-11-30,A Practical Guide to Scaling AI,https://podcasters.spotify.com/pod/show/nlw/episodes/A-Practical-Guide-to-Scaling-AI-e3bloih
+1451,2025-12-01,The 5 Biggest AI Stories to Watch in December,https://podcasters.spotify.com/pod/show/nlw/episodes/The-5-Biggest-AI-Stories-to-Watch-in-December-e3bo7tu
+1450,2025-12-02,OpenAI Declares Code Red,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-Declares-Code-Red-e3bpsd3
+1449,2025-12-03,What We Learned About Amazon’s AI Strategy,https://podcasters.spotify.com/pod/show/nlw/episodes/What-We-Learned-About-Amazons-AI-Strategy-e3brgpr
+1448,2025-12-04,Can Today’s AI Really Replace 12% of Work?,https://podcasters.spotify.com/pod/show/nlw/episodes/Can-Todays-AI-Really-Replace-12-of-Work-e3btac0
+1447,2025-12-05,"What 1,250 Professionals Say About Working With AI",https://podcasters.spotify.com/pod/show/nlw/episodes/What-1-250-Professionals-Say-About-Working-With-AI-e3buu4o
+1446,2025-12-07,AI Has a PR Problem,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-Has-a-PR-Problem-e3c0db1
+1445,2025-12-08,What People Are Actually Using AI For Right Now,https://podcasters.spotify.com/pod/show/nlw/episodes/What-People-Are-Actually-Using-AI-For-Right-Now-e3c2ood
+1443,2025-12-10,The State of Enterprise AI,https://podcasters.spotify.com/pod/show/nlw/episodes/The-State-of-Enterprise-AI-e3c6da9
+1444,2025-12-10,The AI Race Gets a Massive Power Shift,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Race-Gets-a-Massive-Power-Shift-e3c4lr6
+1442,2025-12-11,GPT-5.2 is Here,https://podcasters.spotify.com/pod/show/nlw/episodes/GPT-5-2-is-Here-e3c83vm
+1441,2025-12-12,Why AI Advantage Compounds,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-AI-Advantage-Compounds-e3c9h58
+1440,2025-12-14,The Architects of AI That TIME Missed,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Architects-of-AI-That-TIME-Missed-e3cb2cs
+1439,2025-12-15,Will This OpenAI Update Make AI Agents Work Better?,https://podcasters.spotify.com/pod/show/nlw/episodes/Will-This-OpenAI-Update-Make-AI-Agents-Work-Better-e3cddbr
+1438,2025-12-17,The Most Important AI Lesson Businesses Learned in 2025,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Most-Important-AI-Lesson-Businesses-Learned-in-2025-e3cfbb5
+1437,2025-12-18,4 Reasons to Use GPT Image 1.5 Over Nano Banana Pro,https://podcasters.spotify.com/pod/show/nlw/episodes/4-Reasons-to-Use-GPT-Image-1-5-Over-Nano-Banana-Pro-e3cgskf
+1435,2025-12-19,The Most Important AI Stories This Week,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Most-Important-AI-Stories-This-Week-e3cium4
+1436,2025-12-19,82% of Companies Are Seeing Positive AI ROI,https://podcasters.spotify.com/pod/show/nlw/episodes/82-of-Companies-Are-Seeing-Positive-AI-ROI-e3cidhk
+1434,2025-12-21,Power Ranking the Big AI Ideas for 2026,https://podcasters.spotify.com/pod/show/nlw/episodes/Power-Ranking-the-Big-AI-Ideas-for-2026-e3cl409
+1397,2025-12-22,The 10 Biggest AI Stories of 2025,https://podcasters.spotify.com/pod/show/nlw/episodes/The-10-Biggest-AI-Stories-of-2025-e3cn5q0
+1395,2025-12-24,51 Charts That Will Shape AI in 2026,https://podcasters.spotify.com/pod/show/nlw/episodes/51-Charts-That-Will-Shape-AI-in-2026-e3cploj
+1396,2025-12-24,How AI Starts Doing the Work in 2026 With Anthropic CPO Mike Krieger,https://podcasters.spotify.com/pod/show/nlw/episodes/How-AI-Starts-Doing-the-Work-in-2026-With-Anthropic-CPO-Mike-Krieger-e3cojsp
+1394,2025-12-26,The 5 Most Impactful AI Model Releases of 2025,https://podcasters.spotify.com/pod/show/nlw/episodes/The-5-Most-Impactful-AI-Model-Releases-of-2025-e3cr2nh
+1393,2025-12-28,Why 2026 Is the Year of the AI Builder with Lovable CEO Anton Osika,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-2026-Is-the-Year-of-the-AI-Builder-with-Lovable-CEO-Anton-Osika-e3cstoo
+1392,2025-12-29,50 AI Predictions for 2026 - Part 1,https://podcasters.spotify.com/pod/show/nlw/episodes/50-AI-Predictions-for-2026---Part-1-e3cujje
+1391,2025-12-30,50 AI Predictions for 2026 - Part 2,https://podcasters.spotify.com/pod/show/nlw/episodes/50-AI-Predictions-for-2026---Part-2-e3cvs7s
+1390,2025-12-31,AI New Year’s: The 10-Week AI Resolution,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-New-Years-The-10-Week-AI-Resolution-e3d10rk
+1389,2026-01-03,What Manus and Groq Acquisitions Tell Us About AI,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Manus-and-Groq-Acquisitions-Tell-Us-About-AI-e3d3td4
+1376,2026-01-04,Work in the Age of Infinite Agents,https://podcasters.spotify.com/pod/show/nlw/episodes/Work-in-the-Age-of-Infinite-Agents-e3d5ggm
+1375,2026-01-05,Context Graphs: AI's Next Big Idea,https://podcasters.spotify.com/pod/show/nlw/episodes/Context-Graphs-AIs-Next-Big-Idea-e3d7hej
+1374,2026-01-07,AI at CES is Not Just Cheesy Gadgets Anymore,https://podcasters.spotify.com/pod/show/nlw/episodes/AI-at-CES-is-Not-Just-Cheesy-Gadgets-Anymore-e3d9k98
+1369,2026-01-09,How People Are Using AI for Health,https://podcasters.spotify.com/pod/show/nlw/episodes/How-People-Are-Using-AI-for-Health-e3dcvau
+1373,2026-01-09,Why Everyone Is Obsessed With Claude Code,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Everyone-Is-Obsessed-With-Claude-Code-e3dbb2r
+1367,2026-01-10,Building a Personal AI Model Map [AI Operators Bonus Episode],https://podcasters.spotify.com/pod/show/nlw/episodes/Building-a-Personal-AI-Model-Map-AI-Operators-Bonus-Episode-e3df457
+1368,2026-01-10,What Happens When AI Obliterates Your Business Model?,https://podcasters.spotify.com/pod/show/nlw/episodes/What-Happens-When-AI-Obliterates-Your-Business-Model-e3debhm
+1366,2026-01-11,Does Work Still Matter in the Age of AI?,https://podcasters.spotify.com/pod/show/nlw/episodes/Does-Work-Still-Matter-in-the-Age-of-AI-e3dgbkg
+1364,2026-01-13,Claude Cowork Is Claude Code for Everyone Else,https://podcasters.spotify.com/pod/show/nlw/episodes/Claude-Cowork-Is-Claude-Code-for-Everyone-Else-e3dk53n
+1365,2026-01-13,Google to Officially Power Apple AI Siri,https://podcasters.spotify.com/pod/show/nlw/episodes/Google-to-Officially-Power-Apple-AI-Siri-e3dieoe
+1362,2026-01-15,AI's Battle for Your Context,https://podcasters.spotify.com/pod/show/nlw/episodes/AIs-Battle-for-Your-Context-e3dnhmr
+1363,2026-01-15,ChatGPT 5.5 Coming Soon?,https://podcasters.spotify.com/pod/show/nlw/episodes/ChatGPT-5-5-Coming-Soon-e3dlva0
+1361,2026-01-17,Why CEOs Need to Lead AI Strategy,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-CEOs-Need-to-Lead-AI-Strategy-e3dp5gj
+1360,2026-01-18,Code AGI is Functional AGI (And It's Here),https://podcasters.spotify.com/pod/show/nlw/episodes/Code-AGI-is-Functional-AGI-And-Its-Here-e3dqp2s
+1359,2026-01-19,How to Make ChatGPT Ads Not Suck,https://podcasters.spotify.com/pod/show/nlw/episodes/How-to-Make-ChatGPT-Ads-Not-Suck-e3dt4fv
+1358,2026-01-21,The AI Capabilities Overhang,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Capabilities-Overhang-e3dv7r0
+1356,2026-01-22,The 3x Payoff of Deep AI Integration,https://podcasters.spotify.com/pod/show/nlw/episodes/The-3x-Payoff-of-Deep-AI-Integration-e3e24qb
+1357,2026-01-22,AGI Timelines Shift Forward,https://podcasters.spotify.com/pod/show/nlw/episodes/AGI-Timelines-Shift-Forward-e3e0o7c
+1355,2026-01-24,Who Will Adapt Best to AI Disruption?,https://podcasters.spotify.com/pod/show/nlw/episodes/Who-Will-Adapt-Best-to-AI-Disruption-e3e3p6q
+1354,2026-01-25,Skills for the Code AGI Era,https://podcasters.spotify.com/pod/show/nlw/episodes/Skills-for-the-Code-AGI-Era-e3e4skk
+1353,2026-01-26,"Ralph Wiggum, Clawdbot, and Mac Minis: How Pros Are Vibe Coding in 2026",https://podcasters.spotify.com/pod/show/nlw/episodes/Ralph-Wiggum--Clawdbot--and-Mac-Minis-How-Pros-Are-Vibe-Coding-in-2026-e3e5ior
+1351,2026-01-28,Are Agent Swarms the Next AI Paradigm?,https://podcasters.spotify.com/pod/show/nlw/episodes/Are-Agent-Swarms-the-Next-AI-Paradigm-e3eb0mb
+1352,2026-01-28,The AI Acceleration Gap,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Acceleration-Gap-e3e9nf7
+1350,2026-01-30,Are Markets Still Worried About an AI Bubble?,https://podcasters.spotify.com/pod/show/nlw/episodes/Are-Markets-Still-Worried-About-an-AI-Bubble-e3eco6e
+1349,2026-01-31,"100,000 AI Agents Joined Their Own Social Network Today. It's Called Moltbook.",https://podcasters.spotify.com/pod/show/nlw/episodes/100-000-AI-Agents-Joined-Their-Own-Social-Network-Today--Its-Called-Moltbook-e3ee5ue
+1344,2026-02-01,OpenAI IPO? Grok-SpaceX Merger? The AI IPO Race Heats Up,https://podcasters.spotify.com/pod/show/nlw/episodes/OpenAI-IPO--Grok-SpaceX-Merger--The-AI-IPO-Race-Heats-Up-e3efme6
+1343,2026-02-02,Why Moltbook Matters,https://podcasters.spotify.com/pod/show/nlw/episodes/Why-Moltbook-Matters-e3ei1kq
+1342,2026-02-03,The AI Race Just Got a SpaceX-Sized Twist,https://podcasters.spotify.com/pod/show/nlw/episodes/The-AI-Race-Just-Got-a-SpaceX-Sized-Twist-e3ejn0u
+1339,2026-02-05,The Dawn of the Agent Age,https://podcasters.spotify.com/pod/show/nlw/episodes/The-Dawn-of-the-Agent-Age-e3eldab
+1371,2026-02-05,Is Software Dead?,https://podcasters.spotify.com/pod/show/nlw/episodes/Is-Software-Dead-e3emthk
+1370,2026-02-06,Opus 4.6 and ChatGPT 5.3-Codex Are Here and the Labs Are at War,https://podcasters.spotify.com/pod/show/nlw/episodes/Opus-4-6-and-ChatGPT-5-3-Codex-Are-Here-and-the-Labs-Are-at-War-e3eoc60

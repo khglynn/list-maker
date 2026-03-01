@@ -66,7 +66,10 @@ class FeedEpisode:
     link: str
     guid: str
     publish_date: Optional[date]
+    description_body: Optional[str]
+    episode_number: Optional[int]
     audio_url: Optional[str]
+    image_url: Optional[str]
     official_transcript_url: Optional[str]
 
 
@@ -89,6 +92,18 @@ def parse_pub_date(value: Optional[str]) -> Optional[date]:
         return None
     try:
         return parsedate_to_datetime(value).date()
+    except Exception:
+        return None
+
+
+def parse_int(value: Optional[str]) -> Optional[int]:
+    if not value:
+        return None
+    raw = value.strip()
+    if not raw:
+        return None
+    try:
+        return int(raw)
     except Exception:
         return None
 
@@ -147,16 +162,24 @@ def fetch_feed(feed_url: str, limit: int) -> list[FeedEpisode]:
         link = (item.findtext("link") or "").strip()
         guid = (item.findtext("guid") or link or title).strip()
         pub_date = parse_pub_date((item.findtext("pubDate") or "").strip())
+        description_body = (item.findtext("description") or "").strip() or None
 
         enclosure = item.find("enclosure")
         audio_url = enclosure.attrib.get("url") if enclosure is not None else None
 
+        image_url = None
+        episode_number = None
         official_transcript_url = None
         for child in item:
-            if local_name(child.tag) == "transcript":
+            local = local_name(child.tag)
+            if local == "transcript":
                 official_transcript_url = child.attrib.get("url")
                 if official_transcript_url:
-                    break
+                    continue
+            if local == "image" and not image_url:
+                image_url = (child.attrib.get("href") or (child.text or "")).strip() or None
+            if local == "episode" and episode_number is None:
+                episode_number = parse_int(child.text)
 
         episodes.append(
             FeedEpisode(
@@ -164,7 +187,10 @@ def fetch_feed(feed_url: str, limit: int) -> list[FeedEpisode]:
                 link=link,
                 guid=guid,
                 publish_date=pub_date,
+                description_body=description_body,
+                episode_number=episode_number,
                 audio_url=audio_url,
+                image_url=image_url,
                 official_transcript_url=official_transcript_url,
             )
         )
@@ -280,6 +306,15 @@ def ensure_schema(conn) -> None:
     with conn.cursor() as cur:
         cur.execute(
             """
+            ALTER TABLE episodes
+              ADD COLUMN IF NOT EXISTS description_body TEXT,
+              ADD COLUMN IF NOT EXISTS episode_number INTEGER,
+              ADD COLUMN IF NOT EXISTS audio_url TEXT,
+              ADD COLUMN IF NOT EXISTS image_url TEXT;
+            """
+        )
+        cur.execute(
+            """
             CREATE TABLE IF NOT EXISTS episode_transcripts (
               id SERIAL PRIMARY KEY,
               episode_id INTEGER NOT NULL REFERENCES episodes(id) ON DELETE CASCADE,
@@ -323,21 +358,48 @@ def upsert_show(conn) -> int:
 
 def upsert_episode(conn, show_id: int, ep: FeedEpisode) -> int:
     episode_url = ep.link or ep.guid
+    raw_payload = json.dumps(
+        {
+            "provider": "rss",
+            "guid": ep.guid,
+            "audio_url": ep.audio_url,
+            "image_url": ep.image_url,
+            "official_transcript_url": ep.official_transcript_url,
+            "title": ep.title,
+            "publish_date": ep.publish_date.isoformat() if ep.publish_date else None,
+        }
+    )
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO episodes (
-              show_id, title, url, publish_date, scraped_at, created_at
+              show_id, title, url, publish_date, description_body, episode_number,
+              audio_url, image_url, raw_content, scraped_at, created_at
             )
-            VALUES (%s, %s, %s, %s, NOW(), NOW())
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
             ON CONFLICT (url) DO UPDATE
               SET show_id = EXCLUDED.show_id,
                   title = EXCLUDED.title,
-                  publish_date = EXCLUDED.publish_date,
+                  publish_date = COALESCE(EXCLUDED.publish_date, episodes.publish_date),
+                  description_body = COALESCE(EXCLUDED.description_body, episodes.description_body),
+                  episode_number = COALESCE(EXCLUDED.episode_number, episodes.episode_number),
+                  audio_url = COALESCE(EXCLUDED.audio_url, episodes.audio_url),
+                  image_url = COALESCE(EXCLUDED.image_url, episodes.image_url),
+                  raw_content = COALESCE(EXCLUDED.raw_content, episodes.raw_content),
                   scraped_at = NOW()
             RETURNING id;
             """,
-            (show_id, ep.title, episode_url, ep.publish_date),
+            (
+                show_id,
+                ep.title,
+                episode_url,
+                ep.publish_date,
+                ep.description_body,
+                ep.episode_number,
+                ep.audio_url,
+                ep.image_url,
+                raw_payload,
+            ),
         )
         row = cur.fetchone()
     conn.commit()

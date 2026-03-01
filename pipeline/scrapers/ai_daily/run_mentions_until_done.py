@@ -440,6 +440,21 @@ def write_progress(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
 
 
+def extraction_progress_line(repo_root: Path, spec: dict[str, Any]) -> str:
+    batch_name = str(spec["batch_name"])
+    episode_ids = spec["episode_ids"]
+    total = len(episode_ids)
+    batch_dir = repo_root / "codex-notes" / "ai-daily-entity-extraction" / batch_name / "episodes"
+    completed = 0
+    if batch_dir.exists():
+        try:
+            completed = len(list(batch_dir.glob("*.json")))
+        except OSError:
+            completed = 0
+    first_ep = episode_ids[0] if episode_ids else "?"
+    return f"{batch_name} first_ep={first_ep} progress={completed}/{total}"
+
+
 def main() -> None:
     args = parse_args()
     repo_root = Path(__file__).resolve().parents[3]
@@ -566,10 +581,32 @@ def main() -> None:
                 return spec
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=len(wave_specs)) as executor:
-                futures = [executor.submit(run_extract_for_spec, spec) for spec in wave_specs]
-                for fut in concurrent.futures.as_completed(futures):
-                    spec = fut.result()
-                    print(f"Extraction completed: {spec['batch_name']}", flush=True)
+                future_to_spec = {executor.submit(run_extract_for_spec, spec): spec for spec in wave_specs}
+                pending = set(future_to_spec.keys())
+                heartbeat_every_seconds = 30.0
+                last_heartbeat = time.monotonic()
+
+                while pending:
+                    done, pending = concurrent.futures.wait(
+                        pending,
+                        timeout=5.0,
+                        return_when=concurrent.futures.FIRST_COMPLETED,
+                    )
+                    for fut in done:
+                        spec = fut.result()
+                        print(f"Extraction completed: {spec['batch_name']}", flush=True)
+
+                    now = time.monotonic()
+                    if pending and (now - last_heartbeat) >= heartbeat_every_seconds:
+                        lines = [
+                            extraction_progress_line(repo_root, future_to_spec[fut])
+                            for fut in sorted(
+                                pending,
+                                key=lambda f: int(future_to_spec[f]["batch_index"]),
+                            )
+                        ]
+                        print("Heartbeat: " + " | ".join(lines), flush=True)
+                        last_heartbeat = now
 
             wave_records: list[dict[str, Any]] = []
             any_quality_fail = False

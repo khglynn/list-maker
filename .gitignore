@@ -63,3 +63,9 @@ __pycache__/
 
 # Session logs
 pipeline/match_progress.log
+
+# Batch extraction artifacts (large, regenerable)
+codex-notes/ai-daily-entity-extraction/_full_runs/
+codex-notes/ai-daily-entity-extraction/_guarded_runs/
+codex-notes/ai-daily-entity-extraction/fullrun-*/
+codex-notes/ai-daily-entity-extraction/recent50-*/

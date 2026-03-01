@@ -1,5 +1,20 @@
 -- AI Daily review queries (lean schema: ai_runs, ai_entities, ai_mentions)
 
+-- 0) Repeated mentions rollup (deduped to each episode's latest run)
+SELECT show_name,
+       mention_type,
+       canonical_name,
+       episodes_mentioned,
+       mention_total,
+       first_published_at,
+       last_published_at,
+       linked_mentions,
+       link_coverage
+FROM ai_repeated_mentions
+WHERE show_id = 3
+ORDER BY episodes_mentioned DESC, mention_total DESC, canonical_name
+LIMIT 100;
+
 -- 1) Run-level volume + quality
 SELECT r.id AS run_id,
        r.batch_name,

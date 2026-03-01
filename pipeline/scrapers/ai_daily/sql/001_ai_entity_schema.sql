@@ -96,3 +96,54 @@ CREATE INDEX IF NOT EXISTS idx_ai_mentions_entity ON ai_mentions(entity_id);
 CREATE INDEX IF NOT EXISTS idx_ai_mentions_type ON ai_mentions(mention_type);
 CREATE INDEX IF NOT EXISTS idx_ai_mentions_review ON ai_mentions(review_status);
 CREATE INDEX IF NOT EXISTS idx_ai_mentions_source_url ON ai_mentions(source_url);
+
+
+-- Rollup view for repeated mentions.
+-- Dedupes to each episode's latest loaded run so reprocessing does not double-count.
+CREATE OR REPLACE VIEW ai_repeated_mentions AS
+WITH latest_episode_run AS (
+  SELECT
+    m.episode_id,
+    MAX(m.run_id) AS run_id
+  FROM ai_mentions m
+  GROUP BY m.episode_id
+),
+latest_mentions AS (
+  SELECT m.*
+  FROM ai_mentions m
+  JOIN latest_episode_run ler
+    ON ler.episode_id = m.episode_id
+   AND ler.run_id = m.run_id
+)
+SELECT
+  ep.show_id,
+  s.name AS show_name,
+  lm.mention_type,
+  lm.canonical_name,
+  COUNT(*) AS mention_rows,
+  SUM(COALESCE(lm.mention_count, 1)) AS mention_total,
+  COUNT(DISTINCT lm.episode_id) AS episodes_mentioned,
+  MIN(ep.publish_date) AS first_published_at,
+  MAX(ep.publish_date) AS last_published_at,
+  MAX(lm.run_id) AS latest_run_id,
+  COUNT(*) FILTER (
+    WHERE lm.source_url IS NOT NULL
+      AND BTRIM(lm.source_url) <> ''
+  ) AS linked_mentions,
+  ROUND(
+    (COUNT(*) FILTER (
+      WHERE lm.source_url IS NOT NULL
+        AND BTRIM(lm.source_url) <> ''
+    ))::NUMERIC / NULLIF(COUNT(*), 0),
+    4
+  ) AS link_coverage,
+  COUNT(*) FILTER (WHERE lm.needs_review) AS review_mentions
+FROM latest_mentions lm
+JOIN episodes ep ON ep.id = lm.episode_id
+LEFT JOIN shows s ON s.id = ep.show_id
+GROUP BY
+  ep.show_id,
+  s.name,
+  lm.mention_type,
+  lm.canonical_name
+HAVING COUNT(DISTINCT lm.episode_id) >= 2;
