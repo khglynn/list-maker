@@ -1,7 +1,7 @@
-# list-maker - Agent Instructions
+# pod-lists - Agent Instructions
 
 *Inherits from ~/DevKev/CLAUDE.md*
-*Last updated: 2026-02-05*
+*Last updated: 2026-03-01*
 
 ## About This Project
 
@@ -63,7 +63,7 @@ We have a custom Spotify MCP built for this exact use case!
 ## Folder Structure
 
 ```
-list-maker/
+pod-lists/
 ├── pipeline/              # Song extraction pipeline (Python)
 │   ├── spotify_match.py   # Match songs to Spotify
 │   ├── sync_playlist.py   # Sync to playlists
