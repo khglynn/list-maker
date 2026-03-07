@@ -18,9 +18,11 @@ Chronological session journal. Most recent at top. Never delete entries.
 - Docs were significantly stale — CLAUDE.md didn't mention AI Daily at all
 - READMEs still said "list-maker"
 - ROADMAP described transcript integration as future work (it's built)
-- 230/888 AI Daily episodes extracted before quality gate failures halted backfill
+- Neon has way more data than docs reflected: SOP 664 ep (not 462), AI Daily 734 ep extracted (not 230), PCHH 300 ep imported
+- SOP matching was partially improved (NOT_FOUND 534 → 357) — earlier claim it was "never executed" was wrong
+- Codex branch `codex/ai-daily-brief-kickoff` did the bulk of AI Daily work, was fast-forward merged to main
 
-**Next:** Unstall AI Daily backfill (lower quality gate threshold), then Notion sync.
+**Next:** Finish AI Daily backfill (154 episodes remaining), then Notion sync.
 
 ---
 

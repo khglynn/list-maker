@@ -6,15 +6,15 @@ What's next, in order. When done, move to `COMPLETED.md`.
 
 ---
 
-## 1. Unstall AI Daily Backfill
+## 1. Finish AI Daily Backfill
 
-658 episodes unprocessed. Pipeline works but quality gate is too strict.
+154 episodes remaining (734/888 done). Quality gate may need tuning for the last stretch.
 
 **What:**
-- [ ] Lower `mentions_per_episode` threshold from 5 to 3
-- [ ] Clear any lock files from Feb 11 stall
+- [ ] Check if quality gate threshold needs lowering (5 → 3 mentions/ep)
+- [ ] Clear any lock files from previous stall
 - [ ] Resume `run_mentions_until_done.py`
-- [ ] Run alias normalization + link discovery on new data
+- [ ] Run alias normalization + link discovery on all data
 - [ ] Verify quality with `report_summary.py`
 
 ---

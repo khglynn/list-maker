@@ -7,17 +7,17 @@ Automated pipeline that extracts recommendations from podcasts and routes them t
 Scrapes podcast websites and transcripts for recommendations (songs, apps, tools), matches them to destination platforms, and syncs to playlists and databases.
 
 **Active Playlists:**
-- [Every Song on Switched On Pop](https://open.spotify.com/playlist/0cEVeX4pdHf5RJOiTRzgxX) - 3,501 tracks
+- [Every Song on Switched On Pop](https://open.spotify.com/playlist/0cEVeX4pdHf5RJOiTRzgxX) - 4,043 tracks
 - [This American Life: Full Music Archive](https://open.spotify.com/playlist/3d7fjfrTTKvrl7VHv5JzIz) - 880 tracks
 
 ## Status
 
 | Show | Type | Episodes | Items | Status |
 |------|------|----------|-------|--------|
-| Switched On Pop | Music | 462 | 4,544 songs (91% matched) | Live playlist |
-| This American Life | Music | 882 | 1,094 songs (80% matched) | Live playlist |
-| AI Daily Brief | Apps/Tools | 888 | 230 episodes extracted | Backfill stalled (quality gate) |
-| PCHH | Mixed | - | - | Future |
+| Switched On Pop | Music | 664 | 4,417 songs, 4,043 matched (92%) | Live playlist |
+| This American Life | Music | 882 | 1,094 songs, 880 matched (80%) | Live playlist |
+| AI Daily Brief | Apps/Tools | 888 | 734 ep extracted, 7,982 mentions | Backfill ~83% done |
+| PCHH | Mixed | 300 | 298 transcripts imported | Pipeline not built yet |
 
 See [ROADMAP.md](ROADMAP.md) for what's next.
 

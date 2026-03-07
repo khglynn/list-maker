@@ -31,7 +31,7 @@ Full pipeline for extracting app/tool/platform mentions from AI Daily Brief tran
 - Alias normalization, link discovery, QA summary scripts
 - Validated on 25-episode batch, then scaled to 230 episodes
 
-**Status:** Backfill stalled at 230/888 episodes. Quality gate (`mentions_per_episode >= 5`) failing on lighter episodes. Needs threshold tuning to resume.
+**Status:** 734/888 episodes extracted (83%), 7,982 mentions across 4,292 entities. 154 episodes remaining — quality gate may need threshold tuning to finish.
 
 **Scripts:** `pipeline/scrapers/ai_daily/`
 
@@ -81,9 +81,9 @@ Created mosaic artwork for both SOP and TAL Spotify playlists:
 ### SOP Backfill Complete
 **Completed:** Dec 21, 2025
 
-- ✅ **462 episodes** scraped from switchedonpop.com
-- ✅ **4,544 songs** extracted
-- ✅ **3,501 tracks** in playlist (91.3% match rate)
+- ✅ **462 episodes** initially scraped from switchedonpop.com (now 664 in Neon)
+- ✅ **4,544 songs** initially extracted (now 4,417 after dedup, 4,043 matched)
+- ✅ Playlist live with matched tracks
 - ✅ Neon database with shows, episodes, songs tables
 - ✅ Built `pipeline/spotify_match.py` for matching
 - ✅ Built `pipeline/sync_playlist.py` for syncing

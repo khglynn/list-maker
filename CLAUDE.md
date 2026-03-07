@@ -95,10 +95,10 @@ pod-lists/
 
 | Show | Type | Episodes | Items | Status |
 |------|------|----------|-------|--------|
-| SOP | Music | 462 | 4,544 songs, 3,501 matched (91%) | Live playlist |
+| SOP | Music | 664 | 4,417 songs, 4,043 matched (92%) | Live playlist, 357 NOT_FOUND |
 | TAL | Music | 882 | 1,094 songs, 880 matched (80%) | Live playlist, 214 NOT_FOUND |
-| AI Daily | Apps/Tools | 888 | 230 episodes extracted (26%) | Backfill stalled (quality gate) |
-| PCHH | Mixed | - | - | Taddy configured, pipeline not built |
+| AI Daily | Apps/Tools | 888 | 734 ep extracted (83%), 7,982 mentions | Backfill mostly done |
+| PCHH | Mixed | 300 | 298 transcripts imported | Taddy configured, pipeline not built |
 
 ## AI Daily Pipeline
 
@@ -107,7 +107,7 @@ Extracts app/tool/platform mentions from transcripts using LLM extraction.
 **Neon schema:** 3 tables — `ai_runs`, `ai_entities`, `ai_mentions`
 **Extraction model:** gpt-4.1-mini via OpenAI API
 **Transcripts:** 888 episodes imported (RSS + Firecrawl initially, Taddy API added later)
-**Backfill status:** 230/888 episodes processed. Stalled Feb 11 — quality gate (`mentions_per_episode >= 5`) failing on lighter episodes. Needs threshold adjustment to resume.
+**Backfill status:** 734/888 episodes processed (83%). 154 remaining. Quality gate (`mentions_per_episode >= 5`) was causing failures on lighter episodes — may need threshold adjustment to finish.
 **Next destination:** Notion (not yet connected)
 
 See `pipeline/scrapers/ai_daily/README.md` for full pipeline docs.
@@ -115,7 +115,7 @@ See `pipeline/scrapers/ai_daily/README.md` for full pipeline docs.
 ## Project-Specific Notes
 
 - **SOP and TAL playlists active** - Both shows backfilled, playlists live
-- **SOP/TAL matching improvements planned but not executed** - See `claude-plans/2025-12-21-song-review-progress.md`
+- **SOP matching partially improved** - NOT_FOUND dropped from 534 → 357 since Dec 2025. More fixes possible.
 - **Scrape before transcribe** - SOP and TAL have song data on their websites
 - **Mosaic artwork done** - See `marketing/` for playlist cover generators
 - **Taddy scraper supports multiple shows** - AI Daily, PCHH, SOP all configured
