@@ -1,4 +1,4 @@
-# list-maker Session Handoff
+# pod-lists Session Handoff (archived)
 
 *Last updated: 2025-12-12 (session 3)*
 

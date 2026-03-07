@@ -1,114 +1,86 @@
 # Roadmap
 
-*Last updated: 2026-01-25*
+*Last updated: 2026-03-06*
 
 What's next, in order. When done, move to `COMPLETED.md`.
 
 ---
 
-## 1. Review TAL NOT_FOUND Songs
+## 1. Unstall AI Daily Backfill
 
-**214 songs** couldn't be matched to Spotify. Manual review needed.
+658 episodes unprocessed. Pipeline works but quality gate is too strict.
 
 **What:**
-- [ ] Query NOT_FOUND songs: `SELECT * FROM songs WHERE spotify_match_confidence = 'NOT_FOUND' AND episode_id IN (SELECT id FROM episodes WHERE show_id = 2)`
-- [ ] Use Spotify MCP fuzzy search for each
-- [ ] Mark truly unavailable as UNAVAILABLE
+- [ ] Lower `mentions_per_episode` threshold from 5 to 3
+- [ ] Clear any lock files from Feb 11 stall
+- [ ] Resume `run_mentions_until_done.py`
+- [ ] Run alias normalization + link discovery on new data
+- [ ] Verify quality with `report_summary.py`
 
 ---
 
-## 2. Enhanced Song Extraction
+## 2. AI Daily -> Notion
 
-Extract songs mentioned in episode body text (not just "Songs Discussed" section).
+Push extracted entities to a browsable Notion database.
 
 **What:**
-- [ ] LLM-based extraction from `description_body` column
-- [ ] Handle mentions like "we discuss [song] by [artist]"
-- [ ] Handle album mentions → pull top tracks from Spotify
-- [ ] Deduplication against "Songs Discussed" results
-
-**Why:** Some episodes discuss songs in the body text that aren't listed in the formal section.
+- [ ] Design Notion database schema (Name, Type, Mentions, Dates, URL, Context)
+- [ ] Create database via Notion MCP
+- [ ] Build sync script (Neon -> Notion)
+- [ ] Run initial sync, iterate on schema with Kevin
 
 ---
 
-## 3. Transcript Integration
+## 3. Automation
 
-For podcasts without song lists on their websites (PCHH, AI Daily).
-
-**Strategy (cascading, cheapest first):**
-1. Website scraping (FREE) - SOP, TAL have structured data
-2. Free transcripts - Check RSS feeds, show websites
-3. Transcript API - Taddy, Podscribe, Podchaser (research needed)
-4. Whisper - Last resort (~$0.006/min)
+Make scrapes run without manual intervention.
 
 **What:**
-- [ ] Research transcript API options and pricing
-- [ ] Build adapter interface for multiple sources
-- [ ] Store full transcripts in Neon `episodes.transcript` column
-- [ ] Document process in `helper/guides/`
+- [ ] Choose platform (GitHub Actions recommended)
+- [ ] Weekly: Taddy transcript import for all shows
+- [ ] Weekly: AI Daily entity extraction on new episodes
+- [ ] Weekly: Notion sync (upsert)
+- [ ] Weekly: Spotify playlist sync for SOP/TAL
+- [ ] Failure alerting (email or Notion)
 
 ---
 
-## 4. Weekly Updates Automation
+## 4. SOP/TAL Matching Cleanup (optional)
 
-Scripts exist for ongoing updates. Full automation (cron) is future work.
+Playlists work at 80-91%. Nice-to-have improvements.
 
-**Current process (see `pipeline/README.md`):**
-1. Scrape new episodes (Claude + Firecrawl)
-2. Match songs: `python spotify_match.py --show-id 1`
-3. Review LOW/NOT_FOUND if any
-4. Sync to playlist: `python sync_playlist.py --show-id 1`
-
-**Future automation:**
-- [ ] Vercel Cron job to check for new episodes
-- [ ] Automatic scraping without Claude
-- [ ] Notification when new songs added
+**What:**
+- [ ] Fix "feat./ft." format mismatches (~130 SOP songs)
+- [ ] Fuzzy search major artists (~80 SOP songs)
+- [ ] Mark unavailable songs (~25 songs)
+- [ ] Re-sync playlists
+- [ ] Same for TAL's 214 NOT_FOUND
 
 ---
 
-## 5. Expand: Pop Culture Happy Hour (PCHH)
+## 5. PCHH (future)
 
-More complex - needs transcripts + sentiment filtering.
+Mixed content — music, movies, TV, books. More complex extraction.
 
 **What:**
-- [ ] Check if NPR provides free transcripts (in RSS?)
-- [ ] If not, evaluate transcript APIs (Taddy, Podscribe)
-- [ ] Extract "What's Making Me Happy" segment
-- [ ] Sentiment filtering (positive only)
-- [ ] Route to multiple destinations: music → Spotify, TV/movies → Notion + Trakt
+- [ ] Design extraction prompt for "What's Making Me Happy" segment
+- [ ] Multi-category extraction (music -> Spotify, movies/TV -> Notion + Trakt)
+- [ ] Backfill + add to automation
 
 ---
 
-## 6. Expand: AI Daily
+## 6. Trakt Integration (future)
 
-Apps/platforms/tools recommendations.
-
-**What:**
-- [ ] Source transcripts (same research as PCHH)
-- [ ] Extract app/tool mentions
-- [ ] Sentiment filtering (endorsements only)
-- [ ] Route to Notion
-
----
-
-## 7. Trakt Integration (Movies/TV)
-
-Cross-device watchlist sync for movie/TV recommendations.
-
-**What:**
-- [ ] Set up Trakt API integration
-- [ ] Sync movie/TV items from Notion → Trakt
-- [ ] Or direct pipeline: extract → Trakt (bypass Notion?)
+Cross-device watchlist sync for movie/TV recommendations from PCHH.
 
 ---
 
 ## Future Ideas (Unprioritized)
 
-Not committed - capture for later consideration.
-
-- **Public database export** - Export to SQLite or build read-only API for public access. Neon is for dev/internal use, not public sharing.
-- **Human review UI** - For low-confidence matches, quick approve/reject
-- **Spotify metadata enrichment** - Backfill release year (from album API) and genre (from artist API). Not included in batch search response - requires additional API calls per track. Lower priority but nice for filtering/analytics.
-- **Book audiobook availability** - No good API found, manual for now
-- **One-click-play for TV** - Reelgood integration? (Likewise was buggy)
-- **Public dashboard** - Stats on playlist, most-discussed songs
+- **Enhanced SOP song extraction** - Extract songs from episode body text, not just "Songs Discussed" section. Handle album mentions → pull top tracks from Spotify.
+- **Public database export** - SQLite or read-only API
+- **Human review UI** - Quick approve/reject for low-confidence matches
+- **Spotify metadata enrichment** - Release year, genre (requires extra API calls per track)
+- **Book audiobook availability** - No good aggregator API found yet
+- **One-click-play for TV** - Reelgood integration (Likewise was buggy)
+- **Public dashboard** - Stats on playlists, most-discussed songs/tools

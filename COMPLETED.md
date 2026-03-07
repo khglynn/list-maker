@@ -4,6 +4,46 @@ Work that's done. Newest at top.
 
 ---
 
+## March 2026
+
+### Taddy Multi-Show Transcript Importer
+**Completed:** Mar 1, 2026
+
+Built `pipeline/scrapers/taddy/import_transcripts.py` — imports transcripts from Taddy API for multiple shows (AI Daily, PCHH, SOP). Handles retries, credit management, short transcript rejection.
+
+### Project Rename: list-maker -> pod-lists
+**Completed:** Mar 1, 2026
+
+Renamed project and repo. Updated CLAUDE.md (README and pipeline README updated Mar 6).
+
+---
+
+## February 2026
+
+### AI Daily Entity Extraction Pipeline
+**Completed:** Feb 5-11, 2026
+
+Full pipeline for extracting app/tool/platform mentions from AI Daily Brief transcripts:
+- Lean 3-table Neon schema (`ai_runs`, `ai_entities`, `ai_mentions`)
+- LLM extraction via OpenAI gpt-4.1-mini with locked 12-type taxonomy
+- Quality-gated backfill runner with configurable thresholds
+- Parallel orchestrator (`run_mentions_until_done.py`)
+- Alias normalization, link discovery, QA summary scripts
+- Validated on 25-episode batch, then scaled to 230 episodes
+
+**Status:** Backfill stalled at 230/888 episodes. Quality gate (`mentions_per_episode >= 5`) failing on lighter episodes. Needs threshold tuning to resume.
+
+**Scripts:** `pipeline/scrapers/ai_daily/`
+
+### AI Daily Transcript Backfill
+**Completed:** Feb 2026
+
+- AI Daily Brief episodes imported to Neon via RSS + Firecrawl + OpenAI STT
+- Transcripts stored in `episode_transcripts` table and local cache
+- Taddy API added later (Mar 2026) as a cheaper bulk transcript source
+
+---
+
 ## January 2026
 
 ### Folder Reorganization
@@ -47,7 +87,8 @@ Created mosaic artwork for both SOP and TAL Spotify playlists:
 - ✅ Neon database with shows, episodes, songs tables
 - ✅ Built `pipeline/spotify_match.py` for matching
 - ✅ Built `pipeline/sync_playlist.py` for syncing
-- ✅ Reviewed all LOW and NOT_FOUND matches
+- ✅ Reviewed all LOW matches (200 songs processed)
+- ⚠️ NOT_FOUND analyzed (534 songs) but fixes not executed — see `claude-plans/2025-12-21-song-review-progress.md`
 - ✅ Playlist: [Every Song on Switched On Pop](https://open.spotify.com/playlist/0cEVeX4pdHf5RJOiTRzgxX)
 
 **Match results:**
@@ -74,10 +115,10 @@ Created `claude-plans/2025-12-12-session-handoff.md` for continuity between sess
 
 ---
 
-## December 2024
+## December 2025
 
 ### Spotify Bulk Actions MCP - Published
-**Completed:** Dec 12, 2024
+**Completed:** Dec 12, 2025
 **Plan:** `claude-plans/2025-12-12-spotify-mcp-publish.md`
 
 Moved Kevin's existing Spotify MCP to a public repo, updated it, and published to package registries. This tool powers the music → Spotify pipeline.
@@ -96,11 +137,11 @@ Moved Kevin's existing Spotify MCP to a public repo, updated it, and published t
 ---
 
 ### Project Planning & Setup
-**Completed:** Dec 12, 2024
+**Completed:** Dec 12, 2025
 **Plan:** `claude-plans/2025-12-12-initial-plan.md`
 
 - ✅ Created CLAUDE.md for project instructions
-- ✅ Created project stack file at `~/DevKev/tools/helper/project-stacks/list-maker.md`
+- ✅ Created project stack file at `~/DevKev/helper/project-stacks/pod-lists.md`
 - ✅ Archived initial plan to `claude-plans/2025-12-12-initial-plan.md`
 - ✅ Created context doc summarizing original research chats
 - ✅ Decided on Vercel App (Next.js + Neon) over n8n
@@ -109,7 +150,7 @@ Moved Kevin's existing Spotify MCP to a public repo, updated it, and published t
 ---
 
 ### Original Research
-**Completed:** Oct-Nov 2024 (before this repo)
+**Completed:** Oct-Nov 2025 (before this repo)
 **Docs:** `claude-plans/2025-12-12-project-context.md`
 
 Two long chats with ChatGPT exploring:

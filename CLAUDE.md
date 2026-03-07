@@ -1,7 +1,7 @@
 # pod-lists - Agent Instructions
 
 *Inherits from ~/DevKev/CLAUDE.md*
-*Last updated: 2026-03-01*
+*Last updated: 2026-03-06*
 
 ## About This Project
 
@@ -32,14 +32,17 @@ Kevin prefers a "help me mode" by default:
 |--------------|-----------|-------------|
 | SOP | Switched On Pop | Website show notes |
 | TAL | This American Life | Website song credits |
-| PCHH | Pop Culture Happy Hour | TBD (check for transcripts) |
+| AI Daily | AI Daily Brief | Taddy transcripts → LLM extraction |
+| PCHH | Pop Culture Happy Hour | Taddy transcripts (pipeline not built yet) |
 
 ## Tech Stack
 
 - **Database:** Neon (Postgres) - source of truth
 - **Framework:** Next.js (TypeScript)
 - **Hosting:** Vercel
-- **APIs:** Spotify (via MCP), Notion, Firecrawl (scraping), Claude (extraction)
+- **APIs:** Spotify (via MCP), Notion, Firecrawl (web scraping)
+- **Transcripts:** Taddy API (multi-show transcript import)
+- **Extraction:** OpenAI gpt-4.1-mini (AI Daily entity extraction from transcripts)
 
 ## Spotify MCP
 
@@ -64,13 +67,17 @@ We have a custom Spotify MCP built for this exact use case!
 
 ```
 pod-lists/
-├── pipeline/              # Song extraction pipeline (Python)
+├── pipeline/              # Extraction and matching (Python)
 │   ├── spotify_match.py   # Match songs to Spotify
 │   ├── sync_playlist.py   # Sync to playlists
 │   ├── scrapers/          # Show-specific scrapers
-│   │   ├── sop/           # Switched On Pop
-│   │   └── tal/           # This American Life
-│   └── _cache/            # Cached episode data (gitignored)
+│   │   ├── sop/           # Switched On Pop (website scraper)
+│   │   ├── tal/           # This American Life (website scraper)
+│   │   ├── ai_daily/      # AI Daily Brief (transcript entity extraction)
+│   │   └── taddy/         # Taddy API transcript importer (multi-show)
+│   └── _cache/            # Cached episode data + transcripts (gitignored)
+│
+├── codex-notes/           # AI Daily extraction batch artifacts
 │
 ├── marketing/             # Playlist artwork (mosaic generator)
 │   ├── sop/               # SOP tiles, targets, outputs
@@ -84,19 +91,34 @@ pod-lists/
 
 **Note:** All `npm` commands must be run from inside `web/` (e.g., `cd web && npm run dev`).
 
-## Current Status (Jan 2026)
+## Current Status (Mar 2026)
 
-| Show | Episodes | Songs | Matched | Status |
-|------|----------|-------|---------|--------|
-| SOP | 462 | 4,544 | 3,501 (91%) | Complete |
-| TAL | 882 | 1,094 | 880 (80%) | 214 NOT_FOUND to review |
-| PCHH | - | - | - | Future |
+| Show | Type | Episodes | Items | Status |
+|------|------|----------|-------|--------|
+| SOP | Music | 462 | 4,544 songs, 3,501 matched (91%) | Live playlist |
+| TAL | Music | 882 | 1,094 songs, 880 matched (80%) | Live playlist, 214 NOT_FOUND |
+| AI Daily | Apps/Tools | 888 | 230 episodes extracted (26%) | Backfill stalled (quality gate) |
+| PCHH | Mixed | - | - | Taddy configured, pipeline not built |
+
+## AI Daily Pipeline
+
+Extracts app/tool/platform mentions from transcripts using LLM extraction.
+
+**Neon schema:** 3 tables — `ai_runs`, `ai_entities`, `ai_mentions`
+**Extraction model:** gpt-4.1-mini via OpenAI API
+**Transcripts:** 888 episodes imported (RSS + Firecrawl initially, Taddy API added later)
+**Backfill status:** 230/888 episodes processed. Stalled Feb 11 — quality gate (`mentions_per_episode >= 5`) failing on lighter episodes. Needs threshold adjustment to resume.
+**Next destination:** Notion (not yet connected)
+
+See `pipeline/scrapers/ai_daily/README.md` for full pipeline docs.
 
 ## Project-Specific Notes
 
-- **SOP and TAL complete** - Both shows backfilled, playlists active
+- **SOP and TAL playlists active** - Both shows backfilled, playlists live
+- **SOP/TAL matching improvements planned but not executed** - See `claude-plans/2025-12-21-song-review-progress.md`
 - **Scrape before transcribe** - SOP and TAL have song data on their websites
 - **Mosaic artwork done** - See `marketing/` for playlist cover generators
+- **Taddy scraper supports multiple shows** - AI Daily, PCHH, SOP all configured
 
 ## Relevant Docs & Links
 

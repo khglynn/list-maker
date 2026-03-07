@@ -1,0 +1,81 @@
+# Dev Log
+
+Chronological session journal. Most recent at top. Never delete entries.
+
+---
+
+## 2026-03-06 — Roadmap Review + Docs Cleanup
+
+**What happened:**
+- Full project audit — reviewed all code, plans, and docs for accuracy
+- Discovered AI Daily backfill stalled since Feb 11 (quality gate too strict)
+- Discovered SOP/TAL matching improvements were planned but never executed
+- Updated all project docs: README, pipeline/README, CLAUDE.md, COMPLETED.md, ROADMAP.md
+- Created this DEVLOG
+- Established 6-phase roadmap (see ROADMAP.md)
+
+**Key findings:**
+- Docs were significantly stale — CLAUDE.md didn't mention AI Daily at all
+- READMEs still said "list-maker"
+- ROADMAP described transcript integration as future work (it's built)
+- 230/888 AI Daily episodes extracted before quality gate failures halted backfill
+
+**Next:** Unstall AI Daily backfill (lower quality gate threshold), then Notion sync.
+
+---
+
+## 2026-03-01 — Taddy Scraper Added
+
+**What happened:**
+- Built Taddy API transcript importer supporting AI Daily, PCHH, SOP
+- 888 AI Daily transcripts imported
+- Project renamed from list-maker to pod-lists
+
+---
+
+## 2026-02-11 — AI Daily Backfill Stalled
+
+**What happened:**
+- Running parallel backfill with `run_mentions_until_done.py`
+- Quality gate failures: `mentions_per_episode_too_low` on lighter episodes
+- 230 episodes successfully processed, 658 remaining
+- Last 7 attempts all failed quality checks
+
+---
+
+## 2026-02-05 — AI Daily Lean Schema + Extraction Pipeline
+
+**What happened:**
+- Simplified AI Daily to 3-table Neon schema (ai_runs, ai_entities, ai_mentions)
+- Built full extraction pipeline with quality gates
+- Validated on 25-episode batch (11.6 mentions/ep average)
+- Added guarded backfill runner, alias normalization, link discovery
+
+---
+
+## 2026-01-25 — Folder Reorg + Mosaic Art
+
+**What happened:**
+- Restructured project: scripts/ -> pipeline/, scrapers/ subdirectories
+- Created mosaic artwork for SOP and TAL playlist covers
+- TAL backfill completed: 882 episodes, 1,094 songs, 880 matched
+
+---
+
+## 2025-12-21 — SOP Song Review + Matching Analysis
+
+**What happened:**
+- Processed all LOW confidence matches (200 songs)
+- Detailed analysis of 534 NOT_FOUND songs by category
+- Created improvement plan (feat. format fixes, major artist search)
+- Plan documented but not executed — pivoted to AI Daily
+
+---
+
+## 2025-12-12 — Project Kickoff
+
+**What happened:**
+- Created Neon database, schema, SOP scraper
+- First 3 episodes scraped, 16 songs extracted
+- Spotify MCP configured
+- Session handoff doc created

@@ -1,6 +1,6 @@
-# list-maker Pipeline
+# pod-lists Pipeline
 
-*Last updated: 2026-01-25*
+*Last updated: 2026-03-06*
 
 ## Directory Structure
 
@@ -15,18 +15,33 @@ pipeline/
 │   ├── sop/               # Switched On Pop
 │   │   └── download_episode_art.py
 │   │
-│   └── tal/               # This American Life
-│       ├── fetch.py           # Fetch episode URLs
-│       ├── parse.py           # Parse episode pages
-│       ├── fill_songs.py      # Fill in song data
-│       ├── process_batch.py   # Batch processing
-│       ├── fix_404s.py        # Fix broken URLs
-│       ├── scrape_missing.py  # Scrape missing episodes
-│       ├── scoring_match.py   # Match scoring tracks
-│       └── download_episode_art.py
+│   ├── tal/               # This American Life
+│   │   ├── fetch.py           # Fetch episode URLs
+│   │   ├── parse.py           # Parse episode pages
+│   │   ├── fill_songs.py      # Fill in song data
+│   │   ├── process_batch.py   # Batch processing
+│   │   ├── fix_404s.py        # Fix broken URLs
+│   │   ├── scrape_missing.py  # Scrape missing episodes
+│   │   ├── scoring_match.py   # Match scoring tracks
+│   │   └── download_episode_art.py
+│   │
+│   ├── ai_daily/          # AI Daily Brief entity extraction
+│   │   ├── transcripts.py        # Fetch transcripts (RSS + OpenAI STT)
+│   │   ├── extract_entities.py   # LLM entity extraction (OpenAI)
+│   │   ├── init_entity_schema.py # Create/reset Neon schema
+│   │   ├── load_entity_batch.py  # Load batch artifacts into Neon
+│   │   ├── normalize_aliases.py  # Merge duplicate entities
+│   │   ├── discover_links.py     # Find URLs for entities (Firecrawl)
+│   │   ├── report_summary.py     # Quality summary report
+│   │   ├── run_guarded_backfill.py    # Quality-gated batch runner
+│   │   └── run_mentions_until_done.py # Parallel orchestrator
+│   │
+│   └── taddy/             # Taddy API transcript importer
+│       └── import_transcripts.py  # Multi-show transcript import
 │
 └── _cache/                # Scraped episode data (gitignored)
-    └── tal/               # 885 TAL episode JSONs
+    ├── tal/               # 885 TAL episode JSONs
+    └── ai_daily/          # AI Daily transcripts
 ```
 
 Note: Mosaic artwork generation is in `marketing/` (separate from pipeline).
@@ -41,7 +56,7 @@ Note: Mosaic artwork generation is in `marketing/` (separate from pipeline).
 ## Setup
 
 ```bash
-cd /Users/KevinHG/DevKev/personal/list-maker/pipeline
+cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists/pipeline
 source venv/bin/activate
 ```
 
