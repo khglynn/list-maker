@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 
 
 CURATED_TARGETS = [
+    # --- existing ---
     ("survey", "AI Usage Pulse Survey", "AI Usage Pulse Survey for January"),
     ("survey", "AI Usage Pulse Survey", "January AI Pulse survey"),
     ("survey", "AI Usage Pulse Survey", "January AI Usage Pulse Survey"),
@@ -29,6 +30,33 @@ CURATED_TARGETS = [
     ("software_product", "Claudbot", "Claudebot"),
     ("software_product", "Claudbot", "ClaudeBot"),
     ("model", "Claude Sonnet 5", "Sonnet 5"),
+    # --- accounts: name variants ---
+    ("account", "AI Safety Memes", "AI safety memes account"),
+    ("account", "Chubby", "Chubby Kimonismis"),
+    ("account", "Chubby", "ChubbyOnX"),
+    ("account", "Google DeepMind", "Google DeepMinder"),
+    ("account", "Google", "Google LLC"),
+    ("account", "Jimmy Apples", "Jimmy Apples (Twitter account)"),
+    ("account", "Swix", "LatentspacesSwix"),
+    ("account", "Antoine Osika", "Antoine Osica"),
+    ("account", "Antoine Osika", "Antoine"),
+    ("account", "I Rule the World", "I rule the world M.O."),
+    ("account", "Hater", "Hater at Slow Developer"),
+    ("account", "Boris Power", "Boris"),
+    ("account", "Logan Kilpatrick", "Logan"),
+    # --- models: name variants ---
+    ("model", "Gemini", "Google Gemini"),
+    ("model", "Flux", "Flux1"),
+    ("model", "Bard", "Bard (Google AI)"),
+    ("model", "Bard", "Google Bard"),
+    ("model", "ChatGPT-4", "ChatGPT"),  # model-type ChatGPT → ChatGPT-4
+    # --- other: platform consolidation ---
+    ("other", "X (formerly Twitter)", "X"),
+    ("other", "X (formerly Twitter)", "X (social media platform)"),
+    # --- software: name variants ---
+    ("software_product", "Amazon Bedrock", "AWS Bedrock"),
+    ("software_product", "Google Bard", "Google Bard"),  # exact dedup handles this
+    ("software_product", "N8N", "N8n"),
 ]
 
 
@@ -149,10 +177,10 @@ def dedupe_exact(conn, dry_run: bool) -> int:
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT entity_type, normalized_name, COALESCE(platform, '') AS platform_key,
+            SELECT entity_type, normalized_name,
                    ARRAY_AGG(id ORDER BY id) AS ids
             FROM ai_entities
-            GROUP BY entity_type, normalized_name, COALESCE(platform, '')
+            GROUP BY entity_type, normalized_name
             HAVING COUNT(*) > 1
             ORDER BY entity_type, normalized_name;
             """

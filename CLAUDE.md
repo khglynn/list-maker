@@ -108,7 +108,7 @@ Extracts app/tool/platform mentions from transcripts using LLM extraction.
 **Extraction model:** gpt-4.1-mini via OpenAI API
 **Transcripts:** 888 episodes imported (RSS + Firecrawl initially, Taddy API added later)
 **Backfill status:** 734/888 episodes processed (83%). 154 remaining. Quality gate (`mentions_per_episode >= 5`) was causing failures on lighter episodes — may need threshold adjustment to finish.
-**Next destination:** Notion (not yet connected)
+**Notion destination:** Connected. Database "AI Daily Brief — Tools & Mentions" (DB ID: `982dafa0ad374d618e25207e67860e33`, MCP data source: `a72f8f82-1ca0-4973-9dc2-3757aa729c6e`). Sync via `pipeline/sync_notion.py`.
 
 See `pipeline/scrapers/ai_daily/README.md` for full pipeline docs.
 
