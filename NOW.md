@@ -10,5 +10,5 @@
 
 ## Next Up
 - Automate pipeline (GitHub Actions or cron for `run_new_episodes.py`)
+- SOP/TAL Spotify matching cleanup (357 + 214 = 571 NOT_FOUND songs)
 - PCHH pipeline (movies/TV/books extraction from transcripts → Notion)
-- SOP/TAL Spotify matching cleanup (357 + 214 NOT_FOUND songs)

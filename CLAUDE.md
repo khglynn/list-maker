@@ -99,7 +99,7 @@ pod-lists/
 
 | Show | Type | Episodes | Items | Status |
 |------|------|----------|-------|--------|
-| SOP | Music | 664 | 4,417 songs, 4,043 matched (92%) | Live playlist, 357 NOT_FOUND |
+| SOP | Music | 664 | 4,417 songs, 4,043 matched (92%) | Live playlist, 357 NOT_FOUND + 17 UNAVAILABLE |
 | TAL | Music | 882 | 1,094 songs, 880 matched (80%) | Live playlist, 214 NOT_FOUND |
 | AI Daily | Apps/Tools | 914 | 773 ep extracted (85%), 8,405 mentions, 853 in Notion | Notion synced, orchestrator live |
 | PCHH | Mixed | 0 | 0 | Taddy configured, pipeline not built |
@@ -126,7 +126,7 @@ See `pipeline/scrapers/ai_daily/README.md` for full pipeline docs.
 ## Project-Specific Notes
 
 - **SOP and TAL playlists active** - Both shows backfilled, playlists live
-- **SOP matching partially improved** - NOT_FOUND dropped from 534 → 357 since Dec 2025. More fixes possible.
+- **SOP matching partially improved** - NOT_FOUND dropped from 534 → 357 since Dec 2025. 17 more tagged UNAVAILABLE (not on Spotify).
 - **Scrape before transcribe** - SOP and TAL have song data on their websites
 - **Mosaic artwork done** - See `marketing/` for playlist cover generators
 - **Taddy scraper supports multiple shows** - AI Daily, PCHH, SOP all configured
