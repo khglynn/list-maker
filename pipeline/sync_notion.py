@@ -16,11 +16,9 @@ Required env vars:
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -234,23 +232,39 @@ def clear_all_notion_ids(conn) -> int:
 # ---------------------------------------------------------------------------
 
 def compute_diff(entities: list[dict]) -> tuple[list[dict], list[dict]]:
-    """Split entities into to_create and to_update lists."""
+    """Split entities into to_create and to_update lists.
+
+    An entity needs updating if:
+    - Its ai_entities row was modified after last sync (updated_at > notion_synced_at)
+    - OR its latest mention is newer than last sync (new mentions were added)
+    """
     to_create = []
     to_update = []
     for e in entities:
         if not e["notion_page_id"]:
             to_create.append(e)
         else:
-            # Update if entity was modified after last Notion sync
-            updated = e.get("updated_at")
             synced = e.get("notion_synced_at")
-            if not synced or (updated and updated > synced):
+            if not synced:
+                to_update.append(e)
+                continue
+            # Entity row itself was modified (e.g., merge, alias update)
+            updated = e.get("updated_at")
+            if updated and updated > synced:
+                to_update.append(e)
+                continue
+            # New mentions were added since last sync
+            last_date = e.get("last_date")
+            if last_date and last_date > synced.date():
                 to_update.append(e)
     return to_create, to_update
 
 
-def run_full_reset(token: str, database_id: str, conn, show_id: int, min_mentions: int, dry_run: bool) -> None:
-    """Archive all existing pages, clear IDs, re-create everything."""
+def run_full_reset(token: str, database_id: str, show_id: int, min_mentions: int, dry_run: bool) -> None:
+    """Archive all existing pages, clear IDs, re-create everything.
+
+    Manages its own DB connections (long Notion operations cause timeouts).
+    """
     print("\n--- FULL RESET ---")
 
     # Archive existing pages
@@ -272,40 +286,42 @@ def run_full_reset(token: str, database_id: str, conn, show_id: int, min_mention
                 print(f"  Progress: {i + 1}/{len(existing_pages)} (archived={archived}, skipped={skipped})")
         print(f"  Done: archived={archived}, already_archived={skipped}")
 
-        # Reconnect — DB connection may have timed out during archiving
-        conn.close()
+        # Fresh connection after long archiving phase
         conn = get_db_connection()
-
-        cleared = clear_all_notion_ids(conn)
-        print(f"  Cleared {cleared} notion_page_id values in Neon.")
+        try:
+            cleared = clear_all_notion_ids(conn)
+            print(f"  Cleared {cleared} notion_page_id values in Neon.")
+        finally:
+            conn.close()
     else:
         print(f"  [dry-run] Would archive {len(existing_pages)} pages.")
 
-    # Reconnect and re-fetch for create phase
-    if not dry_run:
-        conn.close()
-        conn = get_db_connection()
+    # Fresh connection for create phase
+    conn = get_db_connection()
+    try:
         entities = fetch_entity_rollup(conn, show_id, min_mentions)
 
-    # Create all entities
-    print(f"\nCreating {len(entities)} pages...")
-    if not dry_run:
-        created = 0
-        failed = 0
-        for i, entity in enumerate(entities):
-            try:
-                props = build_notion_properties(entity)
-                page_id = create_notion_page(token, database_id, props)
-                save_notion_page_id(conn, int(entity["entity_id"]), page_id)
-                created += 1
-            except Exception as exc:
-                failed += 1
-                print(f"  SKIP: {entity['canonical_name']} — {exc}")
-            if (i + 1) % 50 == 0:
-                print(f"  Progress: {i + 1}/{len(entities)} (created={created}, failed={failed})")
-        print(f"  Done: created={created}, failed={failed}")
-    else:
-        print(f"  [dry-run] Would create {len(entities)} pages.")
+        # Create all entities
+        print(f"\nCreating {len(entities)} pages...")
+        if not dry_run:
+            created = 0
+            failed = 0
+            for i, entity in enumerate(entities):
+                try:
+                    props = build_notion_properties(entity)
+                    page_id = create_notion_page(token, database_id, props)
+                    save_notion_page_id(conn, int(entity["entity_id"]), page_id)
+                    created += 1
+                except Exception as exc:
+                    failed += 1
+                    print(f"  SKIP: {entity['canonical_name']} — {exc}")
+                if (i + 1) % 50 == 0:
+                    print(f"  Progress: {i + 1}/{len(entities)} (created={created}, failed={failed})")
+            print(f"  Done: created={created}, failed={failed}")
+        else:
+            print(f"  [dry-run] Would create {len(entities)} pages.")
+    finally:
+        conn.close()
 
 
 def run_incremental_sync(token: str, database_id: str, conn, entities: list[dict], dry_run: bool) -> None:
@@ -319,26 +335,40 @@ def run_incremental_sync(token: str, database_id: str, conn, entities: list[dict
     if to_create:
         print(f"\nCreating {len(to_create)} new pages...")
         if not dry_run:
+            created = 0
+            failed = 0
             for i, entity in enumerate(to_create):
-                props = build_notion_properties(entity)
-                page_id = create_notion_page(token, database_id, props)
-                save_notion_page_id(conn, int(entity["entity_id"]), page_id)
+                try:
+                    props = build_notion_properties(entity)
+                    page_id = create_notion_page(token, database_id, props)
+                    save_notion_page_id(conn, int(entity["entity_id"]), page_id)
+                    created += 1
+                except Exception as exc:
+                    failed += 1
+                    print(f"  SKIP: {entity['canonical_name']} — {exc}")
                 if (i + 1) % 50 == 0:
-                    print(f"  Created {i + 1}/{len(to_create)}...")
-            print(f"  Created all {len(to_create)} pages.")
+                    print(f"  Progress: {i + 1}/{len(to_create)} (created={created}, failed={failed})")
+            print(f"  Created {created} pages." + (f" ({failed} failed)" if failed else ""))
         else:
             print(f"  [dry-run] Would create {len(to_create)} pages.")
 
     if to_update:
         print(f"\nUpdating {len(to_update)} pages...")
         if not dry_run:
+            updated = 0
+            failed = 0
             for i, entity in enumerate(to_update):
-                props = build_notion_properties(entity)
-                update_notion_page(token, entity["notion_page_id"], props)
-                mark_synced(conn, int(entity["entity_id"]))
+                try:
+                    props = build_notion_properties(entity)
+                    update_notion_page(token, entity["notion_page_id"], props)
+                    mark_synced(conn, int(entity["entity_id"]))
+                    updated += 1
+                except Exception as exc:
+                    failed += 1
+                    print(f"  SKIP update: {entity['canonical_name']} — {exc}")
                 if (i + 1) % 50 == 0:
-                    print(f"  Updated {i + 1}/{len(to_update)}...")
-            print(f"  Updated all {len(to_update)} pages.")
+                    print(f"  Progress: {i + 1}/{len(to_update)} (updated={updated}, failed={failed})")
+            print(f"  Updated {updated} pages." + (f" ({failed} failed)" if failed else ""))
         else:
             print(f"  [dry-run] Would update {len(to_update)} pages.")
 
@@ -377,7 +407,7 @@ def main() -> None:
         print(f"Entities with {args.min_mentions}+ mentions: {len(entities)}")
 
         if args.full_reset:
-            run_full_reset(token, show.notion_database_id, conn, show.show_id, args.min_mentions, args.dry_run)
+            run_full_reset(token, show.notion_database_id, show.show_id, args.min_mentions, args.dry_run)
         else:
             run_incremental_sync(token, show.notion_database_id, conn, entities, args.dry_run)
 

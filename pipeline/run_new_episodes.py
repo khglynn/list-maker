@@ -19,6 +19,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import csv
 import subprocess
 import sys
 from pathlib import Path
@@ -33,7 +34,7 @@ VENV_PYTHON = str(PIPELINE_DIR / "venv" / "bin" / "python")
 SCRAPERS_DIR = PIPELINE_DIR / "scrapers"
 
 
-def run_script(script_path: str, args: list[str], dry_run: bool, label: str) -> bool:
+def run_script(script_path: str, args: list[str], dry_run: bool, label: str, timeout: int = 600) -> bool:
     """Run a pipeline script as a subprocess. Returns True on success."""
     cmd = [VENV_PYTHON, script_path] + args
     if dry_run:
@@ -41,7 +42,7 @@ def run_script(script_path: str, args: list[str], dry_run: bool, label: str) -> 
         return True
 
     print(f"  Running: {label}...")
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:
         print(f"  FAILED ({label}):")
         print(f"  stderr: {result.stderr[-500:]}" if result.stderr else "  (no stderr)")
@@ -53,11 +54,15 @@ def run_script(script_path: str, args: list[str], dry_run: bool, label: str) -> 
     return True
 
 
-def find_unextracted_episodes(conn, show_id: int) -> list[int]:
-    """Find episodes that have transcripts but no entity extraction run."""
+def find_unextracted_episodes(conn, show_id: int, recent_only: bool = True) -> list[int]:
+    """Find episodes that have transcripts but no entity extraction run.
+
+    If recent_only=True (default), only returns episodes from the last 90 days.
+    This avoids re-processing old episodes that failed quality gates.
+    Use recent_only=False for full backfill.
+    """
     with conn.cursor() as cur:
-        cur.execute(
-            """
+        sql = """
             SELECT DISTINCT ep.id
             FROM episodes ep
             JOIN episode_transcripts et ON et.episode_id = ep.id
@@ -65,10 +70,12 @@ def find_unextracted_episodes(conn, show_id: int) -> list[int]:
               AND ep.id NOT IN (
                   SELECT DISTINCT m.episode_id FROM ai_mentions m
               )
-            ORDER BY ep.id;
-            """,
-            (show_id,),
-        )
+        """
+        params: list = [show_id]
+        if recent_only:
+            sql += "  AND ep.publish_date >= CURRENT_DATE - INTERVAL '90 days'\n"
+        sql += "ORDER BY ep.id;"
+        cur.execute(sql, params)
         return [row["id"] for row in cur.fetchall()]
 
 
@@ -85,6 +92,55 @@ def step_taddy_import(cfg: ShowConfig, dry_run: bool, per_show_limit: int = 50) 
     return run_script(script, args, dry_run=False, label=f"Taddy import ({cfg.slug})")
 
 
+def prepare_extraction_inputs(conn, episode_ids: list[int]) -> tuple[Path, Path]:
+    """Export transcripts from Neon to file cache and generate a CSV for extract_entities.py.
+
+    Returns (csv_path, transcripts_dir).
+    """
+    transcripts_dir = PIPELINE_DIR / "_cache" / "ai_daily" / "transcripts"
+    transcripts_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = PIPELINE_DIR / "_cache" / "ai_daily" / "unextracted_episodes.csv"
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT ep.id AS episode_id, ep.title, ep.publish_date,
+                   ep.url AS episode_url, et.transcript_text
+            FROM episodes ep
+            JOIN episode_transcripts et ON et.episode_id = ep.id
+            WHERE ep.id = ANY(%s)
+            ORDER BY ep.publish_date DESC
+            """,
+            (episode_ids,),
+        )
+        rows = cur.fetchall()
+
+    # Write transcript files + CSV
+    csv_rows = []
+    written = 0
+    for row in rows:
+        eid = row["episode_id"]
+        slug = row["title"][:80].lower().replace(" ", "-").replace("/", "-")
+        txt_path = transcripts_dir / f"{eid}-{slug}.txt"
+        if not txt_path.exists():
+            txt_path.write_text(row["transcript_text"], encoding="utf-8")
+            written += 1
+        csv_rows.append({
+            "episode_id": eid,
+            "title": row["title"],
+            "publish_date": str(row["publish_date"]),
+            "episode_url": row.get("episode_url") or "",
+        })
+
+    with csv_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["episode_id", "title", "publish_date", "episode_url"])
+        writer.writeheader()
+        writer.writerows(csv_rows)
+
+    print(f"  Prepared {len(csv_rows)} episodes ({written} new transcripts cached)")
+    return csv_path, transcripts_dir
+
+
 def step_entity_extraction(cfg: ShowConfig, episode_ids: list[int], dry_run: bool) -> bool:
     """Step 2: Extract entities from new episodes."""
     if not episode_ids:
@@ -92,14 +148,48 @@ def step_entity_extraction(cfg: ShowConfig, episode_ids: list[int], dry_run: boo
         return True
 
     print(f"  {len(episode_ids)} episodes need entity extraction")
-    # Entity extraction uses extract_entities.py which processes from cached transcripts
-    # For new episodes, we run the guarded backfill with a small chunk
-    script = str(SCRAPERS_DIR / "ai_daily" / "run_guarded_backfill.py")
-    args = [
-        "--chunk-size", str(min(len(episode_ids), 20)),
-        "--max-episodes", str(len(episode_ids)),
-    ]
-    return run_script(script, args, dry_run, label=f"Entity extraction ({len(episode_ids)} eps)")
+
+    # Prepare inputs: export transcripts from Neon and generate CSV
+    conn = get_db_connection()
+    try:
+        csv_path, transcripts_dir = prepare_extraction_inputs(conn, episode_ids)
+    finally:
+        conn.close()
+
+    extract_script = str(SCRAPERS_DIR / "ai_daily" / "extract_entities.py")
+    load_script = str(SCRAPERS_DIR / "ai_daily" / "load_entity_batch.py")
+    output_root = str(PIPELINE_DIR.parent / "codex-notes" / "ai-daily-entity-extraction")
+
+    # Process in batches of 5 (each episode takes ~60-90s for OpenAI extraction)
+    batch_size = 5
+    total_ok = True
+    for start in range(0, len(episode_ids), batch_size):
+        batch = episode_ids[start:start + batch_size]
+        ids_str = ",".join(str(eid) for eid in batch)
+        batch_name = f"incremental-{batch[0]}-to-{batch[-1]}"
+        extract_args = [
+            "--episodes", ids_str,
+            "--limit", str(len(batch)),
+            "--episodes-csv", str(csv_path),
+            "--transcripts-dir", str(transcripts_dir),
+            "--batch-name", batch_name,
+            "--output-dir", output_root,
+        ]
+        batch_num = start // batch_size + 1
+        total_batches = (len(episode_ids) + batch_size - 1) // batch_size
+        label = f"Entity extraction (batch {batch_num}/{total_batches}, {len(batch)} eps)"
+        if not run_script(extract_script, extract_args, dry_run, label=label, timeout=900):
+            print(f"  WARNING: {label} failed, continuing with next batch...")
+            total_ok = False
+            continue
+
+        # Load extracted batch into Neon
+        batch_dir = str(Path(output_root) / batch_name)
+        load_args = ["--batch-dir", batch_dir, "--show-slug", cfg.slug]
+        if not run_script(load_script, load_args, dry_run, label=f"Load batch {batch_num}/{total_batches}"):
+            print(f"  WARNING: Load batch {batch_num} failed, continuing...")
+            total_ok = False
+    return total_ok
 
 
 def step_normalize_aliases(dry_run: bool) -> bool:

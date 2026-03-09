@@ -3,7 +3,7 @@
 Normalize obvious aliases in lean ai_entities schema.
 
 Scope:
-- Safe dedupe: same entity_type + normalized_name + platform
+- Safe dedupe: same entity_type + normalized_name
 - Curated merges for high-confidence transcript variants
 - Backfill aliases from mention_text variants
 """
@@ -12,12 +12,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
+# Allow imports from pipeline/
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from common import load_environment, get_db_connection
 
 
 CURATED_TARGETS = [
@@ -58,25 +59,6 @@ CURATED_TARGETS = [
     ("software_product", "Google Bard", "Google Bard"),  # exact dedup handles this
     ("software_product", "N8N", "N8n"),
 ]
-
-
-def load_environment(repo_root: Path) -> None:
-    load_dotenv(os.path.expanduser("~/.env"))
-    load_dotenv(repo_root / ".env.local")
-    load_dotenv(repo_root / "pipeline" / ".env.local")
-
-
-def get_db_connection():
-    try:
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-    except ImportError as exc:
-        raise RuntimeError("Missing dependency: psycopg2-binary") from exc
-
-    db_url = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL")
-    if not db_url:
-        raise RuntimeError("DATABASE_URL (or NEON_DATABASE_URL) is required")
-    return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
 
 
 def normalize_alias(value: str) -> str:
@@ -293,8 +275,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    repo_root = Path(__file__).resolve().parents[3]
-    load_environment(repo_root)
+    load_environment()
     conn = get_db_connection()
     try:
         print("before:")

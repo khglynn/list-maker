@@ -1,7 +1,7 @@
 # pod-lists - Agent Instructions
 
 *Inherits from ~/DevKev/CLAUDE.md*
-*Last updated: 2026-03-06*
+*Last updated: 2026-03-09*
 
 ## About This Project
 
@@ -67,26 +67,30 @@ We have a custom Spotify MCP built for this exact use case!
 
 ```
 pod-lists/
-├── pipeline/              # Extraction and matching (Python)
-│   ├── spotify_match.py   # Match songs to Spotify
-│   ├── sync_playlist.py   # Sync to playlists
-│   ├── scrapers/          # Show-specific scrapers
-│   │   ├── sop/           # Switched On Pop (website scraper)
-│   │   ├── tal/           # This American Life (website scraper)
-│   │   ├── ai_daily/      # AI Daily Brief (transcript entity extraction)
-│   │   └── taddy/         # Taddy API transcript importer (multi-show)
-│   └── _cache/            # Cached episode data + transcripts (gitignored)
+├── pipeline/                # Extraction and matching (Python)
+│   ├── common.py            # Shared DB connection + env loading
+│   ├── show_config.py       # Centralized ShowConfig for all shows
+│   ├── run_new_episodes.py  # Orchestrator: import → extract → sync
+│   ├── sync_notion.py       # Neon → Notion sync (create/update/archive)
+│   ├── sync_playlist.py     # Neon → Spotify playlist sync
+│   ├── spotify_match.py     # Match songs to Spotify
+│   ├── scrapers/            # Show-specific scrapers
+│   │   ├── sop/             # Switched On Pop (website scraper)
+│   │   ├── tal/             # This American Life (website scraper)
+│   │   ├── ai_daily/        # AI Daily Brief (transcript entity extraction)
+│   │   └── taddy/           # Taddy API transcript importer (multi-show)
+│   └── _cache/              # Cached episode data + transcripts (gitignored)
 │
-├── codex-notes/           # AI Daily extraction batch artifacts
+├── codex-notes/             # AI Daily extraction batch artifacts
 │
-├── marketing/             # Playlist artwork (mosaic generator)
-│   ├── sop/               # SOP tiles, targets, outputs
-│   └── tal/               # TAL tiles, targets, outputs
+├── marketing/               # Playlist artwork (mosaic generator)
+│   ├── sop/                 # SOP tiles, targets, outputs
+│   └── tal/                 # TAL tiles, targets, outputs
 │
-├── web/                   # Next.js app (future automation UI)
-│   └── src/               # Run npm commands from inside web/
+├── web/                     # Next.js app (future automation UI)
+│   └── src/                 # Run npm commands from inside web/
 │
-└── claude-plans/          # Session plans and prompts
+└── claude-plans/            # Session plans and prompts
 ```
 
 **Note:** All `npm` commands must be run from inside `web/` (e.g., `cd web && npm run dev`).
@@ -97,18 +101,25 @@ pod-lists/
 |------|------|----------|-------|--------|
 | SOP | Music | 664 | 4,417 songs, 4,043 matched (92%) | Live playlist, 357 NOT_FOUND |
 | TAL | Music | 882 | 1,094 songs, 880 matched (80%) | Live playlist, 214 NOT_FOUND |
-| AI Daily | Apps/Tools | 888 | 734 ep extracted (83%), 7,982 mentions | Backfill mostly done |
-| PCHH | Mixed | 300 | 298 transcripts imported | Taddy configured, pipeline not built |
+| AI Daily | Apps/Tools | 914 | 773 ep extracted (85%), 8,405 mentions, 853 in Notion | Notion synced, orchestrator live |
+| PCHH | Mixed | 0 | 0 | Taddy configured, pipeline not built |
 
 ## AI Daily Pipeline
 
 Extracts app/tool/platform mentions from transcripts using LLM extraction.
 
-**Neon schema:** 3 tables — `ai_runs`, `ai_entities`, `ai_mentions`
+**Neon schema:** 3 tables — `ai_runs`, `ai_entities`, `ai_mentions` (plus `notion_page_id` / `notion_synced_at` on entities)
 **Extraction model:** gpt-4.1-mini via OpenAI API
-**Transcripts:** 888 episodes imported (RSS + Firecrawl initially, Taddy API added later)
-**Backfill status:** 734/888 episodes processed (83%). 154 remaining. Quality gate (`mentions_per_episode >= 5`) was causing failures on lighter episodes — may need threshold adjustment to finish.
+**Transcripts:** 914 episodes imported via Taddy API (originally RSS + Firecrawl, migrated to Taddy)
+**Extraction status:** 773/914 episodes extracted (85%). ~141 old episodes (pre-Dec 2025) are intentionally skipped — they failed quality gates on lighter episodes and aren't worth re-processing. The orchestrator's `recent_only` filter (90 days) excludes them automatically. New episodes are extracted automatically.
 **Notion destination:** Connected. Database "AI Daily Brief — Tools & Mentions" (DB ID: `982dafa0ad374d618e25207e67860e33`, MCP data source: `a72f8f82-1ca0-4973-9dc2-3757aa729c6e`). Sync via `pipeline/sync_notion.py`.
+**Orchestrator:** `pipeline/run_new_episodes.py` — chains Taddy import → entity extraction → alias normalization → Notion sync → Spotify sync. Run with `--shows ai-daily-brief` or `--all`.
+
+**Required env vars** (in `.env.local`):
+- `DATABASE_URL` — Neon connection string
+- `OPENAI_API_KEY` — for entity extraction
+- `NOTION_TOKEN` — for Notion sync
+- `TADDY_USER_ID` / `TADDY_API_KEY` — for Taddy transcript import
 
 See `pipeline/scrapers/ai_daily/README.md` for full pipeline docs.
 
