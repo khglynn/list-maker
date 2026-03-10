@@ -1,7 +1,7 @@
 # pod-lists - Agent Instructions
 
 *Inherits from ~/DevKev/CLAUDE.md*
-*Last updated: 2026-03-09*
+*Last updated: 2026-03-10*
 
 ## About This Project
 
@@ -81,6 +81,8 @@ pod-lists/
 │   │   └── taddy/           # Taddy API transcript importer (multi-show)
 │   └── _cache/              # Cached episode data + transcripts (gitignored)
 │
+├── saved-transcripts/        # Saved episode transcripts + summaries
+│
 ├── codex-notes/             # AI Daily extraction batch artifacts
 │
 ├── marketing/               # Playlist artwork (mosaic generator)
@@ -101,7 +103,7 @@ pod-lists/
 |------|------|----------|-------|--------|
 | SOP | Music | 664 | 4,417 songs, 4,043 matched (92%) | Live playlist, 357 NOT_FOUND + 17 UNAVAILABLE |
 | TAL | Music | 882 | 1,094 songs, 880 matched (80%) | Live playlist, 214 NOT_FOUND |
-| AI Daily | Apps/Tools | 914 | 773 ep extracted (85%), 8,405 mentions, 853 in Notion | Notion synced, orchestrator live |
+| AI Daily | Apps/Tools | 915 | 773 ep extracted (85%), 8,405 mentions, 853 in Notion | Notion synced, orchestrator live |
 | PCHH | Mixed | 0 | 0 | Taddy configured, pipeline not built |
 
 ## AI Daily Pipeline
@@ -110,7 +112,7 @@ Extracts app/tool/platform mentions from transcripts using LLM extraction.
 
 **Neon schema:** 3 tables — `ai_runs`, `ai_entities`, `ai_mentions` (plus `notion_page_id` / `notion_synced_at` on entities)
 **Extraction model:** gpt-4.1-mini via OpenAI API
-**Transcripts:** 914 episodes imported via Taddy API (originally RSS + Firecrawl, migrated to Taddy)
+**Transcripts:** 915 episodes imported via Taddy API (originally RSS + Firecrawl, migrated to Taddy)
 **Extraction status:** 773/914 episodes extracted (85%). ~141 old episodes (pre-Dec 2025) are intentionally skipped — they failed quality gates on lighter episodes and aren't worth re-processing. The orchestrator's `recent_only` filter (90 days) excludes them automatically. New episodes are extracted automatically.
 **Notion destination:** Connected. Database "AI Daily Brief — Tools & Mentions" (DB ID: `982dafa0ad374d618e25207e67860e33`, MCP data source: `a72f8f82-1ca0-4973-9dc2-3757aa729c6e`). Sync via `pipeline/sync_notion.py`.
 **Orchestrator:** `pipeline/run_new_episodes.py` — chains Taddy import → entity extraction → alias normalization → Notion sync → Spotify sync. Run with `--shows ai-daily-brief` or `--all`.
@@ -122,6 +124,19 @@ Extracts app/tool/platform mentions from transcripts using LLM extraction.
 - `TADDY_USER_ID` / `TADDY_API_KEY` — for Taddy transcript import
 
 See `pipeline/scrapers/ai_daily/README.md` for full pipeline docs.
+
+### Running Pipeline Scripts
+
+The pipeline uses a Python venv and `.env.local` files that don't use `export`. Scripts like `import_transcripts.py` read env vars via `os.getenv()` but don't call `load_environment()` from `common.py`, so you must export vars manually.
+
+**Working command pattern:**
+```bash
+cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists && set -a && source .env.local && source pipeline/.env.local && set +a && cd pipeline && ./venv/bin/python3 <script>
+```
+
+- `set -a` / `set +a` — exports all sourced vars to child processes
+- Must use `./venv/bin/python3` — system python3 doesn't have deps (psycopg2, etc.)
+- The orchestrator (`run_new_episodes.py`) uses `common.py`'s `load_environment()` so it handles env loading itself, but still needs the venv
 
 ## Project-Specific Notes
 
