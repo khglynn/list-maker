@@ -1,10 +1,13 @@
-# list-maker Scripts Dependencies
+# list-maker Pipeline Dependencies
 # Install: pip install -r requirements.txt
 #
 # Used by:
+#   - run_pipeline.py (orchestrator)
 #   - spotify_match.py (match songs to Spotify)
 #   - sync_playlist.py (sync matched songs to playlist)
-#   - tal_fetch.py (fetch TAL episodes via Firecrawl)
+#   - scrapers/sop/scrape.py (SOP episode scraper)
+#   - scrapers/tal/ (TAL scraper suite)
+#   - scrapers/ai_daily/ (AI Daily entity extraction)
 
 spotipy>=2.23.0           # Spotify API client
 psycopg2-binary>=2.9.0    # PostgreSQL driver (Neon)

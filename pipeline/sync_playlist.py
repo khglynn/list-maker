@@ -57,18 +57,19 @@ DESCRIPTION_TEMPLATE = (
 # Spotify Client
 # =============================================================================
 
-def get_spotify_client() -> spotipy.Spotify:
+DEFAULT_CACHE_PATH = "~/DevKev/personal/spotify-bulk-actions-mcp/.spotify_cache/.cache"
+
+
+def get_spotify_client(cache_path: str = None) -> spotipy.Spotify:
     """Initialize Spotify client with OAuth."""
-    cache_path = os.path.expanduser(
-        "~/DevKev/personal/spotify-bulk-actions-mcp/.spotify_cache/.cache"
-    )
+    resolved_cache = os.path.expanduser(cache_path or DEFAULT_CACHE_PATH)
 
     auth_manager = SpotifyOAuth(
         client_id=os.getenv("SPOTIFY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
         redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8080/callback"),
         scope="playlist-modify-public playlist-modify-private playlist-read-private",
-        cache_path=cache_path,
+        cache_path=resolved_cache,
     )
 
     return spotipy.Spotify(auth_manager=auth_manager)
@@ -233,7 +234,72 @@ def update_playlist_description(sp: spotipy.Spotify, playlist_id: str, show_id: 
 # Main
 # =============================================================================
 
+def sync_show(
+    show_id: int,
+    dry_run: bool = False,
+    cache_path: str = None,
+) -> dict:
+    """
+    Sync matched songs to a Spotify playlist for a show.
+
+    Returns dict with stats: {db_tracks, existing_tracks, new_tracks, added}
+    Callable from orchestrator or CLI.
+    """
+    if show_id not in SHOWS:
+        raise ValueError(f"Unknown show ID {show_id}. Valid: {list(SHOWS.keys())}")
+
+    show = SHOWS[show_id]
+    playlist_id = show["playlist_id"]
+    print(f"Syncing '{show['name']}' to playlist {playlist_id}")
+
+    # Get matched tracks from database
+    print("Querying matched tracks from database...")
+    db_tracks = get_matched_track_ids(show_id)
+    print(f"  Found {len(db_tracks)} unique matched tracks")
+
+    stats = {"db_tracks": len(db_tracks), "existing_tracks": 0, "new_tracks": 0, "added": 0}
+
+    if not db_tracks:
+        print("No tracks to sync.")
+        return stats
+
+    # Get current playlist tracks
+    print("Fetching current playlist tracks...")
+    sp = get_spotify_client(cache_path)
+    existing_tracks = get_playlist_tracks(sp, playlist_id)
+    print(f"  Playlist has {len(existing_tracks)} tracks")
+    stats["existing_tracks"] = len(existing_tracks)
+
+    # Find tracks to add
+    new_tracks = [t for t in db_tracks if t not in existing_tracks]
+    print(f"  {len(new_tracks)} new tracks to add")
+    stats["new_tracks"] = len(new_tracks)
+
+    if not new_tracks:
+        print("Playlist is already up to date!")
+        # Still update description (date changes)
+        if not dry_run:
+            update_playlist_description(sp, playlist_id, show_id)
+        return stats
+
+    if dry_run:
+        print(f"\nDry run - would add {len(new_tracks)} tracks")
+        return stats
+
+    # Add new tracks
+    print(f"\nAdding {len(new_tracks)} tracks...")
+    added = add_tracks_to_playlist(sp, playlist_id, new_tracks)
+    print(f"\nDone! Added {added} tracks to playlist.")
+    stats["added"] = added
+
+    # Update playlist description with latest episode
+    update_playlist_description(sp, playlist_id, show_id)
+
+    return stats
+
+
 def main():
+    """CLI entry point."""
     # Load env vars from multiple sources
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(script_dir)
@@ -250,48 +316,11 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Preview only, don't add tracks")
     args = parser.parse_args()
 
-    if args.show_id not in SHOWS:
-        print(f"Error: Unknown show ID {args.show_id}. Valid: {list(SHOWS.keys())}", file=sys.stderr)
+    try:
+        sync_show(show_id=args.show_id, dry_run=args.dry_run)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
-
-    show = SHOWS[args.show_id]
-    playlist_id = show["playlist_id"]
-    print(f"Syncing '{show['name']}' to playlist {playlist_id}")
-
-    # Get matched tracks from database
-    print("Querying matched tracks from database...")
-    db_tracks = get_matched_track_ids(args.show_id)
-    print(f"  Found {len(db_tracks)} unique matched tracks")
-
-    if not db_tracks:
-        print("No tracks to sync.")
-        return
-
-    # Get current playlist tracks
-    print("Fetching current playlist tracks...")
-    sp = get_spotify_client()
-    existing_tracks = get_playlist_tracks(sp, playlist_id)
-    print(f"  Playlist has {len(existing_tracks)} tracks")
-
-    # Find tracks to add
-    new_tracks = [t for t in db_tracks if t not in existing_tracks]
-    print(f"  {len(new_tracks)} new tracks to add")
-
-    if not new_tracks:
-        print("Playlist is already up to date!")
-        return
-
-    if args.dry_run:
-        print(f"\nDry run - would add {len(new_tracks)} tracks")
-        return
-
-    # Add new tracks
-    print(f"\nAdding {len(new_tracks)} tracks...")
-    added = add_tracks_to_playlist(sp, playlist_id, new_tracks)
-    print(f"\nDone! Added {added} tracks to playlist.")
-
-    # Update playlist description with latest episode
-    update_playlist_description(sp, playlist_id, args.show_id)
 
 
 if __name__ == "__main__":

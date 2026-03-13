@@ -1,0 +1,223 @@
+name: Pipeline - Update Playlists
+
+on:
+  # Scheduled runs (times in UTC)
+  schedule:
+    # SOP: Wed + Fri at 10:00 UTC (4-5 AM Central) — SOP publishes Tue/Thu
+    - cron: '0 10 * * 3'   # Wednesday
+    - cron: '0 10 * * 5'   # Friday
+    # TAL: Monday at 10:00 UTC — TAL publishes Sunday
+    - cron: '0 10 * * 1'   # Monday
+    # AI Daily: Daily at 11:00 UTC — publishes daily (entity extraction only)
+    # - cron: '0 11 * * *'  # Uncomment when AI Daily automation is ready
+
+  # Manual trigger from GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      show_id:
+        description: 'Show to process'
+        required: true
+        type: choice
+        options:
+          - '1'   # SOP
+          - '2'   # TAL
+          - '3'   # AI Daily
+          - 'all'
+      dry_run:
+        description: 'Dry run (preview only, no changes)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine show to run
+        id: show
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "show_id=${{ inputs.show_id }}" >> $GITHUB_OUTPUT
+            echo "dry_run=${{ inputs.dry_run }}" >> $GITHUB_OUTPUT
+          else
+            # Scheduled run - determine show from day of week
+            DOW=$(date -u +%u)  # 1=Mon, 2=Tue, ..., 7=Sun
+            case $DOW in
+              1) echo "show_id=2" >> $GITHUB_OUTPUT ;;  # Monday = TAL
+              3) echo "show_id=1" >> $GITHUB_OUTPUT ;;  # Wednesday = SOP
+              5) echo "show_id=1" >> $GITHUB_OUTPUT ;;  # Friday = SOP
+              *) echo "show_id=1" >> $GITHUB_OUTPUT ;;  # Fallback
+            esac
+            echo "dry_run=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: pipeline/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Reconstruct Spotify cache
+        run: |
+          mkdir -p .spotify_cache
+          echo '${{ secrets.SPOTIFY_CACHE_JSON }}' > .spotify_cache/.cache
+
+      - name: Run pipeline
+        id: pipeline
+        env:
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          SPOTIFY_REDIRECT_URI: ${{ secrets.SPOTIFY_REDIRECT_URI }}
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        run: |
+          DRY_RUN_FLAG=""
+          if [ "${{ steps.show.outputs.dry_run }}" = "true" ]; then
+            DRY_RUN_FLAG="--dry-run"
+          fi
+
+          cd pipeline
+          python run_pipeline.py \
+            --show-id ${{ steps.show.outputs.show_id }} \
+            --yes \
+            --cache-path ../.spotify_cache/.cache \
+            --json \
+            $DRY_RUN_FLAG \
+            2>&1 | tee ../pipeline_output.txt
+
+          # Extract JSON summary for later steps
+          sed -n '/--- JSON SUMMARY ---/,$ p' ../pipeline_output.txt | tail -n +2 > ../summary.json
+
+      - name: Write job summary
+        if: always()
+        run: |
+          SHOW_ID="${{ steps.show.outputs.show_id }}"
+          DRY_RUN="${{ steps.show.outputs.dry_run }}"
+
+          # Map show IDs to names
+          case $SHOW_ID in
+            1) SHOW_NAME="SOP (Switched On Pop)" ;;
+            2) SHOW_NAME="TAL (This American Life)" ;;
+            3) SHOW_NAME="AI Daily Brief" ;;
+            all) SHOW_NAME="All Shows" ;;
+          esac
+
+          echo "## Pipeline Run: $SHOW_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "> **Dry run** - no changes were made" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -f summary.json ] && [ -s summary.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat summary.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No JSON summary available. Check logs for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Run:** [View logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify Slack (success)
+        if: success() && steps.show.outputs.dry_run != 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          # Skip if no webhook configured
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "No SLACK_WEBHOOK_URL configured, skipping notification"
+            exit 0
+          fi
+
+          SHOW_ID="${{ steps.show.outputs.show_id }}"
+          case $SHOW_ID in
+            1) SHOW_NAME="SOP" ;;
+            2) SHOW_NAME="TAL" ;;
+            3) SHOW_NAME="AI Daily" ;;
+            all) SHOW_NAME="All Shows" ;;
+          esac
+
+          # Build message from pipeline output
+          DETAILS=""
+          if [ -f summary.json ] && [ -s summary.json ]; then
+            DETAILS=$(python3 -c "
+          import json, sys
+          try:
+              data = json.load(open('summary.json'))
+              for s in data.get('summaries', []):
+                  steps = s.get('steps', {})
+                  scrape = steps.get('scrape', {})
+                  match = steps.get('match', {})
+                  sync = steps.get('sync', {})
+                  ep = scrape.get('scraped', scrape.get('fetched', 0))
+                  songs = scrape.get('songs_found', scrape.get('songs_inserted', 0))
+                  added = sync.get('added', 0)
+                  high = match.get('high', 0)
+                  med = match.get('medium', 0)
+                  print(f'{ep} new episodes, {songs} songs found, {high+med} matched, {added} added to playlist.')
+          except Exception as e:
+              print(f'Pipeline completed. Check logs for details.')
+          ")
+          else
+            DETAILS="Pipeline completed. Check logs for details."
+          fi
+
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-type: application/json' \
+            -d "{\"text\": \"*list-maker: ${SHOW_NAME} updated*\n${DETAILS}\n<${RUN_URL}|View logs>\"}"
+
+      - name: Notify Slack (failure)
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            exit 0
+          fi
+
+          SHOW_ID="${{ steps.show.outputs.show_id }}"
+          case $SHOW_ID in
+            1) SHOW_NAME="SOP" ;;
+            2) SHOW_NAME="TAL" ;;
+            3) SHOW_NAME="AI Daily" ;;
+            all) SHOW_NAME="All Shows" ;;
+          esac
+
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-type: application/json' \
+            -d "{\"text\": \":rotating_light: *list-maker: ${SHOW_NAME} pipeline failed*\n<${RUN_URL}|View logs>\"}"
+
+      - name: Create issue on failure
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const showId = '${{ steps.show.outputs.show_id }}';
+            const showNames = {'1': 'SOP', '2': 'TAL', '3': 'AI Daily', 'all': 'All Shows'};
+            const showName = showNames[showId] || showId;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Pipeline failure: ${showName} (${new Date().toISOString().split('T')[0]})`,
+              body: `The scheduled pipeline run for **${showName}** failed.\n\n**Run:** ${runUrl}\n**Triggered:** ${context.eventName}\n\nCheck the workflow logs for details.`,
+              labels: ['pipeline-failure'],
+            });

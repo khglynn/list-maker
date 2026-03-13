@@ -1,7 +1,7 @@
 # pod-lists - Agent Instructions
 
 *Inherits from ~/DevKev/CLAUDE.md*
-*Last updated: 2026-03-10*
+*Last updated: 2026-03-13*
 
 ## About This Project
 
@@ -70,7 +70,8 @@ pod-lists/
 ├── pipeline/                # Extraction and matching (Python)
 │   ├── common.py            # Shared DB connection + env loading
 │   ├── show_config.py       # Centralized ShowConfig for all shows
-│   ├── run_new_episodes.py  # Orchestrator: import → extract → sync
+│   ├── run_new_episodes.py  # Orchestrator: import → extract → sync (AI Daily)
+│   ├── run_pipeline.py      # Orchestrator: scrape → match → sync (SOP/TAL)
 │   ├── sync_notion.py       # Neon → Notion sync (create/update/archive)
 │   ├── sync_playlist.py     # Neon → Spotify playlist sync
 │   ├── spotify_match.py     # Match songs to Spotify
@@ -80,6 +81,9 @@ pod-lists/
 │   │   ├── ai_daily/        # AI Daily Brief (transcript entity extraction)
 │   │   └── taddy/           # Taddy API transcript importer (multi-show)
 │   └── _cache/              # Cached episode data + transcripts (gitignored)
+│
+├── .github/workflows/       # GitHub Actions automation
+│   └── pipeline.yml         # Scheduled + manual pipeline runs
 │
 ├── saved-transcripts/        # Saved episode transcripts + summaries
 │
@@ -101,10 +105,24 @@ pod-lists/
 
 | Show | Type | Episodes | Items | Status |
 |------|------|----------|-------|--------|
-| SOP | Music | 664 | 4,417 songs, 4,043 matched (92%) | Live playlist, 357 NOT_FOUND + 17 UNAVAILABLE |
-| TAL | Music | 882 | 1,094 songs, 880 matched (80%) | Live playlist, 214 NOT_FOUND |
+| SOP | Music | 664 | 4,417 songs, 4,043 matched (92%) | Automated (GitHub Actions), 357 NOT_FOUND + 17 UNAVAILABLE |
+| TAL | Music | 882 | 1,094 songs, 880 matched (80%) | Automated (GitHub Actions), 214 NOT_FOUND |
 | AI Daily | Apps/Tools | 915 | 773 ep extracted (85%), 8,405 mentions, 853 in Notion | Notion synced, orchestrator live |
 | PCHH | Mixed | 0 | 0 | Taddy configured, pipeline not built |
+
+## Automation
+
+The pipeline runs automatically via GitHub Actions (`.github/workflows/pipeline.yml`).
+
+**Schedule:** SOP on Wed+Fri, TAL on Monday (all at 10 AM UTC).
+
+**Manual trigger:** Actions tab → "Pipeline - Update Playlists" → Run workflow.
+
+**Secrets (7 total):** `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REDIRECT_URI`, `SPOTIFY_CACHE_JSON`, `NEON_DATABASE_URL`, `FIRECRAWL_API_KEY`, `SLACK_WEBHOOK_URL`
+
+**If Spotify auth fails:** Re-auth locally (`python spotify_match.py --show-id 1 --limit 1`), then update `SPOTIFY_CACHE_JSON` secret with new `.spotify_cache/.cache` contents.
+
+See `pipeline/README.md` for full orchestrator docs.
 
 ## AI Daily Pipeline
 
@@ -131,7 +149,7 @@ The pipeline uses a Python venv and `.env.local` files that don't use `export`. 
 
 **Working command pattern:**
 ```bash
-cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists && set -a && source .env.local && source pipeline/.env.local && set +a && cd pipeline && ./venv/bin/python3 <script>
+cd /Users/KevinHG/DevKev/personal/list-maker && set -a && source .env.local && source pipeline/.env.local && set +a && cd pipeline && ./venv/bin/python3 <script>
 ```
 
 - `set -a` / `set +a` — exports all sourced vars to child processes
@@ -140,7 +158,7 @@ cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists && set -a && source .env
 
 ## Project-Specific Notes
 
-- **SOP and TAL playlists active** - Both shows backfilled, playlists live
+- **SOP and TAL automated** - Both shows backfilled, playlists updated automatically via GitHub Actions
 - **SOP matching partially improved** - NOT_FOUND dropped from 534 → 357 since Dec 2025. 17 more tagged UNAVAILABLE (not on Spotify).
 - **Scrape before transcribe** - SOP and TAL have song data on their websites
 - **Mosaic artwork done** - See `marketing/` for playlist cover generators

@@ -43,18 +43,19 @@ MEDIUM_THRESHOLD = 0.70
 # Spotify Client
 # =============================================================================
 
-def get_spotify_client() -> spotipy.Spotify:
+DEFAULT_CACHE_PATH = "~/DevKev/personal/spotify-bulk-actions-mcp/.spotify_cache/.cache"
+
+
+def get_spotify_client(cache_path: Optional[str] = None) -> spotipy.Spotify:
     """Initialize Spotify client with OAuth."""
-    cache_path = os.path.expanduser(
-        "~/DevKev/personal/spotify-bulk-actions-mcp/.spotify_cache/.cache"
-    )
+    resolved_cache = os.path.expanduser(cache_path or DEFAULT_CACHE_PATH)
 
     auth_manager = SpotifyOAuth(
         client_id=os.getenv("SPOTIFY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
         redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8080/callback"),
         scope="user-library-read",
-        cache_path=cache_path,
+        cache_path=resolved_cache,
     )
 
     return spotipy.Spotify(auth_manager=auth_manager)
@@ -131,9 +132,9 @@ def get_confidence_category(confidence: float) -> str:
 
 def get_db_connection() -> psycopg2.extensions.connection:
     """Get Neon database connection."""
-    db_url = os.getenv("NEON_DATABASE_URL")
+    db_url = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL")
     if not db_url:
-        raise RuntimeError("NEON_DATABASE_URL not set in environment")
+        raise RuntimeError("DATABASE_URL (or NEON_DATABASE_URL) not set in environment")
 
     return psycopg2.connect(db_url)
 
@@ -353,14 +354,19 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main():
-    """Main entry point."""
-    args = parse_args()
+def match_songs_for_show(
+    show_id: Optional[int] = None,
+    limit: Optional[int] = None,
+    dry_run: bool = False,
+    yes: bool = False,
+    cache_path: Optional[str] = None,
+) -> Dict[str, int]:
+    """
+    Run the full matching pipeline for a show.
 
-    # Load environment from MCP's .env
-    env_path = os.path.expanduser("~/DevKev/personal/spotify-bulk-actions-mcp/.env")
-    load_dotenv(env_path)
-
+    Returns dict with counts: {high, medium, low, not_found}
+    Callable from orchestrator or CLI.
+    """
     print("=" * 50)
     print("Spotify Song Matching Script")
     print("=" * 50)
@@ -368,13 +374,13 @@ def main():
     # Initialize clients
     print("\nInitializing...")
     try:
-        sp = get_spotify_client()
+        sp = get_spotify_client(cache_path)
         conn = get_db_connection()
         print("  Spotify: Connected")
         print("  Neon: Connected")
     except Exception as e:
         print(f"\nCRITICAL: Failed to initialize: {e}")
-        sys.exit(1)
+        raise
 
     # Count unmatched songs
     count_query = """
@@ -383,37 +389,39 @@ def main():
         WHERE s.spotify_track_id IS NULL
           AND s.spotify_match_confidence IS NULL
     """
-    if args.show_id:
-        count_query += f" AND e.show_id = {args.show_id}"
+    params = []
+    if show_id:
+        count_query += " AND e.show_id = %s"
+        params.append(show_id)
 
     with conn.cursor() as cur:
-        cur.execute(count_query)
+        cur.execute(count_query, params)
         total_unmatched = cur.fetchone()[0]
 
     # Calculate batches
-    limit = args.limit or total_unmatched
-    to_process = min(limit, total_unmatched)
+    effective_limit = limit or total_unmatched
+    to_process = min(effective_limit, total_unmatched)
     num_batches = (to_process + BATCH_SIZE - 1) // BATCH_SIZE
 
     print(f"\nFound {total_unmatched} unmatched songs", end="")
-    if args.show_id:
-        print(f" (show_id={args.show_id})")
+    if show_id:
+        print(f" (show_id={show_id})")
     else:
         print(" (all shows)")
 
     print(f"Will process {to_process} songs in {num_batches} batches of {BATCH_SIZE}")
 
-    if args.dry_run:
+    if dry_run:
         print("\n*** DRY RUN MODE - No database writes ***")
 
     # Confirmation prompt (skip with --yes)
-    if not args.yes:
+    if not yes:
         print("\nPress Enter to continue or Ctrl+C to abort...")
         try:
             input()
         except KeyboardInterrupt:
             print("\nAborted.")
-            sys.exit(0)
+            return {"high": 0, "medium": 0, "low": 0, "not_found": 0}
 
     # Main processing loop
     total_results = {"high": 0, "medium": 0, "low": 0, "not_found": 0}
@@ -427,7 +435,7 @@ def main():
             batch_limit = min(BATCH_SIZE, remaining)
 
             # Fetch songs
-            songs = fetch_unmatched_songs(conn, args.show_id, batch_limit)
+            songs = fetch_unmatched_songs(conn, show_id, batch_limit)
             if not songs:
                 print("\nNo more unmatched songs found.")
                 break
@@ -441,7 +449,7 @@ def main():
             results = match_songs_batch(sp, songs)
 
             # Save results (unless dry run)
-            if not args.dry_run:
+            if not dry_run:
                 matched = results["high"] + results["medium"] + results["low"]
                 save_results(conn, matched, results["not_found"])
                 log_progress(batch_num, song_range, results)
@@ -470,8 +478,36 @@ def main():
     # Final summary
     print_summary(total_results)
 
-    if args.dry_run:
+    if dry_run:
         print("\n*** DRY RUN - No changes were made to the database ***")
+
+    return total_results
+
+
+def main():
+    """CLI entry point."""
+    args = parse_args()
+
+    # Load environment from multiple sources
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+
+    # 1. Spotify credentials from spotify-bulk-actions-mcp
+    spotify_env = os.path.expanduser("~/DevKev/personal/spotify-bulk-actions-mcp/.env")
+    load_dotenv(spotify_env)
+
+    # 2. Project-specific vars (DATABASE_URL) from project root
+    load_dotenv(os.path.join(project_root, ".env.local"))
+
+    try:
+        match_songs_for_show(
+            show_id=args.show_id,
+            limit=args.limit,
+            dry_run=args.dry_run,
+            yes=args.yes,
+        )
+    except Exception:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
