@@ -21,9 +21,9 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 
-# Import parser from tal_parse.py
+# Import parser from parse.py (formerly tal_parse.py)
 sys.path.insert(0, str(Path(__file__).parent))
-from tal_parse import parse_episode
+from parse import parse_episode
 
 
 def get_db_connection():
