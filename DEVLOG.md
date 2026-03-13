@@ -4,6 +4,30 @@ Chronological session journal. Most recent at top. Never delete entries.
 
 ---
 
+## 2026-03-13 — Full Catch-Up: Merge, Pipeline Runs, Automation
+
+**What happened:**
+- Merged Spotify refactors from this Mac with AI Daily work from other machines
+  - `spotify_match.py` and `sync_playlist.py` refactored to be callable from orchestrators
+  - New `run_pipeline.py` orchestrator for music shows (scrape→match→sync)
+  - New Python scrapers for SOP and TAL (ported from TypeScript / unified wrappers)
+  - GitHub Actions workflow for scheduled runs (SOP Wed+Fri, TAL Mon)
+- AI Daily catch-up: 3 new episodes (Mar 10-13), 55 mentions extracted, 47 Notion pages updated
+- SOP catch-up: 11 episodes scraped, 211 songs found, 199 matched (81% HIGH), 166 tracks added to Spotify playlist
+- TAL: already current, no new episodes
+- Fixed `fill_songs.py` import (`tal_parse` → `parse` — old rename not updated)
+- GitHub Actions: workflow pushed, 6/7 secrets configured (missing SLACK_WEBHOOK_URL)
+- Installed missing `openai` package in pipeline venv
+
+**Key numbers:**
+- SOP playlist: 3,542 songs across 675 episodes
+- TAL playlist: 778 songs across 882 episodes
+- AI Daily: 918 episodes imported, 777 extracted, 8,460 mentions, 853+ in Notion
+
+**Next:** Verify GH Actions dry-run, PCHH pipeline, SOP/TAL NOT_FOUND cleanup (369 + 214 songs)
+
+---
+
 ## 2026-03-06 — Roadmap Review + Docs Cleanup
 
 **What happened:**
