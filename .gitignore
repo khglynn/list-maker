@@ -40,8 +40,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# claude code
-.claude/
+# Claude Code per-machine state — never sync via git.
+# Only settings.local.json + worktrees stay machine-local; everything
+# else under .claude/ (commands, hooks, agents, skills, mcp.json, plans)
+# becomes trackable. Aligns with the cross-machine sync architecture in
+# helper/claude-plans/2026-04-28-cross-machine-sync-architecture.md.
+.claude/settings.local.json
+.claude/worktrees/
 
 # marketing assets (too large for git)
 marketing/album_covers/
