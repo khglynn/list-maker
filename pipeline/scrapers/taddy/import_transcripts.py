@@ -6,6 +6,7 @@ Default test run imports 5 new transcripts per show for:
 - ai-daily-brief
 - pchh
 - sop
+- tal
 
 Required env vars:
 - DATABASE_URL (or NEON_DATABASE_URL)
@@ -21,9 +22,11 @@ import os
 import time
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import Any, Optional
 
 import requests
+from dotenv import load_dotenv
 
 TADDY_API_URL = "https://api.taddy.org"
 REQUEST_TIMEOUT = 60
@@ -52,6 +55,12 @@ SHOWS: dict[str, ShowConfig] = {
         series_uuid="81b2a312-6976-4d22-bc54-4e3991fee332",
         fallback_website_url="https://www.npr.org/podcasts/510282/pop-culture-happy-hour",
     ),
+    "tal": ShowConfig(
+        slug="tal",
+        name="This American Life",
+        series_uuid="d682a935-ad2d-46ee-a0ac-139198b83bcc",
+        fallback_website_url="https://www.thisamericanlife.org/podcast/rss.xml",
+    ),
     "sop": ShowConfig(
         slug="sop",
         name="Switched on Pop",
@@ -61,6 +70,13 @@ SHOWS: dict[str, ShowConfig] = {
 }
 
 RAW_CONTENT_SHOW_SLUGS = {"ai-daily-brief", "pchh"}
+
+
+def load_environment() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    load_dotenv(os.path.expanduser("~/.env"))
+    load_dotenv(repo_root / ".env.local")
+    load_dotenv(repo_root / "pipeline" / ".env.local")
 
 
 def get_db_connection():
@@ -765,6 +781,7 @@ def run(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
+    load_environment()
     args = parse_args()
     run(args)
 

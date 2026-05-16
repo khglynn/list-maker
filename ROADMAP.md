@@ -1,43 +1,31 @@
 # Roadmap
 
-*Last updated: 2026-03-06*
+*Last updated: 2026-05-16*
 
 What's next, in order. When done, move to `COMPLETED.md`.
 
 ---
 
-## 1. Finish AI Daily Backfill
+## 1. AI Daily -> Notion
 
-154 episodes remaining (734/888 done). Quality gate may need tuning for the last stretch.
+Push extracted entities to a browsable Notion database. Initial and incremental sync are live; all 978 transcripted episodes have mentions and 1,067 eligible entities are synced.
 
 **What:**
-- [ ] Check if quality gate threshold needs lowering (5 → 3 mentions/ep)
-- [ ] Clear any lock files from previous stall
-- [ ] Resume `run_mentions_until_done.py`
-- [ ] Run alias normalization + link discovery on all data
-- [ ] Verify quality with `report_summary.py`
+- [x] Design Notion database schema (Name, Type, Mentions, Dates, URL, Context)
+- [x] Create/configure Notion database
+- [x] Build sync script (Neon -> Notion)
+- [x] Run initial sync
+- [ ] Iterate on schema with Kevin after browsing the live Notion database
 
 ---
 
-## 2. AI Daily -> Notion
-
-Push extracted entities to a browsable Notion database.
-
-**What:**
-- [ ] Design Notion database schema (Name, Type, Mentions, Dates, URL, Context)
-- [ ] Create database via Notion MCP
-- [ ] Build sync script (Neon -> Notion)
-- [ ] Run initial sync, iterate on schema with Kevin
-
----
-
-## 3. Automation
+## 2. Automation
 
 Make scrapes run without manual intervention.
 
 **What:**
 - [ ] Choose platform (GitHub Actions recommended)
-- [ ] Weekly: Taddy transcript import for all shows
+- [ ] Weekly: Taddy transcript import for Taddy-backed shows (`ai-daily-brief,pchh,sop,tal`)
 - [ ] Weekly: AI Daily entity extraction on new episodes
 - [ ] Weekly: Notion sync (upsert)
 - [ ] Weekly: Spotify playlist sync for SOP/TAL
@@ -45,11 +33,12 @@ Make scrapes run without manual intervention.
 
 ---
 
-## 4. SOP/TAL Matching Cleanup (optional)
+## 3. Spotify Credentials + SOP/TAL Matching Cleanup
 
-Playlists work at 80-91%. Nice-to-have improvements.
+Playlist verification is blocked locally until Spotify credentials are restored. After that, matching cleanup is the next music quality pass.
 
 **What:**
+- [ ] Restore local Spotify env (`SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REDIRECT_URI`) or document where the active token lives.
 - [ ] Fix "feat./ft." format mismatches (~130 SOP songs)
 - [ ] Fuzzy search major artists (~80 SOP songs)
 - [ ] Mark unavailable songs (~25 songs)
@@ -58,14 +47,25 @@ Playlists work at 80-91%. Nice-to-have improvements.
 
 ---
 
-## 5. PCHH (future)
+## 4. PCHH
 
 Mixed content — music, movies, TV, books. More complex extraction.
 
 **What:**
 - [ ] Design extraction prompt for "What's Making Me Happy" segment
 - [ ] Multi-category extraction (music -> Spotify, movies/TV -> Notion + Trakt)
-- [ ] Backfill + add to automation
+- [ ] Backfill from 356 transcripts + add to automation
+
+---
+
+## 5. TAL Transcript Scope
+
+TAL's official Taddy source is configured and current for the rolling feed, but the full 883-episode archive source is not transcribing.
+
+**What:**
+- [ ] Decide whether TAL needs historical transcripts or only website song scraping.
+- [ ] If historical transcripts matter, find a source other than the non-transcribing Taddy archive feed.
+- [ ] Keep website song scraping separate from transcript import.
 
 ---
 

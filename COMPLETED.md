@@ -4,6 +4,28 @@ Work that's done. Newest at top.
 
 ---
 
+## May 2026
+
+### AI Daily Full Transcript Entity Backfill + Notion Sync
+**Completed:** May 16, 2026
+
+- ✅ 978/978 AI Daily episodes have transcripts
+- ✅ 978/978 AI Daily episodes have entity mentions
+- ✅ 1,067 Notion-eligible AI Daily entities synced
+- ✅ Historical gap of 141 older transcripted episodes extracted
+- ✅ Empty mini-model edge cases retried with `gpt-4.1`
+
+### Taddy Transcript Catch-Up Across Active Shows
+**Completed:** May 16, 2026
+
+- ✅ AI Daily Brief current through 2026-05-15
+- ✅ Pop Culture Happy Hour current through 2026-05-15
+- ✅ Switched On Pop Taddy catalog current through 2026-05-15
+- ✅ This American Life official rolling Taddy feed added and current
+- ⚠️ TAL historical archive feed is not transcribing in Taddy
+
+---
+
 ## March 2026
 
 ### Taddy Multi-Show Transcript Importer

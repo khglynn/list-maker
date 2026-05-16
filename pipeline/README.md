@@ -189,9 +189,9 @@ pipeline/venv/bin/python pipeline/scrapers/ai_daily/run_guarded_backfill.py \
 Taddy multi-show import:
 ```bash
 pipeline/venv/bin/python pipeline/scrapers/taddy/import_transcripts.py \
-  --shows ai-daily-brief,pchh,sop \
+  --shows ai-daily-brief,pchh,sop,tal \
   --per-show-limit 2000 \
-  --max-pages 40
+  --max-pages 20
 ```
 
 ---

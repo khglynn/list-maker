@@ -75,6 +75,7 @@ codex-notes/ai-daily-entity-extraction/_guarded_runs/
 codex-notes/ai-daily-entity-extraction/fullrun-*/
 codex-notes/ai-daily-entity-extraction/recent50-*/
 codex-notes/ai-daily-entity-extraction/incremental-*/
+codex-notes/ai-daily-entity-extraction/historical-empty-retry-*/
 codex-notes/ai-daily-entity-extraction/new-*/
 codex-notes/ai-daily-entity-extraction/batch-*/
 

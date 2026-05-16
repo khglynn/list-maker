@@ -23,9 +23,9 @@ pipeline/venv/bin/python pipeline/scrapers/taddy/import_transcripts.py \
 ```bash
 cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists
 pipeline/venv/bin/python pipeline/scrapers/taddy/import_transcripts.py \
-  --shows ai-daily-brief,pchh,sop \
+  --shows ai-daily-brief,pchh,sop,tal \
   --per-show-limit 2000 \
-  --max-pages 40 \
+  --max-pages 20 \
   --max-credit-spend 1701 \
   --check-credits-every 10 \
   --max-failures-per-show 40 \
@@ -37,3 +37,4 @@ Notes:
 - `--allow-processing-status` is off by default. This prevents saving transcripts still in `PROCESSING` state.
 - `raw_content` is only written for `ai-daily-brief` and `pchh`.
 - `raw_content` is never written for `sop`/`tal` to avoid conflicts with existing scrape workflows.
+- TAL's official Taddy source only exposes the current rolling feed, not the full historical archive.

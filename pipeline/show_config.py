@@ -43,6 +43,7 @@ SHOWS: dict[str, ShowConfig] = {
         name="This American Life",
         show_id=2,
         content_types=["music"],
+        taddy_uuid="d682a935-ad2d-46ee-a0ac-139198b83bcc",
         spotify_playlist_id="3d7fjfrTTKvrl7VHv5JzIz",
         spotify_playlist_name="This American Life: Full Music Archive",
         extraction_type="song_extraction",

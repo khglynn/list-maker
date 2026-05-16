@@ -7,17 +7,17 @@ Automated pipeline that extracts recommendations from podcasts and routes them t
 Scrapes podcast websites and transcripts for recommendations (songs, apps, tools), matches them to destination platforms, and syncs to playlists and databases.
 
 **Active Playlists:**
-- [Every Song on Switched On Pop](https://open.spotify.com/playlist/0cEVeX4pdHf5RJOiTRzgxX) - 4,043 tracks
-- [This American Life: Full Music Archive](https://open.spotify.com/playlist/3d7fjfrTTKvrl7VHv5JzIz) - 880 tracks
+- [Every Song on Switched On Pop](https://open.spotify.com/playlist/0cEVeX4pdHf5RJOiTRzgxX) - Spotify sync not verified in the 2026-05-16 catch-up
+- [This American Life: Full Music Archive](https://open.spotify.com/playlist/3d7fjfrTTKvrl7VHv5JzIz) - Spotify sync not verified in the 2026-05-16 catch-up
 
 ## Status
 
 | Show | Type | Episodes | Items | Status |
 |------|------|----------|-------|--------|
-| Switched On Pop | Music | 664 | 4,417 songs, 4,043 matched (92%) | Live playlist |
-| This American Life | Music | 882 | 1,094 songs, 880 matched (80%) | Live playlist |
-| AI Daily Brief | Apps/Tools | 888 | 734 ep extracted, 7,982 mentions | Backfill ~83% done |
-| PCHH | Mixed | 300 | 298 transcripts imported | Pipeline not built yet |
+| Switched On Pop | Music | 698 | 531 Taddy transcripts, Spotify matching needs credential check | Live playlist, transcript import current |
+| This American Life | Music | 893 | 13 transcripts in shared transcript table; 15/15 current Taddy feed checked | Playlist exists; official recent transcript feed current |
+| AI Daily Brief | Apps/Tools | 978 | 978 transcripts, 978 ep extracted, 1,067 Notion entities synced | Current |
+| PCHH | Mixed | 356 | 356 transcripts imported | Pipeline not built yet |
 
 See [ROADMAP.md](ROADMAP.md) for what's next.
 

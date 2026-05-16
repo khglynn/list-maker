@@ -4,6 +4,44 @@ Chronological session journal. Most recent at top. Never delete entries.
 
 ---
 
+## 2026-05-16 — Transcript + AI Daily Notion Catch-Up
+
+**What happened:**
+- Ran a Taddy dry-run, then imported all missing Taddy-backed transcripts found in the current catalog.
+- Imported 150 transcripts total:
+  - AI Daily Brief: 60 new transcripts, now 978/978 through 2026-05-15
+  - Pop Culture Happy Hour: 58 new transcripts, now 356/356 through 2026-05-15
+  - Switched On Pop: 19 new Taddy-catalog transcripts, now 531/531 through 2026-05-15
+  - This American Life: added official Taddy source and imported 13 new transcript rows; 15/15 current-feed episodes covered
+- Spent 150 Taddy transcript credits; 1,850 remained after import.
+- Extracted 60 recent AI Daily episodes in 12 batches and loaded them into Neon.
+- Extracted 141 historical AI Daily gap episodes in 29 batches and loaded them into Neon.
+- Retried four empty `gpt-4.1-mini` extractions with `gpt-4.1`; retries loaded 20 mentions total.
+- Ran alias normalization after each extraction phase.
+- Synced AI Daily entities to Notion:
+  - Main sync updated 122 pages.
+  - Retry sync created 1 page and updated 1 page.
+  - Historical sync created 149 pages and updated 135 pages.
+
+**Key numbers after verification:**
+- SOP: 698 episodes, 531 transcripts, latest 2026-05-15.
+- TAL: 893 episodes, 13 transcripts, latest 2026-05-10; official Taddy source has 15 current-feed episodes and all are covered.
+- AI Daily: 978 episodes, 978 transcripts, 978 episodes with mentions, latest 2026-05-15.
+- AI Daily mentions: 10,785 mentions across 5,463 entities; 2,723 mentions flagged for review.
+- PCHH: 356 episodes, 356 transcripts, latest 2026-05-15.
+- AI Daily Notion: 1,067 eligible entities, 1,067 synced.
+- AI Daily remaining gap: 0 unextracted transcripted episodes.
+
+**Notes:**
+- `import_transcripts.py --max-pages 40` fails against Taddy because Taddy currently accepts pages 1-20 only.
+- `import_transcripts.py` now loads repo env files directly when run as documented.
+- TAL's official Taddy source only exposes a rolling recent feed; the 883-episode archive source exists in Taddy search but is not transcribing.
+- Spotify credentials were not loaded in this repo session, so playlist sync/matching was not run.
+
+**Next:** Restore Spotify credentials for playlist verification, PCHH extraction-to-Notion design, and automation for ongoing catch-up.
+
+---
+
 ## 2026-03-13 — Full Catch-Up: Merge, Pipeline Runs, Automation
 
 **What happened:**
