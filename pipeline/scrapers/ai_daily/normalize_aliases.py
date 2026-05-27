@@ -215,23 +215,29 @@ def apply_curated_merges(conn, dry_run: bool) -> int:
 def backfill_aliases_from_mentions(conn, dry_run: bool) -> int:
     updated = 0
     with conn.cursor() as cur:
-        cur.execute("SELECT id, canonical_name, aliases FROM ai_entities ORDER BY id;")
+        cur.execute(
+            """
+            SELECT
+                e.id,
+                e.canonical_name,
+                e.aliases,
+                COALESCE(
+                  ARRAY_AGG(DISTINCT m.mention_text ORDER BY m.mention_text)
+                    FILTER (WHERE m.mention_text IS NOT NULL AND BTRIM(m.mention_text) <> ''),
+                  ARRAY[]::text[]
+                ) AS mention_aliases
+            FROM ai_entities e
+            LEFT JOIN ai_mentions m ON m.entity_id = e.id
+            GROUP BY e.id
+            ORDER BY e.id;
+            """
+        )
         entities = cur.fetchall()
 
     for entity in entities:
         entity_id = int(entity["id"])
         current_aliases = parse_aliases(entity["aliases"])
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT DISTINCT mention_text
-                FROM ai_mentions
-                WHERE entity_id = %s
-                ORDER BY mention_text;
-                """,
-                (entity_id,),
-            )
-            mention_aliases = [r["mention_text"] for r in cur.fetchall() if r["mention_text"]]
+        mention_aliases = list(entity["mention_aliases"] or [])
         merged = merge_alias_lists(current_aliases, mention_aliases, [entity["canonical_name"]])
         if len(merged) == len(current_aliases):
             continue

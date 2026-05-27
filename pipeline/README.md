@@ -1,6 +1,6 @@
 # pod-lists Pipeline
 
-*Last updated: 2026-03-13*
+*Last updated: 2026-05-22*
 
 ## Directory Structure
 
@@ -13,6 +13,8 @@ pipeline/
 ├── spotify_match.py       # Match songs to Spotify (all shows)
 ├── sync_playlist.py       # Sync matched songs to playlists
 ├── sync_notion.py         # Sync entities to Notion (AI Daily)
+├── data_health.py         # Read-only Neon data quality report
+├── repair_duplicate_episodes.py # Dry-run-first duplicate episode merger
 ├── requirements.txt       # Python dependencies
 ├── venv/                  # Virtual environment (gitignored)
 │
@@ -26,6 +28,7 @@ pipeline/
 │   │   ├── fetch.py           # Fetch episode URLs
 │   │   ├── parse.py           # Parse episode pages
 │   │   ├── fill_songs.py      # Fill in song data
+│   │   ├── repair_metadata.py # Dry-run-first official metadata repair
 │   │   ├── process_batch.py   # Batch processing
 │   │   ├── fix_404s.py        # Fix broken URLs
 │   │   ├── scrape_missing.py  # Scrape missing episodes
@@ -52,6 +55,55 @@ pipeline/
 ```
 
 Note: Mosaic artwork generation is in `marketing/` (separate from pipeline).
+
+---
+
+## Data Quality + Tests
+
+Use tests and health checks together:
+
+- Tests protect pipeline behavior before code changes ship.
+- Health checks inspect the live Neon data for gaps, duplicates, and suspicious drift.
+
+Run the local test suite:
+
+```bash
+pipeline/venv/bin/python -m pytest
+```
+
+Run the live read-only health report:
+
+```bash
+pipeline/venv/bin/python pipeline/data_health.py
+```
+
+Run it in strict mode for automation:
+
+```bash
+pipeline/venv/bin/python pipeline/data_health.py --strict
+```
+
+Current health policy:
+
+| Area | Hard failure | Allowed / explained |
+|------|--------------|---------------------|
+| Shows | Configured slug/id mismatch | None |
+| Episodes | Missing show, title, URL, publish date | Optional episode fields may be null |
+| Duplicates | Same show/title/date more than once | None |
+| Transcripts | AI Daily/PCHH must be complete; SOP/TAL latest transcript must stay fresh | Historic SOP/TAL transcript coverage can be partial |
+| AI Daily | Transcript without mentions, mention without transcript, completed run with zero mentions | Entity alias split candidates are warning-level until curated |
+
+Dry-run-first repair commands:
+
+```bash
+pipeline/venv/bin/python pipeline/scrapers/tal/repair_metadata.py
+pipeline/venv/bin/python pipeline/scrapers/tal/repair_metadata.py --execute
+
+pipeline/venv/bin/python pipeline/repair_duplicate_episodes.py
+pipeline/venv/bin/python pipeline/repair_duplicate_episodes.py --execute
+```
+
+As of 2026-05-22, the episode-level health report has zero hard failures. The remaining warning is AI Daily entity alias splits, which should be handled by a curated merge pass rather than a broad automatic rewrite.
 
 ---
 

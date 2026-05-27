@@ -60,7 +60,7 @@ SHOWS: dict[str, ShowConfig] = {
     "pchh": ShowConfig(
         slug="pchh",
         name="Pop Culture Happy Hour",
-        show_id=4,
+        show_id=11,
         content_types=["mixed"],
         taddy_uuid="81b2a312-6976-4d22-bc54-4e3991fee332",
         extraction_type=None,
