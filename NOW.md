@@ -1,4 +1,4 @@
-# NOW — pod-lists
+# NOW — list-maker
 
 **Last updated:** 2026-05-16
 

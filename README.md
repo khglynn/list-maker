@@ -1,4 +1,4 @@
-# pod-lists
+# list-maker
 
 Automated pipeline that extracts recommendations from podcasts and routes them to the right platforms.
 

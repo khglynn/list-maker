@@ -1,4 +1,4 @@
-# pod-lists - Agent Instructions
+# list-maker - Agent Instructions
 
 *Inherits from ~/DevKev/CLAUDE.md*
 *Last updated: 2026-03-13*
@@ -66,7 +66,7 @@ We have a custom Spotify MCP built for this exact use case!
 ## Folder Structure
 
 ```
-pod-lists/
+list-maker/
 ├── pipeline/                # Extraction and matching (Python)
 │   ├── common.py            # Shared DB connection + env loading
 │   ├── show_config.py       # Centralized ShowConfig for all shows

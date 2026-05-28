@@ -119,7 +119,7 @@ def fetch_page_metadata(url: str) -> PageMetadata:
     response = requests.get(
         url,
         timeout=REQUEST_TIMEOUT,
-        headers={"User-Agent": "pod-lists metadata repair (+https://github.com/khglynn/pod-lists)"},
+        headers={"User-Agent": "list-maker metadata repair (+https://github.com/khglynn/list-maker)"},
     )
     response.raise_for_status()
     return parse_page_metadata(url, response.text)
