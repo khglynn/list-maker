@@ -36,7 +36,7 @@ This mode is designed to stop early if output quality drifts.
 Preflight only (10 new episodes):
 
 ```bash
-cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists
+cd /Users/kevinhalladay-glynn/DevKev/personal/list-maker
 pipeline/venv/bin/python pipeline/scrapers/ai_daily/run_guarded_backfill.py \
   --since-date 2025-08-08 \
   --preflight-new 10
@@ -45,7 +45,7 @@ pipeline/venv/bin/python pipeline/scrapers/ai_daily/run_guarded_backfill.py \
 Then full run with chunk checks:
 
 ```bash
-cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists
+cd /Users/kevinhalladay-glynn/DevKev/personal/list-maker
 pipeline/venv/bin/python pipeline/scrapers/ai_daily/run_guarded_backfill.py \
   --since-date 2025-08-08 \
   --preflight-new 10 \
@@ -69,7 +69,7 @@ python3 init_entity_schema.py --reset
 ```bash
 cd pipeline/scrapers/ai_daily
 python3 load_entity_batch.py \
-  --batch-dir /Users/kevinhalladay-glynn/DevKev/personal/pod-lists/codex-notes/ai-daily-entity-extraction/batch-01-focused-mini \
+  --batch-dir /Users/kevinhalladay-glynn/DevKev/personal/list-maker/codex-notes/ai-daily-entity-extraction/batch-01-focused-mini \
   --prompt-version extract_entities_v2_lean
 ```
 

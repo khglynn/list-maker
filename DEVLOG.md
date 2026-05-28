@@ -4,6 +4,22 @@ Chronological session journal. Most recent at top. Never delete entries.
 
 ---
 
+## 2026-05-28 — Repo renamed back to `list-maker`
+
+**What happened:** Renamed the local folder (`pod-lists` → `list-maker`) and `git remote set-url` to point at `khglynn/list-maker.git`. GitHub canonical name has been `list-maker` since 2025-12-20 (the `pod-lists` URL was just a rename-redirect); other Mac (camillas-MacBook-Pro) already used `list-maker`. This machine was the last holdout.
+
+**Touched in this repo:**
+- CLAUDE.md heading + folder tree
+- README.md heading
+- NOW.md heading
+- pipeline/README.md heading
+- pipeline/scrapers/{ai_daily,taddy}/README.md `cd` examples
+- pipeline/scrapers/tal/repair_metadata.py User-Agent string
+
+**Side effect:** the local `pipeline/venv/` has hardcoded paths to the old `pod-lists` location (shebangs + `VIRTUAL_ENV` in `activate`) and won't work as-is. Delete and recreate with `python -m venv pipeline/venv && pipeline/venv/bin/pip install -r pipeline/requirements.txt` next time you need it.
+
+**Left alone:** historical references in claude-plans/, codex-notes/, COMPLETED.md, and prior DEVLOG entries — those were accurate at their dates.
+
 ## 2026-05-16 — Transcript + AI Daily Notion Catch-Up
 
 **What happened:**

@@ -11,7 +11,7 @@ Required env vars:
 ## Safe Dry Run (read-only, no credits spent)
 
 ```bash
-cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists
+cd /Users/kevinhalladay-glynn/DevKev/personal/list-maker
 pipeline/venv/bin/python pipeline/scrapers/taddy/import_transcripts.py \
   --shows ai-daily-brief,pchh,sop \
   --per-show-limit 25 \
@@ -21,7 +21,7 @@ pipeline/venv/bin/python pipeline/scrapers/taddy/import_transcripts.py \
 ## Recommended Full Run (credit guard + quality guard)
 
 ```bash
-cd /Users/kevinhalladay-glynn/DevKev/personal/pod-lists
+cd /Users/kevinhalladay-glynn/DevKev/personal/list-maker
 pipeline/venv/bin/python pipeline/scrapers/taddy/import_transcripts.py \
   --shows ai-daily-brief,pchh,sop,tal \
   --per-show-limit 2000 \
