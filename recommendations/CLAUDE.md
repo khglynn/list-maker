@@ -103,6 +103,16 @@ is borderline or defunct rather than overselling.
 - Cite sources for claims about a show (fact-checking policy, host credentials, etc.) — practice
   what we preach.
 
+## Calibration Log
+
+- **2026-05-31 (first podcast pass):** Kevin had *already listened to every recommendation* —
+  Short Wave, Science Vs, Radiolab, Hidden Brain, Speaking of Psychology, Science of Happiness,
+  Loudest Girl in the World, Lost Patients, Invisibilia, etc. **Takeaway: the taste targeting is
+  correct, but the canonical/famous tier is exhausted.** Next round must dig for *deeper cuts* —
+  newer (2024–2026) limited series, smaller/independent reported shows, international (BBC/ABC/CBC)
+  production, and adjacent-but-non-obvious shows — explicitly screening OUT anything already in
+  `podcasts/library.md` or the prior recommendations. Novelty is now a hard requirement alongside rigor.
+
 ## Future Categories
 
 Same taste profile, adapted:
