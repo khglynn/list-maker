@@ -2,6 +2,7 @@ from pipeline.scrapers.ai_daily.load_entity_batch import (
     delete_existing_run,
     derive_tags,
     merge_aliases,
+    normalize_entity_type,
     normalize_name,
     parse_aliases,
     parse_facts_json,
@@ -84,6 +85,14 @@ def test_derive_tags_from_platform_type_and_facts() -> None:
         "benchmark_domain": "video",
         "contains_survey_questions": True,
     }
+
+
+def test_normalize_entity_type_falls_back_to_other() -> None:
+    assert normalize_entity_type("  Software_Product ") == "software_product"
+    assert normalize_entity_type("model") == "model"
+    assert normalize_entity_type("dragon") == "other"
+    assert normalize_entity_type("") == "other"
+    assert normalize_entity_type(None) == "other"  # None-tolerant guard (no crash)
 
 
 def test_delete_existing_run_scopes_to_show_and_batch_then_commits() -> None:

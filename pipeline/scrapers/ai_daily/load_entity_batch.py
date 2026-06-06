@@ -56,6 +56,12 @@ def normalize_name(value: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+def normalize_entity_type(raw: str) -> str:
+    """Normalize a CSV entity_type to a known value, else fall back to 'other'."""
+    value = (raw or "").strip().lower()
+    return value if value in VALID_ENTITY_TYPES else "other"
+
+
 def load_environment(repo_root: Path) -> None:
     load_dotenv(os.path.expanduser("~/.env"))
     load_dotenv(repo_root / ".env.local")
@@ -288,9 +294,7 @@ def insert_mention(
 ) -> None:
     episode_id = int(row["episode_id"])
     transcript_id = transcript_map.get(episode_id)
-    entity_type = row["entity_type"].strip().lower()
-    if entity_type not in VALID_ENTITY_TYPES:
-        entity_type = "other"
+    entity_type = normalize_entity_type(row["entity_type"])
 
     confidence = float(row["confidence"]) if row["confidence"] else None
     is_editorial = row["is_editorial"].strip().lower() == "true"
@@ -411,9 +415,7 @@ def main() -> None:
         entity_cache: dict[tuple[str, str, str], int] = {}
 
         for row in rows:
-            entity_type = row["entity_type"].strip().lower()
-            if entity_type not in VALID_ENTITY_TYPES:
-                entity_type = "other"
+            entity_type = normalize_entity_type(row["entity_type"])
             canonical_name = row["canonical_name"].strip()
             mention_text = row["mention_text"].strip()
             platform = row["platform"].strip() or None
