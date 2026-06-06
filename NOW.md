@@ -6,6 +6,7 @@
 Goal — all 6 shows auto-processing on a durable schedule → music (SOP, TAL) to Spotify; tech (AI Daily, Hardfork) + media (PCHH, Culture Gabfest) to Notion; self-healing; Slack-notifying; tested; best-practices.
 - Full spec: `claude-plans/2026-06-06-durable-pipeline-rebuild.md`
 - Way-of-working + grounding (read after any compaction): `claude-plans/2026-06-06-durable-pipeline-resume.md`
+- **Push-hold LIFTED (2026-06-06):** no Vercel link in repo → pushing to `khglynn/list-maker` main is safe. Push each commit going forward (no more local-only).
 
 ## Next step (exact)
 **Workstream A — hardening** (scheduler-agnostic durability core):
