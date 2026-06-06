@@ -134,6 +134,34 @@ def insert_run(
     return int(row["id"])
 
 
+def delete_existing_run(conn, *, show_id: int, batch_name: str) -> int:
+    """Make batch (re)loads idempotent: remove any prior run — and its mentions —
+    for this (show_id, batch_name) before inserting a fresh one. A re-load thus
+    replaces rather than duplicates, and a partially-loaded run self-heals on the
+    next run. Scoped + via psycopg2 (not the Neon MCP, so the destructive-op guard
+    correctly doesn't gate it). No-op on first load (no matching run).
+    """
+    with conn.cursor() as cur:
+        # ai_mentions.run_id is ON DELETE CASCADE, so deleting the runs alone
+        # would clear these too — the explicit delete makes the intent obvious.
+        cur.execute(
+            """
+            DELETE FROM ai_mentions
+            WHERE run_id IN (
+                SELECT id FROM ai_runs WHERE show_id = %s AND batch_name = %s
+            );
+            """,
+            (show_id, batch_name),
+        )
+        cur.execute(
+            "DELETE FROM ai_runs WHERE show_id = %s AND batch_name = %s;",
+            (show_id, batch_name),
+        )
+        removed_runs = cur.rowcount
+    conn.commit()
+    return removed_runs
+
+
 def parse_aliases(raw: Any) -> list[str]:
     if isinstance(raw, list):
         values = [str(v).strip() for v in raw if str(v).strip()]
@@ -358,6 +386,12 @@ def main() -> None:
     try:
         show_id = get_show_id(conn, args.show_slug)
         transcript_map = get_transcript_map(conn, episode_ids)
+        removed_runs = delete_existing_run(conn, show_id=show_id, batch_name=batch_name)
+        if removed_runs:
+            print(
+                f"Idempotent re-load: removed {removed_runs} prior run(s) "
+                f"for batch '{batch_name}' before reloading."
+            )
         run_id = insert_run(
             conn,
             show_id=show_id,

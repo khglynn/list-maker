@@ -10,8 +10,9 @@ Goal — all 6 shows auto-processing on a durable schedule → music (SOP, TAL) 
 ## Next step (exact)
 **Workstream A — hardening** (scheduler-agnostic durability core):
 - **A1 ✅ DONE** — single-source show registry: importer derives `SHOWS`/`RAW_CONTENT_SHOW_SLUGS` from `show_config.py` (added `fallback_website_url` + `store_raw_content`); `cfg.series_uuid`→`cfg.taddy_uuid`; drift-guard test tightened. pytest 24/24; Codex SAFE; parity verified.
-- **A2 → NEXT:** `ON CONFLICT` on `insert_mention` (`load_entity_batch.py`) — idempotent writes (no duplicate mentions on retry).
-- A3 parameterize 90-day filter + `--backfill` flag · A4 per-entity Notion sync state · A5 structured logging · A6 orchestrator-level retry · A7 staleness alert → Slack · A8 tests on extraction + sync · A9 docs (ARCHITECTURE.md + status refresh).
+- **A2 ✅ DONE** — idempotent batch load via `delete_existing_run(show_id, batch_name)` before `insert_run` (re-load replaces; self-heals partials). Scoped psycopg2 DELETE (not the MCP, so unaffected by the destructive-op guard). pytest 25/25; Codex SAFE. *Deferred: full single-transaction atomicity — low value vs blast-radius, and the orchestrator is already episode-idempotent via `find_unextracted_episodes`.*
+- **A3 → NEXT:** parameterize the hardcoded 90-day filter in `find_unextracted_episodes` into a named constant + add a `--backfill`/`recent_only=False` path (needed for Hardfork/media archive backfills; threads through `run_new_episodes.py`).
+- A4 per-entity Notion sync state · A5 structured logging · A6 orchestrator-level retry · A7 staleness alert → Slack · A8 tests on extraction + sync · A9 docs (ARCHITECTURE.md + status refresh).
 Then **C** (Hardfork) → **B** (Cloudflare-Cron durable trigger + Slack) → **D** (media: PCHH + Culture Gabfest) → **E** (verify all shows).
 
 Per-task rhythm: investigate (verify reality) → implement (TDD/DB-test where logic or data changes) → run the net AND read it → doc-sweep → secret-scan the staged diff → commit (scope-prefixed, `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`) → bank NOW/DEVLOG → **Codex + triple-check at the boundary.**
