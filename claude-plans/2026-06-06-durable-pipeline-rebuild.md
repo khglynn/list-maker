@@ -100,6 +100,7 @@ Per Agent 2's transcript-grounded design. **Schema work across 5 surfaces** (not
 ## Side tasks
 - **Research folder tidy** (`…/2026-05-22-running-things-off-my-laptop/`): add `INDEX.md` (read-order + provenance), rename `zimzAEmW`→`…checkpoint-snapshot.zip`, prompts → `prompts/`. Light touch.
 - **Mental-health branch** (`origin/claude/mental-health-podcasts-2DJbo`): leave parked, note in BACKLOG (Short Wave, Science Vs, Radiolab, Speaking of Psychology, Hidden Brain, The Science of Happiness, Unexplainable; all already heard).
+- **Closeout — save the methodology (Kevin wants to reuse it):** once this proves out, capture the durable-autonomous-build approach as a reusable guide/skill via `hg-save-it` — the pattern of: deeply-researched plan → `/loop` self-paced execution → compaction-survival (resume doc + PreCompact/SessionStart-compact hooks) → Codex + `/triple-check` review gate at each step → pre-flight verification (e.g., Taddy availability/transcribe-status) before building a show. *"def wanna try it" — Kevin, 2026-06-06.*
 
 ---
 
