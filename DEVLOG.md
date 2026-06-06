@@ -4,6 +4,27 @@ Chronological session journal. Most recent at top. Never delete entries.
 
 ---
 
+## 2026-06-06 — Durable pipeline rebuild: Workstream A (hardening) complete
+
+**What happened:** Hardened the pipeline into a durable, self-healing, tested system under a `/loop` autonomous run with a Codex + triple-check gate on every step. Workstream A done except A4 (deferred — needs a schema migration):
+- **A1** single-source show registry (importer derives from `show_config.py` + drift test).
+- **A2** idempotent batch load (`delete_existing_run` on (show_id, batch_name); re-runs replace, don't duplicate).
+- **A3** `RECENT_EPISODE_WINDOW_DAYS` const + `--backfill` full-archive path.
+- **A5** `get_logger()` structured-logging foundation + orchestrator per-stage timing.
+- **A6** `run_script` bounded retry + backoff, incl. `subprocess.TimeoutExpired`.
+- **A7** `check_episode_freshness` staleness check (closes the silent-stale hole that let AI Daily drift weeks unnoticed).
+- **A8** extraction + load data-contract tests; DRY'd the duplicated entity_type validation into `normalize_entity_type`.
+- **A9** ARCHITECTURE.md + this entry + CLAUDE.md status refresh.
+- **Deferred:** A4 (per-entity Notion sync state — ALTER), A5b (print→logging sweep), A6b (aggregated failed-steps summary), A7-Slack (send needs the webhook secret).
+
+**Safety added:** a `PreToolUse` hook blocks destructive SQL (DELETE/DROP/TRUNCATE/ALTER) via the Neon MCP during autonomous runs — motivated by a near-miss where coarse-key grouping nearly deleted 124 legitimately-distinct mentions. Plus `PreCompact` + `SessionStart:compact` compaction-survival hooks.
+
+**Compaction method VALIDATED:** a real auto-compaction fired mid-A7; the `SessionStart:compact` hook re-grounded the new instance (resume doc + NOW.md) with zero lost state — WIP intact, tests green. The survival kit works.
+
+**Tests:** 45 passing (up from ~20). **Next:** Workstream C (Hard Fork onboarding) → B (Cloudflare-Cron trigger + Slack) → D (media: PCHH + Culture Gabfest) → E (verify all). Most of C/B/D need Kevin (GitHub secrets, Notion DB, Cloudflare deploy, the Culture Gabfest transcript-source decision).
+
+---
+
 ## 2026-05-28 — Repo renamed back to `list-maker`
 
 **What happened:** Renamed the local folder (`pod-lists` → `list-maker`) and `git remote set-url` to point at `khglynn/list-maker.git`. GitHub canonical name has been `list-maker` since 2025-12-20 (the `pod-lists` URL was just a rename-redirect); other Mac (camillas-MacBook-Pro) already used `list-maker`. This machine was the last holdout.

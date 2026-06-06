@@ -112,6 +112,8 @@ list-maker/
 
 ## Current Status (Mar 2026)
 
+**2026-06-06 update:** Pipeline hardened into a durable, self-healing, tested system (Workstream A — idempotency, retry+backoff, structured logging, staleness alerts, single-source config; 45 tests). See `ARCHITECTURE.md` for the current design + live show counts, and `NOW.md` for active work. The Mar-2026 table below is a point-in-time snapshot (item counts not re-verified in the 2026-06-06 pass).
+
 | Show | Type | Episodes | Items | Status |
 |------|------|----------|-------|--------|
 | SOP | Music | 664 | 4,417 songs, 4,043 matched (92%) | Automated (GitHub Actions), 357 NOT_FOUND + 17 UNAVAILABLE |

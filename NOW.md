@@ -20,8 +20,16 @@ Goal — all 6 shows auto-processing on a durable schedule → music (SOP, TAL) 
 - **A6 ✅ DONE** — `run_script` retries transient subprocess failures (`MAX_STEP_RETRIES=2`, exponential backoff 5s/10s) — safe because steps are idempotent (A2 + upserts); catches `TimeoutExpired` (retryable); logs retries/recovery/final-failure via `log`. pytest 34/34; Codex SAFE (timeout gap fixed). *A6b (deferred): cross-show aggregated failed-steps summary (per-failure `log.error` already gives greppable observability).*
 - **A7 ✅ DONE** — `check_episode_freshness` in `data_health.py`: per-show `STALENESS_MAX_DAYS` (ai-daily 3, pchh 7, hard-fork/gabfest 10, sop 14, tal 21; default 14), flags shows past their freshness threshold; registered in `run_checks`. Closes the silent-staleness hole (AI Daily's 17d drift). pytest 36/36; Codex SAFE. *Slack-send of the report is downstream (workflow + `SLACK_WEBHOOK_URL`) — deferred to B.*
 - **A8 ✅ DONE** — extraction-contract tests (`test_extract_entities.py`: `sanitize_mention`/`sanitize_fact`/`parse_json_object` — confidence∈[0,1], required core fields, unknown-type→other+review, low-conf→review) + DRY'd the duplicated entity_type validation into `normalize_entity_type` (used in `insert_mention` + `main`) with its own test. pytest 45/45; Codex SAFE. *(No OpenAI-mock golden-master needed — the post-LLM sanitizers ARE the testable contract seam.)*
-- **A9:** docs (ARCHITECTURE.md data-flow + CLAUDE.md single-source-of-truth + status refresh) — also fold in the compaction-method writeup + A4/A5b/A6b deferral notes.
-Then **C** (Hardfork) → **B** (Cloudflare-Cron durable trigger + Slack) → **D** (media: PCHH + Culture Gabfest) → **E** (verify all shows).
+- **A9 ✅ DONE** — `ARCHITECTURE.md` (data flow, schema, code map, hardening table, scheduler plan) + DEVLOG entry + CLAUDE.md status pointer. pytest 45/45.
+
+### ✅ WORKSTREAM A COMPLETE (2026-06-06)
+A1–A9 done (A4 + A5b/A6b/A7-Slack deferred). Pipeline is idempotent, self-healing (retry+backoff+timeout), structured-logged, staleness-aware, tested (45), single-sourced, documented — and survived a live compaction. **Autonomous loop paused here** — the rest needs Kevin:
+- **C (Hard Fork):** GitHub secrets + create the Hard Fork Notion DB + Neon `shows` row + backfill (~$2-3 OpenAI). Taddy uuid `ff1d51d4-4fc9-4161-b23b-f0079f6dd5a0`.
+- **B (durable trigger):** Cloudflare Worker Cron deploy + GH PAT secret + Slack wiring (`SLACK_WEBHOOK_URL`).
+- **D (media: PCHH + Culture Gabfest):** Gabfest is NOT_TRANSCRIBING on Taddy → needs a source decision; PCHH media-extraction profile + Notion media DB.
+- **E:** verify all shows end-to-end (+ the SOP/TAL `added_to_playlist` anomaly).
+- **A4:** the deferred schema migration (`ALTER ai_entities`).
+- **Open offer:** widen the loop to do the solo get-it-live steps (set GH secrets from `.env.local` → write `entities.yml` → create Hard Fork Notion DB → backfill) so AI Daily + Hard Fork go live to Notion, leaving Kevin just the Cloudflare deploy + the Gabfest call.
 
 Per-task rhythm: investigate (verify reality) → implement (TDD/DB-test where logic or data changes) → run the net AND read it → doc-sweep → secret-scan the staged diff → commit (scope-prefixed, `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`) → bank NOW/DEVLOG → **Codex + triple-check at the boundary.**
 
