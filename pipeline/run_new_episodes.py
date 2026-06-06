@@ -39,27 +39,55 @@ SCRAPERS_DIR = PIPELINE_DIR / "scrapers"
 # (the --backfill flag) to extract the full archive, e.g. when onboarding a show.
 RECENT_EPISODE_WINDOW_DAYS = 90
 
+# Bounded retry for transient subprocess (step) failures. Steps are idempotent
+# (Taddy upserts, A2 delete-then-insert load, incremental Notion sync), so a
+# retry is safe and recovers transient API/network blips.
+MAX_STEP_RETRIES = 2
+
 log = get_logger("pipeline.run_new_episodes")
 
 
 def run_script(script_path: str, args: list[str], dry_run: bool, label: str, timeout: int = 600) -> bool:
-    """Run a pipeline script as a subprocess. Returns True on success."""
+    """Run a pipeline script as a subprocess, with bounded retry + backoff on
+    failure. Pipeline steps are idempotent (Taddy upserts, A2 delete-then-insert
+    load, incremental Notion sync), so a retry is safe and recovers transient
+    API/network blips. Returns True on success.
+    """
     cmd = [VENV_PYTHON, script_path] + args
     if dry_run:
         print(f"  [dry-run] Would run: {' '.join(cmd)}")
         return True
 
-    print(f"  Running: {label}...")
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-    if result.returncode != 0:
-        print(f"  FAILED ({label}):")
-        print(f"  stderr: {result.stderr[-500:]}" if result.stderr else "  (no stderr)")
-        return False
-    # Print last few lines of output
-    lines = result.stdout.strip().split("\n")
-    for line in lines[-5:]:
-        print(f"    {line}")
-    return True
+    attempts = MAX_STEP_RETRIES + 1
+    for attempt in range(1, attempts + 1):
+        suffix = "" if attempt == 1 else f" (retry {attempt - 1}/{MAX_STEP_RETRIES})"
+        print(f"  Running: {label}{suffix}...")
+        result = None
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            ok = result.returncode == 0
+            tail = "" if ok else (result.stderr[-500:] if result.stderr else "(no stderr)")
+        except subprocess.TimeoutExpired:
+            # A timeout is the canonical transient failure — retry it like any other.
+            ok = False
+            tail = f"timed out after {timeout}s"
+        if ok:
+            if attempt > 1:
+                log.info("step recovered on retry %d: %s", attempt - 1, label)
+            for line in result.stdout.strip().split("\n")[-5:]:
+                print(f"    {line}")
+            return True
+        if attempt < attempts:
+            backoff = 5 * (2 ** (attempt - 1))
+            log.warning(
+                "step attempt %d/%d failed, retrying in %ds: %s — %s",
+                attempt, attempts, backoff, label, tail,
+            )
+            time.sleep(backoff)
+        else:
+            log.error("step failed after %d attempts: %s — %s", attempts, label, tail)
+            print(f"  FAILED ({label}) after {attempts} attempts")
+    return False
 
 
 def find_unextracted_episodes(conn, show_id: int, recent_only: bool = True) -> list[int]:

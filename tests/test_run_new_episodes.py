@@ -66,3 +66,71 @@ def test_backfill_flag_parses(monkeypatch) -> None:
         "sys.argv", ["run_new_episodes.py", "--shows", "ai-daily-brief"]
     )
     assert parse_args().backfill is False
+
+
+def test_run_script_retries_then_succeeds(monkeypatch) -> None:
+    from pipeline import run_new_episodes as rne
+
+    class _Result:
+        def __init__(self, rc: int) -> None:
+            self.returncode = rc
+            self.stdout = "done"
+            self.stderr = ""
+
+    calls = {"n": 0}
+
+    def fake_run(cmd, **kwargs):
+        calls["n"] += 1
+        return _Result(1) if calls["n"] == 1 else _Result(0)  # fail once, then succeed
+
+    monkeypatch.setattr(rne.subprocess, "run", fake_run)
+    monkeypatch.setattr(rne.time, "sleep", lambda _s: None)
+
+    assert rne.run_script("x.py", [], dry_run=False, label="step") is True
+    assert calls["n"] == 2  # one retry, then success
+
+
+def test_run_script_gives_up_after_max_retries(monkeypatch) -> None:
+    from pipeline import run_new_episodes as rne
+
+    class _Result:
+        returncode = 1
+        stdout = ""
+        stderr = "boom"
+
+    calls = {"n": 0}
+    sleeps: list = []
+
+    def fake_run(cmd, **kwargs):
+        calls["n"] += 1
+        return _Result()
+
+    monkeypatch.setattr(rne.subprocess, "run", fake_run)
+    monkeypatch.setattr(rne.time, "sleep", lambda s: sleeps.append(s))
+
+    assert rne.run_script("x.py", [], dry_run=False, label="step") is False
+    assert calls["n"] == rne.MAX_STEP_RETRIES + 1
+    assert sleeps == [5, 10]  # exponential backoff between the 3 attempts
+
+
+def test_run_script_retries_on_timeout(monkeypatch) -> None:
+    from pipeline import run_new_episodes as rne
+
+    class _Result:
+        returncode = 0
+        stdout = "done"
+        stderr = ""
+
+    calls = {"n": 0}
+
+    def fake_run(cmd, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise rne.subprocess.TimeoutExpired(cmd, kwargs.get("timeout", 600))
+        return _Result()
+
+    monkeypatch.setattr(rne.subprocess, "run", fake_run)
+    monkeypatch.setattr(rne.time, "sleep", lambda _s: None)
+
+    assert rne.run_script("x.py", [], dry_run=False, label="step") is True
+    assert calls["n"] == 2  # a timeout is treated as a retryable failure
