@@ -40,6 +40,18 @@ TRANSCRIPT_POLICIES: dict[str, dict[str, Any]] = {
     "tal": {"mode": "latest", "max_latest_lag_days": 21, "min_coverage": 0.01},
 }
 
+# Max days a show may go without a NEW episode before it's flagged stale. Catches
+# a feed/import that silently stopped — e.g. AI Daily's 17-day drift in May 2026.
+STALENESS_MAX_DAYS: dict[str, int] = {
+    "ai-daily-brief": 3,    # daily
+    "pchh": 7,              # ~daily weekdays
+    "hard-fork": 10,        # ~weekly (once onboarded)
+    "culture-gabfest": 10,  # ~weekly (once onboarded)
+    "sop": 14,
+    "tal": 21,
+}
+DEFAULT_STALENESS_MAX_DAYS = 14
+
 OPTIONAL_NULL_NOTES = {
     "episodes.raw_content": "Stored only for AI Daily/PCHH Taddy imports; null for SOP/TAL is expected.",
     "episodes.has_songs_discussed": "Legacy music-triage field; null means not evaluated or not applicable.",
@@ -245,6 +257,48 @@ def check_transcript_coverage(conn) -> CheckResult:
     return CheckResult("transcript_coverage_by_show", status, summary, failures + warnings + details)
 
 
+def check_episode_freshness(conn) -> CheckResult:
+    """Flag shows whose newest episode is older than their staleness threshold —
+    catches a feed/import that silently stopped (e.g. AI Daily's 17-day drift).
+    (Sending this to Slack lives in the scheduled workflow; it needs the
+    SLACK_WEBHOOK_URL secret — deferred. This check is the detector.)
+    """
+    rows = _rows(
+        conn,
+        """
+        SELECT
+          s.slug,
+          MAX(e.publish_date)::date AS latest_episode,
+          (CURRENT_DATE - MAX(e.publish_date)::date) AS days_since
+        FROM shows s
+        JOIN episodes e ON e.show_id = s.id
+        GROUP BY s.slug
+        ORDER BY s.slug;
+        """,
+    )
+    failures: list[str] = []
+    details: list[str] = []
+    for row in rows:
+        slug = row["slug"]
+        days_since = row["days_since"]
+        threshold = STALENESS_MAX_DAYS.get(slug, DEFAULT_STALENESS_MAX_DAYS)
+        details.append(
+            f"{slug}: latest_episode={row['latest_episode']} "
+            f"({days_since}d ago, threshold {threshold}d)"
+        )
+        if days_since is not None and days_since > threshold:
+            failures.append(
+                f"{slug}: no new episode in {days_since} days (threshold {threshold}d)"
+            )
+    status = "fail" if failures else "pass"
+    summary = (
+        "Every show has a recent episode within its freshness threshold."
+        if status == "pass"
+        else f"{len(failures)} show(s) stale (no recent episodes)."
+    )
+    return CheckResult("episode_freshness_by_show", status, summary, failures + details)
+
+
 def check_ai_daily_extraction(conn) -> CheckResult:
     row = _one(
         conn,
@@ -409,6 +463,7 @@ def run_checks(conn) -> list[CheckResult]:
         check_episode_identity(conn),
         check_duplicate_episodes(conn),
         check_transcript_coverage(conn),
+        check_episode_freshness(conn),
         check_ai_daily_extraction(conn),
         check_ai_mention_fields(conn),
         check_possible_entity_alias_splits(conn),
