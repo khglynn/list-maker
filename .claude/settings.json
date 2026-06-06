@@ -1,5 +1,16 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__neon__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "in=\"$(cat)\"; if printf '%s' \"$in\" | grep -iqE '(\"|;|^)[[:space:]]*(delete|drop|truncate|alter)\\b'; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Destructive SQL (DELETE/DROP/TRUNCATE/ALTER) via the Neon MCP is blocked during autonomous runs. Surface to Kevin for explicit per-op approval before deleting or altering data; disable via /hooks to run one.\"}}'; fi"
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "matcher": "compact",
