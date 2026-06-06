@@ -8,8 +8,10 @@ def test_taddy_show_configs_stay_in_sync() -> None:
     }
 
     assert configured_taddy_slugs == set(TADDY_SHOWS)
+    # Single source of truth: the importer derives its registry from show_config,
+    # so the uuids are guaranteed identical (no separate hardcoded list to drift).
     for slug in configured_taddy_slugs:
-        assert SHOWS[slug].taddy_uuid == TADDY_SHOWS[slug].series_uuid
+        assert SHOWS[slug].taddy_uuid == TADDY_SHOWS[slug].taddy_uuid
 
 
 def test_show_ids_are_unique_positive_integers() -> None:

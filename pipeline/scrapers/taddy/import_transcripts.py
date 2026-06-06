@@ -19,8 +19,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import time
-from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -34,42 +34,20 @@ MAX_TADDY_RETRIES = 5
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 
 
-@dataclass
-class ShowConfig:
-    slug: str
-    name: str
-    series_uuid: str
-    fallback_website_url: Optional[str] = None
-
+# Show registry is single-sourced from pipeline/show_config.py. Add pipeline/ to
+# the path (so this works both as a standalone script and as the orchestrator
+# subprocess, regardless of cwd) and expose only the Taddy-enabled shows. Nothing
+# about a show is duplicated here — tests/test_show_config.py guards against drift.
+# NOTE: this module uses cfg.taddy_uuid (canonical) where it once used series_uuid.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from show_config import SHOWS as _ALL_SHOWS, ShowConfig  # noqa: E402
 
 SHOWS: dict[str, ShowConfig] = {
-    "ai-daily-brief": ShowConfig(
-        slug="ai-daily-brief",
-        name="The AI Daily Brief: Artificial Intelligence News and Analysis",
-        series_uuid="60fabbea-f51e-4c8b-82b4-1cbd57fe8c02",
-        fallback_website_url="https://www.aidailybrief.ai/",
-    ),
-    "pchh": ShowConfig(
-        slug="pchh",
-        name="Pop Culture Happy Hour",
-        series_uuid="81b2a312-6976-4d22-bc54-4e3991fee332",
-        fallback_website_url="https://www.npr.org/podcasts/510282/pop-culture-happy-hour",
-    ),
-    "tal": ShowConfig(
-        slug="tal",
-        name="This American Life",
-        series_uuid="d682a935-ad2d-46ee-a0ac-139198b83bcc",
-        fallback_website_url="https://www.thisamericanlife.org/podcast/rss.xml",
-    ),
-    "sop": ShowConfig(
-        slug="sop",
-        name="Switched on Pop",
-        series_uuid="97ed51a4-460e-4dc8-8db5-30df96ad59bc",
-        fallback_website_url="https://switchedonpop.com",
-    ),
+    slug: cfg for slug, cfg in _ALL_SHOWS.items() if cfg.taddy_uuid
 }
-
-RAW_CONTENT_SHOW_SLUGS = {"ai-daily-brief", "pchh"}
+RAW_CONTENT_SHOW_SLUGS = {
+    slug for slug, cfg in _ALL_SHOWS.items() if cfg.store_raw_content
+}
 
 
 def load_environment() -> None:
@@ -588,9 +566,9 @@ def run(args: argparse.Namespace) -> None:
             if stop_all:
                 break
             cfg = SHOWS[slug]
-            series = get_series(cfg.series_uuid, user_id=user_id, api_key=api_key)
+            series = get_series(cfg.taddy_uuid, user_id=user_id, api_key=api_key)
             if not series:
-                print(f"[{slug}] Could not load series {cfg.series_uuid}; skipping")
+                print(f"[{slug}] Could not load series {cfg.taddy_uuid}; skipping")
                 continue
 
             show_name = (series.get("name") or cfg.name).strip()
@@ -602,7 +580,7 @@ def run(args: argparse.Namespace) -> None:
             else:
                 show_id = upsert_show(conn, slug=cfg.slug, name=show_name, website_url=show_website)
             print(
-                f"\n[{slug}] show_id={show_id} series_uuid={cfg.series_uuid} "
+                f"\n[{slug}] show_id={show_id} series_uuid={cfg.taddy_uuid} "
                 f"episodes={series.get('totalEpisodesCount')} status={series.get('taddyTranscribeStatus')}"
             )
 
@@ -619,7 +597,7 @@ def run(args: argparse.Namespace) -> None:
                     break
 
                 episodes = get_latest_episodes(
-                    series_uuid=cfg.series_uuid,
+                    series_uuid=cfg.taddy_uuid,
                     page=page,
                     limit_per_page=args.page_size,
                     user_id=user_id,
@@ -640,7 +618,7 @@ def run(args: argparse.Namespace) -> None:
                             conn,
                             show_id=show_id,
                             show_slug=cfg.slug,
-                            series_uuid=cfg.series_uuid,
+                            series_uuid=cfg.taddy_uuid,
                             episode=ep,
                         )
 
