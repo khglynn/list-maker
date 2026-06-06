@@ -48,6 +48,9 @@ next-env.d.ts
 .claude/settings.local.json
 .claude/worktrees/
 
+# Auto-memory symlink — public repo, keep memory local (don't publish)
+.claude-memory/
+
 # marketing assets (too large for git)
 marketing/album_covers/
 marketing/sop/tiles/

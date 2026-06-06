@@ -1,7 +1,16 @@
 # list-maker - Agent Instructions
 
 *Inherits from ~/DevKev/CLAUDE.md*
-*Last updated: 2026-03-13*
+*Last updated: 2026-06-06*
+
+## ⚑ Active work + resuming after compaction
+
+A **durable, self-healing rebuild** of this pipeline is underway (all 6 shows auto-processing → Spotify/Notion; self-healing; Slack-notifying; tested). If you're resuming — **especially after a compaction** — read these first, in order, before touching anything:
+1. `claude-plans/2026-06-06-durable-pipeline-resume.md` — way-of-working + failure-modes + grounding (load-bearing; don't skim).
+2. `NOW.md` — live state + the exact next step.
+3. `claude-plans/2026-06-06-durable-pipeline-rebuild.md` — the full plan (acceptance criteria, workstreams A–E).
+
+Post-compaction sessions drift toward doing the minimum — that's the #1 failure mode here. The global CLAUDE.md "Default to deep, durable work" + the resume doc are the antidote.
 
 ## About This Project
 
