@@ -11,8 +11,10 @@ Goal — all 6 shows auto-processing on a durable schedule → music (SOP, TAL) 
 **Workstream A — hardening** (scheduler-agnostic durability core):
 - **A1 ✅ DONE** — single-source show registry: importer derives `SHOWS`/`RAW_CONTENT_SHOW_SLUGS` from `show_config.py` (added `fallback_website_url` + `store_raw_content`); `cfg.series_uuid`→`cfg.taddy_uuid`; drift-guard test tightened. pytest 24/24; Codex SAFE; parity verified.
 - **A2 ✅ DONE** — idempotent batch load via `delete_existing_run(show_id, batch_name)` before `insert_run` (re-load replaces; self-heals partials). Scoped psycopg2 DELETE (not the MCP, so unaffected by the destructive-op guard). pytest 25/25; Codex SAFE. *Deferred: full single-transaction atomicity — low value vs blast-radius, and the orchestrator is already episode-idempotent via `find_unextracted_episodes`.*
-- **A3 → NEXT:** parameterize the hardcoded 90-day filter in `find_unextracted_episodes` into a named constant + add a `--backfill`/`recent_only=False` path (needed for Hardfork/media archive backfills; threads through `run_new_episodes.py`).
-- A4 per-entity Notion sync state · A5 structured logging · A6 orchestrator-level retry · A7 staleness alert → Slack · A8 tests on extraction + sync · A9 docs (ARCHITECTURE.md + status refresh).
+- **A3 ✅ DONE** — `RECENT_EPISODE_WINDOW_DAYS` const + `make_interval(days => %s)` (no hardcoded literal) + `--backfill` flag threaded through `process_show`/`main` (→ `recent_only=False` + Taddy cap 500). pytest 28/28; Codex SAFE.
+- **A4 ⏸ KEVIN-BLOCKED (schema migration):** per-entity Notion sync state needs `ALTER TABLE ai_entities ADD COLUMN notion_sync_status / notion_sync_error / notion_sync_attempt_at`. Schema changes are deferred to Kevin per the autonomous-run rule (will summarize at A-complete). Skipped → A5.
+- **A5 → NEXT:** structured logging (Python `logging`) across orchestrator + sync + import + extract; per-stage counts/timing.
+- A6 orchestrator-level retry · A7 staleness alert → Slack (code doable; live send needs `SLACK_WEBHOOK_URL` secret) · A8 tests · A9 docs (ARCHITECTURE.md + status refresh).
 Then **C** (Hardfork) → **B** (Cloudflare-Cron durable trigger + Slack) → **D** (media: PCHH + Culture Gabfest) → **E** (verify all shows).
 
 Per-task rhythm: investigate (verify reality) → implement (TDD/DB-test where logic or data changes) → run the net AND read it → doc-sweep → secret-scan the staged diff → commit (scope-prefixed, `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`) → bank NOW/DEVLOG → **Codex + triple-check at the boundary.**

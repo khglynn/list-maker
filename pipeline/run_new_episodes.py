@@ -33,6 +33,11 @@ PIPELINE_DIR = Path(__file__).resolve().parent
 VENV_PYTHON = str(PIPELINE_DIR / "venv" / "bin" / "python")
 SCRAPERS_DIR = PIPELINE_DIR / "scrapers"
 
+# Episodes older than this are skipped by default — they pre-date the current
+# extraction quality bar and aren't worth re-processing. Pass recent_only=False
+# (the --backfill flag) to extract the full archive, e.g. when onboarding a show.
+RECENT_EPISODE_WINDOW_DAYS = 90
+
 
 def run_script(script_path: str, args: list[str], dry_run: bool, label: str, timeout: int = 600) -> bool:
     """Run a pipeline script as a subprocess. Returns True on success."""
@@ -57,9 +62,10 @@ def run_script(script_path: str, args: list[str], dry_run: bool, label: str, tim
 def find_unextracted_episodes(conn, show_id: int, recent_only: bool = True) -> list[int]:
     """Find episodes that have transcripts but no entity extraction run.
 
-    If recent_only=True (default), only returns episodes from the last 90 days.
-    This avoids re-processing old episodes that failed quality gates.
-    Use recent_only=False for full backfill.
+    If recent_only=True (default), only returns episodes published within the last
+    RECENT_EPISODE_WINDOW_DAYS days — this avoids re-processing old episodes that
+    pre-date the current quality bar. Use recent_only=False (the --backfill flag)
+    for the full archive, e.g. when onboarding a show.
     """
     with conn.cursor() as cur:
         sql = """
@@ -73,7 +79,8 @@ def find_unextracted_episodes(conn, show_id: int, recent_only: bool = True) -> l
         """
         params: list = [show_id]
         if recent_only:
-            sql += "  AND ep.publish_date >= CURRENT_DATE - INTERVAL '90 days'\n"
+            sql += "  AND ep.publish_date >= CURRENT_DATE - make_interval(days => %s)\n"
+            params.append(RECENT_EPISODE_WINDOW_DAYS)
         sql += "ORDER BY ep.id;"
         cur.execute(sql, params)
         return [row["id"] for row in cur.fetchall()]
@@ -224,15 +231,19 @@ def step_spotify_sync(cfg: ShowConfig, dry_run: bool) -> bool:
     return run_script(script, args, dry_run=False, label=f"Spotify sync ({cfg.slug})")
 
 
-def process_show(cfg: ShowConfig, dry_run: bool) -> None:
-    """Run the full pipeline for a single show."""
+def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> None:
+    """Run the full pipeline for a single show.
+
+    backfill=True extracts the full archive (recent_only=False) and raises the
+    Taddy per-run import cap — use it when onboarding a show or catching up history.
+    """
     print(f"\n{'='*60}")
-    print(f"Processing: {cfg.name} ({cfg.slug})")
+    print(f"Processing: {cfg.name} ({cfg.slug}){' [BACKFILL]' if backfill else ''}")
     print(f"{'='*60}")
 
     # Step 1: Taddy import
     print("\n[1/5] Taddy import")
-    if not step_taddy_import(cfg, dry_run):
+    if not step_taddy_import(cfg, dry_run, per_show_limit=500 if backfill else 50):
         print("  WARNING: Taddy import failed, continuing anyway...")
 
     # Step 2: Entity extraction (only for entity-type shows)
@@ -240,7 +251,9 @@ def process_show(cfg: ShowConfig, dry_run: bool) -> None:
     if cfg.extraction_type == "entity_extraction":
         conn = get_db_connection()
         try:
-            unextracted = find_unextracted_episodes(conn, cfg.show_id)
+            unextracted = find_unextracted_episodes(
+                conn, cfg.show_id, recent_only=not backfill
+            )
         finally:
             conn.close()
         if not step_entity_extraction(cfg, unextracted, dry_run):
@@ -275,6 +288,12 @@ def parse_args() -> argparse.Namespace:
     group.add_argument("--shows", help="Comma-separated show slugs (e.g., ai-daily-brief,sop)")
     group.add_argument("--all", action="store_true", help="Process all configured shows")
     p.add_argument("--dry-run", action="store_true", help="Preview actions without executing")
+    p.add_argument(
+        "--backfill",
+        action="store_true",
+        help="Extract the full archive (ignore the recent-only window) and raise the "
+        "Taddy import cap — for onboarding a show or catching up history.",
+    )
     return p.parse_args()
 
 
@@ -293,7 +312,7 @@ def main() -> None:
 
     for slug in slugs:
         cfg = get_show(slug)
-        process_show(cfg, args.dry_run)
+        process_show(cfg, args.dry_run, backfill=args.backfill)
 
     print(f"\n{'='*60}")
     print("All shows processed.")
