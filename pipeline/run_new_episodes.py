@@ -22,11 +22,12 @@ import argparse
 import csv
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 # Allow imports from pipeline/
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import load_environment, get_db_connection
+from common import load_environment, get_db_connection, get_logger
 from show_config import SHOWS, get_show, ShowConfig
 
 PIPELINE_DIR = Path(__file__).resolve().parent
@@ -37,6 +38,8 @@ SCRAPERS_DIR = PIPELINE_DIR / "scrapers"
 # extraction quality bar and aren't worth re-processing. Pass recent_only=False
 # (the --backfill flag) to extract the full archive, e.g. when onboarding a show.
 RECENT_EPISODE_WINDOW_DAYS = 90
+
+log = get_logger("pipeline.run_new_episodes")
 
 
 def run_script(script_path: str, args: list[str], dry_run: bool, label: str, timeout: int = 600) -> bool:
@@ -237,6 +240,7 @@ def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> None
     backfill=True extracts the full archive (recent_only=False) and raises the
     Taddy per-run import cap — use it when onboarding a show or catching up history.
     """
+    started = time.time()
     print(f"\n{'='*60}")
     print(f"Processing: {cfg.name} ({cfg.slug}){' [BACKFILL]' if backfill else ''}")
     print(f"{'='*60}")
@@ -279,7 +283,9 @@ def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> None
     if not step_spotify_sync(cfg, dry_run):
         print("  WARNING: Spotify sync failed.")
 
-    print(f"\nDone: {cfg.name}")
+    elapsed = time.time() - started
+    log.info("show=%s done in %.1fs (backfill=%s)", cfg.slug, elapsed, backfill)
+    print(f"\nDone: {cfg.name} ({elapsed:.1f}s)")
 
 
 def parse_args() -> argparse.Namespace:
@@ -300,6 +306,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     load_environment()
+    get_logger("pipeline.run_new_episodes")  # refresh level now LOG_LEVEL (.env.local) is loaded
+    run_started = time.time()
 
     if args.all:
         slugs = list(SHOWS.keys())
@@ -317,6 +325,7 @@ def main() -> None:
     print(f"\n{'='*60}")
     print("All shows processed.")
     print(f"{'='*60}")
+    log.info("run complete: %d show(s) in %.1fs", len(slugs), time.time() - run_started)
 
 
 if __name__ == "__main__":

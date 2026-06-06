@@ -2,10 +2,31 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+
+_LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Return a configured structured logger (timestamp + level + name).
+
+    Idempotent — repeated calls don't stack handlers. Level comes from the
+    LOG_LEVEL env var (default INFO), so autonomous/CI runs are diagnosable.
+    """
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(_LOG_FORMAT))
+        logger.addHandler(handler)
+        logger.propagate = False
+    level = (os.getenv("LOG_LEVEL") or "INFO").upper()
+    logger.setLevel(getattr(logging, level, logging.INFO))
+    return logger
 
 
 def get_repo_root() -> Path:
