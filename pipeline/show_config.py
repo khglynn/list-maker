@@ -76,7 +76,7 @@ SHOWS: dict[str, ShowConfig] = {
         taddy_uuid="81b2a312-6976-4d22-bc54-4e3991fee332",
         fallback_website_url="https://www.npr.org/podcasts/510282/pop-culture-happy-hour",
         store_raw_content=True,
-        extraction_type=None,
+        extraction_type="media_extraction",
     ),
     "hard-fork": ShowConfig(
         slug="hard-fork",

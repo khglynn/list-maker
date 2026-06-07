@@ -94,7 +94,7 @@ def run_script(script_path: str, args: list[str], dry_run: bool, label: str, tim
 
 
 def find_unextracted_episodes(conn, show_id: int, recent_only: bool = True) -> list[int]:
-    """Find episodes that have transcripts but no entity extraction run.
+    """Find episodes that have source text (transcript OR show-notes) but no extraction run.
 
     If recent_only=True (default), only returns episodes published within the last
     RECENT_EPISODE_WINDOW_DAYS days — this avoids re-processing old episodes that
@@ -105,8 +105,9 @@ def find_unextracted_episodes(conn, show_id: int, recent_only: bool = True) -> l
         sql = """
             SELECT DISTINCT ep.id
             FROM episodes ep
-            JOIN episode_transcripts et ON et.episode_id = ep.id
+            LEFT JOIN episode_transcripts et ON et.episode_id = ep.id
             WHERE ep.show_id = %s
+              AND COALESCE(et.transcript_text, ep.description_body) IS NOT NULL
               AND ep.id NOT IN (
                   SELECT DISTINCT m.episode_id FROM ai_mentions m
               )
@@ -146,9 +147,10 @@ def prepare_extraction_inputs(conn, episode_ids: list[int]) -> tuple[Path, Path]
         cur.execute(
             """
             SELECT ep.id AS episode_id, ep.title, ep.publish_date,
-                   ep.url AS episode_url, et.transcript_text
+                   ep.url AS episode_url,
+                   COALESCE(et.transcript_text, ep.description_body) AS transcript_text
             FROM episodes ep
-            JOIN episode_transcripts et ON et.episode_id = ep.id
+            LEFT JOIN episode_transcripts et ON et.episode_id = ep.id
             WHERE ep.id = ANY(%s)
             ORDER BY ep.publish_date DESC
             """,
@@ -164,7 +166,7 @@ def prepare_extraction_inputs(conn, episode_ids: list[int]) -> tuple[Path, Path]
         slug = row["title"][:80].lower().replace(" ", "-").replace("/", "-")
         txt_path = transcripts_dir / f"{eid}-{slug}.txt"
         if not txt_path.exists():
-            txt_path.write_text(row["transcript_text"], encoding="utf-8")
+            txt_path.write_text(row["transcript_text"] or "", encoding="utf-8")
             written += 1
         csv_rows.append({
             "episode_id": eid,
@@ -215,6 +217,7 @@ def step_entity_extraction(cfg: ShowConfig, episode_ids: list[int], dry_run: boo
             "--transcripts-dir", str(transcripts_dir),
             "--batch-name", batch_name,
             "--output-dir", output_root,
+            "--extraction-type", cfg.extraction_type or "entity_extraction",
         ]
         batch_num = start // batch_size + 1
         total_batches = (len(episode_ids) + batch_size - 1) // batch_size
@@ -281,9 +284,9 @@ def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> None
     if not step_taddy_import(cfg, dry_run, per_show_limit=500 if backfill else 50):
         print("  WARNING: Taddy import failed, continuing anyway...")
 
-    # Step 2: Entity extraction (only for entity-type shows)
+    # Step 2: Entity/media extraction (shows whose content the LLM extractor handles)
     print("\n[2/5] Entity extraction")
-    if cfg.extraction_type == "entity_extraction":
+    if cfg.extraction_type in ("entity_extraction", "media_extraction"):
         conn = get_db_connection()
         try:
             unextracted = find_unextracted_episodes(
@@ -302,7 +305,8 @@ def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> None
         if not step_normalize_aliases(dry_run):
             print("  WARNING: Alias normalization failed, continuing...")
     else:
-        print("  Skipping (not an entity show)")
+        # Media relies on load-time exact-name dedup; the fuzzy alias rules are tech-specific.
+        print(f"  Skipping alias normalization (extraction_type={cfg.extraction_type})")
 
     # Step 4: Notion sync
     print("\n[4/5] Notion sync")

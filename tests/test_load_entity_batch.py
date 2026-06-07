@@ -1,4 +1,6 @@
+from pipeline.scrapers.ai_daily.extract_entities import LOCKED_TYPES, MEDIA_TYPES
 from pipeline.scrapers.ai_daily.load_entity_batch import (
+    VALID_ENTITY_TYPES,
     delete_existing_run,
     derive_tags,
     merge_aliases,
@@ -7,6 +9,19 @@ from pipeline.scrapers.ai_daily.load_entity_batch import (
     parse_aliases,
     parse_facts_json,
 )
+
+
+def test_valid_entity_types_covers_both_taxonomies() -> None:
+    # Drift guard: the loader's accepted set must include every tech + media type the
+    # extractor can emit — otherwise those mentions silently fall back to "other".
+    missing = (set(LOCKED_TYPES) | set(MEDIA_TYPES)) - VALID_ENTITY_TYPES
+    assert not missing, f"VALID_ENTITY_TYPES missing extractor types: {sorted(missing)}"
+
+
+def test_normalize_entity_type_accepts_media() -> None:
+    assert normalize_entity_type("movie") == "movie"
+    assert normalize_entity_type("Tv_Series") == "tv_series"  # case-insensitive
+    assert normalize_entity_type("not_a_real_type") == "other"
 
 
 class _FakeCursor:

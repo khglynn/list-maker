@@ -19,6 +19,8 @@ from dotenv import load_dotenv
 
 
 VALID_ENTITY_TYPES = {
+    # Tech taxonomy (AI Daily, Hard Fork) — mirrors extract_entities.LOCKED_TYPES.
+    # tests/test_load_entity_batch.py guards both halves against drift.
     "software_product",
     "model",
     "benchmark",
@@ -31,6 +33,18 @@ VALID_ENTITY_TYPES = {
     "organization",
     "person",
     "other",
+    # Media taxonomy (PCHH, Culture Gabfest) — mirrors extract_entities.MEDIA_TYPES.
+    "movie",
+    "tv_series",
+    "book",
+    "music_album",
+    "music_track",
+    "game",
+    "podcast_series",
+    "theater_production",
+    "social_account",
+    "artist_profile",
+    "visual_media_other",
 }
 
 
