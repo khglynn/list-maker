@@ -133,8 +133,16 @@ def main() -> None:
     digest = build_digest(shows, totals, checks)
     print(digest)
     if not args.dry_run:
-        ok = post_slack(digest)
-        print(f"\n[posted to Slack: {ok}]")
+        # The pulse IS the heartbeat — a "success" that didn't actually post would make a
+        # silently-broken webhook look healthy, defeating "no pulse = trigger down". So
+        # fail loudly if we couldn't post (the job goes red in Actions instead of green).
+        if not post_slack(digest):
+            print(
+                "ERROR: pulse digest could not be posted to Slack — is SLACK_WEBHOOK_URL set?",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print("\n[posted to Slack]")
 
 
 if __name__ == "__main__":
