@@ -1,4 +1,4 @@
-name: Entities - AI Daily + Hard Fork
+name: Entities + Media (AI Daily, Hard Fork, PCHH, Gabfest)
 
 on:
   # Interim daily trigger (works today). The DURABLE trigger is a Cloudflare Worker
@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
     inputs:
       shows:
-        description: 'Comma-separated entity-show slugs'
+        description: 'Comma-separated entity/media show slugs'
         required: false
-        default: 'ai-daily-brief,hard-fork'
+        default: 'ai-daily-brief,hard-fork,pchh,culture-gabfest'
       backfill:
         description: 'Backfill the full archive (ignore the recent-only window)'
         required: false
@@ -56,7 +56,7 @@ jobs:
           BACKFILL_INPUT: ${{ github.event.inputs.backfill }}
           DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
         run: |
-          SHOWS="${SHOWS_INPUT:-ai-daily-brief,hard-fork}"
+          SHOWS="${SHOWS_INPUT:-ai-daily-brief,hard-fork,pchh,culture-gabfest}"
           FLAGS=""
           [ "$BACKFILL_INPUT" = "true" ] && FLAGS="$FLAGS --backfill"
           [ "$DRY_RUN_INPUT" = "true" ] && FLAGS="$FLAGS --dry-run"
