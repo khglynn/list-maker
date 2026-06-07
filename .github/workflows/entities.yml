@@ -66,11 +66,13 @@ jobs:
           cd pipeline
           python run_new_episodes.py --shows "$SHOWS" $FLAGS
 
-      - name: Data health check (staleness, integrity)
+      - name: Data health check (staleness, integrity, feed second-source)
         if: always()
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          TADDY_USER_ID: ${{ secrets.TADDY_USER_ID }}   # second-source: are we behind the feed?
+          TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
         run: |
           # No `|| true`: a crash here should fail the step (→ Slack), not vanish.
           # data_health.py posts its own Slack on a failed check (e.g. a stale show).

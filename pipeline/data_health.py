@@ -19,6 +19,7 @@ from typing import Any, Iterable
 # Allow running as `python pipeline/data_health.py` from the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import get_db_connection, load_environment, post_slack
+from feed_check import feed_recent_dates
 from show_config import SHOWS
 
 
@@ -313,6 +314,46 @@ def check_episode_freshness(conn) -> CheckResult:
     return CheckResult("episode_freshness_by_show", status, summary, failures + details)
 
 
+def check_import_caught_up(conn) -> CheckResult:
+    """SECOND-SOURCE freshness: is our import behind each show's REAL feed?
+
+    episode_freshness_by_show only knows "days since OUR latest", which can't tell a show
+    on break from an import that silently broke. This asks each feed (Taddy / Megaphone
+    RSS via feed_check) what the latest episode is — if the feed is ahead of us, we're
+    behind and missing episodes. A feed we can't reach is reported, not failed (don't cry
+    wolf on a flaky feed); a confirmed BEHIND is a real, actionable failure.
+    """
+    rows = _rows(
+        conn,
+        """
+        SELECT s.slug, MAX(e.publish_date)::date AS db_latest
+        FROM shows s LEFT JOIN episodes e ON e.show_id = s.id
+        GROUP BY s.slug
+        """,
+    )
+    db_latest = {r["slug"]: r["db_latest"] for r in rows}
+    failures: list[str] = []
+    details: list[str] = []
+    for slug, cfg in SHOWS.items():
+        latest = db_latest.get(slug)
+        feed = feed_recent_dates(cfg)
+        if feed is None:
+            details.append(f"{slug}: feed unverified (couldn't reach the second source)")
+            continue
+        behind = sum(1 for d in feed if latest is None or d > latest)
+        if behind:
+            failures.append(f"{slug}: BEHIND {behind} — feed at {feed[0]}, we have {latest}")
+        else:
+            details.append(f"{slug}: caught up ({latest})")
+    status = "fail" if failures else "pass"
+    summary = (
+        "Every show's import is caught up to its feed."
+        if status == "pass"
+        else f"{len(failures)} show(s) behind their feed (missing episodes)."
+    )
+    return CheckResult("import_caught_up_to_feed", status, summary, failures + details)
+
+
 def check_ai_daily_extraction(conn) -> CheckResult:
     row = _one(
         conn,
@@ -481,8 +522,8 @@ def check_optional_null_map(conn) -> CheckResult:
     )
 
 
-def run_checks(conn) -> list[CheckResult]:
-    return [
+def run_checks(conn, include_feed_check: bool = False) -> list[CheckResult]:
+    checks = [
         check_expected_shows(conn),
         check_episode_identity(conn),
         check_duplicate_episodes(conn),
@@ -493,6 +534,11 @@ def run_checks(conn) -> list[CheckResult]:
         check_possible_entity_alias_splits(conn),
         check_optional_null_map(conn),
     ]
+    if include_feed_check:
+        # Opt-in: makes external Taddy/RSS calls. The CLI enables it (the daily alarm);
+        # the pulse omits it because it does its own per-show feed display.
+        checks.append(check_import_caught_up(conn))
+    return checks
 
 
 def render_text(results: list[CheckResult]) -> str:
@@ -529,7 +575,8 @@ def main() -> None:
     load_environment()
     conn = get_db_connection()
     try:
-        results = run_checks(conn)
+        # Daily CLI run includes the second-source feed check (the loud import-behind alarm).
+        results = run_checks(conn, include_feed_check=True)
     finally:
         conn.close()
 
