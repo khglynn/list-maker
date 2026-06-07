@@ -15,4 +15,5 @@ crons = [
   "0 10 * * 1",   # Mon   — pipeline.yml show_id=2 (This American Life)
   "0 10 * * 3",   # Wed   — pipeline.yml show_id=1 (Switched on Pop)
   "0 10 * * 5",   # Fri   — pipeline.yml show_id=1 (Switched on Pop)
+  "0 12 * * 1",   # Mon   — eval.yml (weekly extraction-quality eval, gated)
 ]
