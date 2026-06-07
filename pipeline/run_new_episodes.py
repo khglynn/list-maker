@@ -121,17 +121,26 @@ def find_unextracted_episodes(conn, show_id: int, recent_only: bool = True) -> l
         return [row["id"] for row in cur.fetchall()]
 
 
-def step_taddy_import(cfg: ShowConfig, dry_run: bool, per_show_limit: int = 50) -> bool:
-    """Step 1: Import new episodes + transcripts from Taddy."""
-    if not cfg.taddy_uuid:
-        print(f"  Skipping Taddy import (no UUID for {cfg.slug})")
-        return True
+def step_import(cfg: ShowConfig, dry_run: bool, per_show_limit: int = 50) -> bool:
+    """Step 1: Import new episodes. Taddy shows get transcripts; Culture Gabfest has no
+    Taddy transcripts (iHeart rights), so it imports from its Megaphone RSS show-notes."""
+    if cfg.taddy_uuid:
+        script = str(SCRAPERS_DIR / "taddy" / "import_transcripts.py")
+        args = ["--shows", cfg.slug, "--per-show-limit", str(per_show_limit)]
+        if dry_run:
+            args.append("--dry-run")
+        return run_script(script, args, dry_run=False, label=f"Taddy import ({cfg.slug})")
 
-    script = str(SCRAPERS_DIR / "taddy" / "import_transcripts.py")
-    args = ["--shows", cfg.slug, "--per-show-limit", str(per_show_limit)]
-    if dry_run:
-        args.append("--dry-run")
-    return run_script(script, args, dry_run=False, label=f"Taddy import ({cfg.slug})")
+    # Culture Gabfest: no Taddy transcripts → import new episodes from Megaphone RSS.
+    if cfg.slug == "culture-gabfest":
+        script = str(SCRAPERS_DIR / "gabfest" / "import_gabfest.py")
+        args = ["--limit", str(per_show_limit)]
+        if dry_run:
+            args.append("--dry-run")
+        return run_script(script, args, dry_run=False, label="Gabfest RSS import")
+
+    print(f"  Skipping import (no source configured for {cfg.slug})")
+    return True
 
 
 def prepare_extraction_inputs(conn, episode_ids: list[int]) -> tuple[Path, Path]:
@@ -281,7 +290,7 @@ def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> None
 
     # Step 1: Taddy import
     print("\n[1/5] Taddy import")
-    if not step_taddy_import(cfg, dry_run, per_show_limit=500 if backfill else 50):
+    if not step_import(cfg, dry_run, per_show_limit=500 if backfill else 50):
         print("  WARNING: Taddy import failed, continuing anyway...")
 
     # Step 2: Entity/media extraction (shows whose content the LLM extractor handles)
