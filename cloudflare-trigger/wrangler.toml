@@ -1,0 +1,10 @@
+name = "list-maker-cron"
+main = "worker.js"
+compatibility_date = "2026-06-06"
+
+# Deploy to the PERSONAL (trimm) Cloudflare account. Set the trimm account_id below
+# (get it from `env -u CLOUDFLARE_API_TOKEN wrangler whoami` after logging into trimm).
+# account_id = "<trimm-account-id>"
+
+[triggers]
+crons = ["0 11 * * *"]   # daily 11:00 UTC — matches entities.yml's interim schedule

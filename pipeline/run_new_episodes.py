@@ -31,7 +31,10 @@ from common import load_environment, get_db_connection, get_logger
 from show_config import SHOWS, get_show, ShowConfig
 
 PIPELINE_DIR = Path(__file__).resolve().parent
-VENV_PYTHON = str(PIPELINE_DIR / "venv" / "bin" / "python")
+# Prefer the project venv locally; fall back to the running interpreter — CI runs
+# on the runner's Python (deps installed there) where the venv path doesn't exist.
+_VENV_PYTHON = PIPELINE_DIR / "venv" / "bin" / "python"
+VENV_PYTHON = str(_VENV_PYTHON) if _VENV_PYTHON.exists() else sys.executable
 SCRAPERS_DIR = PIPELINE_DIR / "scrapers"
 
 # Episodes older than this are skipped by default — they pre-date the current
