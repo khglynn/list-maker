@@ -76,6 +76,7 @@ SHOWS: dict[str, ShowConfig] = {
         taddy_uuid="81b2a312-6976-4d22-bc54-4e3991fee332",
         fallback_website_url="https://www.npr.org/podcasts/510282/pop-culture-happy-hour",
         store_raw_content=True,
+        notion_database_id="3780501ef95081a783ebf8a32fa94657",  # shared Media DB (Option A)
         extraction_type="media_extraction",
     ),
     "hard-fork": ShowConfig(
@@ -97,7 +98,7 @@ SHOWS: dict[str, ShowConfig] = {
         taddy_uuid=None,  # Taddy won't transcribe Gabfest (iHeart rights) — Megaphone RSS show-notes instead
         fallback_website_url="https://feeds.megaphone.fm/slatesculturegabfest",
         store_raw_content=True,
-        # notion_database_id filled when the media Notion DB is created (deferred to media build)
+        notion_database_id="3780501ef95081a783ebf8a32fa94657",  # shared Media DB (Option A)
         extraction_type="media_extraction",
     ),
 }
