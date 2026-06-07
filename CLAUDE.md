@@ -110,16 +110,20 @@ list-maker/
 
 **Note:** All `npm` commands must be run from inside `web/` (e.g., `cd web && npm run dev`).
 
-## Current Status (Mar 2026)
+## Current Status (2026-06-07 — all 6 shows live)
 
-**2026-06-06 update:** Pipeline hardened into a durable, self-healing, tested system (Workstream A — idempotency, retry+backoff, structured logging, staleness alerts, single-source config; 45 tests). See `ARCHITECTURE.md` for the current design + live show counts, and `NOW.md` for active work. The Mar-2026 table below is a point-in-time snapshot (item counts not re-verified in the 2026-06-06 pass).
+**2026-06-07 update:** All 6 shows auto-process end-to-end. Pipeline hardened (Workstream A). **Option A shared Notion DBs:** entities are global (deduped across shows, tagged with a "Shows" multi-select), so AI Daily + Hard Fork share one **Tech DB** (`982dafa0…`) and PCHH + Culture Gabfest share one **Media DB** (`3780501e…94657`). A media extraction profile was added (one extractor, two profiles — tech vs media). Counts below verified 2026-06-07.
 
-| Show | Type | Episodes | Items | Status |
-|------|------|----------|-------|--------|
-| SOP | Music | 664 | 4,417 songs, 4,043 matched (92%) | Automated (GitHub Actions), 357 NOT_FOUND + 17 UNAVAILABLE |
-| TAL | Music | 882 | 1,094 songs, 880 matched (80%) | Automated (GitHub Actions), 214 NOT_FOUND |
-| AI Daily | Apps/Tools | 915 | 773 ep extracted (85%), 8,405 mentions, 853 in Notion | Notion synced, orchestrator live |
-| PCHH | Mixed | 0 | 0 | Taddy configured, pipeline not built |
+| Show | Type | Episodes | Items | Destination / status |
+|------|------|----------|-------|----------------------|
+| SOP | Music | — | 4,864 songs, 4,244 matched (87%) | Spotify playlist (auth fixed; revives on next pipeline.yml run) |
+| TAL | Music | — | 1,087 songs, 875 matched (80%) | Spotify playlist |
+| AI Daily | Tech | 997 | 5,563 entities, 11,065 mentions | shared Tech DB; caught up to 2026-06-06 |
+| Hard Fork | Tech | 198 | 1,267 entities, 2,057 mentions | shared Tech DB |
+| PCHH | Media | 52* | 365 media entities | shared Media DB |
+| Culture Gabfest | Media | 17* | 122 media entities | shared Media DB (extracts from show-notes — no transcripts) |
+
+*PCHH/Gabfest = scoped-recent backfill so far; the full archive (357 + 871 eps) is a ~11h/$7.50 run deferred to Kevin's call.
 
 ## Automation
 

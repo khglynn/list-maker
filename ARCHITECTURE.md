@@ -21,16 +21,18 @@ podcast websites        ┼─► scrapers/ ─► entity/song ─► Neon ─�
 
 Cascading source strategy (cheapest first): website show-notes → free transcripts → Taddy transcript API → Whisper (last resort). Don't pay to transcribe what's already public.
 
-## Shows (live, 2026-06-06)
+## Shows (live, 2026-06-07 — all 6 processing end-to-end)
 
-| Show | slug | Type | Episodes | Transcripts | Latest ep | Destination |
-|------|------|------|----------|-------------|-----------|-------------|
-| AI Daily Brief | `ai-daily-brief` | tech | 980 | 980 | 2026-05-18 | Notion |
-| Pop Culture Happy Hour | `pchh` | media | 357 | 357 | 2026-05-18 | Notion (pipeline pending) |
-| Switched on Pop | `sop` | music | 699 | 532 | 2026-06-02 | Spotify |
-| This American Life | `tal` | music | 889 | 14* | 2026-05-17 | Spotify |
+| Show | slug | Type | Episodes | Latest ep | Destination |
+|------|------|------|----------|-----------|-------------|
+| AI Daily Brief | `ai-daily-brief` | tech | 997 | 2026-06-06 | shared Tech DB (`982dafa0…`) |
+| Hard Fork | `hard-fork` | tech | 198 | 2026-06-05 | shared Tech DB (`982dafa0…`) |
+| Pop Culture Happy Hour | `pchh` | media | 357 | 2026-06-05 | shared Media DB (`3780501e…94657`) |
+| Culture Gabfest | `culture-gabfest` | media | 871 | 2026-06-03 | shared Media DB (`3780501e…94657`) |
+| Switched on Pop | `sop` | music | 699 | 2026-06-02 | Spotify |
+| This American Life | `tal` | music | 889 | 2026-05-10 | Spotify |
 
-*TAL: Taddy only exposes the current rolling feed; the historical archive isn't transcribing. Hard Fork + Culture Gabfest are onboarding (Workstreams C/D). AI Daily's latest ep being weeks old is exactly what A7's staleness check now flags.
+**Shared Notion DBs (Option A):** tech (AI Daily + Hard Fork) and media (PCHH + Gabfest) each share one DB — entities are global, deduped across shows, tagged with a "Shows" multi-select. **Gabfest has no transcripts** (Taddy won't transcribe it — iHeart rights); it extracts from Megaphone RSS show-notes via the orchestrator's `COALESCE(transcript_text, description_body)` source path. PCHH + Gabfest show full-archive episode counts; scoped-recent backfill has extracted/synced 52 + 17 so far — full archive (~11h/$7.50) deferred to Kevin.
 
 ## Neon schema (key tables)
 
