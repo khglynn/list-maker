@@ -333,25 +333,29 @@ def check_import_caught_up(conn) -> CheckResult:
     )
     db_latest = {r["slug"]: r["db_latest"] for r in rows}
     failures: list[str] = []
+    warnings: list[str] = []
     details: list[str] = []
     for slug, cfg in SHOWS.items():
         latest = db_latest.get(slug)
         feed = feed_recent_dates(cfg)
-        if feed is None:
-            details.append(f"{slug}: feed unverified (couldn't reach the second source)")
+        if not feed:
+            # None = couldn't get a trustworthy answer (unreachable / error / empty). A
+            # persistent one means the second source itself is broken — surface it as a
+            # WARN so it can't hide as a silent pass, without crying wolf on a flaky run.
+            warnings.append(f"{slug}: feed UNVERIFIED — second source unreachable")
             continue
         behind = sum(1 for d in feed if latest is None or d > latest)
         if behind:
             failures.append(f"{slug}: BEHIND {behind} — feed at {feed[0]}, we have {latest}")
         else:
             details.append(f"{slug}: caught up ({latest})")
-    status = "fail" if failures else "pass"
-    summary = (
-        "Every show's import is caught up to its feed."
-        if status == "pass"
-        else f"{len(failures)} show(s) behind their feed (missing episodes)."
-    )
-    return CheckResult("import_caught_up_to_feed", status, summary, failures + details)
+    if failures:
+        status, summary = "fail", f"{len(failures)} show(s) behind their feed (missing episodes)."
+    elif warnings:
+        status, summary = "warn", f"{len(warnings)} show(s) could not be verified against their feed."
+    else:
+        status, summary = "pass", "Every show's import is caught up to its feed."
+    return CheckResult("import_caught_up_to_feed", status, summary, failures + warnings + details)
 
 
 def check_ai_daily_extraction(conn) -> CheckResult:

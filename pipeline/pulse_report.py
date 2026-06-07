@@ -92,26 +92,28 @@ def gather(conn) -> tuple[list[dict], dict]:
     return shows, totals
 
 
-def show_status(s: dict) -> tuple[str, bool]:
-    """Return (status_text, is_behind) by comparing our latest vs the real feed."""
+def show_status(s: dict) -> tuple[str, str]:
+    """Return (status_text, state) where state is 'ok' | 'behind' | 'unverified'.
+
+    'unverified' (feed_check returned None — unreachable / error / empty) is its own state
+    on purpose: it must NEVER be counted as green, or the pulse lies by omission.
+    """
     db_latest = s["latest"]
     feed = s["feed_dates"]
-    if feed is None:
-        return f"❓ feed unverified — we have {db_latest}", False
-    if not feed:
-        return f"❓ feed empty — we have {db_latest}", False
+    if not feed:  # None — couldn't get a trustworthy answer from the feed
+        return f"❓ feed unverified — we have {db_latest}", "unverified"
 
     feed_latest = feed[0]
     behind = sum(1 for d in feed if db_latest is None or d > db_latest)
     if behind > 0:
-        return f"🚨 BEHIND {behind} — feed at {feed_latest}, we have {db_latest}", True
+        return f"🚨 BEHIND {behind} — feed at {feed_latest}, we have {db_latest}", "behind"
 
     age = s["days_since"]
     threshold = STALENESS_MAX_DAYS.get(s["slug"], DEFAULT_STALENESS_MAX_DAYS)
     if age is not None and age > threshold:
         # Caught up, but the show itself is quiet — say so, so the green is explained.
-        return f"✅ caught up — show quiet {age}d ({db_latest})", False
-    return f"✅ caught up ({db_latest})", False
+        return f"✅ caught up — show quiet {age}d ({db_latest})", "ok"
+    return f"✅ caught up ({db_latest})", "ok"
 
 
 def build_digest(shows: list[dict], totals: dict, checks: list) -> str:
@@ -121,20 +123,27 @@ def build_digest(shows: list[dict], totals: dict, checks: list) -> str:
 
     show_lines: list[str] = []
     behind_count = 0
+    unverified_count = 0
     for s in shows:
-        status, is_behind = show_status(s)
-        if is_behind:
+        status, state = show_status(s)
+        if state == "behind":
             behind_count += 1
+        elif state == "unverified":
+            unverified_count += 1
         short = SHOW_SHORT.get(s["slug"], s["slug"])
         dest = destination_link(s.get("cfg"))
         show_lines.append(f"• *{short}*  {status}  ·  +{s['recent']} recent  ·  {dest}")
 
     lines: list[str] = [f"📊 *list-maker pulse* — {today.isoformat()}", f"<{HUB_URL}|→ Pod Lists hub (all links)>", ""]
+    warn_suffix = f" (+{len(warns)} warning(s))" if warns else ""
     if behind_count or fails:
-        lines.append(f"⚠️ *{behind_count + len(fails)} issue(s) need attention* (+{len(warns)} warning(s))")
+        unv = f" · {unverified_count} feed(s) unverified" if unverified_count else ""
+        lines.append(f"⚠️ *{behind_count + len(fails)} issue(s) need attention*{unv}{warn_suffix}")
+    elif unverified_count:
+        # We didn't actually check every feed — say so; don't claim "every feed".
+        lines.append(f"✅ *Caught up where we could check* — ⚠️ {unverified_count} feed(s) unverified{warn_suffix}")
     else:
-        suffix = f" ({len(warns)} warning(s))" if warns else ""
-        lines.append(f"✅ *All systems firing — caught up to every feed.*{suffix}")
+        lines.append(f"✅ *All systems firing — caught up to every feed.*{warn_suffix}")
     lines.append("")
 
     lines.append("*Shows* — are we caught up to the real feed?")
