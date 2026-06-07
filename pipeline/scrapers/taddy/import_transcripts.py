@@ -277,6 +277,25 @@ def get_show_id_by_slug(conn, slug: str) -> Optional[int]:
     return None
 
 
+def episode_url_key(episode: dict[str, Any]) -> str:
+    """Stable, per-episode-unique URL key for dedup (episodes.url is UNIQUE).
+
+    The Taddy episode uuid is always present and unique, so prefer it: some shows
+    (e.g. Hard Fork) return a generic show-level websiteUrl for *every* episode,
+    which would otherwise collapse them all onto one row via ON CONFLICT (url) and
+    a global url lookup. Falls back to the old chain only if the uuid is absent.
+    """
+    uuid = episode.get("uuid")
+    if uuid:
+        return f"https://api.taddy.org/podcast-episode/{uuid}"
+    return (
+        episode.get("websiteUrl")
+        or episode.get("audioUrl")
+        or episode.get("guid")
+        or "unknown-episode"
+    )
+
+
 def upsert_episode(
     conn,
     show_id: int,
@@ -284,12 +303,7 @@ def upsert_episode(
     series_uuid: str,
     episode: dict[str, Any],
 ) -> int:
-    episode_url = (
-        episode.get("websiteUrl")
-        or episode.get("audioUrl")
-        or episode.get("guid")
-        or f"https://api.taddy.org/podcast-episode/{episode.get('uuid')}"
-    )
+    episode_url = episode_url_key(episode)
     publish_date = epoch_to_date(episode.get("datePublished"))
     raw_payload = None
     if show_slug in RAW_CONTENT_SHOW_SLUGS:
@@ -395,12 +409,7 @@ def find_existing_episode_id(
     show_id: int,
     episode: dict[str, Any],
 ) -> Optional[int]:
-    episode_url = (
-        episode.get("websiteUrl")
-        or episode.get("audioUrl")
-        or episode.get("guid")
-        or f"https://api.taddy.org/podcast-episode/{episode.get('uuid')}"
-    )
+    episode_url = episode_url_key(episode)
     publish_date = epoch_to_date(episode.get("datePublished"))
     title = (episode.get("name") or "").strip() or "Untitled Episode"
 
