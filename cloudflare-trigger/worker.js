@@ -6,6 +6,7 @@
 //   - Wed   10:00 UTC → pipeline.yml  show_id=1  (Switched on Pop — music)
 //   - Fri   10:00 UTC → pipeline.yml  show_id=1  (Switched on Pop — music)
 //   - Mon   12:00 UTC → eval.yml      (weekly extraction-quality eval — gated)
+//   - 1st+15th 13:00  → pulse.yml     (biweekly Slack health heartbeat)
 //
 // Why this exists: GitHub silently disables `schedule:` crons in public repos after
 // 60 days of repo inactivity. A Cloudflare Worker Cron has no such limit, so THIS
@@ -37,6 +38,7 @@ const SCHEDULE = {
   "0 10 * * 3": { workflow: "pipeline.yml", inputs: { show_id: "1" } }, // Wed — SOP
   "0 10 * * 5": { workflow: "pipeline.yml", inputs: { show_id: "1" } }, // Fri — SOP
   "0 12 * * 1": { workflow: "eval.yml", inputs: {} },                   // Mon — weekly eval
+  "0 13 1,15 * *": { workflow: "pulse.yml", inputs: {} },               // 1st+15th — pulse
 };
 
 // Best-effort failure alert. Logs always; posts to Slack if the webhook is set. Never

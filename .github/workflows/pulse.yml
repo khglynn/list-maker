@@ -1,0 +1,36 @@
+name: Pulse Report (health heartbeat)
+
+# A POSITIVE heartbeat to Slack: per-show freshness, library counts, any actionable
+# failures, and an "all systems firing" confirmation. Complements the push failure-alerts
+# (which only fire FROM a run) by covering the one blind spot — if the pulse stops
+# arriving, the trigger itself is down. For an ACTIVE dead-trigger alert, pair with a
+# Sentry Cron Monitor check-in in the Cloudflare Worker.
+#
+# workflow_dispatch only (no schedule:) — the Cloudflare Worker drives the cadence
+# (1st + 15th), same as the rest of the pipeline, so there's no GitHub 60-day-disable.
+on:
+  workflow_dispatch:
+
+jobs:
+  pulse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: pipeline/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Post pulse to Slack
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: cd pipeline && python pulse_report.py

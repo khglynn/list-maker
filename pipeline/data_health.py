@@ -34,8 +34,12 @@ TRANSCRIPT_POLICIES: dict[str, dict[str, Any]] = {
     # These shows are transcript-first. Missing transcripts are real gaps.
     "ai-daily-brief": {"mode": "complete", "max_latest_lag_days": 0},
     "pchh": {"mode": "complete", "max_latest_lag_days": 0},
+    # Show-notes-based: extracts from the Megaphone RSS description, NOT transcripts —
+    # 0 transcripts is correct, not a gap. (Without this, "cannot compare dates" fails daily.)
+    "culture-gabfest": {"mode": "none"},
     # These shows started as music/recommendation pipelines. Historic transcript
     # coverage is allowed to be partial, but the latest transcript should keep up.
+    # Music shows match from website song data, so a transcript lag is a WARN, not a FAIL.
     "sop": {"mode": "latest", "max_latest_lag_days": 14, "min_coverage": 0.50},
     "tal": {"mode": "latest", "max_latest_lag_days": 21, "min_coverage": 0.01},
 }
@@ -228,6 +232,10 @@ def check_transcript_coverage(conn) -> CheckResult:
         lag_days = _date_lag_days(row["latest_episode"], row["latest_transcript"])
         policy = TRANSCRIPT_POLICIES.get(slug, {"mode": "latest", "max_latest_lag_days": 30})
 
+        if policy["mode"] == "none":
+            details.append(f"{slug}: show-notes based — no transcripts expected (skipped)")
+            continue
+
         detail = (
             f"{slug}: {transcripts}/{episodes} transcripts "
             f"({coverage:.1%}), latest_episode={row['latest_episode']}, "
@@ -235,14 +243,20 @@ def check_transcript_coverage(conn) -> CheckResult:
         )
         details.append(detail)
 
-        if policy["mode"] == "complete" and missing:
+        # Transcript-first shows ('complete'): a missing/lagging transcript is a real
+        # failure. Music shows ('latest'): transcripts aren't load-bearing (matched from
+        # website song data), so the same gap is only a warning — never page on it.
+        is_strict = policy["mode"] == "complete"
+        bucket = failures if is_strict else warnings
+
+        if is_strict and missing:
             failures.append(f"{slug}: {missing} episode(s) missing transcripts")
 
         max_lag = int(policy.get("max_latest_lag_days", 30))
         if lag_days is None:
-            failures.append(f"{slug}: cannot compare latest episode/transcript dates")
+            bucket.append(f"{slug}: cannot compare latest episode/transcript dates")
         elif lag_days > max_lag:
-            failures.append(f"{slug}: latest transcript lags latest episode by {lag_days} days")
+            bucket.append(f"{slug}: latest transcript lags latest episode by {lag_days} days")
 
         min_coverage = policy.get("min_coverage")
         if min_coverage is not None and coverage < float(min_coverage):
@@ -318,14 +332,24 @@ def check_ai_daily_extraction(conn) -> CheckResult:
         """,
     )
     missing_mentions = int(row.get("transcripted_without_mentions") or 0)
+    # A NULL transcript_id is only an issue if the episode actually HAS a transcript that
+    # should have been linked. Show-notes-based shows (Culture Gabfest) extract from the
+    # RSS description and legitimately have no transcript, so their mentions are excluded.
+    # Still flag orphans (transcript_id points to a transcript that no longer exists).
     null_transcript_mentions = int(
         _one(
             conn,
             """
             SELECT COUNT(*) AS count
             FROM ai_mentions m
-            LEFT JOIN episode_transcripts et ON et.id = m.transcript_id
-            WHERE m.transcript_id IS NULL OR et.id IS NULL;
+            WHERE (
+                    m.transcript_id IS NULL
+                    AND EXISTS (SELECT 1 FROM episode_transcripts et2 WHERE et2.episode_id = m.episode_id)
+                  )
+               OR (
+                    m.transcript_id IS NOT NULL
+                    AND NOT EXISTS (SELECT 1 FROM episode_transcripts et WHERE et.id = m.transcript_id)
+                  );
             """,
         ).get("count")
         or 0
