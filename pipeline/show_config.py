@@ -86,7 +86,7 @@ SHOWS: dict[str, ShowConfig] = {
         taddy_uuid="ff1d51d4-4fc9-4161-b23b-f0079f6dd5a0",
         fallback_website_url="https://www.nytimes.com/column/hard-fork",
         store_raw_content=True,
-        # notion_database_id filled once the Hard Fork Notion DB is cloned (WS-C).
+        notion_database_id="3780501ef9508154998ff4cbe82afedf",
         extraction_type="entity_extraction",
     ),
 }

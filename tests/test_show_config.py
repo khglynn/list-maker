@@ -24,4 +24,4 @@ def test_show_ids_are_unique_positive_integers() -> None:
 def test_only_configured_notion_shows_have_database_ids() -> None:
     notion_slugs = {slug for slug, cfg in SHOWS.items() if cfg.notion_database_id}
 
-    assert notion_slugs == {"ai-daily-brief"}
+    assert notion_slugs == {"ai-daily-brief", "hard-fork"}
