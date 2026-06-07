@@ -59,7 +59,9 @@ def notion_request(method: str, url: str, token: str, body: dict | None = None) 
                 resp = requests.patch(url, headers=headers, json=body, timeout=30)
             else:
                 resp = requests.get(url, headers=headers, timeout=30)
-        except requests.exceptions.ConnectionError:
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+            # ReadTimeout is a Timeout (NOT a ConnectionError) — retry both so a
+            # transient slow Notion response doesn't kill a long full-reset.
             if attempt < 4:
                 time.sleep(2 ** attempt)
                 continue
