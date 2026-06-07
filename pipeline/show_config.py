@@ -89,6 +89,17 @@ SHOWS: dict[str, ShowConfig] = {
         notion_database_id="3780501ef9508154998ff4cbe82afedf",
         extraction_type="entity_extraction",
     ),
+    "culture-gabfest": ShowConfig(
+        slug="culture-gabfest",
+        name="Culture Gabfest",
+        show_id=54,
+        content_types=["media"],
+        taddy_uuid=None,  # Taddy won't transcribe Gabfest (iHeart rights) — Megaphone RSS show-notes instead
+        fallback_website_url="https://feeds.megaphone.fm/slatesculturegabfest",
+        store_raw_content=True,
+        # notion_database_id filled when the media Notion DB is created (deferred to media build)
+        extraction_type="media_extraction",
+    ),
 }
 
 
