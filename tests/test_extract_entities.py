@@ -14,6 +14,7 @@ from pipeline.scrapers.ai_daily.extract_entities import (
     get_profile,
     parse_json_object,
     postprocess_mention_types,
+    process_episode_mentions,
     sanitize_fact,
     sanitize_mention,
 )
@@ -170,3 +171,59 @@ def test_sanitize_mention_confidence_always_in_unit_interval() -> None:
         out = sanitize_mention(_mention(confidence=value), 1, 0.0)
         assert out is not None
         assert 0.0 <= out["confidence"] <= 1.0
+
+
+# --- process_episode_mentions: the shared sanitize->postprocess->filter pipeline ---
+# This is the single definition of "what production extracts," reused by the eval
+# harness, so the filter behavior is pinned here.
+
+
+def test_process_episode_mentions_drops_non_editorial_by_default() -> None:
+    tech = get_profile("entity_extraction")
+    raw = {
+        "mentions": [
+            _mention(canonical_name="ChatGPT", entity_type="software_product", is_editorial=True),
+            _mention(canonical_name="SponsorCo", entity_type="organization", is_editorial=False),
+        ]
+    }
+    out = process_episode_mentions(raw, 1, tech)
+    names = {m["canonical_name"] for m in out}
+    assert "ChatGPT" in names
+    assert "SponsorCo" not in names  # ad read dropped
+
+
+def test_process_episode_mentions_focus_core_types_keeps_other() -> None:
+    tech = get_profile("entity_extraction")
+    raw = {
+        "mentions": [
+            _mention(canonical_name="ChatGPT", entity_type="software_product"),  # core -> kept
+            _mention(canonical_name="Sam Altman", entity_type="person"),         # non-core -> dropped
+            _mention(canonical_name="Mystery Thing", entity_type="dragon"),      # unknown -> 'other' -> kept
+        ]
+    }
+    out = process_episode_mentions(raw, 1, tech)
+    types = {m["canonical_name"]: m["entity_type"] for m in out}
+    assert types.get("ChatGPT") == "software_product"
+    assert "Sam Altman" not in types          # non-core filtered out under focus_core_types
+    assert types.get("Mystery Thing") == "other"  # unknown kept for review
+
+
+def test_process_episode_mentions_can_include_non_core_and_ads() -> None:
+    tech = get_profile("entity_extraction")
+    raw = {
+        "mentions": [
+            _mention(canonical_name="Sam Altman", entity_type="person", is_editorial=True),
+            _mention(canonical_name="SponsorCo", entity_type="organization", is_editorial=False),
+        ]
+    }
+    out = process_episode_mentions(
+        raw, 1, tech, include_non_editorial=True, focus_core_types=False
+    )
+    names = {m["canonical_name"] for m in out}
+    assert names == {"Sam Altman", "SponsorCo"}
+
+
+def test_process_episode_mentions_handles_bad_input() -> None:
+    tech = get_profile("entity_extraction")
+    assert process_episode_mentions({}, 1, tech) == []
+    assert process_episode_mentions({"mentions": "nope"}, 1, tech) == []

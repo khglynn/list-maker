@@ -1,0 +1,81 @@
+{
+  "_meta": {
+    "kind": "gold_verified",
+    "description": "Hand-verified MUST-INCLUDE core entities, annotated by reading each transcript. Biased to unambiguous models/products that survive focus_core_types. NOT exhaustive: RECALL (did the run catch the must-haves?) and type-accuracy are the meaningful metrics; precision is reported but not gated. Seed set \u2014 expand by reading more transcripts.",
+    "verified_by": "Claude (model-assisted), 2026-06-07 \u2014 review + expand",
+    "extraction_type": "entity_extraction",
+    "n_episodes": 3,
+    "n_entities": 6
+  },
+  "episodes": [
+    {
+      "episode_id": 4532,
+      "show_slug": "ai-daily-brief",
+      "title": "This Week in AI for Ridiculously Busy People",
+      "publish_date": "2026-06-06",
+      "input_sha256": "dc4ab3774d91e5ba6c21ade1b9a4b96994945ee2912ef0f58ed1f2f1aef6a3ce",
+      "input_chars": 5938,
+      "max_chars": 50000,
+      "must_include": true,
+      "n_entities": 2,
+      "entities": {
+        "codex": {
+          "canonical_name": "Codex",
+          "entity_type": "software_product",
+          "confidence": 1.0
+        },
+        "gpt 55": {
+          "canonical_name": "GPT 5.5",
+          "entity_type": "model",
+          "confidence": 1.0
+        }
+      }
+    },
+    {
+      "episode_id": 4539,
+      "show_slug": "ai-daily-brief",
+      "title": "Claude Opus 4.8 First Impressions",
+      "publish_date": "2026-05-29",
+      "input_sha256": "f2ff7a7d85a1f552349e0730dd4d8fccb501ce23d54f27ff18f862f1ff59b67d",
+      "input_chars": 33322,
+      "max_chars": 50000,
+      "must_include": true,
+      "n_entities": 2,
+      "entities": {
+        "claude opus 48": {
+          "canonical_name": "Claude Opus 4.8",
+          "entity_type": "model",
+          "confidence": 1.0
+        },
+        "bloomberg gpt": {
+          "canonical_name": "Bloomberg GPT",
+          "entity_type": "model",
+          "confidence": 1.0
+        }
+      }
+    },
+    {
+      "episode_id": 4546,
+      "show_slug": "ai-daily-brief",
+      "title": "Anthropic Just Reset AI Expectations",
+      "publish_date": "2026-05-21",
+      "input_sha256": "307c76ab4cc2942e872ec64c9e003da551328d9987f29f2279c8a420284b56a3",
+      "input_chars": 30946,
+      "max_chars": 50000,
+      "must_include": true,
+      "n_entities": 2,
+      "entities": {
+        "mythos": {
+          "canonical_name": "Mythos",
+          "entity_type": "model",
+          "confidence": 1.0
+        },
+        "spacex ipo": {
+          "canonical_name": "SpaceX IPO",
+          "entity_type": "other",
+          "confidence": 1.0
+        }
+      }
+    }
+  ]
+}

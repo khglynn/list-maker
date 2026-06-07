@@ -1,0 +1,2580 @@
+{
+  "_meta": {
+    "kind": "golden_baseline",
+    "description": "Frozen known-good extraction for the tech shows. The eval runner re-extracts these episodes with the current model/prompt and reports drift vs this snapshot. Regenerate only on an intentional re-baseline.",
+    "extraction_type": "entity_extraction",
+    "baseline_model": "gpt-4.1-mini",
+    "shows": [
+      "ai-daily-brief",
+      "hard-fork"
+    ],
+    "per_show": 15,
+    "max_chars": 50000,
+    "n_episodes": 30,
+    "n_entities": 365,
+    "type_counts": {
+      "software_product": 154,
+      "model": 83,
+      "other": 62,
+      "account": 23,
+      "report": 17,
+      "paper": 10,
+      "benchmark": 7,
+      "blog_post": 4,
+      "survey": 3,
+      "social_post": 2
+    }
+  },
+  "episodes": [
+    {
+      "episode_id": 4532,
+      "show_slug": "ai-daily-brief",
+      "title": "This Week in AI for Ridiculously Busy People",
+      "publish_date": "2026-06-06",
+      "input_sha256": "dc4ab3774d91e5ba6c21ade1b9a4b96994945ee2912ef0f58ed1f2f1aef6a3ce",
+      "input_chars": 5938,
+      "max_chars": 50000,
+      "n_entities": 6,
+      "entities": {
+        "gpt 55": {
+          "canonical_name": "GPT 5.5",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "codex": {
+          "canonical_name": "Codex",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "sites": {
+          "canonical_name": "Sites",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "anthropic policy related papers": {
+          "canonical_name": "Anthropic policy-related papers",
+          "entity_type": "paper",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "openai policy related papers": {
+          "canonical_name": "OpenAI policy-related papers",
+          "entity_type": "paper",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "spacex ipo": {
+          "canonical_name": "SpaceX IPO",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4533,
+      "show_slug": "ai-daily-brief",
+      "title": "What OpenAI and Anthropic Think Happens Next With AI",
+      "publish_date": "2026-06-05",
+      "input_sha256": "f3d5f989d539b8d2a78e48d17d98d120b9afbd80bcf2ea751f2ebe7e2d2b1073",
+      "input_chars": 37249,
+      "max_chars": 50000,
+      "n_entities": 12,
+      "entities": {
+        "dreaming": {
+          "canonical_name": "Dreaming",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "mythos": {
+          "canonical_name": "Mythos",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "opus 48": {
+          "canonical_name": "Opus 4.8",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "gpt 56": {
+          "canonical_name": "GPT 5.6",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "claude": {
+          "canonical_name": "Claude",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "when ai builds itself": {
+          "canonical_name": "When AI Builds Itself",
+          "entity_type": "paper",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "democratic governance of frontier ai a blueprint for a federal framework": {
+          "canonical_name": "Democratic Governance of Frontier AI: A Blueprint for a Federal Framework",
+          "entity_type": "report",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "section": {
+          "canonical_name": "Section",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "zenflow work": {
+          "canonical_name": "Zenflow Work",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "leo at synthwaved": {
+          "canonical_name": "Leo at SynthWaved",
+          "entity_type": "account",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "lasane": {
+          "canonical_name": "LaSane",
+          "entity_type": "account",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "agentos": {
+          "canonical_name": "AgentOS",
+          "entity_type": "software_product",
+          "confidence": 0.8,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4534,
+      "show_slug": "ai-daily-brief",
+      "title": "How Companies Are Becoming AI Token Efficient",
+      "publish_date": "2026-06-04",
+      "input_sha256": "c567ef25464bc1eb63edaac5c4d795278ce2382208910a96c31f43eb14cbf899",
+      "input_chars": 29688,
+      "max_chars": 50000,
+      "n_entities": 20,
+      "entities": {
+        "fireworks ai": {
+          "canonical_name": "Fireworks AI",
+          "entity_type": "account",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "glm 51": {
+          "canonical_name": "GLM 5.1",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "chatgpt": {
+          "canonical_name": "ChatGPT",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "claude": {
+          "canonical_name": "Claude",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "zencoder": {
+          "canonical_name": "Zencoder",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "zenflow work": {
+          "canonical_name": "Zenflow Work",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "matthew berman": {
+          "canonical_name": "Matthew Berman",
+          "entity_type": "account",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "artificial analysis intelligence index": {
+          "canonical_name": "Artificial Analysis Intelligence Index",
+          "entity_type": "benchmark",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "claude opus 48": {
+          "canonical_name": "Claude Opus 4.8",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gpt 55": {
+          "canonical_name": "GPT-5.5",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gemini 35 flash": {
+          "canonical_name": "Gemini 3.5 Flash",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "theo": {
+          "canonical_name": "Theo",
+          "entity_type": "account",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "codex": {
+          "canonical_name": "Codex",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "opus 47": {
+          "canonical_name": "Opus 4.7",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "harvey": {
+          "canonical_name": "Harvey",
+          "entity_type": "account",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "kimmys k26 model": {
+          "canonical_name": "Kimmy's K2.6 model",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "factory router": {
+          "canonical_name": "Factory Router",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "perplexity hybrid agentic inference": {
+          "canonical_name": "Perplexity Hybrid Agentic Inference",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "deepseek": {
+          "canonical_name": "DeepSeek",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "x formerly twitter": {
+          "canonical_name": "X (formerly Twitter)",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4535,
+      "show_slug": "ai-daily-brief",
+      "title": "The Next Wave of Enterprise AI",
+      "publish_date": "2026-06-03",
+      "input_sha256": "98da149bc4b087de2ecd0dc8c184bd2d6c399c72ce8d1b4bab0994cb8942f15a",
+      "input_chars": 32741,
+      "max_chars": 50000,
+      "n_entities": 15,
+      "entities": {
+        "mythos": {
+          "canonical_name": "Mythos",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "opus 48": {
+          "canonical_name": "Opus 4.8",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "project glasswing": {
+          "canonical_name": "Project Glasswing",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "the next era of knowledge work": {
+          "canonical_name": "The Next Era of Knowledge Work",
+          "entity_type": "report",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "codex": {
+          "canonical_name": "Codex",
+          "entity_type": "software_product",
+          "confidence": 0.98,
+          "mention_count": 2
+        },
+        "claude code": {
+          "canonical_name": "Claude Code",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "cowork": {
+          "canonical_name": "Cowork",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "image 25": {
+          "canonical_name": "Image 2.5",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "image 25 flash": {
+          "canonical_name": "Image 2.5 Flash",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "transcribe 15": {
+          "canonical_name": "Transcribe 1.5",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "mai thinking 1": {
+          "canonical_name": "MAI Thinking 1",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 2
+        },
+        "voice 2": {
+          "canonical_name": "Voice 2",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "voice 2 flash": {
+          "canonical_name": "Voice 2 Flash",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "code 1 flash": {
+          "canonical_name": "Code 1 Flash",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "microsoft frontier tuning": {
+          "canonical_name": "Microsoft Frontier Tuning",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4536,
+      "show_slug": "ai-daily-brief",
+      "title": "Should Americans Get Shares in AI Companies?",
+      "publish_date": "2026-06-02",
+      "input_sha256": "801b4fb003b182d060ff34c24e385dca99caeeb4f2702c07ab27181ab27c65a8",
+      "input_chars": 27443,
+      "max_chars": 50000,
+      "n_entities": 18,
+      "entities": {
+        "anthropic sovereign wealth funds report": {
+          "canonical_name": "Anthropic Sovereign Wealth Funds Report",
+          "entity_type": "report",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "nvidia rtx spark": {
+          "canonical_name": "NVIDIA RTX Spark",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "nvidia h100": {
+          "canonical_name": "NVIDIA H100",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "apple m5 series": {
+          "canonical_name": "Apple M5 series",
+          "entity_type": "software_product",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "nvidia vera and ruben architectures": {
+          "canonical_name": "NVIDIA Vera and Ruben architectures",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "apple m series chips": {
+          "canonical_name": "Apple M-Series chips",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "instagram": {
+          "canonical_name": "Instagram",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "bain company": {
+          "canonical_name": "Bain & Company",
+          "entity_type": "survey",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "codepuppy": {
+          "canonical_name": "CodePuppy",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "scrunch": {
+          "canonical_name": "Scrunch",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "section": {
+          "canonical_name": "Section",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "outsystems": {
+          "canonical_name": "OutSystems",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "sp 500": {
+          "canonical_name": "S&P 500",
+          "entity_type": "benchmark",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "us semiconductor index": {
+          "canonical_name": "U.S. Semiconductor Index",
+          "entity_type": "benchmark",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "openai april 2026 industrial policy white paper": {
+          "canonical_name": "OpenAI April 2026 Industrial Policy White Paper",
+          "entity_type": "report",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "ezra klein ai public good op ed": {
+          "canonical_name": "Ezra Klein AI Public Good Op-Ed",
+          "entity_type": "social_post",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "facebook": {
+          "canonical_name": "Facebook",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "meta ray ban stories": {
+          "canonical_name": "Meta Ray-Ban Stories",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4537,
+      "show_slug": "ai-daily-brief",
+      "title": "The AI Token Shortage Begins [AI Monthly Recap]",
+      "publish_date": "2026-06-01",
+      "input_sha256": "c6885c40dd53fc09ad2dbc791a895f744530525de557f1aade5ef056a0e3d841",
+      "input_chars": 30698,
+      "max_chars": 50000,
+      "n_entities": 30,
+      "entities": {
+        "claude code": {
+          "canonical_name": "Claude Code",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 2
+        },
+        "codex": {
+          "canonical_name": "Codex",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 2
+        },
+        "opus 45": {
+          "canonical_name": "Opus 4.5",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gpt 52": {
+          "canonical_name": "GPT-5.2",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "openclaw": {
+          "canonical_name": "OpenClaw",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "hermes": {
+          "canonical_name": "Hermes",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "contextportfolioai": {
+          "canonical_name": "contextportfolio.ai",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "google io": {
+          "canonical_name": "Google I/O",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "zenflow work": {
+          "canonical_name": "Zenflow Work",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "slack": {
+          "canonical_name": "Slack",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "telegram": {
+          "canonical_name": "Telegram",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "composer 25": {
+          "canonical_name": "Composer 2.5",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "opus 47": {
+          "canonical_name": "Opus 4.7",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gpt 55": {
+          "canonical_name": "GPT-5.5",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gemini 3flash": {
+          "canonical_name": "Gemini 3.Flash",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "gema series": {
+          "canonical_name": "GEMA series",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "deepseek v4": {
+          "canonical_name": "DeepSeek V4",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "openrouter": {
+          "canonical_name": "OpenRouter",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "colossus 1": {
+          "canonical_name": "Colossus 1",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "claude": {
+          "canonical_name": "Claude",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "colossus 2": {
+          "canonical_name": "Colossus 2",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "claude opus 48": {
+          "canonical_name": "Claude Opus 4.8",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "claude code dynamic workflows": {
+          "canonical_name": "Claude Code dynamic workflows",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "slash goal": {
+          "canonical_name": "slash goal",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "claude desktop": {
+          "canonical_name": "Claude Desktop",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "grok": {
+          "canonical_name": "Grok",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "gemini 35 flash": {
+          "canonical_name": "Gemini 3.5 Flash",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "gemini ultra": {
+          "canonical_name": "Gemini Ultra",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "mythos": {
+          "canonical_name": "Mythos",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "github copilot": {
+          "canonical_name": "GitHub Copilot",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4538,
+      "show_slug": "ai-daily-brief",
+      "title": "How to Use /Goal to Do More With AI",
+      "publish_date": "2026-05-31",
+      "input_sha256": "2a0293390222f57380d06cb4e30152c36159c29415d7242325dde9b36cf09787",
+      "input_chars": 24994,
+      "max_chars": 50000,
+      "n_entities": 4,
+      "entities": {
+        "openai codex": {
+          "canonical_name": "OpenAI Codex",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "claude code": {
+          "canonical_name": "Claude Code",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 2
+        },
+        "openai codex 55": {
+          "canonical_name": "OpenAI Codex 5.5",
+          "entity_type": "model",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "goal": {
+          "canonical_name": "/goal",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4539,
+      "show_slug": "ai-daily-brief",
+      "title": "Claude Opus 4.8 First Impressions",
+      "publish_date": "2026-05-29",
+      "input_sha256": "f2ff7a7d85a1f552349e0730dd4d8fccb501ce23d54f27ff18f862f1ff59b67d",
+      "input_chars": 33322,
+      "max_chars": 50000,
+      "n_entities": 13,
+      "entities": {
+        "claude opus 48": {
+          "canonical_name": "Claude Opus 4.8",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "harvey": {
+          "canonical_name": "Harvey",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "legora": {
+          "canonical_name": "Legora",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "thomson reuters co counsel": {
+          "canonical_name": "Thomson Reuters Co-Counsel",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "bloomberg gpt": {
+          "canonical_name": "Bloomberg GPT",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "devon": {
+          "canonical_name": "Devon",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "section": {
+          "canonical_name": "Section",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "boltnew": {
+          "canonical_name": "Bolt.new",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "chubby": {
+          "canonical_name": "Chubby",
+          "entity_type": "account",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "claude mythos": {
+          "canonical_name": "Claude Mythos",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "codex": {
+          "canonical_name": "Codex",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "github copilot": {
+          "canonical_name": "GitHub Copilot",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gpt 55 instant": {
+          "canonical_name": "GPT-5.5 Instant",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4540,
+      "show_slug": "ai-daily-brief",
+      "title": "The Case for an AI Token Tax",
+      "publish_date": "2026-05-28",
+      "input_sha256": "eff7e6dd25f6a1acef0f84159a20b32f80de3ff8625261a93c23f511836f040d",
+      "input_chars": 26208,
+      "max_chars": 50000,
+      "n_entities": 2,
+      "entities": {
+        "assembly ai": {
+          "canonical_name": "Assembly AI",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "zencoder": {
+          "canonical_name": "Zencoder",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4541,
+      "show_slug": "ai-daily-brief",
+      "title": "The Annual AI Slowdown Panic is Here",
+      "publish_date": "2026-05-27",
+      "input_sha256": "2b8d335e444325eb66184d40fd0544a2a8383587444b848c34e9bd61a53296f1",
+      "input_chars": 35535,
+      "max_chars": 50000,
+      "n_entities": 19,
+      "entities": {
+        "openai consulting ventures": {
+          "canonical_name": "OpenAI consulting ventures",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "quen 36": {
+          "canonical_name": "Quen 3.6",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "codex": {
+          "canonical_name": "Codex",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "scrunch": {
+          "canonical_name": "Scrunch",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "boltnew": {
+          "canonical_name": "Bolt.new",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "zencoder": {
+          "canonical_name": "Zencoder",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "chatgpt": {
+          "canonical_name": "ChatGPT",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "mit study": {
+          "canonical_name": "MIT study",
+          "entity_type": "report",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gpt 5": {
+          "canonical_name": "GPT-5",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gemini": {
+          "canonical_name": "Gemini",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "o1": {
+          "canonical_name": "O1",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "openclaw": {
+          "canonical_name": "OpenClaw",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "mythos": {
+          "canonical_name": "Mythos",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "claude code": {
+          "canonical_name": "Claude Code",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "artificial analysis coding agent index": {
+          "canonical_name": "Artificial Analysis' Coding Agent Index",
+          "entity_type": "benchmark",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "cursor composer 25": {
+          "canonical_name": "Cursor Composer 2.5",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gema 4": {
+          "canonical_name": "GEMA 4",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "quen 35": {
+          "canonical_name": "Quen 3.5",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "anthropic consulting ventures": {
+          "canonical_name": "Anthropic consulting ventures",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4542,
+      "show_slug": "ai-daily-brief",
+      "title": "What the Pope Actually Said About AI",
+      "publish_date": "2026-05-26",
+      "input_sha256": "b4b5715f146e98632400f53dd6994c06268f47dc58f9c3e901a62437b033c1ac",
+      "input_chars": 30971,
+      "max_chars": 50000,
+      "n_entities": 14,
+      "entities": {
+        "mythos": {
+          "canonical_name": "Mythos",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "project glasswing": {
+          "canonical_name": "Project Glasswing",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "claude mythos 1 preview": {
+          "canonical_name": "Claude Mythos 1 Preview",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "aaron levy": {
+          "canonical_name": "Aaron Levy",
+          "entity_type": "account",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "nvidia blackwell": {
+          "canonical_name": "NVIDIA Blackwell",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "deepseek v4": {
+          "canonical_name": "DeepSeek V4",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "grok v9 medium": {
+          "canonical_name": "Grok V9 Medium",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "grok v8 small": {
+          "canonical_name": "Grok V8 Small",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "grok build": {
+          "canonical_name": "Grok Build",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "codex": {
+          "canonical_name": "Codex",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "claude code": {
+          "canonical_name": "Claude Code",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "magnifica humanitas": {
+          "canonical_name": "Magnifica Humanitas",
+          "entity_type": "report",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "rerum novarum": {
+          "canonical_name": "Rerum Novarum",
+          "entity_type": "report",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "catholic sad account": {
+          "canonical_name": "Catholic sad account",
+          "entity_type": "account",
+          "confidence": 0.85,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4543,
+      "show_slug": "ai-daily-brief",
+      "title": "The 4 AI Team Members Execs Should Hire Right Now",
+      "publish_date": "2026-05-25",
+      "input_sha256": "268da94a0f0335f68840eac32f148c01c198b8a785298e8a6bc5201e37783e00",
+      "input_chars": 33241,
+      "max_chars": 50000,
+      "n_entities": 15,
+      "entities": {
+        "ai daily brief": {
+          "canonical_name": "AI Daily Brief",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "enterprise claw": {
+          "canonical_name": "Enterprise Claw",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "agent boss": {
+          "canonical_name": "agent boss",
+          "entity_type": "software_product",
+          "confidence": 0.7,
+          "mention_count": 1
+        },
+        "chatgpt": {
+          "canonical_name": "ChatGPT",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "gemini": {
+          "canonical_name": "Gemini",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "cloudchat": {
+          "canonical_name": "CloudChat",
+          "entity_type": "software_product",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "copilot": {
+          "canonical_name": "Copilot",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "co work cloud": {
+          "canonical_name": "Co-Work Cloud",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "code": {
+          "canonical_name": "Code",
+          "entity_type": "software_product",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "codex": {
+          "canonical_name": "Codex",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 2
+        },
+        "whisperflow": {
+          "canonical_name": "Whisperflow",
+          "entity_type": "software_product",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "opus models": {
+          "canonical_name": "Opus models",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "obsidian": {
+          "canonical_name": "Obsidian",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "personal contact system": {
+          "canonical_name": "personal contact system",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "gpt": {
+          "canonical_name": "GPT",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4544,
+      "show_slug": "ai-daily-brief",
+      "title": "Why Agents Still Need Humans",
+      "publish_date": "2026-05-24",
+      "input_sha256": "f2d9916adbd7f35861a25274ab3d23fa23aa3705409405bbf627096841baf41a",
+      "input_chars": 31063,
+      "max_chars": 50000,
+      "n_entities": 14,
+      "entities": {
+        "the ai daily brief": {
+          "canonical_name": "The AI Daily Brief",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "zen coder": {
+          "canonical_name": "Zen Coder",
+          "entity_type": "software_product",
+          "confidence": 0.7,
+          "mention_count": 1
+        },
+        "after automation": {
+          "canonical_name": "after automation",
+          "entity_type": "paper",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "codex": {
+          "canonical_name": "Codex",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "claude": {
+          "canonical_name": "Claude",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "openai": {
+          "canonical_name": "OpenAI",
+          "entity_type": "account",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "openclaw": {
+          "canonical_name": "OpenClaw",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "zenflow work": {
+          "canonical_name": "Zenflow Work",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "agentic ai": {
+          "canonical_name": "Agentic AI",
+          "entity_type": "other",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "slack": {
+          "canonical_name": "Slack",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "intercom": {
+          "canonical_name": "Intercom",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "patreon ai daily brief": {
+          "canonical_name": "Patreon AI Daily Brief",
+          "entity_type": "other",
+          "confidence": 0.8,
+          "mention_count": 2
+        },
+        "apple podcasts": {
+          "canonical_name": "Apple Podcasts",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "aidailybriefai": {
+          "canonical_name": "aidailybrief.ai",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4545,
+      "show_slug": "ai-daily-brief",
+      "title": "AI\u2019s New Acceleration Phase",
+      "publish_date": "2026-05-22",
+      "input_sha256": "a7755f4e867d304d60566ad7c7fba448cc9acede86c5c61968814e0b0b1b4c9b",
+      "input_chars": 29258,
+      "max_chars": 50000,
+      "n_entities": 16,
+      "entities": {
+        "google io": {
+          "canonical_name": "Google I/O",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "claude code": {
+          "canonical_name": "Claude Code",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "github copilot": {
+          "canonical_name": "GitHub Copilot",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "claude cowork": {
+          "canonical_name": "Claude Cowork",
+          "entity_type": "software_product",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "composer 25": {
+          "canonical_name": "Composer 2.5",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "opus 47": {
+          "canonical_name": "Opus 4.7",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "gpt 55": {
+          "canonical_name": "GPT-5.5",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "elon musk": {
+          "canonical_name": "Elon Musk",
+          "entity_type": "account",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "section": {
+          "canonical_name": "Section",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "zenflow work": {
+          "canonical_name": "Zenflow Work",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gemini app": {
+          "canonical_name": "Gemini app",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "chatgpt": {
+          "canonical_name": "ChatGPT",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "google search ai agents": {
+          "canonical_name": "Google Search AI Agents",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "docs live": {
+          "canonical_name": "Docs Live",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "openai internal model": {
+          "canonical_name": "OpenAI internal model",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "paul erdos problem": {
+          "canonical_name": "Paul Erdos problem",
+          "entity_type": "paper",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 4546,
+      "show_slug": "ai-daily-brief",
+      "title": "Anthropic Just Reset AI Expectations",
+      "publish_date": "2026-05-21",
+      "input_sha256": "307c76ab4cc2942e872ec64c9e003da551328d9987f29f2279c8a420284b56a3",
+      "input_chars": 30946,
+      "max_chars": 50000,
+      "n_entities": 10,
+      "entities": {
+        "mr radable": {
+          "canonical_name": "Mr. Radable",
+          "entity_type": "account",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "claude": {
+          "canonical_name": "Claude",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "openai guaranteed capacity": {
+          "canonical_name": "OpenAI Guaranteed Capacity",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "composer 25": {
+          "canonical_name": "Composer 2.5",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "section": {
+          "canonical_name": "Section",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "noam brown": {
+          "canonical_name": "Noam Brown",
+          "entity_type": "account",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "signal": {
+          "canonical_name": "Signal",
+          "entity_type": "account",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "aish": {
+          "canonical_name": "Aish",
+          "entity_type": "account",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "tmt longshort": {
+          "canonical_name": "TMT Longshort",
+          "entity_type": "account",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "swix": {
+          "canonical_name": "Swix",
+          "entity_type": "account",
+          "confidence": 0.8,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3445,
+      "show_slug": "hard-fork",
+      "title": "Hot I.P.O Summer + What Is A.I. Doing to Math? + HatGPT",
+      "publish_date": "2026-06-05",
+      "input_sha256": "ad5bf008c865862d282ce384c079555927e2fd27cf2191c3b5f6363e6b169916",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 12,
+      "entities": {
+        "cpap machine": {
+          "canonical_name": "CPAP machine",
+          "entity_type": "other",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "x social network": {
+          "canonical_name": "X (social network)",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "starlink": {
+          "canonical_name": "Starlink",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "the proof in the code": {
+          "canonical_name": "The Proof in the Code",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "cursor": {
+          "canonical_name": "Cursor",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "international mathematical olympiad": {
+          "canonical_name": "International Mathematical Olympiad",
+          "entity_type": "benchmark",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "william lowell putnam mathematical competition": {
+          "canonical_name": "William Lowell Putnam Mathematical Competition",
+          "entity_type": "benchmark",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "erds problems": {
+          "canonical_name": "Erd\u0151s problems",
+          "entity_type": "benchmark",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "unit distance problem": {
+          "canonical_name": "Unit distance problem",
+          "entity_type": "paper",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "leiden declaration on artificial intelligence and mathematics": {
+          "canonical_name": "Leiden Declaration on Artificial Intelligence and Mathematics",
+          "entity_type": "report",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "chatgpt": {
+          "canonical_name": "ChatGPT",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "lean theorem prover": {
+          "canonical_name": "Lean (theorem prover)",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3446,
+      "show_slug": "hard-fork",
+      "title": "Interesting Times: Why Are We Still Driving?",
+      "publish_date": "2026-05-29",
+      "input_sha256": "8b8810a47efbef737372c185e63d14a2cfc096c3a8654220782b72bcb54e6662",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 4,
+      "entities": {
+        "hard fork live": {
+          "canonical_name": "Hard Fork Live",
+          "entity_type": "other",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "interesting times": {
+          "canonical_name": "Interesting Times",
+          "entity_type": "other",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "changing lanes": {
+          "canonical_name": "changing lanes",
+          "entity_type": "blog_post",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "the end of driving": {
+          "canonical_name": "The End of Driving",
+          "entity_type": "paper",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3447,
+      "show_slug": "hard-fork",
+      "title": "Our Field Trip to Google I/O + A Sit-Down With Sundar Pichai + System Update",
+      "publish_date": "2026-05-22",
+      "input_sha256": "0cd968a4888749c1fae15ab5c0b3f727ae921c1d27e72d2d998a206372903643",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 11,
+      "entities": {
+        "bellatro": {
+          "canonical_name": "Bellatro",
+          "entity_type": "other",
+          "confidence": 0.7,
+          "mention_count": 1
+        },
+        "google io": {
+          "canonical_name": "Google I/O",
+          "entity_type": "other",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "gemini 35 flash": {
+          "canonical_name": "Gemini 3.5 Flash",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "agentic search": {
+          "canonical_name": "Agentic search",
+          "entity_type": "other",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "anti gravity": {
+          "canonical_name": "Anti-Gravity",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "open claw": {
+          "canonical_name": "Open Claw",
+          "entity_type": "other",
+          "confidence": 0.7,
+          "mention_count": 1
+        },
+        "gemini spark": {
+          "canonical_name": "Gemini Spark",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "bard": {
+          "canonical_name": "Bard",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "tensor processing units": {
+          "canonical_name": "Tensor Processing Units",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "synthid": {
+          "canonical_name": "SynthID",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "elon musk openai trial": {
+          "canonical_name": "Elon Musk OpenAI trial",
+          "entity_type": "report",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3448,
+      "show_slug": "hard-fork",
+      "title": "A.I. Safety Is So Back + Mythos Mayhem with Nikesh Arora + Hot Mess Express",
+      "publish_date": "2026-05-15",
+      "input_sha256": "e596596b38b91bbc382ac07406b0c0ceb01bcf00685cc50fb93d71c804a66e1e",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 8,
+      "entities": {
+        "90 day responsible disclosure window": {
+          "canonical_name": "90-day responsible disclosure window",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "ai action summit": {
+          "canonical_name": "AI Action Summit",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "new york times games": {
+          "canonical_name": "New York Times Games",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "connections new york times game": {
+          "canonical_name": "Connections (New York Times Game)",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "perplexity ai": {
+          "canonical_name": "Perplexity AI",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "claude mythos": {
+          "canonical_name": "Claude Mythos",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "canvas lms": {
+          "canonical_name": "Canvas LMS",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gpt 55 cyber": {
+          "canonical_name": "GPT 5.5 Cyber",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3449,
+      "show_slug": "hard-fork",
+      "title": "Can the U.S. Rein in Prediction Markets? + Joanna Stern on Her Year of A.I. Experiments + Our Producer Goes to Attention School",
+      "publish_date": "2026-05-08",
+      "input_sha256": "981c73196e7bbdb4906c593e10da038cdbc5a5b45b6dfef7ccea81950051e08c",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 13,
+      "entities": {
+        "prediction markets": {
+          "canonical_name": "prediction markets",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "polymarket": {
+          "canonical_name": "Polymarket",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "kalshi": {
+          "canonical_name": "Kalshi",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "brazil": {
+          "canonical_name": "Brazil",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "france": {
+          "canonical_name": "France",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "hungary": {
+          "canonical_name": "Hungary",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "i am not a robot": {
+          "canonical_name": "I Am Not a Robot",
+          "entity_type": "other",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "chatgpt": {
+          "canonical_name": "ChatGPT",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "perl ai": {
+          "canonical_name": "Perl AI",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "overjet": {
+          "canonical_name": "Overjet",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "claude": {
+          "canonical_name": "Claude",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "ezra klein show": {
+          "canonical_name": "Ezra Klein Show",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "hard fork": {
+          "canonical_name": "Hard Fork",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3450,
+      "show_slug": "hard-fork",
+      "title": "OpenAI\u2019s Big Reset + A.I. in the Doctor\u2019s Office + Talkie, a pre-1930s LLM",
+      "publish_date": "2026-05-01",
+      "input_sha256": "52dcfe8144fed5adccfd9aba70fda0388c26a5e49ffc3cbc9b6a23dc1025ac4c",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 13,
+      "entities": {
+        "claude": {
+          "canonical_name": "Claude",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "chatgpt": {
+          "canonical_name": "ChatGPT",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "amazon bedrock": {
+          "canonical_name": "Amazon Bedrock",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "openai codex": {
+          "canonical_name": "OpenAI Codex",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "openai stargate": {
+          "canonical_name": "OpenAI Stargate",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "elon musk v openai lawsuit": {
+          "canonical_name": "Elon Musk v. OpenAI lawsuit",
+          "entity_type": "report",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "chatgpt go": {
+          "canonical_name": "ChatGPT Go",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "chatgpt for clinicians": {
+          "canonical_name": "ChatGPT for clinicians",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "open evidence": {
+          "canonical_name": "Open Evidence",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "american medical association survey on ai use": {
+          "canonical_name": "American Medical Association survey on AI use",
+          "entity_type": "survey",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "redmod": {
+          "canonical_name": "RedMod",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gemini": {
+          "canonical_name": "Gemini",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "chatgpt health": {
+          "canonical_name": "ChatGPT Health",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3451,
+      "show_slug": "hard-fork",
+      "title": "Tim Cook\u2019s Legacy + The Future of U.B.I. With Andrew Yang + HatGPT",
+      "publish_date": "2026-04-24",
+      "input_sha256": "a2428ba69fbed1eb0b078ef7e161dc5cb43b5abf9171ec55d139a6898b598fbd",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 13,
+      "entities": {
+        "apple tv": {
+          "canonical_name": "Apple TV",
+          "entity_type": "software_product",
+          "confidence": 0.75,
+          "mention_count": 1
+        },
+        "apple pay": {
+          "canonical_name": "Apple Pay",
+          "entity_type": "software_product",
+          "confidence": 0.75,
+          "mention_count": 1
+        },
+        "songs of innocence": {
+          "canonical_name": "Songs of Innocence",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "apple music": {
+          "canonical_name": "Apple Music",
+          "entity_type": "software_product",
+          "confidence": 0.75,
+          "mention_count": 1
+        },
+        "apple watch": {
+          "canonical_name": "Apple Watch",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "airpods": {
+          "canonical_name": "AirPods",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "apple silicon": {
+          "canonical_name": "Apple Silicon",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "titan project": {
+          "canonical_name": "Titan Project",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "apple vision pro": {
+          "canonical_name": "Apple Vision Pro",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "siri": {
+          "canonical_name": "Siri",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "elon musk": {
+          "canonical_name": "Elon Musk",
+          "entity_type": "account",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "chatgpt": {
+          "canonical_name": "ChatGPT",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gemini": {
+          "canonical_name": "Gemini",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3452,
+      "show_slug": "hard-fork",
+      "title": "A.I. Backlash Turns Violent + Kara Swisher on Healthmaxxing + The Zuck Bot Is Coming",
+      "publish_date": "2026-04-17",
+      "input_sha256": "23f5e201662d0386cdd6c6b6faf5d512c0aff3ec005935b10f19e065c291b2e7",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 12,
+      "entities": {
+        "wecroak": {
+          "canonical_name": "WeCroak",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "crispr": {
+          "canonical_name": "CRISPR",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "mrna vaccines": {
+          "canonical_name": "mRNA vaccines",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "ketamine": {
+          "canonical_name": "ketamine",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "data centers": {
+          "canonical_name": "data centers",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "stanford ai index 2026": {
+          "canonical_name": "Stanford AI Index 2026",
+          "entity_type": "report",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "pew research center study on ai attitudes 2026": {
+          "canonical_name": "Pew Research Center study on AI attitudes 2026",
+          "entity_type": "report",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "sam altman blog post on ai backlash": {
+          "canonical_name": "Sam Altman blog post on AI backlash",
+          "entity_type": "blog_post",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "the new yorker article on sam altman": {
+          "canonical_name": "The New Yorker article on Sam Altman",
+          "entity_type": "paper",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "industrial policy for the intelligence age": {
+          "canonical_name": "Industrial Policy for the Intelligence Age",
+          "entity_type": "report",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "kara swisher wants to live forever": {
+          "canonical_name": "Kara Swisher Wants to Live Forever",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "glp 1 receptor agonists": {
+          "canonical_name": "GLP-1 receptor agonists",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3453,
+      "show_slug": "hard-fork",
+      "title": "Anthropic\u2019s Cybersecurity Shock Wave + Ronan Farrow and Andrew Marantz on Their Sam Altman Investigation + One Good Thing",
+      "publish_date": "2026-04-10",
+      "input_sha256": "330b7ca005f8d9120aaf512ceed87392987785911abb3ff73136f8ce0f5303a4",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 8,
+      "entities": {
+        "claude mythos": {
+          "canonical_name": "Claude Mythos",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "project glasswing": {
+          "canonical_name": "Project Glasswing",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "openbsd": {
+          "canonical_name": "OpenBSD",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "ffmpeg": {
+          "canonical_name": "FFmpeg",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "perplexity": {
+          "canonical_name": "Perplexity",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "tbpn": {
+          "canonical_name": "TBPN",
+          "entity_type": "other",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "blue shield of california theater": {
+          "canonical_name": "Blue Shield of California Theater",
+          "entity_type": "other",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "platformer": {
+          "canonical_name": "Platformer",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3454,
+      "show_slug": "hard-fork",
+      "title": "The Future of Addictive Design + Going Deep at DeepMind + HatGPT",
+      "publish_date": "2026-04-03",
+      "input_sha256": "6c078c33f39dc9b7a6c5206b97b5d0071893416ab8bf12438d79d160a7547421",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 16,
+      "entities": {
+        "baidu robo taxis": {
+          "canonical_name": "Baidu robo-taxis",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "youtube": {
+          "canonical_name": "YouTube",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "section 230 of the communications decency act": {
+          "canonical_name": "Section 230 of the Communications Decency Act",
+          "entity_type": "other",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "meta internal research on addictiveness": {
+          "canonical_name": "Meta internal research on addictiveness",
+          "entity_type": "report",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "frances haugen whistleblower revelations": {
+          "canonical_name": "Frances Haugen whistleblower revelations",
+          "entity_type": "report",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "instagram": {
+          "canonical_name": "Instagram",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "tiktok": {
+          "canonical_name": "TikTok",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "snapchat": {
+          "canonical_name": "Snapchat",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "sora": {
+          "canonical_name": "Sora",
+          "entity_type": "software_product",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "pew research center teen ai chatbot usage survey 2025": {
+          "canonical_name": "Pew Research Center Teen AI Chatbot Usage Survey 2025",
+          "entity_type": "survey",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "the infinity machine": {
+          "canonical_name": "The Infinity Machine",
+          "entity_type": "other",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "perplexity ai": {
+          "canonical_name": "Perplexity AI",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "chatgpt": {
+          "canonical_name": "ChatGPT",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "attention is all you need transformer paper": {
+          "canonical_name": "Attention Is All You Need (Transformer paper)",
+          "entity_type": "paper",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "alphago": {
+          "canonical_name": "AlphaGo",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "project mario": {
+          "canonical_name": "Project Mario",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3455,
+      "show_slug": "hard-fork",
+      "title": "The Ezra Klein Show: How Fast Will A.I. Agents Rip Through the Economy?",
+      "publish_date": "2026-03-27",
+      "input_sha256": "594df91e05dd69a734708929856d3632338ce5a10030db01f73003c43b40c7e8",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 8,
+      "entities": {
+        "the ezra klein show": {
+          "canonical_name": "The Ezra Klein Show",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "import ai": {
+          "canonical_name": "Import AI",
+          "entity_type": "blog_post",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "claude code": {
+          "canonical_name": "Claude Code",
+          "entity_type": "software_product",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "codex": {
+          "canonical_name": "Codex",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "claude": {
+          "canonical_name": "Claude",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "claude interviewer": {
+          "canonical_name": "Claude Interviewer",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "anthropic economic index": {
+          "canonical_name": "Anthropic Economic Index",
+          "entity_type": "report",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "how and why government should monitor ai development": {
+          "canonical_name": "How and Why Government Should Monitor AI Development",
+          "entity_type": "paper",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3456,
+      "show_slug": "hard-fork",
+      "title": "\u2018A.I.-Washing\u2019 Layoffs? + Why L.L.M.s Can\u2019t Write Well + Tokenmaxxing",
+      "publish_date": "2026-03-20",
+      "input_sha256": "e534c8c242ef5f90f3608da6a6d20a8b6dffd3e6b64bd952a85c6f9429f3fd00",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 12,
+      "entities": {
+        "grok": {
+          "canonical_name": "Grok",
+          "entity_type": "software_product",
+          "confidence": 0.8,
+          "mention_count": 1
+        },
+        "perplexity ai": {
+          "canonical_name": "Perplexity AI",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "behemoth": {
+          "canonical_name": "Behemoth",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 2
+        },
+        "avocado": {
+          "canonical_name": "Avocado",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gemini 25": {
+          "canonical_name": "Gemini 2.5",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "gpt 2": {
+          "canonical_name": "GPT-2",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gpt 3": {
+          "canonical_name": "GPT-3",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "chatgpt": {
+          "canonical_name": "ChatGPT",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "reinforcement learning from human feedback": {
+          "canonical_name": "Reinforcement Learning from Human Feedback",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "mercor": {
+          "canonical_name": "Mercor",
+          "entity_type": "other",
+          "confidence": 0.7,
+          "mention_count": 1
+        },
+        "claude": {
+          "canonical_name": "Claude",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "pseudo write": {
+          "canonical_name": "Pseudo-Write",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3457,
+      "show_slug": "hard-fork",
+      "title": "A.I. Goes to War + Is \u2018A.I. Brain Fry\u2019 Real? + How Grammarly Stole Casey\u2019s Identity",
+      "publish_date": "2026-03-13",
+      "input_sha256": "342796c89dd8c6bc6ccf802d1058eb9d5dae8e6cbc16ccde75b9abe15a829003",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 8,
+      "entities": {
+        "none": {
+          "canonical_name": "None",
+          "entity_type": "other",
+          "confidence": 0.7,
+          "mention_count": 1
+        },
+        "claude": {
+          "canonical_name": "Claude",
+          "entity_type": "model",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "perplexity ai": {
+          "canonical_name": "Perplexity AI",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "maven smart system": {
+          "canonical_name": "Maven Smart System",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "gemini": {
+          "canonical_name": "Gemini",
+          "entity_type": "model",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "amazon web services": {
+          "canonical_name": "Amazon Web Services",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "strait of hormuz": {
+          "canonical_name": "Strait of Hormuz",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "harvard business review": {
+          "canonical_name": "Harvard Business Review",
+          "entity_type": "report",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3458,
+      "show_slug": "hard-fork",
+      "title": "OpenAI's Fog of War + Betting on Iran + Hard Fork Review of Slop",
+      "publish_date": "2026-03-06",
+      "input_sha256": "448fefb1f7cd6a4d9e3da1b069dcca4a35ef6526a57dfc18d818965ddbc0bde2",
+      "input_chars": 50000,
+      "max_chars": 50000,
+      "n_entities": 9,
+      "entities": {
+        "chatgpt": {
+          "canonical_name": "ChatGPT",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "claude": {
+          "canonical_name": "Claude",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "sam altman": {
+          "canonical_name": "Sam Altman",
+          "entity_type": "account",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "lawfare": {
+          "canonical_name": "Lawfare",
+          "entity_type": "blog_post",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "the making of the atomic bomb": {
+          "canonical_name": "The Making of the Atomic Bomb",
+          "entity_type": "other",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "kalshi": {
+          "canonical_name": "Kalshi",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "polymarket": {
+          "canonical_name": "Polymarket",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "chris murphy": {
+          "canonical_name": "Chris Murphy",
+          "entity_type": "account",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "youtube": {
+          "canonical_name": "YouTube",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    },
+    {
+      "episode_id": 3459,
+      "show_slug": "hard-fork",
+      "title": "At the Pentagon, OpenAI is In and Anthropic Is Out",
+      "publish_date": "2026-03-01",
+      "input_sha256": "a43468ca4c46a32a1a177beea52b626d0a5d8414fe03dddd2c3d05ca238cc165",
+      "input_chars": 33793,
+      "max_chars": 50000,
+      "n_entities": 10,
+      "entities": {
+        "sam altman": {
+          "canonical_name": "Sam Altman",
+          "entity_type": "account",
+          "confidence": 0.95,
+          "mention_count": 1
+        },
+        "claude": {
+          "canonical_name": "Claude",
+          "entity_type": "model",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "true social": {
+          "canonical_name": "True Social",
+          "entity_type": "social_post",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "chatgpt": {
+          "canonical_name": "ChatGPT",
+          "entity_type": "software_product",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "katy perry": {
+          "canonical_name": "Katy Perry",
+          "entity_type": "account",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "the making of the atomic bomb": {
+          "canonical_name": "The Making of the Atomic Bomb",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "manhattan project": {
+          "canonical_name": "Manhattan Project",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "perplexity ai": {
+          "canonical_name": "Perplexity AI",
+          "entity_type": "software_product",
+          "confidence": 0.85,
+          "mention_count": 1
+        },
+        "x formerly twitter": {
+          "canonical_name": "X (formerly Twitter)",
+          "entity_type": "other",
+          "confidence": 0.9,
+          "mention_count": 1
+        },
+        "pete hegseth": {
+          "canonical_name": "Pete Hegseth",
+          "entity_type": "account",
+          "confidence": 0.9,
+          "mention_count": 1
+        }
+      }
+    }
+  ]
+}

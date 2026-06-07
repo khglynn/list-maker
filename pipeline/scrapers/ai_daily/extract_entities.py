@@ -714,6 +714,51 @@ def postprocess_mention_types(
     return mention
 
 
+def process_episode_mentions(
+    raw: dict[str, Any],
+    episode_id: int,
+    profile: ExtractionProfile,
+    confidence_review_threshold: float = DEFAULT_CONFIDENCE_REVIEW_THRESHOLD,
+    include_non_editorial: bool = False,
+    focus_core_types: bool = True,
+) -> list[dict[str, Any]]:
+    """Turn a raw LLM response into the mentions that actually get loaded.
+
+    This is the single per-episode pipeline — sanitize -> postprocess types -> filter —
+    used by BOTH main() and the eval harness, so "what production extracts" has one
+    definition that can't drift. The defaults mirror the production CLI defaults
+    (editorial-only, core-types-only), which is what the orchestrator runs.
+    """
+    mentions_raw = raw.get("mentions", [])
+    if not isinstance(mentions_raw, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for mention in mentions_raw:
+        normalized = sanitize_mention(
+            mention=mention,
+            episode_id=episode_id,
+            confidence_review_threshold=confidence_review_threshold,
+            valid_types=profile.types,
+        )
+        if normalized is None:
+            continue
+        normalized = postprocess_mention_types(
+            normalized,
+            valid_types=profile.types,
+            apply_tech_heuristics=profile.apply_tech_heuristics,
+        )
+        if not include_non_editorial and not normalized["is_editorial"]:
+            continue
+        if (
+            focus_core_types
+            and normalized["entity_type"] not in profile.core_types
+            and normalized["entity_type"] != "other"
+        ):
+            continue
+        out.append(normalized)
+    return out
+
+
 def read_episode_inputs(
     episodes_csv: Path,
     transcripts_dir: Path,
@@ -938,33 +983,14 @@ def main() -> None:
             total_input_cost_usd += usage.estimated_input_cost_usd
             total_output_cost_usd += usage.estimated_output_cost_usd
 
-        mentions_raw = raw.get("mentions", [])
-        sanitized_mentions: list[dict[str, Any]] = []
-        if isinstance(mentions_raw, list):
-            for mention in mentions_raw:
-                normalized = sanitize_mention(
-                    mention=mention,
-                    episode_id=episode.episode_id,
-                    confidence_review_threshold=args.confidence_review_threshold,
-                    valid_types=profile.types,
-                )
-                if normalized is not None:
-                    normalized = postprocess_mention_types(
-                        normalized,
-                        valid_types=profile.types,
-                        apply_tech_heuristics=profile.apply_tech_heuristics,
-                    )
-                    sanitized_mentions.append(normalized)
-
-        # Optional filters for cleaner, user-facing review batches.
-        filtered_mentions: list[dict[str, Any]] = []
-        for mention in sanitized_mentions:
-            if not args.include_non_editorial and not mention["is_editorial"]:
-                continue
-            if args.focus_core_types and mention["entity_type"] not in profile.core_types and mention["entity_type"] != "other":
-                continue
-            filtered_mentions.append(mention)
-        sanitized_mentions = filtered_mentions
+        sanitized_mentions = process_episode_mentions(
+            raw,
+            episode.episode_id,
+            profile,
+            confidence_review_threshold=args.confidence_review_threshold,
+            include_non_editorial=args.include_non_editorial,
+            focus_core_types=args.focus_core_types,
+        )
 
         new_type_candidates = raw.get("new_type_candidates", [])
         if not isinstance(new_type_candidates, list):
