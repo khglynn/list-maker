@@ -86,7 +86,7 @@ SHOWS: dict[str, ShowConfig] = {
         taddy_uuid="ff1d51d4-4fc9-4161-b23b-f0079f6dd5a0",
         fallback_website_url="https://www.nytimes.com/column/hard-fork",
         store_raw_content=True,
-        notion_database_id="3780501ef9508154998ff4cbe82afedf",
+        notion_database_id="982dafa0ad374d618e25207e67860e33",  # shared Tech DB (Option A) — same as AI Daily
         extraction_type="entity_extraction",
     ),
     "culture-gabfest": ShowConfig(

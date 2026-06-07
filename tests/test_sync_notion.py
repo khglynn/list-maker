@@ -82,6 +82,18 @@ def test_build_notion_properties_truncates_long_text_fields() -> None:
     assert len(props["userDefined:URL"]["url"]) == 2000
 
 
+def test_build_notion_properties_adds_shows_multiselect() -> None:
+    # Option A: shared DB → a "Shows" tag listing which shows mention the entity.
+    props = build_notion_properties(entity(show_names=["The AI Daily Brief", "Hard Fork"]))
+    assert props["Shows"] == {
+        "multi_select": [{"name": "The AI Daily Brief"}, {"name": "Hard Fork"}]
+    }
+
+
+def test_build_notion_properties_omits_shows_when_absent() -> None:
+    assert "Shows" not in build_notion_properties(entity())  # no empty tag
+
+
 def test_compute_diff_creates_missing_pages() -> None:
     to_create, to_update = compute_diff([entity(notion_page_id=None)])
 

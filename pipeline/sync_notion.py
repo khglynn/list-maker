@@ -26,7 +26,7 @@ import requests
 # Allow imports from pipeline/
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import get_db_connection, get_logger, load_environment, post_slack
-from show_config import get_show
+from show_config import SHOWS, get_show
 
 NOTION_API = "https://api.notion.com/v1"
 NOTION_VERSION = "2022-06-28"
@@ -104,6 +104,10 @@ def build_notion_properties(entity: dict) -> dict:
     if url:
         props["userDefined:URL"] = {"url": url[:2000]}
 
+    show_names = entity.get("show_names") or []
+    if show_names:
+        props["Shows"] = {"multi_select": [{"name": str(n)[:100]} for n in show_names]}
+
     return props
 
 
@@ -151,8 +155,12 @@ def query_all_notion_pages(token: str, database_id: str) -> list[dict]:
 # Neon queries
 # ---------------------------------------------------------------------------
 
-def fetch_entity_rollup(conn, show_id: int, min_mentions: int = 2) -> list[dict]:
-    """Get entities with aggregated mention stats for a show."""
+def fetch_entity_rollup(
+    conn, show_ids: list[int], show_names: dict[int, str], min_mentions: int = 2
+) -> list[dict]:
+    """Get entities with aggregated mention stats across a GROUP of shows (the shows
+    sharing one Notion DB — Option A). Counts are global within the group; each entity
+    carries the list of show names that mention it (for the Notion "Shows" property)."""
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -168,7 +176,8 @@ def fetch_entity_rollup(conn, show_id: int, min_mentions: int = 2) -> list[dict]
                 COALESCE(agg.episode_count, 0) AS episode_count,
                 agg.first_date,
                 agg.last_date,
-                agg.latest_context
+                agg.latest_context,
+                agg.show_ids
             FROM ai_entities e
             JOIN (
                 SELECT
@@ -177,18 +186,24 @@ def fetch_entity_rollup(conn, show_id: int, min_mentions: int = 2) -> list[dict]
                     COUNT(DISTINCT m.episode_id) AS episode_count,
                     MIN(ep.publish_date)::date AS first_date,
                     MAX(ep.publish_date)::date AS last_date,
-                    (ARRAY_AGG(m.context_snippet ORDER BY ep.publish_date DESC NULLS LAST))[1] AS latest_context
+                    (ARRAY_AGG(m.context_snippet ORDER BY ep.publish_date DESC NULLS LAST))[1] AS latest_context,
+                    ARRAY_AGG(DISTINCT ep.show_id) AS show_ids
                 FROM ai_mentions m
                 JOIN episodes ep ON ep.id = m.episode_id
-                WHERE ep.show_id = %s
+                WHERE ep.show_id = ANY(%s)
                 GROUP BY m.entity_id
                 HAVING COUNT(*) >= %s
             ) agg ON agg.entity_id = e.id
             ORDER BY agg.mention_count DESC;
             """,
-            (show_id, min_mentions),
+            (show_ids, min_mentions),
         )
-        return cur.fetchall()
+        rows = [dict(r) for r in cur.fetchall()]
+    for r in rows:
+        r["show_names"] = [
+            show_names[sid] for sid in (r.get("show_ids") or []) if sid in show_names
+        ]
+    return rows
 
 
 def save_notion_page_id(conn, entity_id: int, page_id: str) -> None:
@@ -308,7 +323,7 @@ def alert_on_failure_rate(phase: str, succeeded: int, failed: int) -> None:
         post_slack(f":warning: list-maker {msg}")
 
 
-def run_full_reset(token: str, database_id: str, show_id: int, min_mentions: int, dry_run: bool) -> None:
+def run_full_reset(token: str, database_id: str, show_ids: list[int], show_names: dict[int, str], min_mentions: int, dry_run: bool) -> None:
     """Archive all existing pages, clear IDs, re-create everything.
 
     Manages its own DB connections (long Notion operations cause timeouts).
@@ -347,7 +362,7 @@ def run_full_reset(token: str, database_id: str, show_id: int, min_mentions: int
     # Fresh connection for create phase
     conn = get_db_connection()
     try:
-        entities = fetch_entity_rollup(conn, show_id, min_mentions)
+        entities = fetch_entity_rollup(conn, show_ids, show_names, min_mentions)
 
         # Create all entities
         print(f"\nCreating {len(entities)} pages...")
@@ -456,12 +471,17 @@ def main() -> None:
 
     conn = get_db_connection()
     try:
-        entities = fetch_entity_rollup(conn, show.show_id, args.min_mentions)
-        print(f"Show: {show.name} (id={show.show_id})")
+        # Option A: shows sharing a Notion DB form a group → one shared DB, one page per
+        # entity, a "Shows" tag, and counts global within the group.
+        group = [s for s in SHOWS.values() if s.notion_database_id == show.notion_database_id]
+        show_ids = [s.show_id for s in group]
+        show_names = {s.show_id: s.name for s in group}
+        entities = fetch_entity_rollup(conn, show_ids, show_names, args.min_mentions)
+        print(f"Notion DB group: {[s.slug for s in group]} (show_ids={show_ids})")
         print(f"Entities with {args.min_mentions}+ mentions: {len(entities)}")
 
         if args.full_reset:
-            run_full_reset(token, show.notion_database_id, show.show_id, args.min_mentions, args.dry_run)
+            run_full_reset(token, show.notion_database_id, show_ids, show_names, args.min_mentions, args.dry_run)
         else:
             run_incremental_sync(token, show.notion_database_id, conn, entities, args.dry_run)
 
