@@ -77,22 +77,32 @@ We have a custom Spotify MCP built for this exact use case!
 ```
 list-maker/
 ├── pipeline/                # Extraction and matching (Python)
-│   ├── common.py            # Shared DB connection + env loading
+│   ├── common.py            # Shared DB connection + env + Slack + logging
 │   ├── show_config.py       # Centralized ShowConfig for all shows
-│   ├── run_new_episodes.py  # Orchestrator: import → extract → sync (AI Daily)
+│   ├── run_new_episodes.py  # Orchestrator: import → extract → sync (entity/media shows)
 │   ├── run_pipeline.py      # Orchestrator: scrape → match → sync (SOP/TAL)
-│   ├── sync_notion.py       # Neon → Notion sync (create/update/archive)
+│   ├── sync_notion.py       # Neon → Notion sync (entities; create/update/archive)
+│   ├── sync_transcripts_notion.py  # Neon → Notion "Transcripts" DB (tech; idempotent)
+│   ├── search_transcripts.py       # Postgres FTS over transcripts (websearch + snippets)
 │   ├── sync_playlist.py     # Neon → Spotify playlist sync
 │   ├── spotify_match.py     # Match songs to Spotify
+│   ├── data_health.py       # Staleness + integrity checks (Slacks on failure)
 │   ├── scrapers/            # Show-specific scrapers
 │   │   ├── sop/             # Switched On Pop (website scraper)
 │   │   ├── tal/             # This American Life (website scraper)
-│   │   ├── ai_daily/        # AI Daily Brief (transcript entity extraction)
+│   │   ├── ai_daily/        # AI Daily Brief (extraction; sql/ migrations live here)
 │   │   └── taddy/           # Taddy API transcript importer (multi-show)
 │   └── _cache/              # Cached episode data + transcripts (gitignored)
 │
-├── .github/workflows/       # GitHub Actions automation
-│   └── pipeline.yml         # Scheduled + manual pipeline runs
+├── evals/                   # Extraction eval harness (the honest gradient)
+│   └── extraction/          # metrics.py + run_eval.py + build_baseline.py + fixtures/
+│
+├── cloudflare-trigger/      # Durable control plane (Worker cron → workflow_dispatch)
+│
+├── .github/workflows/       # GitHub Actions (triggered by the Cloudflare Worker)
+│   ├── pipeline.yml         # Music (SOP/TAL → Spotify)
+│   ├── entities.yml         # Tech + media (AI Daily, Hard Fork, PCHH, Gabfest → Notion)
+│   └── eval.yml             # Weekly gated extraction eval
 │
 ├── saved-transcripts/        # Saved episode transcripts + summaries
 │
@@ -125,19 +135,24 @@ list-maker/
 
 *PCHH/Gabfest = scoped-recent backfill so far; the full archive (357 + 871 eps) is a ~11h/$7.50 run deferred to Kevin's call.
 
+**Infrastructure (2026-06-07 session 2):**
+- **Durable control plane** — a Cloudflare Worker (`cloudflare-trigger/`, trimm account, `list-maker-cron.kevinhg.workers.dev`) drives ALL schedules via `workflow_dispatch`: entities daily, music Mon/Wed/Fri, eval Mon. This kills the GitHub public-repo 60-day cron silent-disable. A failed trigger Slacks. (Pending Kevin: the `GH_PAT` Worker secret, then the `schedule:` blocks come off both workflows.)
+- **Extraction eval harness** (`evals/extraction/`) — re-extracts a frozen set + gates on stable signals (yield, type-distribution, gold recall, confidence contract) so a model/prompt change can't silently regress. Run `run_eval.py` before/after a model swap; weekly CI via `eval.yml`. **Note:** same-model extraction has ~40% set churn at temp 0, so the gate uses aggregates, not per-episode set identity (see `evals/README.md`).
+- **Transcripts searchable BOTH** — Neon FTS (`search_transcripts.py`, generated tsvector + GIN on `episode_transcripts`) for power search, AND a Notion "Transcripts" DB (`sync_transcripts_notion.py`, idempotent) of the 1,196 tech-show transcripts so Kevin can query them via Notion AI.
+
 ## Automation
 
-The pipeline runs automatically via GitHub Actions (`.github/workflows/pipeline.yml`).
+The pipeline runs automatically. The **durable trigger** is the Cloudflare Worker (`cloudflare-trigger/`) calling `workflow_dispatch` — NOT GitHub's own `schedule:` (which silently disables after 60 idle days). Workflows: `pipeline.yml` (music → Spotify), `entities.yml` (tech + media → Notion), `eval.yml` (weekly extraction eval).
 
-**Schedule:** SOP on Wed+Fri, TAL on Monday (all at 10 AM UTC).
+**Schedule (in the Worker + each workflow):** entities daily 11:00 UTC; SOP Wed+Fri, TAL Mon 10:00 UTC; eval Mon 12:00 UTC.
 
-**Manual trigger:** Actions tab → "Pipeline - Update Playlists" → Run workflow.
+**Manual trigger:** Actions tab → the workflow → Run workflow (or the Worker's `/?token=…` endpoint).
 
-**Secrets (7 total):** `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REDIRECT_URI`, `SPOTIFY_CACHE_JSON`, `NEON_DATABASE_URL`, `FIRECRAWL_API_KEY`, `SLACK_WEBHOOK_URL`
+**Secrets:** `SPOTIFY_CLIENT_ID/SECRET/REDIRECT_URI/CACHE_JSON`, `NEON_DATABASE_URL`, `FIRECRAWL_API_KEY`, `SLACK_WEBHOOK_URL`, `OPENAI_API_KEY`, `NOTION_TOKEN`, `TADDY_USER_ID/API_KEY`. Cloudflare Worker secret: `GH_PAT` (+ optional `SLACK_WEBHOOK_URL`, `TRIGGER_TOKEN`).
 
 **If Spotify auth fails:** Re-auth locally (`python spotify_match.py --show-id 1 --limit 1`), then update `SPOTIFY_CACHE_JSON` secret with new `.spotify_cache/.cache` contents.
 
-See `pipeline/README.md` for full orchestrator docs.
+See `pipeline/README.md` for orchestrator docs, `evals/README.md` for the eval harness, `cloudflare-trigger/README.md` for the trigger.
 
 ## AI Daily Pipeline
 
