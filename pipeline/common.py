@@ -29,6 +29,28 @@ def get_logger(name: str) -> logging.Logger:
     return logger
 
 
+def post_slack(text: str) -> bool:
+    """Post a message to Slack via the SLACK_WEBHOOK_URL env var.
+
+    No-op (logged) when the webhook isn't set, and never raises — alerting must
+    not break a pipeline run. Returns True if Slack accepted the message.
+    """
+    url = os.getenv("SLACK_WEBHOOK_URL")
+    logger = get_logger("pipeline.slack")
+    if not url:
+        logger.info("Slack alert (no SLACK_WEBHOOK_URL): %s", text)
+        return False
+    try:
+        import requests
+
+        resp = requests.post(url, json={"text": text}, timeout=10)
+        resp.raise_for_status()
+        return True
+    except Exception as exc:  # alerting must never break the run
+        logger.warning("Slack post failed: %s", exc)
+        return False
+
+
 def get_repo_root() -> Path:
     """Return the repo root (parent of pipeline/)."""
     return Path(__file__).resolve().parent.parent

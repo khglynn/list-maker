@@ -25,12 +25,15 @@ import requests
 
 # Allow imports from pipeline/
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import get_db_connection, load_environment
+from common import get_db_connection, get_logger, load_environment, post_slack
 from show_config import get_show
 
 NOTION_API = "https://api.notion.com/v1"
 NOTION_VERSION = "2022-06-28"
 RATE_LIMIT_DELAY = 0.35  # ~3 req/s
+
+log = get_logger("pipeline.sync_notion")
+FAILURE_ALERT_THRESHOLD = 0.10  # Slack-alert if >10% of a phase's entities fail
 
 
 # ---------------------------------------------------------------------------
@@ -189,12 +192,14 @@ def fetch_entity_rollup(conn, show_id: int, min_mentions: int = 2) -> list[dict]
 
 
 def save_notion_page_id(conn, entity_id: int, page_id: str) -> None:
-    """Write back a Notion page ID to Neon after creating a page."""
+    """Write back a Notion page ID to Neon after creating a page (marks synced)."""
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE ai_entities
-            SET notion_page_id = %s, notion_synced_at = NOW()
+            SET notion_page_id = %s, notion_synced_at = NOW(),
+                notion_sync_status = 'synced', notion_sync_error = NULL,
+                notion_sync_attempt_at = NOW()
             WHERE id = %s;
             """,
             (page_id, entity_id),
@@ -203,13 +208,42 @@ def save_notion_page_id(conn, entity_id: int, page_id: str) -> None:
 
 
 def mark_synced(conn, entity_id: int) -> None:
-    """Update notion_synced_at for an entity that was updated in Notion."""
+    """Mark an entity successfully (re)synced to Notion."""
     with conn.cursor() as cur:
         cur.execute(
-            "UPDATE ai_entities SET notion_synced_at = NOW() WHERE id = %s;",
+            """
+            UPDATE ai_entities
+            SET notion_synced_at = NOW(), notion_sync_status = 'synced',
+                notion_sync_error = NULL, notion_sync_attempt_at = NOW()
+            WHERE id = %s;
+            """,
             (entity_id,),
         )
     conn.commit()
+
+
+def mark_sync_failed(conn, entity_id: int, error: str) -> None:
+    """Record a failed Notion sync attempt instead of swallowing it, so it can be
+    retried and counted. Leaves notion_page_id / notion_synced_at intact.
+
+    Best-effort — never raises, so persisting telemetry can't turn a recoverable
+    per-entity failure into a whole-run crash.
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE ai_entities
+                SET notion_sync_status = 'failed',
+                    notion_sync_error = %s,
+                    notion_sync_attempt_at = NOW()
+                WHERE id = %s;
+                """,
+                (error[:500], entity_id),
+            )
+        conn.commit()
+    except Exception as exc:  # recording a failure must not itself break the run
+        log.warning("Could not record sync failure for entity %s: %s", entity_id, exc)
 
 
 def clear_all_notion_ids(conn) -> int:
@@ -258,6 +292,20 @@ def compute_diff(entities: list[dict]) -> tuple[list[dict], list[dict]]:
             if last_date and last_date > synced.date():
                 to_update.append(e)
     return to_create, to_update
+
+
+def alert_on_failure_rate(phase: str, succeeded: int, failed: int) -> None:
+    """Log a phase's failure count, and Slack-alert if the failure rate exceeds the
+    threshold — so a silently-degrading Notion sync becomes loud instead of hiding.
+    """
+    total = succeeded + failed
+    if total == 0 or failed == 0:
+        return
+    rate = failed / total
+    msg = f"Notion sync — {phase}: {failed}/{total} failed ({rate:.0%})"
+    log.warning(msg)
+    if rate > FAILURE_ALERT_THRESHOLD:
+        post_slack(f":warning: list-maker {msg}")
 
 
 def run_full_reset(token: str, database_id: str, show_id: int, min_mentions: int, dry_run: bool) -> None:
@@ -314,10 +362,12 @@ def run_full_reset(token: str, database_id: str, show_id: int, min_mentions: int
                     created += 1
                 except Exception as exc:
                     failed += 1
+                    mark_sync_failed(conn, int(entity["entity_id"]), str(exc))
                     print(f"  SKIP: {entity['canonical_name']} — {exc}")
                 if (i + 1) % 50 == 0:
                     print(f"  Progress: {i + 1}/{len(entities)} (created={created}, failed={failed})")
             print(f"  Done: created={created}, failed={failed}")
+            alert_on_failure_rate("full-reset create", created, failed)
         else:
             print(f"  [dry-run] Would create {len(entities)} pages.")
     finally:
@@ -345,10 +395,12 @@ def run_incremental_sync(token: str, database_id: str, conn, entities: list[dict
                     created += 1
                 except Exception as exc:
                     failed += 1
+                    mark_sync_failed(conn, int(entity["entity_id"]), str(exc))
                     print(f"  SKIP: {entity['canonical_name']} — {exc}")
                 if (i + 1) % 50 == 0:
                     print(f"  Progress: {i + 1}/{len(to_create)} (created={created}, failed={failed})")
             print(f"  Created {created} pages." + (f" ({failed} failed)" if failed else ""))
+            alert_on_failure_rate("incremental create", created, failed)
         else:
             print(f"  [dry-run] Would create {len(to_create)} pages.")
 
@@ -365,10 +417,12 @@ def run_incremental_sync(token: str, database_id: str, conn, entities: list[dict
                     updated += 1
                 except Exception as exc:
                     failed += 1
+                    mark_sync_failed(conn, int(entity["entity_id"]), str(exc))
                     print(f"  SKIP update: {entity['canonical_name']} — {exc}")
                 if (i + 1) % 50 == 0:
                     print(f"  Progress: {i + 1}/{len(to_update)} (updated={updated}, failed={failed})")
             print(f"  Updated {updated} pages." + (f" ({failed} failed)" if failed else ""))
+            alert_on_failure_rate("incremental update", updated, failed)
         else:
             print(f"  [dry-run] Would update {len(to_update)} pages.")
 

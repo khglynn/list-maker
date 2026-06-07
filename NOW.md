@@ -29,7 +29,7 @@ A1–A9 done. Pipeline is idempotent, self-healing, structured-logged, staleness
 **Access resolved:** GH secrets set (OPENAI/NOTION/TADDY/SLACK ✅); Slack webhook wired + tested (posts to #list-maker ✅); wrangler logged into trimm ✅; A4 columns approved ✅; Gabfest path solved (Megaphone RSS show-notes carry the endorsements → scrape, NO transcription).
 
 **Sequence (loop drives, gate every step):**
-1. **A4** — Notion sync-state columns (psycopg2 migration, `IF NOT EXISTS`) + record status in `sync_notion.py` + >10%-fail alert.
+1. **A4 ✅ DONE (2026-06-07)** — migration `003` applied (3 `notion_sync_*` columns) + `sync_notion.py` records synced/failed status (`mark_sync_failed`, best-effort/never-raises) + reusable `post_slack` in `common.py` + >10%-per-phase Slack alert. pytest 51/51; Codex SAFE.
 2. **C — Hard Fork** ("Hard Fork", uuid `ff1d51d4-4fc9-4161-b23b-f0079f6dd5a0`): `show_config.py` entry + Neon `shows` row (MCP INSERT ok — only DELETE/ALTER are guard-blocked) + create Notion DB (clone AI Daily schema via the `NOTION_TOKEN` integration) + Taddy import + `--backfill` (~$2-3). Also catch AI Daily up (19d stale).
 3. **D — media:** PCHH media-extraction profile + media Notion DB (PCHH transcripts ready ✅); Gabfest = Megaphone RSS (`feeds.megaphone.fm/slatesculturegabfest`) endorsement scraper (no transcription). Media entity-types = a psycopg2 migration. Tiny validation batch + projected-cost note before any big media backfill.
 4. **B — trigger:** write `entities.yml` (daily) + the Cloudflare Worker (trimm) code + the `sys.executable` CI fix. **DEPLOY = Kevin** (`wrangler deploy` w/ trimm + a fine-grained GH PAT as a CF secret).

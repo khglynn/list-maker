@@ -2,7 +2,7 @@
 
 import logging
 
-from pipeline.common import get_logger
+from pipeline.common import get_logger, post_slack
 
 
 def test_get_logger_is_idempotent_and_configured(monkeypatch) -> None:
@@ -33,3 +33,28 @@ def test_get_logger_falls_back_on_bogus_level(monkeypatch) -> None:
     name = "pipeline.test.a5_bogus"
     logging.getLogger(name).handlers.clear()
     assert get_logger(name).level == logging.INFO
+
+
+def test_post_slack_noop_without_webhook(monkeypatch) -> None:
+    monkeypatch.delenv("SLACK_WEBHOOK_URL", raising=False)
+    assert post_slack("hello") is False
+
+
+def test_post_slack_posts_when_webhook_set(monkeypatch) -> None:
+    import requests
+
+    monkeypatch.setenv("SLACK_WEBHOOK_URL", "https://hooks.slack.test/x")
+    sent = {}
+
+    class _Resp:
+        def raise_for_status(self):
+            return None
+
+    def fake_post(url, json=None, timeout=None):
+        sent["url"] = url
+        sent["text"] = json["text"]
+        return _Resp()
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    assert post_slack("hello") is True
+    assert sent == {"url": "https://hooks.slack.test/x", "text": "hello"}
