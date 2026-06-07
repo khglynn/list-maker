@@ -73,6 +73,9 @@ jobs:
 
       - name: Run pipeline
         id: pipeline
+        # Step-level timeout (< job timeout) so a hang FAILS this step (→ Slack alert)
+        # instead of cancelling the job, which would skip the if:failure() notify.
+        timeout-minutes: 25
         env:
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
@@ -177,7 +180,7 @@ jobs:
 
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+          curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL" \
             -H 'Content-type: application/json' \
             -d "{\"text\": \"*list-maker: ${SHOW_NAME} updated*\n${DETAILS}\n<${RUN_URL}|View logs>\"}"
 
@@ -200,7 +203,7 @@ jobs:
 
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+          curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL" \
             -H 'Content-type: application/json' \
             -d "{\"text\": \":rotating_light: *list-maker: ${SHOW_NAME} pipeline failed*\n<${RUN_URL}|View logs>\"}"
 

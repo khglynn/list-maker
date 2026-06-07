@@ -277,21 +277,25 @@ def step_spotify_sync(cfg: ShowConfig, dry_run: bool) -> bool:
     return run_script(script, args, dry_run=False, label=f"Spotify sync ({cfg.slug})")
 
 
-def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> None:
-    """Run the full pipeline for a single show.
+def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> list[str]:
+    """Run the full pipeline for a single show. Returns the list of failed step names
+    (empty = all OK) so the caller can surface a partial failure instead of swallowing it.
+    Steps stay resilient (one failure doesn't block the rest), but the failure is recorded.
 
     backfill=True extracts the full archive (recent_only=False) and raises the
     Taddy per-run import cap — use it when onboarding a show or catching up history.
     """
     started = time.time()
+    failed: list[str] = []
     print(f"\n{'='*60}")
     print(f"Processing: {cfg.name} ({cfg.slug}){' [BACKFILL]' if backfill else ''}")
     print(f"{'='*60}")
 
-    # Step 1: Taddy import
-    print("\n[1/5] Taddy import")
+    # Step 1: import (Taddy transcripts, or Megaphone RSS for Gabfest)
+    print("\n[1/5] Import")
     if not step_import(cfg, dry_run, per_show_limit=500 if backfill else 50):
-        print("  WARNING: Taddy import failed, continuing anyway...")
+        print("  WARNING: import failed, continuing...")
+        failed.append("import")
 
     # Step 2: Entity/media extraction (shows whose content the LLM extractor handles)
     print("\n[2/5] Entity extraction")
@@ -305,6 +309,7 @@ def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> None
             conn.close()
         if not step_entity_extraction(cfg, unextracted, dry_run):
             print("  WARNING: Entity extraction failed, continuing...")
+            failed.append("extraction")
     else:
         print(f"  Skipping (extraction_type={cfg.extraction_type})")
 
@@ -313,6 +318,7 @@ def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> None
     if cfg.extraction_type == "entity_extraction":
         if not step_normalize_aliases(dry_run):
             print("  WARNING: Alias normalization failed, continuing...")
+            failed.append("normalize")
     else:
         # Media relies on load-time exact-name dedup; the fuzzy alias rules are tech-specific.
         print(f"  Skipping alias normalization (extraction_type={cfg.extraction_type})")
@@ -321,15 +327,18 @@ def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> None
     print("\n[4/5] Notion sync")
     if not step_notion_sync(cfg, dry_run):
         print("  WARNING: Notion sync failed.")
+        failed.append("notion_sync")
 
     # Step 5: Spotify sync
     print("\n[5/5] Spotify sync")
     if not step_spotify_sync(cfg, dry_run):
         print("  WARNING: Spotify sync failed.")
+        failed.append("spotify_sync")
 
     elapsed = time.time() - started
-    log.info("show=%s done in %.1fs (backfill=%s)", cfg.slug, elapsed, backfill)
-    print(f"\nDone: {cfg.name} ({elapsed:.1f}s)")
+    log.info("show=%s done in %.1fs (backfill=%s, failed=%s)", cfg.slug, elapsed, backfill, failed)
+    print(f"\nDone: {cfg.name} ({elapsed:.1f}s){' — FAILED: ' + ','.join(failed) if failed else ''}")
+    return failed
 
 
 def parse_args() -> argparse.Namespace:
@@ -362,14 +371,25 @@ def main() -> None:
     if args.dry_run:
         print("Mode: DRY RUN")
 
+    failures: dict[str, list[str]] = {}
     for slug in slugs:
         cfg = get_show(slug)
-        process_show(cfg, args.dry_run, backfill=args.backfill)
+        failed = process_show(cfg, args.dry_run, backfill=args.backfill)
+        if failed:
+            failures[slug] = failed
 
     print(f"\n{'='*60}")
     print("All shows processed.")
     print(f"{'='*60}")
     log.info("run complete: %d show(s) in %.1fs", len(slugs), time.time() - run_started)
+
+    # A partial failure (one show/step) must NOT look like success: exit non-zero so the
+    # CI failure path fires (Slack + issue). Skipped steps don't count. Dry runs never fail.
+    if failures and not args.dry_run:
+        summary = "; ".join(f"{slug}: {', '.join(steps)}" for slug, steps in failures.items())
+        print(f"\n⚠️  PARTIAL FAILURE — {summary}", file=sys.stderr)
+        log.error("partial failure — %s", summary)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

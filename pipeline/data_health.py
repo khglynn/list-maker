@@ -18,7 +18,7 @@ from typing import Any, Iterable
 
 # Allow running as `python pipeline/data_health.py` from the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import get_db_connection, load_environment
+from common import get_db_connection, load_environment, post_slack
 from show_config import SHOWS
 
 
@@ -514,7 +514,17 @@ def main() -> None:
     else:
         print(render_text(results))
 
-    if args.strict and any(result.status == "fail" for result in results):
+    # Alert to Slack when a check fails — especially staleness, where a show has silently
+    # stopped updating. This is the backstop for a partial pipeline failure that didn't crash
+    # the run. post_slack is a no-op without SLACK_WEBHOOK_URL, so local runs stay quiet.
+    failed = [r for r in results if r.status == "fail"]
+    if failed:
+        post_slack(
+            ":warning: *list-maker data health* — "
+            + "; ".join(f"{r.name}: {r.summary}" for r in failed)
+        )
+
+    if args.strict and failed:
         sys.exit(1)
 
 

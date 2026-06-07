@@ -44,6 +44,9 @@ jobs:
         run: pip install -r pipeline/requirements.txt
 
       - name: Run entity pipeline
+        # Step-level timeout (< job timeout) so a hang FAILS this step (→ Slack alert)
+        # instead of cancelling the job, which would skip the if:failure() notify.
+        timeout-minutes: 50
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -67,8 +70,11 @@ jobs:
         if: always()
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          cd pipeline && python data_health.py >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
+          # No `|| true`: a crash here should fail the step (→ Slack), not vanish.
+          # data_health.py posts its own Slack on a failed check (e.g. a stale show).
+          cd pipeline && python data_health.py | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Notify Slack (success)
         if: success() && github.event.inputs.dry_run != 'true'
@@ -77,7 +83,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
-          curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' \
+          curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' \
             --data "{\"text\": \":white_check_mark: *list-maker: entity pipeline ran*\n<${RUN_URL}|View logs>\"}"
 
       - name: Notify Slack (failure)
@@ -87,7 +93,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
-          curl -s -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' \
+          curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' \
             --data "{\"text\": \":rotating_light: *list-maker: entity pipeline FAILED*\n<${RUN_URL}|View logs>\"}"
 
       - name: Create issue on failure (non-dry-run)
