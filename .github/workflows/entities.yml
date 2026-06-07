@@ -78,16 +78,8 @@ jobs:
           # data_health.py posts its own Slack on a failed check (e.g. a stale show).
           cd pipeline && python data_health.py | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: Notify Slack (success)
-        if: success() && github.event.inputs.dry_run != 'true'
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
-          curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' \
-            --data "{\"text\": \":white_check_mark: *list-maker: entity pipeline ran*\n<${RUN_URL}|View logs>\"}"
-
+      # No per-run success ping — daily shows (AI Daily, PCHH) would spam the channel.
+      # The biweekly pulse is the positive report; only failures ping here.
       - name: Notify Slack (failure)
         if: failure()
         env:

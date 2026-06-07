@@ -134,56 +134,8 @@ jobs:
           echo "**Triggered by:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Run:** [View logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
 
-      - name: Notify Slack (success)
-        if: success() && steps.show.outputs.dry_run != 'true'
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: |
-          # Skip if no webhook configured
-          if [ -z "$SLACK_WEBHOOK_URL" ]; then
-            echo "No SLACK_WEBHOOK_URL configured, skipping notification"
-            exit 0
-          fi
-
-          SHOW_ID="${{ steps.show.outputs.show_id }}"
-          case $SHOW_ID in
-            1) SHOW_NAME="SOP" ;;
-            2) SHOW_NAME="TAL" ;;
-            3) SHOW_NAME="AI Daily" ;;
-            all) SHOW_NAME="All Shows" ;;
-          esac
-
-          # Build message from pipeline output
-          DETAILS=""
-          if [ -f summary.json ] && [ -s summary.json ]; then
-            DETAILS=$(python3 -c "
-          import json, sys
-          try:
-              data = json.load(open('summary.json'))
-              for s in data.get('summaries', []):
-                  steps = s.get('steps', {})
-                  scrape = steps.get('scrape', {})
-                  match = steps.get('match', {})
-                  sync = steps.get('sync', {})
-                  ep = scrape.get('scraped', scrape.get('fetched', 0))
-                  songs = scrape.get('songs_found', scrape.get('songs_inserted', 0))
-                  added = sync.get('added', 0)
-                  high = match.get('high', 0)
-                  med = match.get('medium', 0)
-                  print(f'{ep} new episodes, {songs} songs found, {high+med} matched, {added} added to playlist.')
-          except Exception as e:
-              print(f'Pipeline completed. Check logs for details.')
-          ")
-          else
-            DETAILS="Pipeline completed. Check logs for details."
-          fi
-
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL" \
-            -H 'Content-type: application/json' \
-            -d "{\"text\": \"*list-maker: ${SHOW_NAME} updated*\n${DETAILS}\n<${RUN_URL}|View logs>\"}"
-
+      # No per-run success ping — it's noise (the run summary lives in the job summary,
+      # and the biweekly pulse is the positive report). Only failures ping.
       - name: Notify Slack (failure)
         if: failure()
         env:
