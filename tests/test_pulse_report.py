@@ -1,48 +1,70 @@
 """Unit tests for the pulse digest logic.
 
-The pulse is a heartbeat Kevin reads at a glance, so its core decision — green vs.
-needs-attention, and what gets surfaced — is pinned here. Pure formatting, no DB.
+The pulse's core decision is "are we caught up to the real feed?" (second source), and
+its job is to never show green when we're behind or can't verify. That logic is pinned
+here. Pure formatting + comparison, no DB / no network.
 """
 
 from __future__ import annotations
 
+from datetime import date
+
 from pipeline.data_health import CheckResult
-from pipeline.pulse_report import build_digest
+from pipeline.pulse_report import build_digest, show_status
 
 TOTALS = {"entities": 100, "mentions": 200, "notion_transcripts": 50}
 
 
-def _show(slug: str, days: int | None, eps: int = 10, latest: str = "2026-06-06") -> dict:
-    return {"slug": slug, "days_since": days, "latest": latest, "episodes": eps}
+def _show(slug: str = "ai-daily-brief", latest: str = "2026-06-06", days: int = 1,
+          recent: int = 2, feed_dates: object = "caught_up") -> dict:
+    ldate = date.fromisoformat(latest) if latest else None
+    fd = feed_dates
+    if fd == "caught_up":  # feed agrees with our latest
+        fd = [ldate] if ldate else []
+    return {"slug": slug, "latest": ldate, "days_since": days, "recent": recent,
+            "episodes": 10, "feed_dates": fd, "cfg": None}
 
 
-def test_all_green_when_no_failures() -> None:
-    digest = build_digest([_show("ai-daily-brief", 1)], TOTALS, [CheckResult("x", "pass", "ok", [])])
-    assert "All systems firing" in digest
-    assert "Needs attention" not in digest
+def test_caught_up_is_green() -> None:
+    status, behind = show_status(_show())
+    assert "caught up" in status and behind is False
 
 
-def test_failure_surfaces_and_flips_headline() -> None:
-    checks = [CheckResult("episode_freshness_by_show", "fail", "a show is stale", [])]
-    digest = build_digest([_show("ai-daily-brief", 1)], TOTALS, checks)
-    assert "issue(s) need attention" in digest
-    assert "episode_freshness_by_show: a show is stale" in digest
+def test_behind_the_feed_flags_and_counts() -> None:
+    # Feed has two episodes newer than ours -> BEHIND 2.
+    s = _show(latest="2026-06-06", feed_dates=[date(2026, 6, 8), date(2026, 6, 7), date(2026, 6, 6)])
+    status, behind = show_status(s)
+    assert "BEHIND 2" in status and behind is True
 
 
-def test_warning_only_stays_green_but_is_counted_not_listed() -> None:
+def test_feed_unverified_is_not_green() -> None:
+    # Couldn't reach the feed -> "unverified", never green.
+    status, behind = show_status(_show(feed_dates=None))
+    assert "unverified" in status and behind is False
+
+
+def test_quiet_show_caught_up_is_explained() -> None:
+    # Caught up but old (25d > TAL's 21d threshold, feed also old) -> green, but says "quiet".
+    s = _show(slug="tal", latest="2026-05-13", days=25, feed_dates=[date(2026, 5, 13)])
+    status, behind = show_status(s)
+    assert "caught up" in status and "quiet" in status and behind is False
+
+
+def test_digest_has_hub_link_and_green_headline() -> None:
+    digest = build_digest([_show()], TOTALS, [CheckResult("x", "pass", "ok", [])])
+    assert "Pod Lists hub" in digest
+    assert "caught up to every feed" in digest
+
+
+def test_digest_behind_flips_headline() -> None:
+    behind = _show(feed_dates=[date(2026, 6, 8), date(2026, 6, 6)])  # behind 1
+    digest = build_digest([behind], TOTALS, [CheckResult("x", "pass", "ok", [])])
+    assert "need attention" in digest
+
+
+def test_digest_warning_only_stays_green_but_counted() -> None:
     checks = [CheckResult("possible_entity_alias_splits", "warn", "25 splits", [])]
-    digest = build_digest([_show("ai-daily-brief", 1)], TOTALS, checks)
-    assert "All systems firing" in digest
+    digest = build_digest([_show()], TOTALS, checks)
+    assert "caught up to every feed" in digest
     assert "1 warning" in digest
-    assert "Needs attention" not in digest  # advisory warnings aren't listed
-
-
-def test_stale_show_is_marked() -> None:
-    # AI Daily threshold is 3 days; 99 days is well past it.
-    digest = build_digest([_show("ai-daily-brief", 99)], TOTALS, [CheckResult("x", "pass", "ok", [])])
-    assert "STALE" in digest
-
-
-def test_show_with_no_episodes_is_handled() -> None:
-    digest = build_digest([_show("hard-fork", None)], TOTALS, [CheckResult("x", "pass", "ok", [])])
-    assert "no episodes yet" in digest
+    assert "Needs attention" not in digest
