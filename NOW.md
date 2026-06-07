@@ -1,6 +1,7 @@
 # NOW — list-maker
 
-**Last updated:** 2026-06-06
+**Last updated:** 2026-06-07
+> **▶ POST-COMPACTION — read `claude-plans/2026-06-07-session-handoff.md` FIRST.** Ways of working + the live picture from the last deep session + the antidote to doing the minimum. (State below is current; that doc carries the *how*.)
 
 ## Active: durable, self-healing rebuild (plan approved 2026-06-06)
 Goal — all 6 shows auto-processing on a durable schedule → music (SOP, TAL) to Spotify; tech (AI Daily, Hardfork) + media (PCHH, Culture Gabfest) to Notion; self-healing; Slack-notifying; tested; best-practices.
