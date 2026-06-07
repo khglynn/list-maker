@@ -2,6 +2,7 @@
 
 **Last updated:** 2026-06-07
 > **▶ POST-COMPACTION — read `claude-plans/2026-06-07-session-handoff.md` FIRST.** Ways of working + the live picture from the last deep session + the antidote to doing the minimum. (State below is current; that doc carries the *how*.)
+> **Overnight progress (2026-06-07):** Tech-DB re-sync ✅ DONE + VERIFIED — full-reset created **1275/1275, 0 failed**; ChatGPT confirmed in the shared "Tech Tools & Mentions" DB (982dafa0) with Shows=[AI Daily, Hard Fork] → **Option A WORKS**. (1st attempt died on a Notion ReadTimeout → fixed `notion_request` to retry Timeout [`ce2948a`] → re-run `byl8yqfsk` clean.) `clear_notion_ids_for_group` scoped [`81a7b2c`]. **NEXT: the media build** (per the handoff's implementation map) → then AI Daily catch-up → E verify.
 
 ## Active: durable, self-healing rebuild (plan approved 2026-06-06)
 Goal — all 6 shows auto-processing on a durable schedule → music (SOP, TAL) to Spotify; tech (AI Daily, Hardfork) + media (PCHH, Culture Gabfest) to Notion; self-healing; Slack-notifying; tested; best-practices.
