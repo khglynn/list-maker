@@ -263,15 +263,24 @@ def mark_sync_failed(conn, entity_id: int, error: str) -> None:
         log.warning("Could not record sync failure for entity %s: %s", entity_id, exc)
 
 
-def clear_all_notion_ids(conn) -> int:
-    """Clear all notion_page_id values. Returns count cleared."""
+def clear_notion_ids_for_group(conn, show_ids: list[int]) -> int:
+    """Clear notion_page_id/synced_at for entities mentioned by a show GROUP, so a
+    full-reset re-creates only that group's pages. Scoped (not global) so a tech reset
+    never wipes a media group's notion_page_ids, or vice versa. Returns count cleared."""
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE ai_entities
             SET notion_page_id = NULL, notion_synced_at = NULL
-            WHERE notion_page_id IS NOT NULL;
-            """
+            WHERE notion_page_id IS NOT NULL
+              AND id IN (
+                  SELECT DISTINCT m.entity_id
+                  FROM ai_mentions m
+                  JOIN episodes ep ON ep.id = m.episode_id
+                  WHERE ep.show_id = ANY(%s)
+              );
+            """,
+            (show_ids,),
         )
         count = cur.rowcount
     conn.commit()
@@ -354,7 +363,7 @@ def run_full_reset(token: str, database_id: str, show_ids: list[int], show_names
         # Fresh connection after long archiving phase
         conn = get_db_connection()
         try:
-            cleared = clear_all_notion_ids(conn)
+            cleared = clear_notion_ids_for_group(conn, show_ids)
             print(f"  Cleared {cleared} notion_page_id values in Neon.")
         finally:
             conn.close()
