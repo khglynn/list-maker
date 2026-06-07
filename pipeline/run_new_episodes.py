@@ -249,7 +249,7 @@ def step_notion_sync(cfg: ShowConfig, dry_run: bool) -> bool:
         return True
 
     script = str(PIPELINE_DIR / "sync_notion.py")
-    args = ["--show", cfg.slug]
+    args = ["--show", cfg.slug, "--min-mentions", str(cfg.notion_min_mentions)]
     if dry_run:
         args.append("--dry-run")
     return run_script(script, args, dry_run=False, label=f"Notion sync ({cfg.slug})")

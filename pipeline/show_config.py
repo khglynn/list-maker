@@ -29,6 +29,7 @@ class ShowConfig:
 
     # Notion
     notion_database_id: Optional[str] = None
+    notion_min_mentions: int = 2  # min mentions to surface in Notion (media shows use 1)
 
     # Extraction
     extraction_type: Optional[str] = None  # "entity_extraction", "song_extraction"
@@ -77,6 +78,7 @@ SHOWS: dict[str, ShowConfig] = {
         fallback_website_url="https://www.npr.org/podcasts/510282/pop-culture-happy-hour",
         store_raw_content=True,
         notion_database_id="3780501ef95081a783ebf8a32fa94657",  # shared Media DB (Option A)
+        notion_min_mentions=1,  # media: a single recommendation is meaningful
         extraction_type="media_extraction",
     ),
     "hard-fork": ShowConfig(
@@ -99,6 +101,7 @@ SHOWS: dict[str, ShowConfig] = {
         fallback_website_url="https://feeds.megaphone.fm/slatesculturegabfest",
         store_raw_content=True,
         notion_database_id="3780501ef95081a783ebf8a32fa94657",  # shared Media DB (Option A)
+        notion_min_mentions=1,  # media: a single recommendation is meaningful
         extraction_type="media_extraction",
     ),
 }
