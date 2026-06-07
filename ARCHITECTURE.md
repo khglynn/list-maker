@@ -38,7 +38,7 @@ Cascading source strategy (cheapest first): website show-notes → free transcri
 
 - `shows` — registry (slug, name, id). Mirrored in code by `pipeline/show_config.py` (**single source of truth**; a drift test fails the build if they diverge).
 - `episodes` — per-show episodes (publish_date, url, title; `raw_content` for Taddy shows).
-- `episode_transcripts` — transcript text per episode.
+- `episode_transcripts` — transcript text per episode. Generated `search_vector` (tsvector + GIN) powers FTS; `notion_transcript_page_id` tracks the Notion mirror (idempotent sync).
 - `songs` — music-show song rows (+ Spotify match state).
 - `ai_runs` / `ai_entities` / `ai_mentions` — entity-extraction store. `ai_mentions.run_id → ai_runs` (ON DELETE CASCADE); `ai_entities` deduped by (entity_type, normalized_name, platform); `ai_mentions.entity_id` ON DELETE SET NULL.
 
@@ -51,9 +51,13 @@ Cascading source strategy (cheapest first): website show-notes → free transcri
 - `pipeline/scrapers/{sop,tal,ai_daily,taddy}/` — per-show extractors.
 - `pipeline/scrapers/ai_daily/extract_entities.py` — LLM extraction (gpt-4.1-mini); pure sanitizers enforce the data contract (confidence ∈ [0,1], required fields, valid entity_type).
 - `pipeline/scrapers/ai_daily/load_entity_batch.py` — batch → Neon loader; idempotent on (show_id, batch_name) via `delete_existing_run`.
-- `pipeline/sync_notion.py` / `pipeline/sync_playlist.py` — Neon → Notion / Spotify.
-- `pipeline/data_health.py` — read-only health checks (transcript coverage, episode freshness/staleness, mention integrity…).
-- `tests/` — pytest (45 tests): config drift, idempotency, retry, logging, staleness, extraction + load contracts.
+- `pipeline/sync_notion.py` / `pipeline/sync_playlist.py` — Neon → Notion (entities) / Spotify.
+- `pipeline/sync_transcripts_notion.py` — Neon → Notion "Transcripts" DB (tech shows); idempotent/resumable (NULL-marker gated, adopt-don't-duplicate on resume), chunked + rate-limited.
+- `pipeline/search_transcripts.py` — Postgres FTS over transcripts (websearch_to_tsquery + ts_headline snippets).
+- `pipeline/data_health.py` — read-only health checks (transcript coverage, episode freshness/staleness, mention integrity…); Slacks on a failed check.
+- `evals/extraction/` — extraction eval harness (deterministic scorers, frozen baseline + gold fixtures, gated runner). The honest gradient for the one LLM step; see `evals/README.md`.
+- `cloudflare-trigger/` — the durable control plane: a Worker cron → GitHub `workflow_dispatch` for all three workflows.
+- `tests/` — pytest (110 tests): config drift, idempotency, retry, logging, staleness, extraction + load contracts, eval scorers, transcript chunking.
 
 ## Durability (the 2026-06-06 hardening)
 
@@ -69,11 +73,17 @@ Built to run unattended and self-heal:
 | A7 | Staleness alert — a silently-stopped feed becomes loud | `check_episode_freshness` |
 | A8 | Data contracts pinned in tests | `tests/` |
 
-Deferred to Kevin / later: A4 per-entity Notion sync state (needs a schema migration); A5b print→logging sweep; A6b aggregated failed-steps summary; A7's Slack send (needs `SLACK_WEBHOOK_URL`).
+Since shipped: A4 per-entity Notion sync state (migration 003 + `mark_sync_failed`); A7's Slack send (`data_health.py` posts on a failed check). Still deferred (low-value): A5b print→logging sweep; A6b aggregated failed-steps summary.
 
-## Scheduling (Workstream B — in progress)
+## Scheduling — the durable control plane (deployed 2026-06-07)
 
-Today: GitHub Actions (`pipeline.yml`) on a `schedule:` cron. Durable target: a **Cloudflare Worker Cron** calling GitHub `workflow_dispatch` — removes the 60-day public-repo cron-disable risk — plus Slack notifications on every run / failure / staleness. Rationale (Cloudflare over Inngest: no rewrite, no new account) is in the rebuild plan.
+A **Cloudflare Worker Cron** (`cloudflare-trigger/`, trimm account) calls GitHub `workflow_dispatch` for all three workflows — entities daily, music Mon/Wed/Fri, eval Mon — so GitHub's own `schedule:` cron (which silently disables after 60 idle days on a public repo) is no longer the trigger. A failed dispatch posts to Slack (the trigger itself is observable). Every run also Slacks on success / failure / staleness. Chosen over Inngest (no rewrite, no new account) per the rebuild plan.
+
+*Pending Kevin: set the `GH_PAT` Worker secret, then the `schedule:` blocks come off `pipeline.yml` + `entities.yml` (steps in `cloudflare-trigger/README.md`). Until then the GitHub schedules stay active — no gap.*
+
+## Quality gradient — the eval harness
+
+`evals/extraction/` re-extracts a frozen set of tech episodes and gates on **stable aggregate signals** (entity yield, type distribution, gold recall, the confidence contract) — never per-episode set identity, because measured same-model churn is ~40% at temp 0. Run before/after any model or prompt change; weekly CI via `eval.yml`. This is how we answer "how will you know the output stayed good?" — see `evals/README.md`.
 
 ## Operational safety
 
