@@ -26,6 +26,9 @@ from spotipy.exceptions import SpotifyException
 from thefuzz import fuzz
 from dotenv import load_dotenv
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from common import ensure_spotify_token  # noqa: E402
+
 # =============================================================================
 # Constants
 # =============================================================================
@@ -56,8 +59,9 @@ def get_spotify_client(cache_path: Optional[str] = None) -> spotipy.Spotify:
         redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8080/callback"),
         scope="user-library-read",
         cache_path=resolved_cache,
+        open_browser=False,
     )
-
+    ensure_spotify_token(auth_manager)
     return spotipy.Spotify(auth_manager=auth_manager)
 
 

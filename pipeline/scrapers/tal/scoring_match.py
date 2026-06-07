@@ -9,6 +9,7 @@ Usage:
     python scoring_match.py --show-id 2 --execute    # Match and update DB
     python scoring_match.py --show-id 2 --sync       # Also add to playlist
 """
+from __future__ import annotations  # PEP-604 (dict | None) annotations under Python 3.9
 
 import argparse
 import os
@@ -21,6 +22,9 @@ from psycopg2.extras import RealDictCursor
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from common import ensure_spotify_token  # noqa: E402
 
 
 # Playlist IDs by show
@@ -48,7 +52,9 @@ def get_spotify_client():
         redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8080/callback"),
         scope="playlist-modify-public playlist-modify-private",
         cache_path=cache_path,
+        open_browser=False,
     )
+    ensure_spotify_token(auth_manager)
     return spotipy.Spotify(auth_manager=auth_manager)
 
 

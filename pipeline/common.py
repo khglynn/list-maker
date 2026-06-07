@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -77,3 +78,36 @@ def get_db_connection():
     if not db_url:
         raise RuntimeError("DATABASE_URL (or NEON_DATABASE_URL) is required")
     return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+
+
+def ensure_spotify_token(auth_manager) -> None:
+    """Fail fast on a missing/expired Spotify token instead of hanging on spotipy's
+    interactive auth flow.
+
+    spotipy's SpotifyOAuth, given no usable cached token, calls input() to read the
+    redirect URL — which blocks forever in a headless/CI runner with no stdin. That
+    silently broke SOP/TAL: the music pipeline hung 30 min on every scheduled run with
+    real work, got cancelled, and never synced the playlists.
+
+    Validate the cached token up front (refreshing if expired). If there's still no
+    usable token, raise a clear error *only when headless* — in a real terminal we let
+    spotipy run its normal interactive flow so local re-auth still works.
+    """
+    cached = auth_manager.get_cached_token()
+    if cached and not auth_manager.is_token_expired(cached):
+        return
+    if cached:  # present but expired — try a silent refresh
+        refresh_token = cached.get("refresh_token")
+        if refresh_token:
+            try:
+                if auth_manager.refresh_access_token(refresh_token):
+                    return  # refreshed to a usable token
+                # spotipy can return None/empty instead of raising — treat as no token.
+            except Exception:  # noqa: BLE001 — fall through to the no-token handling
+                pass
+    # No usable token. Headless → fail loudly + fast; interactive → allow re-auth.
+    if not sys.stdin.isatty():
+        raise RuntimeError(
+            "Spotify token missing/expired in a non-interactive context — re-auth locally "
+            "(python spotify_match.py --show-id 1 --limit 1) and update the SPOTIFY_CACHE_JSON secret"
+        )
