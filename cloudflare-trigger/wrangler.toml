@@ -2,9 +2,17 @@ name = "list-maker-cron"
 main = "worker.js"
 compatibility_date = "2026-06-06"
 
-# Deploy to the PERSONAL (trimm) Cloudflare account. Set the trimm account_id below
-# (get it from `env -u CLOUDFLARE_API_TOKEN wrangler whoami` after logging into trimm).
-# account_id = "<trimm-account-id>"
+# PERSONAL (trimm) Cloudflare account — kevin@trimm.co.
+account_id = "759a850a3af3e2fbf1ab036e7eb2f231"
 
+# The durable control plane for BOTH workflows (entities + music). Times are UTC and
+# mirror what used to live in each workflow's `schedule:` block — removed, because
+# GitHub silently disables public-repo crons after 60 idle days. The cron strings
+# below must stay in sync with the SCHEDULE map in worker.js.
 [triggers]
-crons = ["0 11 * * *"]   # daily 11:00 UTC — matches entities.yml's interim schedule
+crons = [
+  "0 11 * * *",   # daily — entities.yml (AI Daily, Hard Fork, PCHH, Gabfest)
+  "0 10 * * 1",   # Mon   — pipeline.yml show_id=2 (This American Life)
+  "0 10 * * 3",   # Wed   — pipeline.yml show_id=1 (Switched on Pop)
+  "0 10 * * 5",   # Fri   — pipeline.yml show_id=1 (Switched on Pop)
+]

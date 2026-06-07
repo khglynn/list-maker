@@ -1,32 +1,51 @@
 # list-maker-cron — durable pipeline trigger (Cloudflare Worker)
 
-On a daily cron, this Worker calls GitHub `workflow_dispatch` for
-`.github/workflows/entities.yml`. It's the **durable** trigger: GitHub auto-disables
-`schedule:` crons in public repos after 60 days of inactivity; a Cloudflare Worker
-Cron doesn't have that limit.
+This Worker is the **durable control plane** for the whole pipeline. On a set of
+crons it calls GitHub `workflow_dispatch` for both workflows:
 
-## Deploy (Kevin — personal **trimm** Cloudflare)
+| Cron (UTC)      | Workflow       | What runs                                   |
+|-----------------|----------------|---------------------------------------------|
+| `0 11 * * *`    | `entities.yml` | AI Daily, Hard Fork, PCHH, Culture Gabfest  |
+| `0 10 * * 1`    | `pipeline.yml` | This American Life (music → Spotify)        |
+| `0 10 * * 3`    | `pipeline.yml` | Switched on Pop (music → Spotify)           |
+| `0 10 * * 5`    | `pipeline.yml` | Switched on Pop (music → Spotify)           |
 
-The global `CLOUDFLARE_API_TOKEN` is the **Tecovas** token, so unset it for these
-commands (so wrangler uses your trimm OAuth):
+**Why it exists:** GitHub auto-disables `schedule:` crons in public repos after 60
+days of inactivity — silently. A Cloudflare Worker Cron has no such limit. Once this
+is deployed, the `schedule:` blocks are removed from **both** workflows, so this
+Worker is their only trigger. (The cron strings live in two places that must stay in
+sync: `wrangler.toml [triggers].crons` and the `SCHEDULE` map in `worker.js`.)
 
-1. **Log into trimm** (once): `env -u CLOUDFLARE_API_TOKEN wrangler login` → pick trimm.
-2. **Account id:** `env -u CLOUDFLARE_API_TOKEN wrangler whoami` → copy the Account ID
-   into `wrangler.toml` (`account_id = "..."`).
-3. **GitHub PAT:** create a fine-grained PAT for `khglynn/list-maker` with
-   **Actions: Read and write**, then:
-   `env -u CLOUDFLARE_API_TOKEN wrangler secret put GH_PAT` (paste the PAT).
-4. **Deploy:** `env -u CLOUDFLARE_API_TOKEN wrangler deploy`
-5. **Verify:** hit the Worker's URL once (it also dispatches on GET) and confirm a
-   run appears under the repo's Actions tab.
-6. **Then** delete the `schedule:` block from `.github/workflows/entities.yml` — the
-   Worker is now the durable trigger (one commit).
+## Deploy (personal **trimm** Cloudflare — account_id already set)
 
-## Manual trigger (optional)
-The Worker also dispatches on an HTTP GET — but only if you set a `TRIGGER_TOKEN`
-secret and pass it: `env -u CLOUDFLARE_API_TOKEN wrangler secret put TRIGGER_TOKEN`,
-then `GET https://<worker-url>/?token=<TRIGGER_TOKEN>`. Without `TRIGGER_TOKEN` the
-HTTP endpoint returns 403 (the cron is unaffected).
+The global `CLOUDFLARE_API_TOKEN` is the **Tecovas** token, so every command unsets
+it (`env -u CLOUDFLARE_API_TOKEN ...`) to use the trimm OAuth login.
+
+`account_id` is already filled in `wrangler.toml` (`759a850a…`, kevin@trimm.co).
+
+1. **Deploy:** `env -u CLOUDFLARE_API_TOKEN wrangler deploy` (creates the Worker; it
+   no-ops safely until `GH_PAT` is set).
+2. **GitHub PAT (Kevin):** create a fine-grained PAT for `khglynn/list-maker` with
+   **Actions: Read and write**, then store it:
+   `env -u CLOUDFLARE_API_TOKEN wrangler secret put GH_PAT` (paste at the prompt).
+   - **Also set the Slack webhook** (recommended — makes a failed *trigger* alert,
+     not just a failed run): `env -u CLOUDFLARE_API_TOKEN wrangler secret put SLACK_WEBHOOK_URL`
+     (paste the same `#list-maker` webhook used by the GitHub workflows).
+3. **Verify:** set a one-off trigger token and hit the Worker once, then confirm a run
+   appears under the repo's Actions tab:
+   - `env -u CLOUDFLARE_API_TOKEN wrangler secret put TRIGGER_TOKEN` (paste any value)
+   - `curl "https://list-maker-cron.<subdomain>.workers.dev/?token=<value>"`
+4. **Remove both `schedule:` blocks** from `.github/workflows/entities.yml` and
+   `.github/workflows/pipeline.yml` — the Worker is now the durable trigger (one commit).
+
+## Manual trigger (optional, after `TRIGGER_TOKEN` is set)
+
+```
+GET https://<worker-url>/?token=<TRIGGER_TOKEN>                       # entities.yml
+GET https://<worker-url>/?token=<TRIGGER_TOKEN>&workflow=pipeline.yml&show_id=1
+```
+
+Without `TRIGGER_TOKEN` the HTTP endpoint returns 403 (the cron is unaffected).
 
 ## Local test
-`env -u CLOUDFLARE_API_TOKEN wrangler dev`, then trigger the scheduled event.
+`env -u CLOUDFLARE_API_TOKEN wrangler dev`, then trigger a scheduled event.
