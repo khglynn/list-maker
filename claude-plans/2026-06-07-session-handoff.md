@@ -63,4 +63,16 @@
 
 ---
 
+## Media-extraction profile — implementation map (from reading extract_entities.py)
+Thread a `profile` (locked types + core types + system prompt). The user-prompt JSON shape is SHARED across tech/media — media-specific data goes in `facts` (creators[{role,name}], release_year, platform, explicit_endorsement, caveats, comparison_to[]). Concretely:
+- Add `MEDIA_TYPES` (movie, tv_series, book, music_album, music_track, game, podcast_series, theater_production, social_account, artist_profile, visual_media_other, other) + `MEDIA_CORE_TYPES` next to `LOCKED_TYPES` (extract_entities.py:42).
+- `openai_extract` (~:225) hardcodes the tech `system_prompt` (~:233-250) + `type_list` from LOCKED_TYPES → pass a profile-aware system_prompt + type_list. Media prompt: extract media RECOMMENDATIONS from culture pods, segment-aware (PCHH "What's Making Me Happy", Gabfest endorsements), capture endorsement/creators/platform/caveats/release_year in facts.
+- `sanitize_mention` forces `entity_type not in LOCKED_TYPES → "other"` in TWO spots (~:435, ~:583) — use the profile's valid types so media types survive. The tech reclassifications (report→org, survey, benchmark, account) are no-ops for media type names, so they can stay.
+- `main` (~:734): add `--extraction-type` (default `entity_extraction`) → select profile.
+- `run_new_episodes.step_entity_extraction`: pass the show's `extraction_type` to extract_entities (new flag).
+- `load_entity_batch`: add media types to the VALID set + `normalize_entity_type`. entity_type CHECK migration: extend with media types (psycopg2, additive, `sql/004_*` style).
+- TDD: profile selection + media-type survival through sanitize.
+Then: shared "Media Recommendations" Notion DB (Option A) under parent 31c0501e-…, Shows property; pchh + culture-gabfest notion_database_id → it; tiny validation (5-10 eps each) → QUERY ai_mentions, verify sane media entities → SCOPED recent backfill (NOT all 871 Gabfest).
+
+---
 *This handoff embodies hg-save-it (durable instructions for Claude — reasoning over rules) and hg-project-management (useful density, single source of truth, session continuity). NOW.md is the live state; the resume doc is the grounding; this is the way-of-working memory. Keep all three true.*
