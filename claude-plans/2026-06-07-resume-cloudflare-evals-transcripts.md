@@ -1,6 +1,8 @@
 # Post-Compaction Prompt — list-maker: Cloudflare + Evals + Transcripts
 *Written 2026-06-07 evening by the instance that did the work, for the next instance. You are MID-BUILD on a durable rebuild — not starting fresh. The #1 failure mode here is doing the minimum / executing the literal next bullet without re-grounding in WHY. Refuse it.*
 
+> **✅ EXECUTED 2026-06-07 (session 2) — see `NOW.md` for live state.** All three workstreams done: (1) Cloudflare Worker deployed (5 crons, both workflows + eval, trigger-failure Slack) — only the `GH_PAT` secret + `schedule:`-removal pending Kevin; (2) eval harness shipped (`evals/`, gate calibrated to measured noise); (3) transcripts searchable BOTH (Neon FTS `bbba4fa` + Notion DB `9220b52`, backfill of 1,193 eps run). Don't re-do these — read NOW.md, then continue from whatever's still open (Kevin's PAT → verify dispatch + remove schedules). The WHY-grounding below is still the way of working.
+
 ---
 
 ## READ FIRST — required, in order. These are the *why*, not background. Do not skip them and do not start work until you've rooted in their reasoning.
