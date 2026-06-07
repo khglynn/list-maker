@@ -66,6 +66,32 @@ CORE_TYPES = {
     "social_post",
     "blog_post",
 }
+
+# --- Media extraction taxonomy (Workstream D: PCHH + Culture Gabfest) ---
+MEDIA_TYPES = [
+    "movie",
+    "tv_series",
+    "book",
+    "music_album",
+    "music_track",
+    "game",
+    "podcast_series",
+    "theater_production",
+    "social_account",
+    "artist_profile",
+    "visual_media_other",
+    "other",
+]
+MEDIA_CORE_TYPES = {
+    "movie",
+    "tv_series",
+    "book",
+    "music_album",
+    "music_track",
+    "game",
+    "podcast_series",
+    "theater_production",
+}
 REQUEST_TIMEOUT_SECONDS = 180
 OPENAI_MAX_RETRIES = 6
 OPENAI_INITIAL_BACKOFF_SECONDS = 2.0
@@ -181,6 +207,12 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Include sponsor/ad mentions; default is to exclude them",
     )
+    parser.add_argument(
+        "--extraction-type",
+        type=str,
+        default="entity_extraction",
+        help="Extraction profile: entity_extraction (tech, default) or media_extraction",
+    )
     return parser.parse_args()
 
 
@@ -222,15 +254,24 @@ def parse_retry_after_seconds(value: Optional[str]) -> Optional[float]:
     return parsed
 
 
-def openai_extract(
-    api_key: str,
-    model: str,
-    episode: EpisodeInput,
-    transcript_text: str,
-) -> tuple[dict[str, Any], UsageInfo]:
-    type_list = ", ".join(LOCKED_TYPES)
+@dataclass(frozen=True)
+class ExtractionProfile:
+    """One extraction profile = one taxonomy + system prompt + post-processing policy.
 
-    system_prompt = (
+    Tech (AI Daily, Hard Fork) and media (PCHH, Culture Gabfest) share the user-prompt
+    JSON shape and the same extractor; they differ only in the locked types, the system
+    prompt, and whether the tech-specific reclassification heuristics run.
+    """
+
+    name: str
+    types: list[str]
+    core_types: frozenset[str]
+    system_prompt: str
+    apply_tech_heuristics: bool
+
+
+def _tech_system_prompt(type_list: str) -> str:
+    return (
         "You extract structured references from podcast transcripts for a curated database. "
         "Follow the locked taxonomy exactly and be conservative.\n\n"
         f"Locked entity types: {type_list}.\n"
@@ -248,6 +289,67 @@ def openai_extract(
         "11) Do not include duplicate mention rows with identical mention_text + context.\n"
         "12) Aim for quality over quantity; cap at 40 mentions per episode."
     )
+
+
+def _media_system_prompt(type_list: str) -> str:
+    return (
+        "You extract MEDIA RECOMMENDATIONS from culture and entertainment podcast transcripts "
+        "for a curated database. Capture the movies, shows, books, music, games, podcasts, and live "
+        "performances that hosts and guests recommend, endorse, or discuss engaging with.\n\n"
+        f"Locked entity types: {type_list}.\n"
+        "Important rules:\n"
+        "1) Map each cultural work to the closest locked type. People (directors, authors, artists) belong "
+        "in that work's facts.creators, NOT as their own mention — unless the person themselves is the "
+        "recommendation (then use artist_profile or social_account).\n"
+        "2) Pay special attention to endorsement segments — Pop Culture Happy Hour's \"What's Making Me Happy "
+        "This Week\" and Culture Gabfest's \"endorsements\" — where hosts explicitly recommend something. Set "
+        "facts.explicit_endorsement=true for those.\n"
+        "3) In facts, capture when stated: creators (list of {role, name}, e.g. director/author/artist/"
+        "showrunner/host), release_year (int), platform (where to watch/read/stream/play), explicit_endorsement "
+        "(bool), caveats (reservations a host voiced), comparison_to (similar works named).\n"
+        "4) Never invent URLs or facts. If unknown, omit the fact or set source_url=null.\n"
+        "5) sentiment_label reflects the hosts' take: positive=recommend/love, negative=pan, mixed=liked-with-"
+        "reservations, neutral=mentioned-without-judgment.\n"
+        "6) Set is_editorial=true for normal host discussion; false only for explicit sponsor/ad reads.\n"
+        "7) If a work's type is genuinely unclear, use type='other' and set needs_review=true.\n"
+        "8) Keep meaningful recommendations, not every passing pop-culture reference.\n"
+        "9) Return valid JSON only. No duplicate rows with identical mention_text + context.\n"
+        "10) Aim for quality over quantity; cap at 40 mentions per episode."
+    )
+
+
+def get_profile(extraction_type: Optional[str]) -> ExtractionProfile:
+    """Select the extraction profile for a show's extraction_type.
+
+    Defaults to the tech taxonomy for anything that isn't explicitly media — song_extraction
+    shows (SOP/TAL) don't use this extractor at all, so 'tech' is a safe, behavior-preserving
+    default for any non-media caller.
+    """
+    if extraction_type == "media_extraction":
+        return ExtractionProfile(
+            name="media",
+            types=MEDIA_TYPES,
+            core_types=frozenset(MEDIA_CORE_TYPES),
+            system_prompt=_media_system_prompt(", ".join(MEDIA_TYPES)),
+            apply_tech_heuristics=False,
+        )
+    return ExtractionProfile(
+        name="tech",
+        types=LOCKED_TYPES,
+        core_types=frozenset(CORE_TYPES),
+        system_prompt=_tech_system_prompt(", ".join(LOCKED_TYPES)),
+        apply_tech_heuristics=True,
+    )
+
+
+def openai_extract(
+    api_key: str,
+    model: str,
+    episode: EpisodeInput,
+    transcript_text: str,
+    profile: ExtractionProfile,
+) -> tuple[dict[str, Any], UsageInfo]:
+    system_prompt = profile.system_prompt
 
     user_prompt = (
         "Extract mention candidates from this episode.\n\n"
@@ -414,6 +516,7 @@ def sanitize_mention(
     mention: Any,
     episode_id: int,
     confidence_review_threshold: float,
+    valid_types: list[str] = LOCKED_TYPES,
 ) -> Optional[dict[str, Any]]:
     if not isinstance(mention, dict):
         return None
@@ -432,7 +535,7 @@ def sanitize_mention(
         if review_reason == "":
             review_reason = None
 
-    if entity_type not in LOCKED_TYPES:
+    if entity_type not in valid_types:
         entity_type = "other"
         needs_review = True
         review_reason = review_reason or "model_proposed_unknown_type"
@@ -498,10 +601,29 @@ def sanitize_mention(
     }
 
 
-def postprocess_mention_types(mention: dict[str, Any]) -> dict[str, Any]:
+def postprocess_mention_types(
+    mention: dict[str, Any],
+    valid_types: list[str] = LOCKED_TYPES,
+    apply_tech_heuristics: bool = True,
+) -> dict[str, Any]:
     """
     Light normalization layer to improve consistency after model extraction.
+
+    The reclassification heuristics below (media-outlet→org, survey/benchmark recovery,
+    posting→account) are tech-taxonomy specific, so they run only when apply_tech_heuristics
+    is True. For the media profile, skip them and just gate the type against the media
+    taxonomy — otherwise a media "book" whose context mentions "survey" would be retyped.
     """
+    if not apply_tech_heuristics:
+        if mention["entity_type"] not in valid_types:
+            mention["entity_type"] = "other"
+            mention["needs_review"] = True
+            mention["review_reason"] = mention["review_reason"] or "postprocess_unknown_type"
+        if mention["entity_type"] == "other":
+            mention["needs_review"] = True
+            mention["review_reason"] = mention["review_reason"] or "other_type_needs_review"
+        return mention
+
     text_blob = " ".join(
         [
             mention.get("mention_text", ""),
@@ -580,7 +702,7 @@ def postprocess_mention_types(mention: dict[str, Any]) -> dict[str, Any]:
             mention["needs_review"] = True
             mention["review_reason"] = mention["review_reason"] or "posting_context_retyped_to_account"
 
-    if mention["entity_type"] not in LOCKED_TYPES:
+    if mention["entity_type"] not in valid_types:
         mention["entity_type"] = "other"
         mention["needs_review"] = True
         mention["review_reason"] = mention["review_reason"] or "postprocess_unknown_type"
@@ -733,6 +855,7 @@ def build_summary_markdown(
 
 def main() -> None:
     args = parse_args()
+    profile = get_profile(args.extraction_type)
     repo_root = Path(__file__).resolve().parents[3]
     load_environment(repo_root)
 
@@ -805,6 +928,7 @@ def main() -> None:
             model=args.model,
             episode=episode,
             transcript_text=transcript_text,
+            profile=profile,
         )
         total_prompt_tokens += usage.prompt_tokens
         total_completion_tokens += usage.completion_tokens
@@ -822,9 +946,14 @@ def main() -> None:
                     mention=mention,
                     episode_id=episode.episode_id,
                     confidence_review_threshold=args.confidence_review_threshold,
+                    valid_types=profile.types,
                 )
                 if normalized is not None:
-                    normalized = postprocess_mention_types(normalized)
+                    normalized = postprocess_mention_types(
+                        normalized,
+                        valid_types=profile.types,
+                        apply_tech_heuristics=profile.apply_tech_heuristics,
+                    )
                     sanitized_mentions.append(normalized)
 
         # Optional filters for cleaner, user-facing review batches.
@@ -832,7 +961,7 @@ def main() -> None:
         for mention in sanitized_mentions:
             if not args.include_non_editorial and not mention["is_editorial"]:
                 continue
-            if args.focus_core_types and mention["entity_type"] not in CORE_TYPES and mention["entity_type"] != "other":
+            if args.focus_core_types and mention["entity_type"] not in profile.core_types and mention["entity_type"] != "other":
                 continue
             filtered_mentions.append(mention)
         sanitized_mentions = filtered_mentions
@@ -846,7 +975,7 @@ def main() -> None:
                 proposed_type = normalize_text(str(c.get("proposed_type", ""))).lower()
                 if not proposed_type:
                     continue
-                if proposed_type in LOCKED_TYPES:
+                if proposed_type in profile.types:
                     # Ignore suggestions that are already in the locked taxonomy.
                     continue
                 normalized_new_type_candidates.append(

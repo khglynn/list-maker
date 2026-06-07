@@ -9,7 +9,11 @@ back to 'other' + needs_review, and low-confidence mentions are flagged.
 import pytest
 
 from pipeline.scrapers.ai_daily.extract_entities import (
+    LOCKED_TYPES,
+    MEDIA_TYPES,
+    get_profile,
     parse_json_object,
+    postprocess_mention_types,
     sanitize_fact,
     sanitize_mention,
 )
@@ -26,6 +30,90 @@ def _mention(**overrides):
     }
     base.update(overrides)
     return base
+
+
+# --- media extraction profile (Workstream D: PCHH + Culture Gabfest) ---
+
+
+def test_get_profile_selects_tech_vs_media() -> None:
+    tech = get_profile("entity_extraction")
+    assert tech.name == "tech"
+    assert "software_product" in tech.types and "movie" not in tech.types
+    assert tech.apply_tech_heuristics is True
+
+    media = get_profile("media_extraction")
+    assert media.name == "media"
+    assert "movie" in media.types and "book" in media.types
+    assert "software_product" not in media.types
+    assert media.apply_tech_heuristics is False
+    assert "What's Making Me Happy" in media.system_prompt  # segment-aware media prompt
+
+
+def test_get_profile_defaults_to_tech() -> None:
+    assert get_profile(None).name == "tech"
+    assert get_profile("song_extraction").name == "tech"  # non-media slug → tech default
+
+
+def test_sanitize_mention_media_type_survives_under_media_profile() -> None:
+    m = sanitize_mention(
+        _mention(entity_type="movie", canonical_name="Dune: Part Two", mention_text="Dune"),
+        episode_id=1,
+        confidence_review_threshold=0.5,
+        valid_types=MEDIA_TYPES,
+    )
+    assert m is not None and m["entity_type"] == "movie"  # not forced to "other"
+
+
+def test_sanitize_mention_cross_profile_type_falls_back() -> None:
+    # A tech type isn't valid under the media taxonomy → other + needs_review.
+    m = sanitize_mention(
+        _mention(entity_type="software_product"),
+        episode_id=1,
+        confidence_review_threshold=0.5,
+        valid_types=MEDIA_TYPES,
+    )
+    assert m["entity_type"] == "other" and m["needs_review"] is True
+
+
+def test_sanitize_mention_default_valid_types_is_tech() -> None:
+    # Back-compat: the default taxonomy stays tech, so a media type falls back.
+    m = sanitize_mention(
+        _mention(entity_type="movie"), episode_id=1, confidence_review_threshold=0.5
+    )
+    assert m["entity_type"] == "other"
+
+
+def test_postprocess_skips_tech_heuristics_for_media() -> None:
+    base = {
+        "entity_type": "other",
+        "mention_text": "X",
+        "canonical_name": "X",
+        "context_snippet": "they discussed a big survey of fans",
+        "needs_review": False,
+        "review_reason": None,
+    }
+    # Tech profile: "other" + "survey" context → retyped to survey by the heuristic.
+    tech = postprocess_mention_types(dict(base), valid_types=LOCKED_TYPES, apply_tech_heuristics=True)
+    assert tech["entity_type"] == "survey"
+    # Media profile: heuristics skipped → stays "other".
+    media = postprocess_mention_types(dict(base), valid_types=MEDIA_TYPES, apply_tech_heuristics=False)
+    assert media["entity_type"] == "other"
+
+
+def test_postprocess_media_type_survives() -> None:
+    m = postprocess_mention_types(
+        {
+            "entity_type": "book",
+            "mention_text": "X",
+            "canonical_name": "X",
+            "context_snippet": "a wonderful novel",
+            "needs_review": False,
+            "review_reason": None,
+        },
+        valid_types=MEDIA_TYPES,
+        apply_tech_heuristics=False,
+    )
+    assert m["entity_type"] == "book"  # survived the media post-process
 
 
 def test_parse_json_object_plain_and_fenced() -> None:
