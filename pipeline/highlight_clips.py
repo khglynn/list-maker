@@ -310,9 +310,18 @@ def build_highlight(cid: str, tags: dict, file_upload_id: str, quote: str,
                         "color": "gray_background", "rich_text": header, "children": children}}
 
 
-def insert_highlight(token: str, page_id: str, after_block_id: str, callout: dict) -> None:
+def insert_highlight(token: str, page_id: str, after_block_id: str, callout: dict,
+                     clips_count: int | None = None) -> None:
     notion_request("PATCH", f"{NOTION_API}/blocks/{page_id}/children", token,
                    {"children": [callout], "after": after_block_id})
+    if clips_count is not None:
+        # The Clips column is the at-a-glance "this episode has my moments" marker.
+        notion_request("PATCH", f"{NOTION_API}/pages/{page_id}", token,
+                       {"properties": {"Clips": {"number": clips_count}}})
+
+
+def count_clip_callouts(blocks: list[dict]) -> int:
+    return sum(1 for b in blocks if b["type"] == "callout" and "castro " in b["text"])
 
 
 # ── manifest ─────────────────────────────────────────────────────────────────
@@ -407,7 +416,8 @@ def main() -> None:
                         jump = anchor_url(ep["page_id"], anchor)
                 fid = upload_audio(token, audio)
                 callout = build_highlight(cid, tags, fid, quote_from_span(clip_text), jump)
-                insert_highlight(token, ep["page_id"], blocks[0]["id"], callout)
+                insert_highlight(token, ep["page_id"], blocks[0]["id"], callout,
+                                 clips_count=count_clip_callouts(blocks) + 1)
 
                 manifest[cid] = {"episode_id": ep["episode_id"], "page_id": ep["page_id"],
                                  "title": tags["episode_title"], "anchored": bool(jump)}

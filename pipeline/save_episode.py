@@ -353,7 +353,9 @@ def main() -> None:  # noqa: PLR0915 — an orchestrator reads better linear tha
                 fid = upload_audio(token, item["audio"])
                 callout = build_highlight(cid, item["tags"], fid,
                                           quote_from_span(item["clip_text"]), jump)
-                insert_highlight(token, page_id, blocks[0]["id"], callout)
+                from pipeline.highlight_clips import count_clip_callouts
+                insert_highlight(token, page_id, blocks[0]["id"], callout,
+                                 clips_count=count_clip_callouts(blocks) + 1)
                 manifest[cid] = {"episode_id": item["episode_id"], "page_id": page_id,
                                  "title": item["tags"]["episode_title"], "anchored": bool(jump)}
                 save_manifest(manifest)
