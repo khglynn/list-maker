@@ -35,6 +35,29 @@ cd pipeline && ./venv/bin/python scrapers/research/import_research.py   # ingest
 - Re-running is the maintenance method: idempotent by key, refreshed text upserts in place. Run it after a batch of new research lands.
 - Never in CI: the vault only exists on Kevin's machines, and the show is excluded from all scheduled paths and health cadence checks.
 
+## Podcast clip highlights (local-only, on demand)
+
+```
+cd pipeline && ./venv/bin/python highlight_clips.py --dry-run   # match report
+./venv/bin/python highlight_clips.py                            # process new clips
+```
+
+Drop Castro clip exports (.MOV) into `~/Downloads/Podcast Clips/` and run. For
+episodes in the DB, each clip becomes a highlight callout at the top of the
+episode's Notion transcript page: audio player + the clip's quote + an anchor
+link jumping to that spot in the transcript. Matching uses the export's embedded
+metadata (show + episode title); Whisper transcribes only the clip to find the
+in/out points.
+
+**Where the files live:** the audio's permanent home is Notion (uploaded to the
+page). The original .MOVs (video + audio, ~10× larger) are disposable after a
+run — archive to NAS or delete, nothing depends on them. Extracted m4as +
+the manifest live in `pipeline/_cache/podcast-clips/`.
+
+Clips from shows not in the DB are reported, not processed — that bucket (plus
+`pipeline/_cache/apple-notes/podcast-links.txt`) is the queue for the future
+one-off podcast ingest.
+
 ## Where things land
 
 | Artifact | Notion DB | Notes |
