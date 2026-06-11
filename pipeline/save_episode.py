@@ -63,9 +63,11 @@ log = get_logger("pipeline.save_episode")
 
 def taddy_find_episode(episode_title: str, show_name: str, user_id: str, api_key: str) -> Optional[dict]:
     term = episode_title.replace('"', " ").strip()[:120]
+    # searchId is REQUIRED in the selection set — Taddy 400s without it.
     query = f"""
     query {{
       search(term:"{term}", filterForTypes:PODCASTEPISODE, limitPerPage:8) {{
+        searchId
         podcastEpisodes {{ uuid name datePublished podcastSeries {{ name }} }}
       }}
     }}
@@ -91,6 +93,19 @@ def taddy_transcript_text(episode_uuid: str, user_id: str, api_key: str) -> Opti
     return text if len(text) >= MIN_FULL_TRANSCRIPT_CHARS else None
 
 
+def try_taddy_full(title: str, show: str, user_id: str, api_key: str) -> tuple[Optional[dict], Optional[str]]:
+    """Best-effort Taddy upgrade. Any Taddy failure degrades to (None, None) — the
+    honest fallbacks (clip text / show notes) exist precisely for that, so a Taddy
+    hiccup must never kill the item."""
+    try:
+        hit = taddy_find_episode(title, show, user_id, api_key)
+        full = taddy_transcript_text(hit["uuid"], user_id, api_key) if hit else None
+        return hit, full
+    except Exception as exc:  # noqa: BLE001
+        log.warning("taddy lookup failed for %r (%s) — falling back: %s", title[:50], show, exc)
+        return None, None
+
+
 # ── link metadata (castro.fm / spotify episode pages) ────────────────────────
 
 def parse_og(html: str, prop: str) -> str:
@@ -102,13 +117,27 @@ def parse_og(html: str, prop: str) -> str:
 def scrape_link_meta(url: str) -> dict:
     import html as html_mod
 
-    resp = httpx.get(url, follow_redirects=True, timeout=30,
-                     headers={"User-Agent": "Mozilla/5.0 (list-maker save_episode)"})
-    resp.raise_for_status()
-    page = resp.text
-    title = parse_og(page, "title") or (re.search(r"<title>([^<]+)</title>", page) or [None, ""])[1]
+    title = notes = ""
+    api_key = os.getenv("FIRECRAWL_API_KEY")
+    if api_key:
+        # Firecrawl first: castro.fm TLS-resets repeated raw-httpx hits (it served
+        # the dry-run, then started refusing) — the proxy absorbs that.
+        try:
+            from pipeline.scrapers.blog.import_blog import scrape_post
+            meta = scrape_post(url, api_key)["metadata"]
+            title = (meta.get("ogTitle") or meta.get("title") or "").strip()
+            notes = (meta.get("ogDescription") or meta.get("description") or "").strip()
+        except Exception as exc:  # noqa: BLE001
+            log.warning("firecrawl scrape failed for %s — raw fallback: %s", url, exc)
+    if not title:
+        resp = httpx.get(url, follow_redirects=True, timeout=30,
+                         headers={"User-Agent": "Mozilla/5.0 (list-maker save_episode)"})
+        resp.raise_for_status()
+        page = resp.text
+        title = parse_og(page, "title") or (re.search(r"<title>([^<]+)</title>", page) or [None, ""])[1]
+        notes = parse_og(page, "description")
     title = html_mod.unescape(title).strip()
-    notes = html_mod.unescape(parse_og(page, "description")).strip()
+    notes = html_mod.unescape(notes).strip()
     show = ""
     if "castro.fm" in url:
         # Castro og:title format: "Show: Episode Title (1h51m)" — split + drop duration.
@@ -229,8 +258,7 @@ def main() -> None:  # noqa: PLR0915 — an orchestrator reads better linear tha
                     print(f"DRY-RUN clip: {title[:55]!r} ({show_name})")
                     done += 1
                     continue
-                hit = taddy_find_episode(title, show_name, taddy_user, taddy_key)
-                full = taddy_transcript_text(hit["uuid"], taddy_user, taddy_key) if hit else None
+                hit, full = try_taddy_full(title, show_name, taddy_user, taddy_key)
                 audio = extract_audio(path, CACHE_DIR / f"castro-{cid}.m4a")
                 clip_text = transcribe(audio, openai_key)
                 text = full or clip_text
@@ -272,8 +300,7 @@ def main() -> None:  # noqa: PLR0915 — an orchestrator reads better linear tha
                         done += 1
                         log.info("already in DB under %s: %r", in_db_slug, meta["title"][:50])
                         continue
-                hit = taddy_find_episode(meta["title"], meta["show"], taddy_user, taddy_key)
-                full = taddy_transcript_text(hit["uuid"], taddy_user, taddy_key) if hit else None
+                hit, full = try_taddy_full(meta["title"], meta["show"], taddy_user, taddy_key)
                 show_name = meta["show"] or ((hit.get("podcastSeries") or {}).get("name") if hit else "") or "Podcast"
                 text = full or meta["notes"] or meta["title"]
                 source = "taddy_transcript" if full else "show_notes"
