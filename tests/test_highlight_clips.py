@@ -60,3 +60,17 @@ def test_normalize_and_duration() -> None:
     assert normalize("Hello,   World! It's——fine.") == "hello world it s fine"
     assert fmt_duration(58) == "0:58"
     assert fmt_duration(153) == "2:33"
+
+
+def test_existing_highlight_adopts_by_castro_id() -> None:
+    """Crash-idempotency: the page records inserted clips via the castro id in the
+    callout header — a re-run after a crash adopts instead of duplicating."""
+    from pipeline.highlight_clips import existing_highlight
+
+    blocks = [
+        {"id": "a", "type": "paragraph", "text": "AI Daily — intro line."},
+        {"id": "b", "type": "callout", "text": "Kevin's clip · 0:58 · castro 12345"},
+    ]
+    assert existing_highlight(blocks, "12345")
+    assert not existing_highlight(blocks, "99999")
+    assert not existing_highlight([{"id": "a", "type": "paragraph", "text": "castro 12345"}], "12345")

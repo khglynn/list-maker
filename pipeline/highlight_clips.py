@@ -227,6 +227,13 @@ def page_blocks(token: str, page_id: str) -> list[dict]:
     return blocks
 
 
+def existing_highlight(blocks: list[dict], cid: str) -> bool:
+    """Adopt-don't-duplicate: the castro id lives in each callout's header, so the
+    page itself records what's been inserted. Closes the crash window between
+    insert_highlight and save_manifest — a re-run adopts instead of duplicating."""
+    return any(b["type"] == "callout" and f"castro {cid}" in b["text"] for b in blocks)
+
+
 def find_anchor_block(blocks: list[dict], head: str) -> Optional[str]:
     """The paragraph block containing the clip's opening words. Substring on the
     first 8 normalized words; fuzzy best-block fallback."""
@@ -374,12 +381,22 @@ def main() -> None:
                     processed_this_run += 1
                     continue
 
-                audio = extract_audio(path, CACHE_DIR / f"castro-{cid}.m4a")
-                clip_text = transcribe(audio, api_key)
-                span = locate_span(clip_text, ep["transcript_text"] or "")
+                # Blocks first: the adopt-check must run BEFORE the expensive steps
+                # (Whisper, upload) so a crashed prior run costs nothing to heal.
                 blocks = page_blocks(token, ep["page_id"])
                 if not blocks:
                     raise RuntimeError("page has no blocks")
+                if existing_highlight(blocks, cid):
+                    manifest[cid] = {"episode_id": ep["episode_id"], "page_id": ep["page_id"],
+                                     "title": tags["episode_title"], "adopted": True}
+                    save_manifest(manifest)
+                    buckets["processed"] += 1
+                    processed_this_run += 1
+                    log.info("adopted existing highlight for castro %s (ep %s)", cid, ep["episode_id"])
+                    continue
+                audio = extract_audio(path, CACHE_DIR / f"castro-{cid}.m4a")
+                clip_text = transcribe(audio, api_key)
+                span = locate_span(clip_text, ep["transcript_text"] or "")
                 jump = None
                 if span:
                     anchor = find_anchor_block(blocks, span["head"])
