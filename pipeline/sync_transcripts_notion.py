@@ -259,6 +259,12 @@ def main() -> None:
         log.info(msg)
         if failed or skipped_empty:
             post_slack(f":warning: *list-maker {msg}*")
+        if failed:
+            # Exit non-zero so the CI step goes red — a green step with lost work is
+            # the silent-failure class this pipeline hunts. (skipped_empty stays
+            # warn-only: an empty transcript is a data gap owned by data_health's
+            # coverage check, and it retries naturally on every run.)
+            raise SystemExit(1)
 
 
 if __name__ == "__main__":

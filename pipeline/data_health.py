@@ -20,7 +20,7 @@ from typing import Any, Iterable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import get_db_connection, load_environment, post_slack
 from feed_check import feed_recent_dates
-from show_config import SHOWS, TRANSCRIPT_NOTION_SHOWS
+from show_config import SHOWS, TRANSCRIPT_NOTION_SHOWS, curated_show_slugs
 
 
 @dataclass
@@ -35,6 +35,12 @@ TRANSCRIPT_POLICIES: dict[str, dict[str, Any]] = {
     # These shows are transcript-first. Missing transcripts are real gaps.
     "ai-daily-brief": {"mode": "complete", "max_latest_lag_days": 0},
     "pchh": {"mode": "complete", "max_latest_lag_days": 0},
+    # Curated sources: save_item inserts episode + full text atomically, so a
+    # missing transcript means a broken ingest, not a transcription lag.
+    "openai-blog": {"mode": "complete", "max_latest_lag_days": 0},
+    "anthropic-blog": {"mode": "complete", "max_latest_lag_days": 0},
+    "saved-articles": {"mode": "complete", "max_latest_lag_days": 0},
+    "agentic-research": {"mode": "complete", "max_latest_lag_days": 0},
     # Show-notes-based: extracts from the Megaphone RSS description, NOT transcripts —
     # 0 transcripts is correct, not a gap. (Without this, "cannot compare dates" fails daily.)
     "culture-gabfest": {"mode": "none"},
@@ -242,6 +248,12 @@ def check_transcript_coverage(conn) -> CheckResult:
             details.append(f"{slug}: show-notes based — no transcripts expected (skipped)")
             continue
 
+        if episodes == 0:
+            # New/curated show before its first ingest: nothing to measure yet.
+            # Without this, complete-mode shows fail "cannot compare dates" daily.
+            details.append(f"{slug}: no episodes yet (skipped)")
+            continue
+
         detail = (
             f"{slug}: {transcripts}/{episodes} transcripts "
             f"({coverage:.1%}), latest_episode={row['latest_episode']}, "
@@ -298,8 +310,14 @@ def check_episode_freshness(conn) -> CheckResult:
     )
     failures: list[str] = []
     details: list[str] = []
+    curated = curated_show_slugs()
     for row in rows:
         slug = row["slug"]
+        if slug in curated:
+            # Curated sources have no publishing cadence — "stale" just means Kevin
+            # hasn't pulled anything lately, which is his call, not a pipeline failure.
+            details.append(f"{slug}: curated source — staleness not applicable (skipped)")
+            continue
         days_since = row["days_since"]
         threshold = STALENESS_MAX_DAYS.get(slug, DEFAULT_STALENESS_MAX_DAYS)
         details.append(
@@ -413,7 +431,12 @@ def check_import_caught_up(conn) -> CheckResult:
     failures: list[str] = []
     warnings: list[str] = []
     details: list[str] = []
+    curated = curated_show_slugs()
     for slug, cfg in SHOWS.items():
+        if slug in curated:
+            # No feed to verify against — skipping avoids a permanent UNVERIFIED warn.
+            details.append(f"{slug}: curated source — no feed second-source (skipped)")
+            continue
         latest = db_latest.get(slug)
         feed = feed_recent_dates(cfg)
         if not feed:

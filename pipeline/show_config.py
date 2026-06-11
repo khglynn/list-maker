@@ -18,6 +18,16 @@ class ShowConfig:
     show_id: int
     content_types: list[str]  # "music", "entities", "mixed"
 
+    # What kind of source this is. Podcasts flow through the scheduled orchestrator;
+    # "blog" and "research" sources are CURATED — ingested via save_item/the pull queue,
+    # never the daily import — so data_health skips their feed/staleness checks.
+    medium: str = "podcast"  # "podcast" | "blog" | "research"
+
+    # Scheduled importer for non-Taddy shows ("gabfest_rss"). None + no taddy_uuid =
+    # nothing to import on a scheduled run (curated sources). Taddy shows are keyed
+    # off taddy_uuid itself — the uuid IS the importer config.
+    importer: Optional[str] = None
+
     # Taddy
     taddy_uuid: Optional[str] = None
     fallback_website_url: Optional[str] = None
@@ -97,12 +107,57 @@ SHOWS: dict[str, ShowConfig] = {
         name="Culture Gabfest",
         show_id=54,
         content_types=["media"],
+        importer="gabfest_rss",
         taddy_uuid=None,  # Taddy won't transcribe Gabfest (iHeart rights) — Megaphone RSS show-notes instead
         fallback_website_url="https://feeds.megaphone.fm/slatesculturegabfest",
         store_raw_content=True,
         notion_database_id="3780501ef95081a783ebf8a32fa94657",  # shared Media DB (Option A)
         notion_min_mentions=1,  # media: a single recommendation is meaningful
         extraction_type="media_extraction",
+    ),
+    # ── Curated sources (medium != "podcast") ───────────────────────────────
+    # Ingested item-by-item via save_item.py / the Blog Pull Queue — NOT by the
+    # scheduled orchestrator. Pull signal: outbound-link density (posts citing many
+    # resources improve the mentions DB most). notion_min_mentions stays at the
+    # default 2 until the per-show threshold qualifier ships (a 1 here would make
+    # any group sync flood the shared Tech DB with every 1-mention podcast entity).
+    "openai-blog": ShowConfig(
+        slug="openai-blog",
+        name="OpenAI Blog",
+        show_id=60,
+        content_types=["entities"],
+        medium="blog",
+        fallback_website_url="https://openai.com/news/",
+        notion_database_id="982dafa0ad374d618e25207e67860e33",  # shared Tech DB (Option A)
+        extraction_type="entity_extraction",
+    ),
+    "anthropic-blog": ShowConfig(
+        slug="anthropic-blog",
+        name="Anthropic Blog",
+        show_id=61,
+        content_types=["entities"],
+        medium="blog",
+        fallback_website_url="https://www.anthropic.com/news",
+        notion_database_id="982dafa0ad374d618e25207e67860e33",  # shared Tech DB (Option A)
+        extraction_type="entity_extraction",
+    ),
+    "saved-articles": ShowConfig(
+        slug="saved-articles",
+        name="Saved Articles",
+        show_id=62,
+        content_types=["entities"],
+        medium="blog",  # catch-all for one-off publications (e.g. MIT Tech Review)
+        notion_database_id="982dafa0ad374d618e25207e67860e33",  # shared Tech DB (Option A)
+        extraction_type="entity_extraction",
+    ),
+    "agentic-research": ShowConfig(
+        slug="agentic-research",
+        name="Agentic Research",
+        show_id=63,
+        content_types=["entities"],
+        medium="research",  # local Obsidian research-run docs; ingested locally only
+        notion_database_id="982dafa0ad374d618e25207e67860e33",  # shared Tech DB (Option A)
+        extraction_type="entity_extraction",
     ),
 }
 
@@ -128,3 +183,10 @@ def shows_with_notion() -> list[ShowConfig]:
 def shows_with_spotify() -> list[ShowConfig]:
     """Return shows that have a Spotify playlist configured."""
     return [s for s in SHOWS.values() if s.spotify_playlist_id]
+
+
+def curated_show_slugs() -> set[str]:
+    """Slugs of curated (non-podcast) sources — blog/research shows with no feed and
+    no publishing cadence. data_health skips staleness + feed checks for these; a
+    'stale' curated show just means Kevin hasn't pulled anything lately, by design."""
+    return {slug for slug, cfg in SHOWS.items() if cfg.medium != "podcast"}

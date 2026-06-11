@@ -122,8 +122,10 @@ def find_unextracted_episodes(conn, show_id: int, recent_only: bool = True) -> l
 
 
 def step_import(cfg: ShowConfig, dry_run: bool, per_show_limit: int = 50) -> bool:
-    """Step 1: Import new episodes. Taddy shows get transcripts; Culture Gabfest has no
-    Taddy transcripts (iHeart rights), so it imports from its Megaphone RSS show-notes."""
+    """Step 1: Import new episodes. Taddy shows get transcripts; cfg.importer routes
+    non-Taddy scheduled sources (Gabfest's Megaphone RSS show-notes). Curated sources
+    (blogs, research — cfg.importer None) are ingested via save_item/the pull queue,
+    never here, so skipping them is correct rather than a gap."""
     if cfg.taddy_uuid:
         script = str(SCRAPERS_DIR / "taddy" / "import_transcripts.py")
         args = ["--shows", cfg.slug, "--per-show-limit", str(per_show_limit)]
@@ -131,15 +133,14 @@ def step_import(cfg: ShowConfig, dry_run: bool, per_show_limit: int = 50) -> boo
             args.append("--dry-run")
         return run_script(script, args, dry_run=False, label=f"Taddy import ({cfg.slug})")
 
-    # Culture Gabfest: no Taddy transcripts → import new episodes from Megaphone RSS.
-    if cfg.slug == "culture-gabfest":
+    if cfg.importer == "gabfest_rss":
         script = str(SCRAPERS_DIR / "gabfest" / "import_gabfest.py")
         args = ["--limit", str(per_show_limit)]
         if dry_run:
             args.append("--dry-run")
         return run_script(script, args, dry_run=False, label="Gabfest RSS import")
 
-    print(f"  Skipping import (no source configured for {cfg.slug})")
+    print(f"  Skipping import (no scheduled source for {cfg.slug})")
     return True
 
 
