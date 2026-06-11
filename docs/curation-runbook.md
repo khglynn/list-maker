@@ -54,9 +54,11 @@ page). The original .MOVs (video + audio, ~10× larger) are disposable after a
 run — archive to NAS or delete, nothing depends on them. Extracted m4as +
 the manifest live in `pipeline/_cache/podcast-clips/`.
 
-Clips from shows not in the DB are reported, not processed — that bucket (plus
-`pipeline/_cache/apple-notes/podcast-links.txt`) is the queue for the future
-one-off podcast ingest.
+Clips from shows we don't carry go through `save_episode.py` instead: it creates
+"Saved Episodes" pages (show 64) in the Transcripts DB under their REAL show
+names — full Taddy transcript when search finds one, honest clip-excerpt or
+show-notes page otherwise — and lays the same highlights on top. The **Clips**
+column on the Transcripts DB marks which episodes carry highlights.
 
 ## Where things land
 
