@@ -251,7 +251,10 @@ def ingest_checked_rows(save_fn: Callable[[str, Optional[str]], bool],
     for row in rows:
         try:
             ok = save_fn(row["url"], None)
-        except Exception as exc:  # noqa: BLE001 — one bad row must not strand the rest
+        # SystemExit included: save_url raises it for operational failures (missing
+        # API key, no local PDF folder) — escaping here would abort the whole queue
+        # run mid-way and strand the remaining rows as 'candidate' forever.
+        except (Exception, SystemExit) as exc:  # noqa: BLE001
             log.error("ingest FAILED %s: %s", row["url"], exc)
             ok = False
         set_row_status(token, row["page_id"], "pulled" if ok else "failed")

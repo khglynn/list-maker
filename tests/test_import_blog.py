@@ -17,9 +17,9 @@ def test_canonicalize_forces_https_and_lowercases_host() -> None:
     assert canonicalize_url("http://OpenAI.com/news/post") == "https://openai.com/news/post"
 
 
-def test_canonicalize_strips_trailing_slash_fragment_and_tracking() -> None:
+def test_canonicalize_strips_trailing_slash_fragment_tracking_and_www() -> None:
     url = "https://www.anthropic.com/news/claude-fable/?utm_source=tw&utm_campaign=x&ref=feed#intro"
-    assert canonicalize_url(url) == "https://www.anthropic.com/news/claude-fable"
+    assert canonicalize_url(url) == "https://anthropic.com/news/claude-fable"
 
 
 def test_canonicalize_keeps_legitimate_query_params() -> None:
@@ -33,6 +33,7 @@ def test_canonicalize_variants_collapse_to_one_key() -> None:
         "http://openai.com/index/abc/",
         "https://openai.com/index/abc?utm_source=newsletter",
         "https://OPENAI.com/index/abc#section",
+        "https://www.openai.com/index/abc",
     ]
     assert len({canonicalize_url(v) for v in variants}) == 1
 

@@ -124,9 +124,16 @@ def main() -> None:
     if not root.is_dir():
         raise SystemExit(f"Research folder not found: {root} — this importer is local-only.")
 
+    vault_root = Path.home() / "Documents" / VAULT_NAME
+    try:
+        # Keys are vault-relative obsidian:// URIs — a root outside the vault has no
+        # valid key and would crash mid-import; fail clearly before touching the DB.
+        root.resolve().relative_to(vault_root.resolve())
+    except ValueError:
+        raise SystemExit(f"--root must be inside the Obsidian vault ({vault_root}).")
+
     cfg = get_show("agentic-research")
     docs = find_docs(root / args.subdir if args.subdir else root)
-    vault_root = Path.home() / "Documents" / VAULT_NAME
 
     created = refreshed = skipped_small = 0
     conn = get_db_connection()

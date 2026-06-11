@@ -49,7 +49,9 @@ def canonicalize_url(url: str) -> str:
     url = (url or "").strip()
     scheme, netloc, path, query, _fragment = urlsplit(url)
     scheme = "https" if scheme in ("http", "https", "") else scheme
-    netloc = netloc.lower()
+    # www. is semantically irrelevant for this corpus — keeping it would make
+    # www/apex variants of the same post two different UNIQUE keys.
+    netloc = netloc.lower().removeprefix("www.")
     if path != "/":
         path = path.rstrip("/")
     kept = [
