@@ -20,7 +20,7 @@ from typing import Any, Iterable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import get_db_connection, load_environment, post_slack
 from feed_check import feed_recent_dates
-from show_config import SHOWS
+from show_config import SHOWS, TRANSCRIPT_NOTION_SHOWS
 
 
 @dataclass
@@ -56,6 +56,11 @@ STALENESS_MAX_DAYS: dict[str, int] = {
     "tal": 21,
 }
 DEFAULT_STALENESS_MAX_DAYS = 14
+
+# Notion syncs run daily; anything unsynced for longer than this means the sync
+# itself silently stopped (the failure class behind the June 2026 Transcripts-DB
+# freeze: pipeline green every day, Notion frozen at June 6).
+NOTION_SYNC_MAX_LAG_DAYS = 2
 
 OPTIONAL_NULL_NOTES = {
     "episodes.raw_content": "Stored only for AI Daily/PCHH Taddy imports; null for SOP/TAL is expected.",
@@ -314,6 +319,79 @@ def check_episode_freshness(conn) -> CheckResult:
     return CheckResult("episode_freshness_by_show", status, summary, failures + details)
 
 
+def check_notion_sync_freshness(conn) -> CheckResult:
+    """Notion is a DESTINATION — a green pipeline run proves data reached Neon, not Notion.
+
+    Two drift detectors, both age-gated to NOTION_SYNC_MAX_LAG_DAYS so same-day work
+    (synced later in the same run) never false-positives:
+    - transcripts: rows for TRANSCRIPT_NOTION_SHOWS still missing a Notion page id
+      (empty transcripts excluded — they're never marked synced by design and belong
+      to check_transcript_coverage)
+    - entities: rows synced once but whose updates stopped propagating
+    Lingering 'failed' entity syncs are a WARN — acute failures already Slack via
+    sync_notion's >10%-per-run alert; this is the slow-leak view.
+    """
+    transcript_rows = _rows(
+        conn,
+        """
+        SELECT s.slug, COUNT(*) AS unsynced, MIN(et.created_at)::date AS oldest
+        FROM episode_transcripts et
+        JOIN episodes ep ON ep.id = et.episode_id
+        JOIN shows s ON s.id = ep.show_id
+        WHERE s.slug = ANY(%s)
+          AND et.transcript_text IS NOT NULL AND BTRIM(et.transcript_text) <> ''
+          AND et.notion_transcript_page_id IS NULL
+          AND et.created_at < now() - make_interval(days => %s)
+        GROUP BY s.slug
+        ORDER BY s.slug;
+        """,
+        [list(TRANSCRIPT_NOTION_SHOWS), NOTION_SYNC_MAX_LAG_DAYS],
+    )
+    stale_entities = int(
+        _one(
+            conn,
+            """
+            SELECT COUNT(*) AS count
+            FROM ai_entities
+            WHERE notion_page_id IS NOT NULL
+              AND notion_synced_at < updated_at - make_interval(days => %s);
+            """,
+            [NOTION_SYNC_MAX_LAG_DAYS],
+        ).get("count")
+        or 0
+    )
+    failed_entities = int(
+        _one(
+            conn,
+            "SELECT COUNT(*) AS count FROM ai_entities WHERE notion_sync_status = 'failed';",
+        ).get("count")
+        or 0
+    )
+
+    failures: list[str] = []
+    warnings: list[str] = []
+    for row in transcript_rows:
+        failures.append(
+            f"{row['slug']}: {row['unsynced']} transcript(s) unsynced to Notion "
+            f"for >{NOTION_SYNC_MAX_LAG_DAYS}d (oldest {row['oldest']})"
+        )
+    if stale_entities:
+        failures.append(
+            f"{stale_entities} entity page(s) have Neon updates >{NOTION_SYNC_MAX_LAG_DAYS}d "
+            "old that never reached Notion"
+        )
+    if failed_entities:
+        warnings.append(f"{failed_entities} entity(ies) lingering in notion_sync_status='failed'")
+
+    status = "fail" if failures else ("warn" if warnings else "pass")
+    summary = (
+        "Notion mirrors (transcripts + entities) are keeping up with Neon."
+        if status == "pass"
+        else f"{len(failures)} Notion sync drift failure(s), {len(warnings)} warning(s)."
+    )
+    return CheckResult("notion_sync_freshness", status, summary, failures + warnings)
+
+
 def check_import_caught_up(conn) -> CheckResult:
     """SECOND-SOURCE freshness: is our import behind each show's REAL feed?
 
@@ -533,6 +611,7 @@ def run_checks(conn, include_feed_check: bool = False) -> list[CheckResult]:
         check_duplicate_episodes(conn),
         check_transcript_coverage(conn),
         check_episode_freshness(conn),
+        check_notion_sync_freshness(conn),
         check_ai_daily_extraction(conn),
         check_ai_mention_fields(conn),
         check_possible_entity_alias_splits(conn),

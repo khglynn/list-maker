@@ -107,6 +107,12 @@ SHOWS: dict[str, ShowConfig] = {
 }
 
 
+# Shows whose full transcripts mirror into the Notion "Transcripts" DB
+# (sync_transcripts_notion.py, daily via entities.yml). Single source for the
+# sync default AND data_health's notion-freshness check — keep them in lockstep.
+TRANSCRIPT_NOTION_SHOWS: tuple[str, ...] = ("ai-daily-brief", "hard-fork")
+
+
 def get_show(slug: str) -> ShowConfig:
     """Get show config by slug. Raises KeyError if not found."""
     if slug not in SHOWS:

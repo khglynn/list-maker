@@ -27,6 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from pipeline.common import get_db_connection, get_logger, load_environment, post_slack  # noqa: E402
+from pipeline.show_config import TRANSCRIPT_NOTION_SHOWS  # noqa: E402 — single-source show list
 from pipeline.sync_notion import NOTION_API, notion_request  # noqa: E402 — reuse hardened client
 
 # Parent: the "Pod Lists" hub page. TRANSCRIPTS_DB_ID set via the one-time --create-db.
@@ -34,7 +35,7 @@ POD_LISTS_PAGE_ID = "31c0501e-f950-80d1-a3fd-e8fa8d5ce907"
 TRANSCRIPTS_DB_ID = "3780501e-f950-81c9-a3e3-eca7f1162c9d"  # "Transcripts" DB under Pod Lists
 
 SHOW_DISPLAY = {"ai-daily-brief": "AI Daily", "hard-fork": "Hard Fork"}
-DEFAULT_SHOWS = "ai-daily-brief,hard-fork"
+DEFAULT_SHOWS = ",".join(TRANSCRIPT_NOTION_SHOWS)
 RICH_TEXT_LIMIT = 1900   # under Notion's 2000-char/rich-text cap, with margin
 BLOCKS_PER_REQUEST = 100  # Notion's max children per create/append call
 
@@ -215,8 +216,9 @@ def main() -> None:
         log.info("Found %d unsynced transcript(s) for %s", len(episodes), shows)
 
         # Adopt-don't-duplicate: a page already in Notion (from a run that crashed before
-        # its DB marker committed) is healed, not recreated.
-        existing = {} if args.dry_run else fetch_existing_notion_pages(token, db_id)
+        # its DB marker committed) is healed, not recreated. Skipped when there's nothing
+        # to sync — the daily no-new-episodes run shouldn't pay a full DB pagination scan.
+        existing = {} if (args.dry_run or not episodes) else fetch_existing_notion_pages(token, db_id)
         if existing:
             log.info("%d transcript page(s) already in Notion — adopt on match", len(existing))
 

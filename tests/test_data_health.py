@@ -4,8 +4,24 @@ from pipeline.data_health import (
     CheckResult,
     _date_lag_days,
     check_episode_freshness,
+    check_notion_sync_freshness,
     render_text,
 )
+
+
+def _patch_notion_freshness(monkeypatch, *, transcript_rows, stale_entities, failed_entities):
+    """The check makes one _rows call (transcript backlog) and two _one calls
+    (stale entity count, failed entity count) — dispatch _one on SQL content."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: transcript_rows)
+
+    def fake_one(conn, sql, params=None):
+        if "notion_sync_status" in sql:
+            return {"count": failed_entities}
+        return {"count": stale_entities}
+
+    monkeypatch.setattr(dh, "_one", fake_one)
 
 
 def test_date_lag_days_handles_missing_dates() -> None:
@@ -56,3 +72,39 @@ def test_check_episode_freshness_passes_when_all_recent(monkeypatch) -> None:
     monkeypatch.setattr(dh, "_rows", lambda *a, **k: rows)
 
     assert check_episode_freshness(conn=None).status == "pass"
+
+
+def test_notion_sync_freshness_fails_on_transcript_backlog(monkeypatch) -> None:
+    _patch_notion_freshness(
+        monkeypatch,
+        transcript_rows=[{"slug": "ai-daily-brief", "unsynced": 3, "oldest": date(2026, 6, 7)}],
+        stale_entities=0,
+        failed_entities=0,
+    )
+    result = check_notion_sync_freshness(conn=None)
+    assert result.status == "fail"
+    assert any("ai-daily-brief: 3 transcript(s) unsynced" in d for d in result.details)
+
+
+def test_notion_sync_freshness_fails_on_stale_entity_pages(monkeypatch) -> None:
+    _patch_notion_freshness(
+        monkeypatch, transcript_rows=[], stale_entities=5, failed_entities=0
+    )
+    result = check_notion_sync_freshness(conn=None)
+    assert result.status == "fail"
+    assert any("5 entity page(s)" in d for d in result.details)
+
+
+def test_notion_sync_freshness_warns_on_lingering_failed(monkeypatch) -> None:
+    _patch_notion_freshness(
+        monkeypatch, transcript_rows=[], stale_entities=0, failed_entities=2
+    )
+    result = check_notion_sync_freshness(conn=None)
+    assert result.status == "warn"
+
+
+def test_notion_sync_freshness_passes_when_clean(monkeypatch) -> None:
+    _patch_notion_freshness(
+        monkeypatch, transcript_rows=[], stale_entities=0, failed_entities=0
+    )
+    assert check_notion_sync_freshness(conn=None).status == "pass"

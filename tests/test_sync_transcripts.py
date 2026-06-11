@@ -39,3 +39,12 @@ def test_long_unbroken_token_hard_splits_at_limit() -> None:
     chunks = chunk_text(text)
     assert all(len(c) <= RICH_TEXT_LIMIT for c in chunks)
     assert "".join(chunks) == text
+
+
+def test_default_shows_derives_from_show_config() -> None:
+    """Single-source guard: the sync default and data_health's notion-freshness
+    check must watch the SAME shows (drift here = silent unmonitored sync gaps)."""
+    from pipeline.show_config import TRANSCRIPT_NOTION_SHOWS
+    from pipeline.sync_transcripts_notion import DEFAULT_SHOWS
+
+    assert DEFAULT_SHOWS == ",".join(TRANSCRIPT_NOTION_SHOWS)

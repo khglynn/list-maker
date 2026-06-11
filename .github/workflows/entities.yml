@@ -66,6 +66,19 @@ jobs:
           cd pipeline
           python run_new_episodes.py --shows "$SHOWS" $FLAGS
 
+      - name: Sync transcripts to Notion (Transcripts DB)
+        # Runs even if the pipeline step failed: syncs whatever DID land in Neon.
+        # Idempotent (notion_transcript_page_id gate) + adopt-don't-duplicate on resume,
+        # so a daily run is safe and a no-new-episodes day is a cheap no-op.
+        # This step was the missing link behind the June 2026 Transcripts-DB freeze.
+        if: always()
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          cd pipeline && python sync_transcripts_notion.py
+
       - name: Data health check (staleness, integrity, feed second-source)
         if: always()
         env:
