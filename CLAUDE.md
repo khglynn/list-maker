@@ -196,6 +196,18 @@ cd /Users/KevinHG/DevKev/personal/list-maker && set -a && source .env.local && s
 - **Mosaic artwork done** - See `marketing/` for playlist cover generators
 - **Taddy scraper supports multiple shows** - AI Daily, PCHH, SOP all configured
 
+## Notion surface — the Pod Lists hub
+
+**Hub page (all DBs live under it):** https://app.notion.com/p/Pod-Lists-31c0501ef95080d1a3fde8fa8d5ce907 — **when you add/rename a DB or change what flows where, update the hub page's prose too** (Kevin browses from there; a DB he doesn't know exists might as well not).
+
+| DB | ID | What |
+|---|---|---|
+| 🛠️ Tech Tools & Mentions | `982dafa0…` | Entities/mentions: podcasts + blogs + research (Sources/Items/URL columns; "Vetted sources" view) |
+| 🍿 Media Recommendations | `3780501e…94657` | PCHH + Gabfest media entities |
+| 📝 Tech Show Transcripts | `3780501e…62c9d` | Podcast full texts + Saved Episodes one-offs; **Clips** column = Kevin's highlights |
+| 📰 Blog Posts | `37c0501e…93f5` | Curated article full texts (URL + Links Out) |
+| 📥 Blog Pull Queue | `37c0501e…1f53` | Candidates; Kevin checks Pull → weekly blogs.yml ingests |
+
 ## Relevant Docs & Links
 
 - **Engineering principles:** `docs/principles.md` — distilled from Kevin's four research guides (legibility, automation planes, data provenance, dependency hygiene). Read before substantive pipeline changes; the full-reasoning canonical guides live in his Obsidian vault.
