@@ -87,7 +87,7 @@ Since shipped: A4 per-entity Notion sync state (migration 003 + `mark_sync_faile
 
 A **Cloudflare Worker Cron** (`cloudflare-trigger/`, trimm account) calls GitHub `workflow_dispatch` for the workflows — entities daily, music Mon/Wed/Fri, eval Mon, **blogs (pull queue) Mon**, pulse 1st/15th — so GitHub's own `schedule:` cron (which silently disables after 60 idle days on a public repo) is no longer the trigger. A failed dispatch posts to Slack (the trigger itself is observable). Every run also Slacks on success / failure / staleness. Chosen over Inngest (no rewrite, no new account) per the rebuild plan.
 
-*Pending Kevin: set the `GH_PAT` Worker secret, then the `schedule:` blocks come off `pipeline.yml` + `entities.yml` (steps in `cloudflare-trigger/README.md`). Until then the GitHub schedules stay active — no gap.*
+*Live as of 2026-06-11: `GH_PAT` = the reused fine-grained `GITHUB_HG_CLAUDE_TOKEN` (expires 2027-01-20 — dispatch failures alert at the trigger when it does); all `schedule:` blocks removed — the Worker is the only trigger. **Constraint learned the hard way: Workers Free caps a Worker at 5 cron triggers** (a 7-cron deploy failed), so music runs on ONE Mon/Wed/Fri cron and worker.js picks the show by fire day.*
 
 ## Quality gradient — the eval harness
 

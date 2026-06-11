@@ -1,13 +1,14 @@
 // list-maker-cron — Cloudflare Worker: the DURABLE control plane for the pipeline.
 //
-// On a set of crons it calls GitHub's workflow_dispatch for the repo's workflows:
-//   - daily 11:00 UTC → entities.yml  (AI Daily, Hard Fork, PCHH, Culture Gabfest)
-//   - Mon   10:00 UTC → pipeline.yml  show_id=2  (This American Life — music)
-//   - Wed   10:00 UTC → pipeline.yml  show_id=1  (Switched on Pop — music)
-//   - Fri   10:00 UTC → pipeline.yml  show_id=1  (Switched on Pop — music)
-//   - Mon   12:00 UTC → eval.yml      (weekly extraction-quality eval — gated)
-//   - Mon   13:00 UTC → blogs.yml     (weekly blog pull queue: discover + ingest checked)
-//   - 1st+15th 13:30  → pulse.yml     (biweekly Slack health heartbeat)
+// On a set of crons it calls GitHub's workflow_dispatch for the repo's workflows.
+// HARD CONSTRAINT: Workers Free allows max 5 cron triggers per Worker — the 2026-06-11
+// deploy with 7 crons failed exactly there. So music shares ONE Mon/Wed/Fri cron and
+// the Worker picks the show by day. The 5:
+//   - daily 11:00 UTC     → entities.yml  (AI Daily, Hard Fork, PCHH, Culture Gabfest)
+//   - Mon/Wed/Fri 10:00   → pipeline.yml  (Mon → show_id=2 TAL; Wed+Fri → show_id=1 SOP)
+//   - Mon   12:00 UTC     → eval.yml      (weekly extraction-quality eval — gated)
+//   - Mon   13:00 UTC     → blogs.yml     (weekly blog pull queue: discover + ingest checked)
+//   - 1st+15th 13:30      → pulse.yml     (biweekly Slack health heartbeat)
 //
 // Why this exists: GitHub silently disables `schedule:` crons in public repos after
 // 60 days of repo inactivity. A Cloudflare Worker Cron has no such limit, so THIS
@@ -35,9 +36,14 @@ const REPO = "khglynn/list-maker";
 // control plane. Changing cadence means editing this map + wrangler.toml together.
 const SCHEDULE = {
   "0 11 * * *": { workflow: "entities.yml", inputs: {} },
-  "0 10 * * 1": { workflow: "pipeline.yml", inputs: { show_id: "2" } }, // Mon — TAL
-  "0 10 * * 3": { workflow: "pipeline.yml", inputs: { show_id: "1" } }, // Wed — SOP
-  "0 10 * * 5": { workflow: "pipeline.yml", inputs: { show_id: "1" } }, // Fri — SOP
+  // One cron, two music shows (free-plan 5-cron cap): the fire day picks the show.
+  // getUTCDay(): Mon=1 → TAL (show_id 2); Wed=3 / Fri=5 → SOP (show_id 1).
+  "0 10 * * 1,3,5": {
+    workflow: "pipeline.yml",
+    inputsFor: (event) => ({
+      show_id: new Date(event.scheduledTime).getUTCDay() === 1 ? "2" : "1",
+    }),
+  },
   "0 12 * * 1": { workflow: "eval.yml", inputs: {} },                   // Mon — weekly eval
   "0 13 * * 1": { workflow: "blogs.yml", inputs: {} },                  // Mon — blog pull queue
   "30 13 1,15 * *": { workflow: "pulse.yml", inputs: {} },              // 1st+15th — pulse
@@ -100,8 +106,9 @@ export default {
       );
       return;
     }
+    const inputs = target.inputsFor ? target.inputsFor(event) : target.inputs;
     ctx.waitUntil(
-      dispatch(env, target.workflow, target.inputs).catch((e) =>
+      dispatch(env, target.workflow, inputs).catch((e) =>
         notifyFailure(env, `dispatch ${target.workflow} failed — ${e.message}`)
       )
     );
