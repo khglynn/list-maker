@@ -27,12 +27,38 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from pipeline.common import get_db_connection, get_logger, load_environment, post_slack  # noqa: E402
-from pipeline.show_config import TRANSCRIPT_NOTION_SHOWS  # noqa: E402 — single-source show list
+from pipeline.show_config import BLOG_NOTION_SHOWS, SHOWS, TRANSCRIPT_NOTION_SHOWS  # noqa: E402
 from pipeline.sync_notion import NOTION_API, notion_request  # noqa: E402 — reuse hardened client
 
-# Parent: the "Pod Lists" hub page. TRANSCRIPTS_DB_ID set via the one-time --create-db.
+# Parent: the "Pod Lists" hub page. DB ids set via the one-time --create-db per target.
 POD_LISTS_PAGE_ID = "31c0501e-f950-80d1-a3fd-e8fa8d5ce907"
 TRANSCRIPTS_DB_ID = "3780501e-f950-81c9-a3e3-eca7f1162c9d"  # "Transcripts" DB under Pod Lists
+BLOG_POSTS_DB_ID = "37c0501e-f950-8119-ab65-e0bfddf093f5"  # "Blog Posts" DB under Pod Lists
+
+# One engine, two mirrors: which shows feed which Notion DB, and how pages differ.
+# Blog pages carry URL + Links Out (the curation signal: outbound-link density).
+SYNC_TARGETS: dict[str, dict] = {
+    "transcripts": {
+        "db_id": lambda: TRANSCRIPTS_DB_ID,
+        "shows": TRANSCRIPT_NOTION_SHOWS,
+        "source_label": "transcript",
+        "title": "Transcripts",
+        "description": ("Full episode transcripts for the tech shows (AI Daily, Hard Fork) — "
+                        "ask Notion AI across them, or power-search via Neon FTS."),
+        "icon": "\U0001F4DD",
+        "blog_props": False,
+    },
+    "blog-posts": {
+        "db_id": lambda: BLOG_POSTS_DB_ID,
+        "shows": BLOG_NOTION_SHOWS,
+        "source_label": "blog_post",
+        "title": "Blog Posts",
+        "description": ("Full text of curated blog posts/articles (OpenAI, Anthropic, one-off saves) — "
+                        "pulled via the Blog Pull Queue; Links Out = outbound-link density, the pull signal."),
+        "icon": "\U0001F4F0",
+        "blog_props": True,
+    },
+}
 
 SHOW_DISPLAY = {"ai-daily-brief": "AI Daily", "hard-fork": "Hard Fork"}
 DEFAULT_SHOWS = ",".join(TRANSCRIPT_NOTION_SHOWS)
@@ -42,12 +68,27 @@ BLOCKS_PER_REQUEST = 100  # Notion's max children per create/append call
 log = get_logger("pipeline.transcripts_notion")
 
 
+def display_name(slug: str) -> str:
+    """Short display override if one exists, else the configured show name."""
+    if slug in SHOW_DISPLAY:
+        return SHOW_DISPLAY[slug]
+    return SHOWS[slug].name if slug in SHOWS else slug
+
+
+def count_links_out(text: str) -> int:
+    """Outbound-link density — Kevin's pull-worthiness signal for blog posts."""
+    import re
+    return len(re.findall(r"https?://", text or ""))
+
+
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Sync tech-show transcripts to a Notion DB")
-    p.add_argument("--shows", default=DEFAULT_SHOWS, help="Comma-separated show slugs")
+    p = argparse.ArgumentParser(description="Sync full texts (transcripts/blog posts) to a Notion DB")
+    p.add_argument("--target", default="transcripts", choices=sorted(SYNC_TARGETS),
+                   help="Which Notion mirror to sync (picks DB + default shows)")
+    p.add_argument("--shows", default="", help="Comma-separated show slugs (default: the target's shows)")
     p.add_argument("--limit", type=int, default=0, help="Max episodes this run (0 = all unsynced)")
-    p.add_argument("--database-id", default="", help="Transcripts DB id (overrides TRANSCRIPTS_DB_ID)")
-    p.add_argument("--create-db", action="store_true", help="Create the Transcripts DB under Pod Lists and exit")
+    p.add_argument("--database-id", default="", help="Notion DB id (overrides the target's configured id)")
+    p.add_argument("--create-db", action="store_true", help="Create the target's DB under Pod Lists and exit")
     p.add_argument("--dry-run", action="store_true", help="Show what would sync; no Notion writes")
     return p.parse_args()
 
@@ -76,54 +117,60 @@ def paragraph_block(content: str) -> dict:
     }
 
 
-def build_blocks(ep: dict, transcript: str) -> list[dict]:
-    show = SHOW_DISPLAY.get(ep["show_slug"], ep["show_slug"])
-    intro = f"{show} — {ep['publish_date'] or 'date unknown'}. Full episode transcript."
+def build_blocks(ep: dict, transcript: str, source_label: str = "transcript") -> list[dict]:
+    show = display_name(ep["show_slug"])
+    kind = "Full episode transcript." if source_label == "transcript" else "Full post text."
+    intro = f"{show} — {ep['publish_date'] or 'date unknown'}. {kind}"
     return [paragraph_block(intro)] + [paragraph_block(c) for c in chunk_text(transcript)]
 
 
-def build_properties(ep: dict) -> dict:
+def build_properties(ep: dict, target: dict) -> dict:
     props = {
         "Name": {"title": [{"text": {"content": (ep["title"] or "Untitled")[:2000]}}]},
-        "Show": {"select": {"name": SHOW_DISPLAY.get(ep["show_slug"], ep["show_slug"])}},
+        "Show": {"select": {"name": display_name(ep["show_slug"])}},
         "Episode ID": {"number": ep["episode_id"]},
         "Characters": {"number": ep["chars"]},
-        "Source": {"select": {"name": "transcript"}},
+        "Source": {"select": {"name": target["source_label"]}},
     }
     if ep["publish_date"]:
         props["Date"] = {"date": {"start": str(ep["publish_date"])}}
+    if target["blog_props"]:
+        if ep.get("url"):
+            props["URL"] = {"url": ep["url"]}
+        props["Links Out"] = {"number": count_links_out(ep.get("transcript_text") or "")}
     return props
 
 
-def create_database(token: str) -> str:
+def create_database(token: str, target: dict) -> str:
+    show_options = [{"name": display_name(slug), "color": "default"} for slug in target["shows"]]
+    properties = {
+        "Name": {"title": {}},
+        "Show": {"select": {"options": show_options}},
+        "Date": {"date": {}},
+        "Episode ID": {"number": {}},
+        "Source": {"select": {"options": [{"name": target["source_label"], "color": "default"}]}},
+        "Characters": {"number": {}},
+    }
+    if target["blog_props"]:
+        properties["URL"] = {"url": {}}
+        properties["Links Out"] = {"number": {}}
     body = {
         "parent": {"type": "page_id", "page_id": POD_LISTS_PAGE_ID},
-        "title": [{"type": "text", "text": {"content": "Transcripts"}}],
-        "description": [
-            {"type": "text", "text": {"content": "Full episode transcripts for the tech shows "
-             "(AI Daily, Hard Fork) — ask Notion AI across them, or power-search via Neon FTS."}}
-        ],
-        "icon": {"type": "emoji", "emoji": "\U0001F4DD"},
-        "properties": {
-            "Name": {"title": {}},
-            "Show": {"select": {"options": [
-                {"name": "AI Daily", "color": "blue"}, {"name": "Hard Fork", "color": "green"}]}},
-            "Date": {"date": {}},
-            "Episode ID": {"number": {}},
-            "Source": {"select": {"options": [{"name": "transcript", "color": "default"}]}},
-            "Characters": {"number": {}},
-        },
+        "title": [{"type": "text", "text": {"content": target["title"]}}],
+        "description": [{"type": "text", "text": {"content": target["description"]}}],
+        "icon": {"type": "emoji", "emoji": target["icon"]},
+        "properties": properties,
     }
     result = notion_request("POST", f"{NOTION_API}/databases", token, body)
     return result["id"]
 
 
-def create_transcript_page(token: str, db_id: str, ep: dict, transcript: str) -> str:
-    blocks = build_blocks(ep, transcript)
+def create_transcript_page(token: str, db_id: str, ep: dict, transcript: str, target: dict) -> str:
+    blocks = build_blocks(ep, transcript, target["source_label"])
     first, rest = blocks[:BLOCKS_PER_REQUEST], blocks[BLOCKS_PER_REQUEST:]
     result = notion_request(
         "POST", f"{NOTION_API}/pages", token,
-        {"parent": {"database_id": db_id}, "properties": build_properties(ep), "children": first},
+        {"parent": {"database_id": db_id}, "properties": build_properties(ep, target), "children": first},
     )
     page_id = result["id"]
     for i in range(0, len(rest), BLOCKS_PER_REQUEST):
@@ -138,7 +185,7 @@ def find_unsynced(conn, shows: list[str], limit: int) -> list[dict]:
     # Don't filter empty transcripts here — let them enter the loop so they're explicitly
     # logged + counted (skipped without marking synced) instead of silently excluded.
     sql = """
-        SELECT ep.id AS episode_id, ep.title, ep.publish_date, s.slug AS show_slug,
+        SELECT ep.id AS episode_id, ep.title, ep.publish_date, ep.url, s.slug AS show_slug,
                length(et.transcript_text) AS chars, et.transcript_text
         FROM episode_transcripts et
         JOIN episodes ep ON ep.id = et.episode_id
@@ -199,17 +246,22 @@ def main() -> None:
     if not token:
         raise SystemExit("NOTION_TOKEN is required")
 
+    target = SYNC_TARGETS[args.target]
+
     if args.create_db:
-        db_id = create_database(token)
-        print(f"Created Transcripts DB: {db_id}")
-        print("Set TRANSCRIPTS_DB_ID in sync_transcripts_notion.py to this value (then commit).")
+        db_id = create_database(token, target)
+        print(f"Created {target['title']} DB: {db_id}")
+        print(f"Set the {args.target} db id constant in sync_transcripts_notion.py to this value (then commit).")
         return
 
-    db_id = args.database_id or TRANSCRIPTS_DB_ID
-    if "PLACEHOLDER" in db_id or not db_id:
-        raise SystemExit("No Transcripts DB id — run --create-db first, then set TRANSCRIPTS_DB_ID (or pass --database-id).")
+    db_id = args.database_id or target["db_id"]()
+    if not db_id or "PLACEHOLDER" in db_id:
+        raise SystemExit(
+            f"No {target['title']} DB id — run --create-db --target {args.target} first, "
+            "then set the constant (or pass --database-id)."
+        )
 
-    shows = [s.strip() for s in args.shows.split(",") if s.strip()]
+    shows = [s.strip() for s in (args.shows or ",".join(target["shows"])).split(",") if s.strip()]
     conn = get_db_connection()
     try:
         episodes = find_unsynced(conn, shows, args.limit)
@@ -239,7 +291,7 @@ def main() -> None:
                     mark_synced(conn, ep["episode_id"], existing[ep["episode_id"]])
                     healed += 1
                     continue
-                page_id = create_transcript_page(token, db_id, ep, transcript)
+                page_id = create_transcript_page(token, db_id, ep, transcript, target)
                 mark_synced(conn, ep["episode_id"], page_id)
                 synced += 1
                 if (synced + healed) % 25 == 0:
@@ -254,7 +306,7 @@ def main() -> None:
         conn.close()
 
     if not args.dry_run:
-        msg = (f"transcripts -> Notion: synced {synced}, healed {healed}, "
+        msg = (f"{args.target} -> Notion: synced {synced}, healed {healed}, "
                f"skipped_empty {skipped_empty}, failed {failed} (of {len(episodes)})")
         log.info(msg)
         if failed or skipped_empty:

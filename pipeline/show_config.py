@@ -167,6 +167,11 @@ SHOWS: dict[str, ShowConfig] = {
 # sync default AND data_health's notion-freshness check — keep them in lockstep.
 TRANSCRIPT_NOTION_SHOWS: tuple[str, ...] = ("ai-daily-brief", "hard-fork")
 
+# Shows whose full texts mirror into the Notion "Blog Posts" DB (same engine,
+# --target blog-posts). agentic-research is deliberately absent: those docs'
+# canonical home is the Obsidian vault — only their MENTIONS go to Notion.
+BLOG_NOTION_SHOWS: tuple[str, ...] = ("openai-blog", "anthropic-blog", "saved-articles")
+
 
 def get_show(slug: str) -> ShowConfig:
     """Get show config by slug. Raises KeyError if not found."""

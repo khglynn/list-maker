@@ -48,3 +48,29 @@ def test_default_shows_derives_from_show_config() -> None:
     from pipeline.sync_transcripts_notion import DEFAULT_SHOWS
 
     assert DEFAULT_SHOWS == ",".join(TRANSCRIPT_NOTION_SHOWS)
+
+
+def test_blog_target_properties_include_url_and_links_out() -> None:
+    from pipeline.sync_transcripts_notion import SYNC_TARGETS, build_properties
+
+    ep = {
+        "episode_id": 1, "title": "Post", "publish_date": None, "show_slug": "openai-blog",
+        "chars": 10, "url": "https://openai.com/index/abc",
+        "transcript_text": "see https://a.com and https://b.com",
+    }
+    blog_props = build_properties(ep, SYNC_TARGETS["blog-posts"])
+    assert blog_props["URL"] == {"url": "https://openai.com/index/abc"}
+    assert blog_props["Links Out"] == {"number": 2}
+    assert blog_props["Source"]["select"]["name"] == "blog_post"
+
+    transcript_props = build_properties(ep, SYNC_TARGETS["transcripts"])
+    assert "URL" not in transcript_props and "Links Out" not in transcript_props
+    assert transcript_props["Source"]["select"]["name"] == "transcript"
+
+
+def test_sync_target_shows_come_from_show_config() -> None:
+    from pipeline.show_config import BLOG_NOTION_SHOWS, TRANSCRIPT_NOTION_SHOWS
+    from pipeline.sync_transcripts_notion import SYNC_TARGETS
+
+    assert SYNC_TARGETS["transcripts"]["shows"] == TRANSCRIPT_NOTION_SHOWS
+    assert SYNC_TARGETS["blog-posts"]["shows"] == BLOG_NOTION_SHOWS

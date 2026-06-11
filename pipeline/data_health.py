@@ -20,7 +20,7 @@ from typing import Any, Iterable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import get_db_connection, load_environment, post_slack
 from feed_check import feed_recent_dates
-from show_config import SHOWS, TRANSCRIPT_NOTION_SHOWS, curated_show_slugs
+from show_config import BLOG_NOTION_SHOWS, SHOWS, TRANSCRIPT_NOTION_SHOWS, curated_show_slugs
 
 
 @dataclass
@@ -363,7 +363,8 @@ def check_notion_sync_freshness(conn) -> CheckResult:
         GROUP BY s.slug
         ORDER BY s.slug;
         """,
-        [list(TRANSCRIPT_NOTION_SHOWS), NOTION_SYNC_MAX_LAG_DAYS],
+        # Watch BOTH full-text mirrors: the Transcripts DB and the Blog Posts DB.
+        [list(TRANSCRIPT_NOTION_SHOWS + BLOG_NOTION_SHOWS), NOTION_SYNC_MAX_LAG_DAYS],
     )
     stale_entities = int(
         _one(

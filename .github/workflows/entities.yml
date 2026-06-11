@@ -77,7 +77,11 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          cd pipeline && python sync_transcripts_notion.py
+          cd pipeline
+          python sync_transcripts_notion.py --target transcripts
+          # Belt-and-suspenders for blog posts: save_item syncs at ingest time, but a
+          # failed/missed sync heals here daily (cheap no-op when nothing is unsynced).
+          python sync_transcripts_notion.py --target blog-posts
 
       - name: Data health check (staleness, integrity, feed second-source)
         if: always()
