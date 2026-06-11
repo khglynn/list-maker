@@ -94,7 +94,8 @@ def episode_source_name(ep: dict) -> str:
         try:
             name = (json.loads(raw) if isinstance(raw, str) else raw).get("source_name")
             if name:
-                return str(name)[:100]
+                # Notion select options reject commas ("Today, Explained" 400s).
+                return str(name).replace(",", "")[:100]
         except (ValueError, AttributeError):
             pass
     return display_name(ep["show_slug"])

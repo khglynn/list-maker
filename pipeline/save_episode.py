@@ -68,7 +68,7 @@ def taddy_find_episode(episode_title: str, show_name: str, user_id: str, api_key
     query {{
       search(term:"{term}", filterForTypes:PODCASTEPISODE, limitPerPage:8) {{
         searchId
-        podcastEpisodes {{ uuid name datePublished podcastSeries {{ name }} }}
+        podcastEpisodes {{ uuid name datePublished podcastSeries {{ uuid name }} }}
       }}
     }}
     """
@@ -140,10 +140,15 @@ def scrape_link_meta(url: str) -> dict:
     notes = html_mod.unescape(notes).strip()
     show = ""
     if "castro.fm" in url:
-        # Castro og:title format: "Show: Episode Title (1h51m)" — split + drop duration.
-        m = re.match(r"^(?P<show>[^:]+):\s*(?P<title>.+?)(?:\s*\((?:\d+h)?\d+m\))?$", title)
-        if m:
-            show, title = m.group("show").strip(), m.group("title").strip()
+        # Castro og:title = "{series}: {episode} (1h51m)" — but series AND episode
+        # names can themselves contain colons, so a single split point is ambiguous.
+        # Return both split candidates; the caller tries Taddy with each.
+        title = re.sub(r"\s*\((?:\d+h)?\d+m\)$", "", title)
+        if ":" in title:
+            first_show, first_title = (s.strip() for s in title.split(":", 1))
+            last_show, last_title = (s.strip() for s in title.rsplit(":", 1))
+            return {"title": first_title, "show": first_show, "notes": notes,
+                    "alt": {"title": last_title, "show": last_show}}
     return {"title": title, "show": show, "notes": notes}
 
 
@@ -301,6 +306,13 @@ def main() -> None:  # noqa: PLR0915 — an orchestrator reads better linear tha
                         log.info("already in DB under %s: %r", in_db_slug, meta["title"][:50])
                         continue
                 hit, full = try_taddy_full(meta["title"], meta["show"], taddy_user, taddy_key)
+                if not hit and meta.get("alt"):
+                    # Ambiguous colon split: retry with the other candidate, and
+                    # adopt it wholesale on a hit (its names are the clean ones).
+                    hit, full = try_taddy_full(meta["alt"]["title"], meta["alt"]["show"],
+                                               taddy_user, taddy_key)
+                    if hit:
+                        meta["title"], meta["show"] = meta["alt"]["title"], meta["alt"]["show"]
                 show_name = meta["show"] or ((hit.get("podcastSeries") or {}).get("name") if hit else "") or "Podcast"
                 text = full or meta["notes"] or meta["title"]
                 source = "taddy_transcript" if full else "show_notes"
