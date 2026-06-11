@@ -230,8 +230,11 @@ def page_blocks(token: str, page_id: str) -> list[dict]:
 def existing_highlight(blocks: list[dict], cid: str) -> bool:
     """Adopt-don't-duplicate: the castro id lives in each callout's header, so the
     page itself records what's been inserted. Closes the crash window between
-    insert_highlight and save_manifest — a re-run adopts instead of duplicating."""
-    return any(b["type"] == "callout" and f"castro {cid}" in b["text"] for b in blocks)
+    insert_highlight and save_manifest — a re-run adopts instead of duplicating.
+    \\b after the id: a bare substring check would falsely adopt prefix ids
+    (castro 123 inside castro 12345)."""
+    pattern = re.compile(rf"castro {re.escape(cid)}\b")
+    return any(b["type"] == "callout" and pattern.search(b["text"]) for b in blocks)
 
 
 def find_anchor_block(blocks: list[dict], head: str) -> Optional[str]:

@@ -74,3 +74,12 @@ def test_existing_highlight_adopts_by_castro_id() -> None:
     assert existing_highlight(blocks, "12345")
     assert not existing_highlight(blocks, "99999")
     assert not existing_highlight([{"id": "a", "type": "paragraph", "text": "castro 12345"}], "12345")
+
+
+def test_existing_highlight_rejects_prefix_ids() -> None:
+    from pipeline.highlight_clips import existing_highlight
+
+    blocks = [{"id": "b", "type": "callout", "text": "Kevin's clip · castro 12345"}]
+    assert not existing_highlight(blocks, "123")     # prefix of a longer id
+    assert not existing_highlight(blocks, "2345")    # suffix fragment
+    assert existing_highlight(blocks, "12345")
