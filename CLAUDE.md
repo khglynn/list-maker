@@ -196,6 +196,7 @@ cd /Users/KevinHG/DevKev/personal/list-maker && set -a && source .env.local && s
 
 ## Relevant Docs & Links
 
+- **Engineering principles:** `docs/principles.md` — distilled from Kevin's four research guides (legibility, automation planes, data provenance, dependency hygiene). Read before substantive pipeline changes; the full-reasoning canonical guides live in his Obsidian vault.
 - **Plan file:** `claude-plans/2025-12-12-initial-plan.md`
 - **Context doc:** `claude-plans/2025-12-12-project-context.md` (summary of original research chats)
 - **Original research chats:**
