@@ -41,6 +41,10 @@ SYNC_TARGETS: dict[str, dict] = {
     "transcripts": {
         "db_id": lambda: TRANSCRIPTS_DB_ID,
         "shows": TRANSCRIPT_NOTION_SHOWS,
+        # Podcast vocabulary: a "Show" has "Episode" rows, plus a Source select
+        # ("transcript") distinguishing how the text was obtained.
+        "group_prop": "Show",
+        "id_prop": "Episode ID",
         "source_label": "transcript",
         "title": "Transcripts",
         "description": ("Full episode transcripts for the tech shows (AI Daily, Hard Fork) — "
@@ -51,7 +55,12 @@ SYNC_TARGETS: dict[str, dict] = {
     "blog-posts": {
         "db_id": lambda: BLOG_POSTS_DB_ID,
         "shows": BLOG_NOTION_SHOWS,
-        "source_label": "blog_post",
+        # Curated vocabulary: a post's "Source" is its publication, rows are "Items".
+        # No source_label select — every row here is a blog post, a constant column
+        # is noise (dropped in the 2026-06-11 UX pass).
+        "group_prop": "Source",
+        "id_prop": "Item ID",
+        "source_label": None,
         "title": "Blog Posts",
         "description": ("Full text of curated blog posts/articles (OpenAI, Anthropic, one-off saves) — "
                         "pulled via the Blog Pull Queue; Links Out = outbound-link density, the pull signal."),
@@ -127,11 +136,12 @@ def build_blocks(ep: dict, transcript: str, source_label: str = "transcript") ->
 def build_properties(ep: dict, target: dict) -> dict:
     props = {
         "Name": {"title": [{"text": {"content": (ep["title"] or "Untitled")[:2000]}}]},
-        "Show": {"select": {"name": display_name(ep["show_slug"])}},
-        "Episode ID": {"number": ep["episode_id"]},
+        target["group_prop"]: {"select": {"name": display_name(ep["show_slug"])}},
+        target["id_prop"]: {"number": ep["episode_id"]},
         "Characters": {"number": ep["chars"]},
-        "Source": {"select": {"name": target["source_label"]}},
     }
+    if target["source_label"]:
+        props["Source"] = {"select": {"name": target["source_label"]}}
     if ep["publish_date"]:
         props["Date"] = {"date": {"start": str(ep["publish_date"])}}
     if target["blog_props"]:
@@ -145,12 +155,13 @@ def create_database(token: str, target: dict) -> str:
     show_options = [{"name": display_name(slug), "color": "default"} for slug in target["shows"]]
     properties = {
         "Name": {"title": {}},
-        "Show": {"select": {"options": show_options}},
+        target["group_prop"]: {"select": {"options": show_options}},
         "Date": {"date": {}},
-        "Episode ID": {"number": {}},
-        "Source": {"select": {"options": [{"name": target["source_label"], "color": "default"}]}},
+        target["id_prop"]: {"number": {}},
         "Characters": {"number": {}},
     }
+    if target["source_label"]:
+        properties["Source"] = {"select": {"options": [{"name": target["source_label"], "color": "default"}]}}
     if target["blog_props"]:
         properties["URL"] = {"url": {}}
         properties["Links Out"] = {"number": {}}
@@ -204,13 +215,13 @@ def find_unsynced(conn, shows: list[str], limit: int) -> list[dict]:
         return list(cur.fetchall())
 
 
-def fetch_existing_notion_pages(token: str, db_id: str) -> dict[int, str]:
-    """Map episode_id -> page_id for transcript pages already in the Notion DB.
+def fetch_existing_notion_pages(token: str, db_id: str, id_prop: str = "Episode ID") -> dict[int, str]:
+    """Map episode_id -> page_id for full-text pages already in the Notion DB.
 
     Closes the create/commit atomicity gap: if a previous run created a Notion page but
     crashed before committing notion_transcript_page_id, a resumed run ADOPTS that page
     (marks it synced) instead of creating a duplicate. One upfront paginated scan, not a
-    per-episode query.
+    per-episode query. id_prop is the target's row-id property (Episode ID / Item ID).
     """
     existing: dict[int, str] = {}
     cursor = None
@@ -220,7 +231,7 @@ def fetch_existing_notion_pages(token: str, db_id: str) -> dict[int, str]:
             body["start_cursor"] = cursor
         result = notion_request("POST", f"{NOTION_API}/databases/{db_id}/query", token, body)
         for page in result.get("results", []):
-            num = page.get("properties", {}).get("Episode ID", {}).get("number")
+            num = page.get("properties", {}).get(id_prop, {}).get("number")
             if num is not None:
                 existing[int(num)] = page["id"]
         if not result.get("has_more"):
@@ -270,7 +281,9 @@ def main() -> None:
         # Adopt-don't-duplicate: a page already in Notion (from a run that crashed before
         # its DB marker committed) is healed, not recreated. Skipped when there's nothing
         # to sync — the daily no-new-episodes run shouldn't pay a full DB pagination scan.
-        existing = {} if (args.dry_run or not episodes) else fetch_existing_notion_pages(token, db_id)
+        existing = {} if (args.dry_run or not episodes) else fetch_existing_notion_pages(
+            token, db_id, target["id_prop"]
+        )
         if existing:
             log.info("%d transcript page(s) already in Notion — adopt on match", len(existing))
 

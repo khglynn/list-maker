@@ -90,7 +90,9 @@ def build_notion_properties(entity: dict) -> dict:
         "Name": {"title": [{"text": {"content": str(entity["canonical_name"])[:2000]}}]},
         "Type": {"select": {"name": entity["entity_type"]}},
         "Mentions": {"number": int(entity["mention_count"])},
-        "Episodes": {"number": int(entity["episode_count"])},
+        # "Items" not "Episodes": the count spans episodes, blog posts, and research
+        # docs since the 2026-06-11 curated-sources build (renamed in Notion same day).
+        "Items": {"number": int(entity["episode_count"])},
     }
 
     if entity.get("first_date"):
@@ -104,11 +106,12 @@ def build_notion_properties(entity: dict) -> dict:
 
     url = entity.get("primary_url") or ""
     if url:
-        props["userDefined:URL"] = {"url": url[:2000]}
+        props["URL"] = {"url": url[:2000]}
 
     show_names = entity.get("show_names") or []
     if show_names:
-        props["Shows"] = {"multi_select": [{"name": str(n)[:100]} for n in show_names]}
+        # "Sources" not "Shows": podcasts, blogs, and research runs all tag here.
+        props["Sources"] = {"multi_select": [{"name": str(n)[:100]} for n in show_names]}
 
     return props
 
@@ -163,7 +166,7 @@ def fetch_entity_rollup(
 ) -> list[dict]:
     """Get entities with aggregated mention stats across a GROUP of shows (the shows
     sharing one Notion DB — Option A). Counts are global within the group; each entity
-    carries the list of show names that mention it (for the Notion "Shows" property).
+    carries the list of show names that mention it (for the Notion "Sources" property).
 
     Qualifier: group-global mentions >= min_mentions, OR >= 1 mention from a CURATED
     show. A curated pull is deliberate — Kevin chose that post because its citations
@@ -492,7 +495,7 @@ def main() -> None:
     conn = get_db_connection()
     try:
         # Option A: shows sharing a Notion DB form a group → one shared DB, one page per
-        # entity, a "Shows" tag, and counts global within the group.
+        # entity, a "Sources" tag, and counts global within the group.
         group = [s for s in SHOWS.values() if s.notion_database_id == show.notion_database_id]
         show_ids = [s.show_id for s in group]
         show_names = {s.show_id: s.name for s in group}

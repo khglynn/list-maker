@@ -50,7 +50,9 @@ def test_default_shows_derives_from_show_config() -> None:
     assert DEFAULT_SHOWS == ",".join(TRANSCRIPT_NOTION_SHOWS)
 
 
-def test_blog_target_properties_include_url_and_links_out() -> None:
+def test_blog_target_properties_use_curated_vocabulary() -> None:
+    """Per-target labels (2026-06-11 UX pass): blog rows say Source/Item ID and skip
+    the constant source-label select; transcripts keep Show/Episode ID/Source."""
     from pipeline.sync_transcripts_notion import SYNC_TARGETS, build_properties
 
     ep = {
@@ -61,11 +63,15 @@ def test_blog_target_properties_include_url_and_links_out() -> None:
     blog_props = build_properties(ep, SYNC_TARGETS["blog-posts"])
     assert blog_props["URL"] == {"url": "https://openai.com/index/abc"}
     assert blog_props["Links Out"] == {"number": 2}
-    assert blog_props["Source"]["select"]["name"] == "blog_post"
+    assert blog_props["Source"]["select"]["name"] == "OpenAI Blog"
+    assert blog_props["Item ID"] == {"number": 1}
+    assert "Show" not in blog_props and "Episode ID" not in blog_props
 
     transcript_props = build_properties(ep, SYNC_TARGETS["transcripts"])
     assert "URL" not in transcript_props and "Links Out" not in transcript_props
     assert transcript_props["Source"]["select"]["name"] == "transcript"
+    assert transcript_props["Episode ID"] == {"number": 1}
+    assert "Item ID" not in transcript_props
 
 
 def test_sync_target_shows_come_from_show_config() -> None:

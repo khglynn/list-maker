@@ -62,10 +62,10 @@ def test_build_notion_properties_maps_core_fields() -> None:
     assert props["Name"]["title"][0]["text"]["content"] == "Example Tool"
     assert props["Type"]["select"]["name"] == "software_product"
     assert props["Mentions"]["number"] == 3
-    assert props["Episodes"]["number"] == 2
+    assert props["Items"]["number"] == 2
     assert props["First Mentioned"]["date"]["start"] == "2026-01-01"
     assert props["Last Mentioned"]["date"]["start"] == "2026-01-05"
-    assert props["userDefined:URL"]["url"] == "https://example.com"
+    assert props["URL"]["url"] == "https://example.com"
 
 
 def test_build_notion_properties_truncates_long_text_fields() -> None:
@@ -79,19 +79,20 @@ def test_build_notion_properties_truncates_long_text_fields() -> None:
 
     assert len(props["Name"]["title"][0]["text"]["content"]) == 2000
     assert len(props["Context"]["rich_text"][0]["text"]["content"]) == 2000
-    assert len(props["userDefined:URL"]["url"]) == 2000
+    assert len(props["URL"]["url"]) == 2000
 
 
-def test_build_notion_properties_adds_shows_multiselect() -> None:
-    # Option A: shared DB → a "Shows" tag listing which shows mention the entity.
-    props = build_notion_properties(entity(show_names=["The AI Daily Brief", "Hard Fork"]))
-    assert props["Shows"] == {
-        "multi_select": [{"name": "The AI Daily Brief"}, {"name": "Hard Fork"}]
+def test_build_notion_properties_adds_sources_multiselect() -> None:
+    # Option A: shared DB → a "Sources" tag listing which sources mention the entity
+    # (podcasts, blogs, research runs — renamed from "Shows" in the 2026-06-11 UX pass).
+    props = build_notion_properties(entity(show_names=["The AI Daily Brief", "OpenAI Blog"]))
+    assert props["Sources"] == {
+        "multi_select": [{"name": "The AI Daily Brief"}, {"name": "OpenAI Blog"}]
     }
 
 
-def test_build_notion_properties_omits_shows_when_absent() -> None:
-    assert "Shows" not in build_notion_properties(entity())  # no empty tag
+def test_build_notion_properties_omits_sources_when_absent() -> None:
+    assert "Sources" not in build_notion_properties(entity())  # no empty tag
 
 
 def test_compute_diff_creates_missing_pages() -> None:
