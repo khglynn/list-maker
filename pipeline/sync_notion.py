@@ -158,11 +158,18 @@ def query_all_notion_pages(token: str, database_id: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 def fetch_entity_rollup(
-    conn, show_ids: list[int], show_names: dict[int, str], min_mentions: int = 2
+    conn, show_ids: list[int], show_names: dict[int, str], min_mentions: int = 2,
+    curated_show_ids: list[int] | None = None,
 ) -> list[dict]:
     """Get entities with aggregated mention stats across a GROUP of shows (the shows
     sharing one Notion DB — Option A). Counts are global within the group; each entity
-    carries the list of show names that mention it (for the Notion "Shows" property)."""
+    carries the list of show names that mention it (for the Notion "Shows" property).
+
+    Qualifier: group-global mentions >= min_mentions, OR >= 1 mention from a CURATED
+    show. A curated pull is deliberate — Kevin chose that post because its citations
+    matter — so its resources surface at 1 mention, while podcast chatter still needs
+    min_mentions to filter noise. (Without the OR, blog-cited resources would hide;
+    with min_mentions=1 globally, every 1-mention podcast entity would flood the DB.)"""
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -195,10 +202,11 @@ def fetch_entity_rollup(
                 WHERE ep.show_id = ANY(%s)
                 GROUP BY m.entity_id
                 HAVING COUNT(*) >= %s
+                    OR COUNT(*) FILTER (WHERE ep.show_id = ANY(%s)) >= 1
             ) agg ON agg.entity_id = e.id
             ORDER BY agg.mention_count DESC;
             """,
-            (show_ids, min_mentions),
+            (show_ids, min_mentions, curated_show_ids or []),
         )
         rows = [dict(r) for r in cur.fetchall()]
     for r in rows:
@@ -334,7 +342,8 @@ def alert_on_failure_rate(phase: str, succeeded: int, failed: int) -> None:
         post_slack(f":warning: list-maker {msg}")
 
 
-def run_full_reset(token: str, database_id: str, show_ids: list[int], show_names: dict[int, str], min_mentions: int, dry_run: bool) -> None:
+def run_full_reset(token: str, database_id: str, show_ids: list[int], show_names: dict[int, str], min_mentions: int, dry_run: bool,
+                   curated_show_ids: list[int] | None = None) -> None:
     """Archive all existing pages, clear IDs, re-create everything.
 
     Manages its own DB connections (long Notion operations cause timeouts).
@@ -373,7 +382,7 @@ def run_full_reset(token: str, database_id: str, show_ids: list[int], show_names
     # Fresh connection for create phase
     conn = get_db_connection()
     try:
-        entities = fetch_entity_rollup(conn, show_ids, show_names, min_mentions)
+        entities = fetch_entity_rollup(conn, show_ids, show_names, min_mentions, curated_show_ids)
 
         # Create all entities
         print(f"\nCreating {len(entities)} pages...")
@@ -487,12 +496,14 @@ def main() -> None:
         group = [s for s in SHOWS.values() if s.notion_database_id == show.notion_database_id]
         show_ids = [s.show_id for s in group]
         show_names = {s.show_id: s.name for s in group}
-        entities = fetch_entity_rollup(conn, show_ids, show_names, args.min_mentions)
+        curated_ids = [s.show_id for s in group if s.medium != "podcast"]
+        entities = fetch_entity_rollup(conn, show_ids, show_names, args.min_mentions, curated_ids)
         print(f"Notion DB group: {[s.slug for s in group]} (show_ids={show_ids})")
-        print(f"Entities with {args.min_mentions}+ mentions: {len(entities)}")
+        print(f"Entities qualifying ({args.min_mentions}+ mentions, or any curated mention): {len(entities)}")
 
         if args.full_reset:
-            run_full_reset(token, show.notion_database_id, show_ids, show_names, args.min_mentions, args.dry_run)
+            run_full_reset(token, show.notion_database_id, show_ids, show_names, args.min_mentions, args.dry_run,
+                           curated_ids)
         else:
             run_incremental_sync(token, show.notion_database_id, conn, entities, args.dry_run)
 

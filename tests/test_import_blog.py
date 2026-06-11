@@ -66,3 +66,13 @@ def test_parse_publish_date_from_url_path() -> None:
 def test_metadata_date_wins_over_url_date() -> None:
     meta = {"article:published_time": "2026-01-15T08:00:00Z"}
     assert parse_publish_date(meta, "https://example.com/2026/05/26/post/") == date(2026, 1, 15)
+
+
+def test_is_probable_post_url() -> None:
+    from pipeline.scrapers.blog.import_blog import is_probable_post_url
+
+    assert is_probable_post_url("https://www.anthropic.com/news/claude-fable-5")
+    assert is_probable_post_url("https://openai.com/index/abc")
+    assert is_probable_post_url("https://eig.org/ai-and-jobs-the-final-word")
+    assert not is_probable_post_url("https://www.platformer.news")
+    assert not is_probable_post_url("https://openai.com/news")

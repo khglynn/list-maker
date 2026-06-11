@@ -183,3 +183,37 @@ def test_alert_on_failure_rate_silent_when_no_failures(monkeypatch) -> None:
     monkeypatch.setattr(sn, "post_slack", lambda text: posted.append(text))
     sn.alert_on_failure_rate("incremental create", succeeded=10, failed=0)
     assert not posted
+
+
+def test_fetch_entity_rollup_curated_qualifier() -> None:
+    """The HAVING must qualify entities by group threshold OR any curated-show
+    mention — and an empty curated list must degrade to pure old behavior."""
+    from pipeline.sync_notion import fetch_entity_rollup
+
+    class _Cursor:
+        sql = ""
+        params = None
+
+        def execute(self, sql, params=None):
+            _Cursor.sql, _Cursor.params = sql, params
+
+        def fetchall(self):
+            return []
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    class _Conn:
+        def cursor(self):
+            return _Cursor()
+
+    fetch_entity_rollup(_Conn(), [3, 48, 62], {}, 2, [62])
+    assert "HAVING COUNT(*) >= %s" in _Cursor.sql
+    assert "FILTER (WHERE ep.show_id = ANY(%s)) >= 1" in _Cursor.sql
+    assert _Cursor.params == ([3, 48, 62], 2, [62])
+
+    fetch_entity_rollup(_Conn(), [3, 48], {}, 2)
+    assert _Cursor.params == ([3, 48], 2, [])

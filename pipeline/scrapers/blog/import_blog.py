@@ -60,6 +60,18 @@ def canonicalize_url(url: str) -> str:
     return urlunsplit((scheme, netloc, path, urlencode(kept), ""))
 
 
+def is_probable_post_url(url: str) -> bool:
+    """Heuristic: does this URL point at a specific post (pullable) vs a domain
+    root or section index (not)? Two path segments, or one long/sluggy segment,
+    reads as a post: /news/claude-fable-5 yes, /news no, bare domain no."""
+    segments = [s for s in urlsplit(url).path.split("/") if s]
+    if len(segments) >= 2:
+        return True
+    if len(segments) == 1:
+        return "-" in segments[0] or len(segments[0]) >= 20
+    return False
+
+
 def scrape_post(url: str, api_key: str) -> dict:
     """Scrape a post via Firecrawl. Returns {markdown, metadata}."""
     response = httpx.post(

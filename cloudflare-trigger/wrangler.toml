@@ -16,5 +16,6 @@ crons = [
   "0 10 * * 3",   # Wed   — pipeline.yml show_id=1 (Switched on Pop)
   "0 10 * * 5",   # Fri   — pipeline.yml show_id=1 (Switched on Pop)
   "0 12 * * 1",   # Mon   — eval.yml (weekly extraction-quality eval, gated)
-  "0 13 1,15 * *",# 1st+15th — pulse.yml (biweekly Slack health heartbeat)
+  "0 13 * * 1",   # Mon   — blogs.yml (blog pull queue: discover + ingest checked)
+  "30 13 1,15 * *", # 1st+15th — pulse.yml (staggered past blogs so it never reports mid-run)
 ]

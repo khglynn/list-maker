@@ -118,9 +118,9 @@ SHOWS: dict[str, ShowConfig] = {
     # ── Curated sources (medium != "podcast") ───────────────────────────────
     # Ingested item-by-item via save_item.py / the Blog Pull Queue — NOT by the
     # scheduled orchestrator. Pull signal: outbound-link density (posts citing many
-    # resources improve the mentions DB most). notion_min_mentions stays at the
-    # default 2 until the per-show threshold qualifier ships (a 1 here would make
-    # any group sync flood the shared Tech DB with every 1-mention podcast entity).
+    # resources improve the mentions DB most). Their entities surface in Notion at
+    # 1 mention via fetch_entity_rollup's curated-show qualifier — notion_min_mentions
+    # here only gates podcast noise, so the default 2 is correct.
     "openai-blog": ShowConfig(
         slug="openai-blog",
         name="OpenAI Blog",
