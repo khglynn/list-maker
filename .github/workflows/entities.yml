@@ -1,12 +1,12 @@
 name: Entities + Media (AI Daily, Hard Fork, PCHH, Gabfest)
 
 on:
-  # Interim daily trigger (works today). The DURABLE trigger is a Cloudflare Worker
-  # Cron calling workflow_dispatch (see cloudflare-trigger/) — once it's deployed,
-  # remove this schedule: block (public repos auto-disable scheduled crons after
-  # 60 days of inactivity; the Worker doesn't have that limit).
-  schedule:
-    - cron: '0 11 * * *'   # daily 11:00 UTC (~5-6 AM Central)
+  # No schedule: block on purpose — the Cloudflare Worker cron (cloudflare-trigger/)
+  # is the durable trigger (daily 11:00 UTC via workflow_dispatch). GitHub's own
+  # cron silently disables on public repos after 60 idle days; the Worker doesn't,
+  # and a failed dispatch alerts. Verified live 2026-06-11 (GH_PAT = the reused
+  # fine-grained GITHUB_HG_CLAUDE_TOKEN, expires 2027-01-20 — dispatch failures
+  # will Slack when it does).
   workflow_dispatch:
     inputs:
       shows:

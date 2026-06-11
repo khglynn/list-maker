@@ -1,15 +1,10 @@
 name: Pipeline - Update Playlists
 
 on:
-  # Scheduled runs (times in UTC)
-  schedule:
-    # SOP: Wed + Fri at 10:00 UTC (4-5 AM Central) — SOP publishes Tue/Thu
-    - cron: '0 10 * * 3'   # Wednesday
-    - cron: '0 10 * * 5'   # Friday
-    # TAL: Monday at 10:00 UTC — TAL publishes Sunday
-    - cron: '0 10 * * 1'   # Monday
-    # AI Daily: Daily at 11:00 UTC — publishes daily (entity extraction only)
-    # - cron: '0 11 * * *'  # Uncomment when AI Daily automation is ready
+  # No schedule: block on purpose — the Cloudflare Worker cron (cloudflare-trigger/)
+  # is the durable trigger (SOP Wed+Fri, TAL Mon, 10:00 UTC via workflow_dispatch).
+  # GitHub's own cron silently disables on public repos after 60 idle days; the
+  # Worker doesn't, and a failed dispatch alerts. Verified live 2026-06-11.
 
   # Manual trigger from GitHub Actions UI
   workflow_dispatch:

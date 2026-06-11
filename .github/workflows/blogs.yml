@@ -1,10 +1,11 @@
 name: Blog Pull Queue (weekly discover + ingest checked)
 
 on:
-  # Interim weekly trigger. The DURABLE trigger is the Cloudflare Worker cron
-  # calling workflow_dispatch (cloudflare-trigger/) — once GH_PAT is set and a
-  # real dispatch is verified, remove this schedule: block (public repos
-  # auto-disable scheduled crons after 60 idle days; the Worker doesn't).
+  # Interim weekly trigger — the ONE workflow still on a GitHub schedule. The
+  # Worker secrets are live (verified 2026-06-11) but the deployed Worker predates
+  # the blogs cron; once Kevin runs `wrangler deploy` in cloudflare-trigger/,
+  # remove this schedule: block (public repos auto-disable crons after 60 idle
+  # days; the Worker doesn't).
   schedule:
     - cron: '0 13 * * 1'   # Mondays 13:00 UTC (~8 AM Central)
   workflow_dispatch:
