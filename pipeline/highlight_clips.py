@@ -324,6 +324,13 @@ def count_clip_callouts(blocks: list[dict]) -> int:
     return sum(1 for b in blocks if b["type"] == "callout" and "castro " in b["text"])
 
 
+def set_clips_count(token: str, page_id: str, count: int) -> None:
+    """Also called on ADOPT: a crash between callout-insert and this property PATCH
+    would otherwise leave the count stale forever (the adopt path skips insert)."""
+    notion_request("PATCH", f"{NOTION_API}/pages/{page_id}", token,
+                   {"properties": {"Clips": {"number": count}}})
+
+
 # ── manifest ─────────────────────────────────────────────────────────────────
 
 def load_manifest() -> dict:
@@ -399,6 +406,7 @@ def main() -> None:
                 if not blocks:
                     raise RuntimeError("page has no blocks")
                 if existing_highlight(blocks, cid):
+                    set_clips_count(token, ep["page_id"], count_clip_callouts(blocks))
                     manifest[cid] = {"episode_id": ep["episode_id"], "page_id": ep["page_id"],
                                      "title": tags["episode_title"], "adopted": True}
                     save_manifest(manifest)

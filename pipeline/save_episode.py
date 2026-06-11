@@ -340,6 +340,8 @@ def main() -> None:  # noqa: PLR0915 — an orchestrator reads better linear tha
                     raise RuntimeError("page not created by sync")
                 blocks = page_blocks(token, page_id)
                 if existing_highlight(blocks, cid):
+                    from pipeline.highlight_clips import count_clip_callouts, set_clips_count
+                    set_clips_count(token, page_id, count_clip_callouts(blocks))
                     manifest[cid] = {"episode_id": item["episode_id"], "page_id": page_id,
                                      "title": item["tags"]["episode_title"], "adopted": True}
                     save_manifest(manifest)
