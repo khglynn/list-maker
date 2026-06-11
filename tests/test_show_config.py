@@ -52,7 +52,8 @@ def test_curated_shows_have_no_scheduled_import_path() -> None:
 
 def test_curated_set_matches_expected() -> None:
     assert curated_show_slugs() == {
-        "openai-blog", "anthropic-blog", "saved-articles", "agentic-research"
+        "openai-blog", "anthropic-blog", "saved-articles", "agentic-research",
+        "saved-episodes",
     }
 
 

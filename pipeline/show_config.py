@@ -159,13 +159,24 @@ SHOWS: dict[str, ShowConfig] = {
         notion_database_id="982dafa0ad374d618e25207e67860e33",  # shared Tech DB (Option A)
         extraction_type="entity_extraction",
     ),
+    "saved-episodes": ShowConfig(
+        slug="saved-episodes",
+        name="Saved Episodes",
+        show_id=64,
+        content_types=["entities"],
+        medium="episode",  # one-off podcast episodes from shows we don't carry (clips, note links)
+        # No extraction + no entity DB on purpose: these span Science Vs / Pivot /
+        # Las Culturistas etc. — tech-profile mentions from them would pollute the
+        # shared Tech DB. The value is the highlight page, not the mentions.
+        extraction_type=None,
+    ),
 }
 
 
 # Shows whose full transcripts mirror into the Notion "Transcripts" DB
 # (sync_transcripts_notion.py, daily via entities.yml). Single source for the
 # sync default AND data_health's notion-freshness check — keep them in lockstep.
-TRANSCRIPT_NOTION_SHOWS: tuple[str, ...] = ("ai-daily-brief", "hard-fork")
+TRANSCRIPT_NOTION_SHOWS: tuple[str, ...] = ("ai-daily-brief", "hard-fork", "saved-episodes")
 
 # Shows whose full texts mirror into the Notion "Blog Posts" DB (same engine,
 # --target blog-posts). agentic-research is deliberately absent: those docs'

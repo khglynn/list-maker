@@ -80,3 +80,23 @@ def test_sync_target_shows_come_from_show_config() -> None:
 
     assert SYNC_TARGETS["transcripts"]["shows"] == TRANSCRIPT_NOTION_SHOWS
     assert SYNC_TARGETS["blog-posts"]["shows"] == BLOG_NOTION_SHOWS
+
+
+def test_episode_source_name_prefers_oneoff_real_show() -> None:
+    """Saved-episode pages must show the REAL show (Science Vs), not the
+    catch-all; non-oneoff rows keep their configured display name."""
+    from pipeline.sync_transcripts_notion import build_properties, episode_source_name, SYNC_TARGETS
+
+    oneoff = {"episode_id": 9, "title": "T", "publish_date": None, "chars": 5,
+              "show_slug": "saved-episodes", "source_type": "castro_clip",
+              "raw_content": '{"provider": "oneoff_episode", "source_name": "Science Vs"}'}
+    assert episode_source_name(oneoff) == "Science Vs"
+    props = build_properties(oneoff, SYNC_TARGETS["transcripts"])
+    assert props["Show"]["select"]["name"] == "Science Vs"
+    assert props["Source"]["select"]["name"] == "castro_clip"  # honest per-row source
+
+    regular = {"episode_id": 1, "title": "T", "publish_date": None, "chars": 5,
+               "show_slug": "ai-daily-brief", "source_type": "taddy_transcript", "raw_content": None}
+    assert episode_source_name(regular) == "AI Daily"
+    props = build_properties(regular, SYNC_TARGETS["transcripts"])
+    assert props["Source"]["select"]["name"] == "transcript"  # blanket label, NOT source_type

@@ -20,6 +20,7 @@ Batched + rate-limited via the hardened notion_request from sync_notion.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -84,6 +85,21 @@ def display_name(slug: str) -> str:
     return SHOWS[slug].name if slug in SHOWS else slug
 
 
+def episode_source_name(ep: dict) -> str:
+    """The Show/Source select for a page. One-off saved episodes carry their REAL
+    show in raw_content.source_name ("Science Vs", "Pivot") — a page labeled
+    'Saved Episodes' would hide the thing Kevin actually wants to see."""
+    raw = ep.get("raw_content")
+    if raw:
+        try:
+            name = (json.loads(raw) if isinstance(raw, str) else raw).get("source_name")
+            if name:
+                return str(name)[:100]
+        except (ValueError, AttributeError):
+            pass
+    return display_name(ep["show_slug"])
+
+
 def count_links_out(text: str) -> int:
     """Outbound-link density — Kevin's pull-worthiness signal for blog posts."""
     import re
@@ -126,9 +142,16 @@ def paragraph_block(content: str) -> dict:
     }
 
 
+INTRO_BY_SOURCE = {
+    "castro_clip": "Clip excerpt — the full episode is not ingested.",
+    "show_notes": "Episode show notes — the full episode is not ingested.",
+}
+
+
 def build_blocks(ep: dict, transcript: str, source_label: str = "transcript") -> list[dict]:
-    show = display_name(ep["show_slug"])
-    kind = "Full episode transcript." if source_label == "transcript" else "Full post text."
+    show = episode_source_name(ep)
+    kind = INTRO_BY_SOURCE.get(ep.get("source_type") or "") or (
+        "Full episode transcript." if source_label == "transcript" else "Full post text.")
     intro = f"{show} — {ep['publish_date'] or 'date unknown'}. {kind}"
     return [paragraph_block(intro)] + [paragraph_block(c) for c in chunk_text(transcript)]
 
@@ -136,12 +159,17 @@ def build_blocks(ep: dict, transcript: str, source_label: str = "transcript") ->
 def build_properties(ep: dict, target: dict) -> dict:
     props = {
         "Name": {"title": [{"text": {"content": (ep["title"] or "Untitled")[:2000]}}]},
-        target["group_prop"]: {"select": {"name": display_name(ep["show_slug"])}},
+        target["group_prop"]: {"select": {"name": episode_source_name(ep)}},
         target["id_prop"]: {"number": ep["episode_id"]},
         "Characters": {"number": ep["chars"]},
     }
     if target["source_label"]:
-        props["Source"] = {"select": {"name": target["source_label"]}}
+        label = target["source_label"]
+        if ep.get("show_slug") == "saved-episodes" and ep.get("source_type"):
+            # One-off pages keep their honest per-row source (taddy_transcript /
+            # castro_clip / show_notes) instead of the target's blanket label.
+            label = ep["source_type"]
+        props["Source"] = {"select": {"name": label}}
     if ep["publish_date"]:
         props["Date"] = {"date": {"start": str(ep["publish_date"])}}
     if target["blog_props"]:
@@ -196,7 +224,8 @@ def find_unsynced(conn, shows: list[str], limit: int) -> list[dict]:
     # Don't filter empty transcripts here — let them enter the loop so they're explicitly
     # logged + counted (skipped without marking synced) instead of silently excluded.
     sql = """
-        SELECT ep.id AS episode_id, ep.title, ep.publish_date, ep.url, s.slug AS show_slug,
+        SELECT ep.id AS episode_id, ep.title, ep.publish_date, ep.url, ep.raw_content,
+               s.slug AS show_slug, et.source_type,
                length(et.transcript_text) AS chars, et.transcript_text
         FROM episode_transcripts et
         JOIN episodes ep ON ep.id = et.episode_id
