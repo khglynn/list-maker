@@ -27,7 +27,7 @@ from thefuzz import fuzz
 from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import ensure_spotify_token  # noqa: E402
+from common import SPOTIFY_SCOPE, ensure_spotify_token  # noqa: E402
 
 # =============================================================================
 # Constants
@@ -57,9 +57,11 @@ def get_spotify_client(cache_path: Optional[str] = None) -> spotipy.Spotify:
         client_id=os.getenv("SPOTIFY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
         redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8080/callback"),
-        scope="user-library-read",
+        scope=SPOTIFY_SCOPE,  # the shared-cache union — never a per-script scope
         cache_path=resolved_cache,
-        open_browser=False,
+        # Browser only in a real terminal: local re-auth is one click; CI never
+        # reaches the interactive path (ensure_spotify_token raises first).
+        open_browser=sys.stdin.isatty(),
     )
     ensure_spotify_token(auth_manager)
     return spotipy.Spotify(auth_manager=auth_manager)

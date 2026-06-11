@@ -80,6 +80,18 @@ def get_db_connection():
     return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
 
 
+# THE canonical Spotify scope — the UNION of every script's needs. All three
+# get_spotify_client builders share ONE cache file; if they request different
+# scopes, whichever script authenticates last mints a token the others reject
+# (spotipy refuses a cached token whose scope doesn't cover the request). That
+# exact failure hit on 2026-06-11: a spotify_match re-auth wrote a
+# user-library-read-only token and sync_playlist went dark. One scope, one cache.
+SPOTIFY_SCOPE = (
+    "user-library-read playlist-read-private "
+    "playlist-modify-public playlist-modify-private"
+)
+
+
 def ensure_spotify_token(auth_manager) -> None:
     """Fail fast on a missing/expired Spotify token instead of hanging on spotipy's
     interactive auth flow.

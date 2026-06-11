@@ -139,3 +139,21 @@ def test_ensure_spotify_token_missing_interactive_passes(monkeypatch) -> None:
     monkeypatch.setattr("sys.stdin", _FakeStdin(tty=True))
     am = _FakeAuthManager(token=None, expired=True)
     ensure_spotify_token(am)  # no raise
+
+
+def test_spotify_builders_share_canonical_scope() -> None:
+    """Three scripts share ONE token cache; per-script scopes mint tokens the
+    others reject (the 2026-06-11 incident: a user-library-read re-auth broke
+    the playlist sync). Source-shape guard: every SpotifyOAuth builder must use
+    common.SPOTIFY_SCOPE — a literal scope= string anywhere is the bug returning."""
+    from pathlib import Path
+
+    builders = [
+        "pipeline/sync_playlist.py",
+        "pipeline/spotify_match.py",
+        "pipeline/scrapers/tal/scoring_match.py",
+    ]
+    for rel in builders:
+        src = Path(rel).read_text()
+        assert "scope=SPOTIFY_SCOPE" in src, f"{rel}: must use the canonical scope"
+        assert 'scope="' not in src, f"{rel}: literal scope string found"

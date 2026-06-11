@@ -24,7 +24,7 @@ from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import ensure_spotify_token  # noqa: E402
+from common import SPOTIFY_SCOPE, ensure_spotify_token  # noqa: E402
 
 
 # Playlist IDs by show
@@ -50,9 +50,11 @@ def get_spotify_client():
         client_id=os.getenv("SPOTIFY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
         redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8080/callback"),
-        scope="playlist-modify-public playlist-modify-private",
+        scope=SPOTIFY_SCOPE,  # the shared-cache union — never a per-script scope
         cache_path=cache_path,
-        open_browser=False,
+        # Browser only in a real terminal: local re-auth is one click; CI never
+        # reaches the interactive path (ensure_spotify_token raises first).
+        open_browser=sys.stdin.isatty(),
     )
     ensure_spotify_token(auth_manager)
     return spotipy.Spotify(auth_manager=auth_manager)
