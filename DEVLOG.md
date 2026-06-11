@@ -4,6 +4,27 @@ Chronological session journal. Most recent at top. Never delete entries.
 
 ---
 
+## 2026-06-10/11 — Beyond podcasts: curated sources + the Notion-staleness fix
+
+**Trigger:** Kevin's ethical-AI-use talk (June 11) — he wanted blog posts, one-off articles, and his research-run citations in the same mentions DB, plus he caught AI Daily's Notion mirror stuck at June 6.
+
+**Root cause of the staleness (the load-bearing find):** `sync_transcripts_notion.py` was a one-time backfill never added to any schedule — the daily pipeline ran green for 4 days while the Transcripts DB silently froze. The failure class: *Notion is a destination; a green run only proves data reached Neon.* Fixed three ways: the sync now runs daily in `entities.yml` (both mirrors); a new `check_notion_sync_freshness` health check fails when any mirror drifts >2 days; a Codex finding made the sync exit non-zero when episodes fail (no more green-step-with-lost-work).
+
+**Shipped (commits `67fedfa`→`77dfdda`+):**
+- **Curated sources** (shows 60–63, `medium` + `importer` ShowConfig fields, gabfest slug-hack generalized): openai-blog, anthropic-blog, saved-articles, agentic-research → shared Tech DB. Exempt from staleness/feed checks (no cadence). Drift tests rewritten to assert full DB→show-set group maps.
+- **`import_blog.py`** storage primitive (Firecrawl; `canonicalize_url` guards the episodes.url dedup key; thin-scrape guard; metadata→URL-path→fallback date parsing) + **`save_item.py`** ("save this article": domain→show resolution, per-episode extraction, entity + mirror syncs; PDFs → Obsidian research folder; `--podcast` explicitly deferred).
+- **Blog Pull Queue** (Notion DB + `build_pull_queue.py` + weekly `blogs.yml` + Worker cron entry): discovery from the mentions DB, Firecrawl enrichment, **Links Out = the pull signal**, Kevin's checkboxes = ground truth for a future auto-pull rule. First build: 30 candidates, 25 queued.
+- **Curated Notion qualifier** in `fetch_entity_rollup`: curated mentions qualify at 1, podcasts still need min_mentions — validated live (Fable 5 release post yielded FrontierCode/CursorBench/ViBench benchmarks + the system card, all in Notion at 1 mention).
+- **Blog Posts Notion DB** (parametrized `sync_transcripts_notion --target`; URL + Links Out properties).
+- **Research importer** (`import_research.py`): obsidian:// URI keys (stable + clickable), infra-file filter (validation caught CLAUDE.md/backlogs polluting the candidate set), local-only.
+- **`docs/principles.md`**: the 4 research guides distilled into the repo (legibility, automation planes, provenance, dependency hygiene) + `docs/curation-runbook.md`.
+
+**Validated end-to-end:** MIT TR jobs article + Fable 5 release + OpenAI "Built to benefit everyone" → stored, extracted (22 sane mentions, conf 0.90–0.99), entity pages + full-text mirror pages live; re-save = refresh, no dup.
+
+**Apple Notes mining handed off** to Kevin's preso session (export JSONL of all 371 notes in `pipeline/_cache/apple-notes/`).
+
+**Pending Kevin:** GH_PAT Worker secret (still!); `wrangler deploy` of the new Worker cron (deploy gate); full research-corpus GO (397→~filtered count files, projects 1–3k new Tech-DB entities); Spotify re-auth (music workstream, unchanged).
+
 ## 2026-06-06 — Durable pipeline rebuild: Workstream A (hardening) complete
 
 **What happened:** Hardened the pipeline into a durable, self-healing, tested system under a `/loop` autonomous run with a Codex + triple-check gate on every step. Workstream A done except A4 (deferred — needs a schema migration):

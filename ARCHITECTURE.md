@@ -1,10 +1,10 @@
 # Architecture — list-maker
 
-*Last updated: 2026-06-06. The data flow + the durable-pipeline design. Live task state → `NOW.md`; history → `DEVLOG.md`; full rebuild spec → `claude-plans/2026-06-06-durable-pipeline-rebuild.md`.*
+*Last updated: 2026-06-11. The data flow + the durable-pipeline design. Live task state → `NOW.md`; history → `DEVLOG.md`; full rebuild spec → `claude-plans/2026-06-06-durable-pipeline-rebuild.md`; engineering principles → `docs/principles.md`.*
 
 ## What this is
 
-A pipeline that extracts recommendations from podcasts and routes them to the right destination. **Neon (Postgres) is the source of truth** — everything else (Notion, Spotify) is a downstream sync.
+A pipeline that extracts recommendations from podcasts — and, since 2026-06-11, from curated blog posts, one-off saved articles, and local research-run docs — and routes them to the right destination. **Neon (Postgres) is the source of truth** — everything else (Notion, Spotify) is a downstream sync.
 
 ## Data flow
 
@@ -13,11 +13,13 @@ Source                      Extract                 Store (Neon)        Sync to
 ──────────────────────────────────────────────────────────────────────────────────
 Taddy API (transcripts) ┐
 podcast websites        ┼─► scrapers/ ─► entity/song ─► Neon ──┬─► Notion (tech + media)
-                        ┘    extraction     rows             └─► Spotify (music)
+blog posts (curated)    ┼    extraction     rows             ├─► Notion full-text mirrors
+research-run docs       ┘                                    └─► Spotify (music)
 ```
 
 - **Music shows** (SOP, TAL): song data scraped from the show's website → matched to Spotify → `songs` rows → one Spotify playlist per show.
 - **Tech/media shows** (AI Daily, Hard Fork; PCHH, Culture Gabfest): Taddy transcripts → LLM entity extraction → `ai_entities` / `ai_mentions` → Notion.
+- **Curated sources** (`medium != "podcast"`: openai-blog, anthropic-blog, saved-articles, agentic-research): no feed, no cadence — items are pulled deliberately via `save_item.py` or the **Blog Pull Queue** (a Notion DB; weekly `blogs.yml` discovers candidates from the mentions DB, enriches with word count + **Links Out** — outbound-link density is the pull signal — and ingests rows Kevin checked). Their entities qualify for Notion at **1 mention** (`fetch_entity_rollup`'s curated qualifier); podcast chatter still needs `min_mentions`. PDFs/long reports skip the DB and save into the Obsidian research folder.
 
 Cascading source strategy (cheapest first): website show-notes → free transcripts → Taddy transcript API → Whisper (last resort). Don't pay to transcribe what's already public.
 
@@ -32,7 +34,9 @@ Cascading source strategy (cheapest first): website show-notes → free transcri
 | Switched on Pop | `sop` | music | 699 | 2026-06-02 | Spotify |
 | This American Life | `tal` | music | 889 | 2026-05-10 | Spotify |
 
-**Shared Notion DBs (Option A):** tech (AI Daily + Hard Fork) and media (PCHH + Gabfest) each share one DB — entities are global, deduped across shows, tagged with a "Shows" multi-select. **Gabfest has no transcripts** (Taddy won't transcribe it — iHeart rights); it extracts from Megaphone RSS show-notes via the orchestrator's `COALESCE(transcript_text, description_body)` source path. PCHH + Gabfest show full-archive episode counts; scoped-recent backfill has extracted/synced 52 + 17 so far — full archive (~11h/$7.50) deferred to Kevin.
+**Curated sources (2026-06-11):** `openai-blog` (60), `anthropic-blog` (61), `saved-articles` (62, one-off catch-all), `agentic-research` (63, local Obsidian docs keyed by `obsidian://` URI — vault-relative, never in CI). All feed the shared Tech DB; full blog texts also mirror to the Notion **Blog Posts** DB (`37c0501e…93f5`); candidates queue in the **Blog Pull Queue** DB (`37c0501e…1f53`). Curated shows are exempt from staleness/feed health checks (no cadence to be late against).
+
+**Shared Notion DBs (Option A):** tech (AI Daily + Hard Fork + the curated sources) and media (PCHH + Gabfest) each share one DB — entities are global, deduped across shows, tagged with a "Shows" multi-select. **Heads-up:** a `--full-reset` of the tech group now also wipes/recreates curated-source pages — the blast radius grew with the group. **Gabfest has no transcripts** (Taddy won't transcribe it — iHeart rights); it extracts from Megaphone RSS show-notes via the orchestrator's `COALESCE(transcript_text, description_body)` source path. PCHH + Gabfest show full-archive episode counts; scoped-recent backfill has extracted/synced 52 + 17 so far — full archive (~11h/$7.50) deferred to Kevin.
 
 ## Neon schema (key tables)
 
@@ -51,8 +55,12 @@ Cascading source strategy (cheapest first): website show-notes → free transcri
 - `pipeline/scrapers/{sop,tal,ai_daily,taddy}/` — per-show extractors.
 - `pipeline/scrapers/ai_daily/extract_entities.py` — LLM extraction (gpt-4.1-mini); pure sanitizers enforce the data contract (confidence ∈ [0,1], required fields, valid entity_type).
 - `pipeline/scrapers/ai_daily/load_entity_batch.py` — batch → Neon loader; idempotent on (show_id, batch_name) via `delete_existing_run`.
-- `pipeline/sync_notion.py` / `pipeline/sync_playlist.py` — Neon → Notion (entities) / Spotify.
-- `pipeline/sync_transcripts_notion.py` — Neon → Notion "Transcripts" DB (tech shows); idempotent/resumable (NULL-marker gated, adopt-don't-duplicate on resume), chunked + rate-limited.
+- `pipeline/sync_notion.py` / `pipeline/sync_playlist.py` — Neon → Notion (entities) / Spotify. Entity qualifier: group `min_mentions` OR any curated-source mention.
+- `pipeline/sync_transcripts_notion.py` — Neon → Notion full-text mirrors, parametrized by `--target`: `transcripts` (tech shows) | `blog-posts` (curated; + URL/Links Out properties). Idempotent/resumable (NULL-marker gated, adopt-don't-duplicate on resume), chunked + rate-limited; runs daily in `entities.yml`.
+- `pipeline/save_item.py` — "save this article": resolve show by domain → scrape/store → extract that episode → sync entities + blog mirror. `--from-queue` ingests checked Pull Queue rows.
+- `pipeline/build_pull_queue.py` — Blog Pull Queue: `--build` discovers candidates from the mentions DB + enriches (Firecrawl); `--ingest` pulls checked rows. Weekly via `blogs.yml`.
+- `pipeline/scrapers/blog/import_blog.py` — blog storage primitive: Firecrawl scrape, `canonicalize_url` (the episodes.url dedup key), thin-scrape guard, metadata/URL-path date parsing.
+- `pipeline/scrapers/research/import_research.py` — local-only Agentic Research ingester (obsidian:// keys, infra-file filter).
 - `pipeline/search_transcripts.py` — Postgres FTS over transcripts (websearch_to_tsquery + ts_headline snippets).
 - `pipeline/data_health.py` — read-only health checks (transcript coverage, episode freshness/staleness, mention integrity…); Slacks on a failed check.
 - `evals/extraction/` — extraction eval harness (deterministic scorers, frozen baseline + gold fixtures, gated runner). The honest gradient for the one LLM step; see `evals/README.md`.
@@ -73,11 +81,11 @@ Built to run unattended and self-heal:
 | A7 | Staleness alert — a silently-stopped feed becomes loud | `check_episode_freshness` |
 | A8 | Data contracts pinned in tests | `tests/` |
 
-Since shipped: A4 per-entity Notion sync state (migration 003 + `mark_sync_failed`); A7's Slack send (`data_health.py` posts on a failed check). Still deferred (low-value): A5b print→logging sweep; A6b aggregated failed-steps summary.
+Since shipped: A4 per-entity Notion sync state (migration 003 + `mark_sync_failed`); A7's Slack send (`data_health.py` posts on a failed check); **`check_notion_sync_freshness` (2026-06-11)** — Notion is a destination, and a green pipeline run only proves data reached Neon. The Transcripts DB silently froze for 4 days in June 2026 because its sync was a one-time backfill nobody scheduled; now the sync runs daily in `entities.yml` and the health check fails loudly if either Notion mirror (or entity pages) drifts >2 days behind Neon. Still deferred (low-value): A5b print→logging sweep; A6b aggregated failed-steps summary.
 
 ## Scheduling — the durable control plane (deployed 2026-06-07)
 
-A **Cloudflare Worker Cron** (`cloudflare-trigger/`, trimm account) calls GitHub `workflow_dispatch` for all three workflows — entities daily, music Mon/Wed/Fri, eval Mon — so GitHub's own `schedule:` cron (which silently disables after 60 idle days on a public repo) is no longer the trigger. A failed dispatch posts to Slack (the trigger itself is observable). Every run also Slacks on success / failure / staleness. Chosen over Inngest (no rewrite, no new account) per the rebuild plan.
+A **Cloudflare Worker Cron** (`cloudflare-trigger/`, trimm account) calls GitHub `workflow_dispatch` for the workflows — entities daily, music Mon/Wed/Fri, eval Mon, **blogs (pull queue) Mon**, pulse 1st/15th — so GitHub's own `schedule:` cron (which silently disables after 60 idle days on a public repo) is no longer the trigger. A failed dispatch posts to Slack (the trigger itself is observable). Every run also Slacks on success / failure / staleness. Chosen over Inngest (no rewrite, no new account) per the rebuild plan.
 
 *Pending Kevin: set the `GH_PAT` Worker secret, then the `schedule:` blocks come off `pipeline.yml` + `entities.yml` (steps in `cloudflare-trigger/README.md`). Until then the GitHub schedules stay active — no gap.*
 

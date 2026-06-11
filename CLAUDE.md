@@ -122,6 +122,8 @@ list-maker/
 
 ## Current Status (2026-06-07 — all 6 shows live)
 
+**2026-06-11 update — beyond podcasts:** Four curated sources added (`openai-blog`, `anthropic-blog`, `saved-articles`, `agentic-research` — shows 60–63, shared Tech DB). Items are pulled deliberately, never crawled: `pipeline/save_item.py --url <article>` saves one; the **Blog Pull Queue** Notion DB collects candidates weekly (`blogs.yml`, Mon) ranked by Links Out — Kevin checks boxes, the next run ingests. Full blog texts mirror to the **Blog Posts** Notion DB; research docs stay canonical in Obsidian (mentions only). The Transcripts-DB staleness gap is fixed (sync now daily in `entities.yml` + a `notion_sync_freshness` health check). See `docs/curation-runbook.md` + `docs/principles.md`.
+
 **2026-06-07 update:** All 6 shows auto-process end-to-end. Pipeline hardened (Workstream A). **Option A shared Notion DBs:** entities are global (deduped across shows, tagged with a "Shows" multi-select), so AI Daily + Hard Fork share one **Tech DB** (`982dafa0…`) and PCHH + Culture Gabfest share one **Media DB** (`3780501e…94657`). A media extraction profile was added (one extractor, two profiles — tech vs media). Counts below verified 2026-06-07.
 
 | Show | Type | Episodes | Items | Destination / status |
