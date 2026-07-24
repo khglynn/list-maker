@@ -13,11 +13,15 @@
 > actually dying on `RuntimeError: Spotify token missing/expired` — and the
 > failure-Slack step never fired. Fixed: workflow-level `defaults: run: shell: bash`
 > across all five workflows; dead `schedule:`-event branches deleted.
-> **⏸ PENDING KEVIN (the underlying failure is still live):** the Spotify token is
-> expired — run `python spotify_match.py --show-id 1 --limit 1` locally to re-auth in
-> the browser, then update the `SPOTIFY_CACHE_JSON` GitHub secret
-> from `.spotify_cache/.cache` (per CLAUDE.md:155). Until then the music pipeline fails
-> fast — but now VISIBLY (red run + Slack ping).
+> **✅ ALL RESOLVED same day (2026-07-24 late morning):** Worker redeployed with the
+> corrected crons (version `3ccd1176`, all 5 schedules verified in deploy output). The
+> Spotify token turned out fine LOCALLY (silent refresh) — only the GitHub secret copy
+> was stale; refreshed cache pushed to `SPOTIFY_CACHE_JSON` (source of truth:
+> `~/DevKev/personal/spotify-bulk-actions-mcp/.spotify_cache/.cache` — shared with the
+> spotify-bulk-actions project) and a live dispatched run (30107449205) synced **226
+> tracks to SOP — the first real successful sync since 06-11**, six-week backlog
+> flushed in one run, pipefail visibly active. Monday brings TAL's first-ever
+> auto-sync.
 
 > **▶ LATEST (2026-06-11 late session): clips + one-offs SHIPPED.** `highlight_clips.py` (20 in-DB Castro clips → audio highlights w/ transcript anchor links, 100% anchored) + `save_episode.py` (Saved Episodes show 64: 31 one-off episodes — 19 full Taddy transcripts, 9 clip excerpts, 3 show-notes; Taddy search needs `searchId` + nested `uuid`, terms ≤8 words; Notion selects reject commas). Final rebuild pass was IN FLIGHT at session end (stale adopted pages healed: archived 19, manifest pruned, re-run launched) — **verify: all 31 show-64 episodes paged + highlights anchored, no dupes** (`pipeline/_cache/podcast-clips/manifest.json`). 2 junk show-64 rows (garbage castro titles, pre-fix) need find+delete (Kevin OK). UX renames live: Tech/Media DBs say Sources/Items/URL. Notes spelunk queued 8 articles (incl. free a16z piece). Spotify: union scope shipped; Kevin's one browser consent + secret re-push + backlog flush remain.
 
