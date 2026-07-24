@@ -37,16 +37,18 @@ const REPO = "khglynn/list-maker";
 const SCHEDULE = {
   "0 11 * * *": { workflow: "entities.yml", inputs: {} },
   // One cron, two music shows (free-plan 5-cron cap): the fire day picks the show.
-  // getUTCDay(): Mon=1 → TAL (show_id 2); Wed=3 / Fri=5 → SOP (show_id 1).
-  "0 10 * * 1,3,5": {
+  // Cron days use CLOUDFLARE's 1=Sun..7=Sat convention (Mon=2/Wed=4/Fri=6 — see
+  // wrangler.toml); the JS check below uses Date's own Mon=1. With the cron actually
+  // firing on real Mon/Wed/Fri, getUTCDay()===1 correctly selects TAL on Mondays.
+  "0 10 * * 2,4,6": {
     workflow: "pipeline.yml",
     inputsFor: (event) => ({
       show_id: new Date(event.scheduledTime).getUTCDay() === 1 ? "2" : "1",
     }),
   },
-  "0 12 * * 1": { workflow: "eval.yml", inputs: {} },                   // Mon — weekly eval
-  "0 13 * * 1": { workflow: "blogs.yml", inputs: {} },                  // Mon — blog pull queue
-  "30 13 1,15 * *": { workflow: "pulse.yml", inputs: {} },              // 1st+15th — pulse
+  "0 12 * * 2": { workflow: "eval.yml", inputs: {} },                   // Mon — weekly eval
+  "0 20 * * 2": { workflow: "blogs.yml", inputs: {} },                  // Mon ~3pm CT — blog pull queue
+  "15 20 1,15 * *": { workflow: "pulse.yml", inputs: {} },              // 1st+15th ~3:15pm CT — pulse
 };
 
 // Best-effort failure alert. Logs always; posts to Slack if the webhook is set. Never

@@ -7,6 +7,12 @@ name: Extraction Eval (tech shows)
 # No `schedule:` block on purpose: the durable trigger is the Cloudflare Worker
 # (cloudflare-trigger/), which dispatches this weekly. GitHub disables public-repo crons
 # after 60 idle days — the exact trap the rest of this pipeline was moved off of.
+# shell: bash turns on pipefail for run steps — without it, `cmd | tee` reports tee's
+# exit code and a crashed script reads as "success" (bit pipeline.yml for six weeks).
+defaults:
+  run:
+    shell: bash
+
 on:
   workflow_dispatch:
     inputs:

@@ -1,5 +1,11 @@
 name: Blog Pull Queue (weekly discover + ingest checked)
 
+# shell: bash turns on pipefail for run steps — without it, `cmd | tee` reports tee's
+# exit code and a crashed script reads as "success" (bit pipeline.yml for six weeks).
+defaults:
+  run:
+    shell: bash
+
 on:
   # No schedule: block on purpose — the Cloudflare Worker cron (cloudflare-trigger/)
   # is the durable trigger (Mon 13:00 UTC via workflow_dispatch). GitHub's own cron

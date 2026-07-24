@@ -85,9 +85,9 @@ Since shipped: A4 per-entity Notion sync state (migration 003 + `mark_sync_faile
 
 ## Scheduling — the durable control plane (deployed 2026-06-07)
 
-A **Cloudflare Worker Cron** (`cloudflare-trigger/`, trimm account) calls GitHub `workflow_dispatch` for the workflows — entities daily, music Mon/Wed/Fri, eval Mon, **blogs (pull queue) Mon**, pulse 1st/15th — so GitHub's own `schedule:` cron (which silently disables after 60 idle days on a public repo) is no longer the trigger. A failed dispatch posts to Slack (the trigger itself is observable). Every run also Slacks on success / failure / staleness. Chosen over Inngest (no rewrite, no new account) per the rebuild plan.
+A **Cloudflare Worker Cron** (`cloudflare-trigger/`, trimm account) calls GitHub `workflow_dispatch` for the workflows — entities daily, music Mon/Wed/Fri, eval Mon, **blogs (pull queue) Mon ~3pm CT**, pulse 1st/15th ~3:15pm CT — so GitHub's own `schedule:` cron (which silently disables after 60 idle days on a public repo) is no longer the trigger. A failed dispatch posts to Slack (the trigger itself is observable). Every run also Slacks on success / failure / staleness. Chosen over Inngest (no rewrite, no new account) per the rebuild plan.
 
-*Live as of 2026-06-11: `GH_PAT` = the reused fine-grained `GITHUB_HG_CLAUDE_TOKEN` (expires 2027-01-20 — dispatch failures alert at the trigger when it does); all `schedule:` blocks removed — the Worker is the only trigger. **Constraint learned the hard way: Workers Free caps a Worker at 5 cron triggers** (a 7-cron deploy failed), so music runs on ONE Mon/Wed/Fri cron and worker.js picks the show by fire day.*
+*Live as of 2026-06-11: `GH_PAT` = the reused fine-grained `GITHUB_HG_CLAUDE_TOKEN` (expires 2027-01-20 — dispatch failures alert at the trigger when it does); all `schedule:` blocks removed — the Worker is the only trigger. **Constraint learned the hard way: Workers Free caps a Worker at 5 cron triggers** (a 7-cron deploy failed), so music runs on ONE Mon/Wed/Fri cron and worker.js picks the show by fire day. **Second constraint learned the hard way (2026-07-24): Cloudflare cron day-of-week is 1=Sunday..7=Saturday, NOT standard cron's 0=Sunday — the original 1,3,5 values fired Sun/Tue/Thu for six weeks and TAL never auto-synced. Cloudflare Mon=2/Wed=4/Fri=6.***
 
 ## Quality gradient — the eval harness
 

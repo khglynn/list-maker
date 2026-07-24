@@ -1,5 +1,13 @@
 name: Pipeline - Update Playlists
 
+# Without an explicit bash shell, GitHub runs steps with bash -e but NOT -o pipefail —
+# so `python ... | tee out.txt` reports tee's exit (0) and a crashed pipeline reads as
+# "success" (masked every scheduled Spotify-auth failure 2026-06-11→07-24, and the
+# failure-Slack step never fired). shell: bash turns on pipefail for every run step.
+defaults:
+  run:
+    shell: bash
+
 on:
   # No schedule: block on purpose — the Cloudflare Worker cron (cloudflare-trigger/)
   # is the durable trigger (SOP Wed+Fri, TAL Mon, 10:00 UTC via workflow_dispatch).
@@ -35,21 +43,11 @@ jobs:
 
       - name: Determine show to run
         id: show
+        # Every trigger arrives as workflow_dispatch (Cloudflare Worker cron or manual UI)
+        # since the 2026-06-11 migration removed schedule: blocks — no day-of-week fallback.
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "show_id=${{ inputs.show_id }}" >> $GITHUB_OUTPUT
-            echo "dry_run=${{ inputs.dry_run }}" >> $GITHUB_OUTPUT
-          else
-            # Scheduled run - determine show from day of week
-            DOW=$(date -u +%u)  # 1=Mon, 2=Tue, ..., 7=Sun
-            case $DOW in
-              1) echo "show_id=2" >> $GITHUB_OUTPUT ;;  # Monday = TAL
-              3) echo "show_id=1" >> $GITHUB_OUTPUT ;;  # Wednesday = SOP
-              5) echo "show_id=1" >> $GITHUB_OUTPUT ;;  # Friday = SOP
-              *) echo "show_id=1" >> $GITHUB_OUTPUT ;;  # Fallback
-            esac
-            echo "dry_run=false" >> $GITHUB_OUTPUT
-          fi
+          echo "show_id=${{ inputs.show_id }}" >> $GITHUB_OUTPUT
+          echo "dry_run=${{ inputs.dry_run }}" >> $GITHUB_OUTPUT
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -155,7 +153,7 @@ jobs:
             -d "{\"text\": \":rotating_light: *list-maker: ${SHOW_NAME} pipeline failed*\n<${RUN_URL}|View logs>\"}"
 
       - name: Create issue on failure
-        if: failure() && github.event_name == 'schedule'
+        if: failure()  # all triggers — 'schedule' events no longer exist post Worker migration
         uses: actions/github-script@v7
         with:
           script: |

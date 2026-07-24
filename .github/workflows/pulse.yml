@@ -8,6 +8,12 @@ name: Pulse Report (health heartbeat)
 #
 # workflow_dispatch only (no schedule:) — the Cloudflare Worker drives the cadence
 # (1st + 15th), same as the rest of the pipeline, so there's no GitHub 60-day-disable.
+# shell: bash turns on pipefail for run steps — without it, `cmd | tee` reports tee's
+# exit code and a crashed script reads as "success" (bit pipeline.yml for six weeks).
+defaults:
+  run:
+    shell: bash
+
 on:
   workflow_dispatch:
 

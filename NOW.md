@@ -1,6 +1,23 @@
 # NOW — list-maker
 
-**Last updated:** 2026-06-11 (~03:00)
+**Last updated:** 2026-07-24
+
+> **⚠️ 2026-07-24 — two silent failures fixed (found by an eachie-side error sweep):**
+> (1) **Cloudflare cron day-of-week is 1=Sunday..7=Saturday** — the 06-11 crons assumed
+> standard 0=Sunday, so every weekday cron fired ONE DAY EARLY (Sun/Tue/Thu) for six
+> weeks and **TAL never auto-synced once** (worker.js's Monday check never matched a
+> real fire day). Fixed: Mon=2/Wed=4/Fri=6 in wrangler.toml + worker.js; blogs moved to
+> Mon 20:00 UTC and pulse to 20:15 UTC 1st/15th (Kevin's ~3pm-CT report window).
+> (2) **Missing `shell: bash` meant no pipefail** — `python run_pipeline.py | tee ...`
+> reported tee's exit 0, so every scheduled run since 06-11 read "success" while
+> actually dying on `RuntimeError: Spotify token missing/expired` — and the
+> failure-Slack step never fired. Fixed: workflow-level `defaults: run: shell: bash`
+> across all five workflows; dead `schedule:`-event branches deleted.
+> **⏸ PENDING KEVIN (the underlying failure is still live):** the Spotify token is
+> expired — run `python spotify_match.py --show-id 1 --limit 1` locally to re-auth in
+> the browser, then update the `SPOTIFY_CACHE_JSON` GitHub secret
+> from `.spotify_cache/.cache` (per CLAUDE.md:155). Until then the music pipeline fails
+> fast — but now VISIBLY (red run + Slack ping).
 
 > **▶ LATEST (2026-06-11 late session): clips + one-offs SHIPPED.** `highlight_clips.py` (20 in-DB Castro clips → audio highlights w/ transcript anchor links, 100% anchored) + `save_episode.py` (Saved Episodes show 64: 31 one-off episodes — 19 full Taddy transcripts, 9 clip excerpts, 3 show-notes; Taddy search needs `searchId` + nested `uuid`, terms ≤8 words; Notion selects reject commas). Final rebuild pass was IN FLIGHT at session end (stale adopted pages healed: archived 19, manifest pruned, re-run launched) — **verify: all 31 show-64 episodes paged + highlights anchored, no dupes** (`pipeline/_cache/podcast-clips/manifest.json`). 2 junk show-64 rows (garbage castro titles, pre-fix) need find+delete (Kevin OK). UX renames live: Tech/Media DBs say Sources/Items/URL. Notes spelunk queued 8 articles (incl. free a16z piece). Spotify: union scope shipped; Kevin's one browser consent + secret re-push + backlog flush remain.
 

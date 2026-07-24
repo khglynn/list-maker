@@ -1,5 +1,11 @@
 name: Entities + Media (AI Daily, Hard Fork, PCHH, Gabfest)
 
+# shell: bash turns on pipefail for run steps — without it, `cmd | tee` reports tee's
+# exit code and a crashed script reads as "success" (bit pipeline.yml for six weeks).
+defaults:
+  run:
+    shell: bash
+
 on:
   # No schedule: block on purpose — the Cloudflare Worker cron (cloudflare-trigger/)
   # is the durable trigger (daily 11:00 UTC via workflow_dispatch). GitHub's own
