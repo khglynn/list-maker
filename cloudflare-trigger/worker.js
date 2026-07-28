@@ -35,18 +35,23 @@ const REPO = "khglynn/list-maker";
 // Keeping the schedule here, in one place, is the point: the Worker is the single
 // control plane. Changing cadence means editing this map + wrangler.toml together.
 const SCHEDULE = {
-  "0 11 * * *": { workflow: "entities.yml", inputs: {} },
+  // 2026-07-27: everything consolidated into Kevin's ~3pm-CT anchor window so
+  // non-critical Slack pings (these workflows notify on failure) arrive at a
+  // predictable hour instead of pre-dawn. Content lands ~3-4pm now, not ~6am —
+  // Kevin's accepted tradeoff.
+  "30 20 * * *": { workflow: "entities.yml", inputs: {} },              // daily ~3:30pm CT
   // One cron, two music shows (free-plan 5-cron cap): the fire day picks the show.
   // Cron days use CLOUDFLARE's 1=Sun..7=Sat convention (Mon=2/Wed=4/Fri=6 — see
   // wrangler.toml); the JS check below uses Date's own Mon=1. With the cron actually
   // firing on real Mon/Wed/Fri, getUTCDay()===1 correctly selects TAL on Mondays.
-  "0 10 * * 2,4,6": {
+  // (20:45 UTC is still the same UTC day, so the Monday check is unaffected.)
+  "45 20 * * 2,4,6": {
     workflow: "pipeline.yml",
     inputsFor: (event) => ({
       show_id: new Date(event.scheduledTime).getUTCDay() === 1 ? "2" : "1",
     }),
   },
-  "0 12 * * 2": { workflow: "eval.yml", inputs: {} },                   // Mon — weekly eval
+  "55 20 * * 2": { workflow: "eval.yml", inputs: {} },                  // Mon ~3:55pm CT — weekly eval
   "0 20 * * 2": { workflow: "blogs.yml", inputs: {} },                  // Mon ~3pm CT — blog pull queue
   "15 20 1,15 * *": { workflow: "pulse.yml", inputs: {} },              // 1st+15th ~3:15pm CT — pulse
 };
