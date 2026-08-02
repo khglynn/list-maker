@@ -1,0 +1,64 @@
+name: Tests
+
+# The suite existed for months with nothing running it: every other workflow here is
+# workflow_dispatch-only (the Cloudflare Worker drives their cadence), and the only
+# PR-triggered workflow was the @claude bot. So 185 tests guarded the pipeline exactly
+# as often as someone remembered to type `pytest` — which is not a guardrail, it's a
+# habit. This runs them on every PR and every push to main.
+#
+# Python 3.12 matches what actually runs the pipeline in CI (entities/pipeline/eval/
+# pulse/blogs all pin 3.12). Local venvs may be older — the repo's macOS venv is 3.9 —
+# so pinning to the deployed version is the point: tests should fail here for the same
+# reasons production would.
+#
+# shell: bash turns on pipefail for run steps — without it, `cmd | tee` reports tee's
+# exit code and a crashed script reads as "success" (bit pipeline.yml for six weeks).
+defaults:
+  run:
+    shell: bash
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A newer push to the same branch makes the in-flight run irrelevant. Cancel it rather
+# than paying for a result nobody will read. main is exempt: its runs are the record of
+# what landed, so each commit gets its own verdict.
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: pipeline/requirements.txt
+
+      - name: Install dependencies
+        # pytest is already in pipeline/requirements.txt, so this is the same install
+        # every other workflow does — no test-only dependency set to drift out of sync.
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Run tests
+        # No env: block on purpose. The suite is hermetic — it fakes DB connections and
+        # subprocesses rather than reaching for either, so it needs no secrets and makes
+        # no network calls. Verified by running it with a stripped environment (no
+        # DATABASE_URL, no .env.local, no ~/.env) before this workflow was written.
+        # If a future test needs a real database, skip it on the absence of its env var
+        # rather than wiring a secret in here: a test that only runs when a credential
+        # happens to be present is a test nobody can trust the result of.
+        run: pytest -q

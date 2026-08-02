@@ -501,6 +501,13 @@ def step_self_heal_transcript_race(cfg: ShowConfig, dry_run: bool) -> tuple[bool
     # episode damaged would otherwise be retried silently every run, spending money on
     # a loop nobody can see. Naming it here turns that into one visible failure, and
     # data_health fails outright once an episode sits unhealed for a few days.
+    #
+    # The known way to land here: an extraction that yields no mentions at all makes
+    # load_entity_batch raise on the empty mentions.csv, so the damaged run survives and
+    # the episode stays queued. That is deliberately left to retry rather than guarded —
+    # it is capped at SELF_HEAL_MAX_EPISODES_PER_RUN a day and data_health's
+    # transcript_race_selfheal check fails after 3 days, so the loop is bounded and
+    # visible rather than silent. Add a guard only if it ever actually fires.
     conn = get_db_connection()
     try:
         still_damaged = find_transcript_race_batches(conn, cfg.show_id, max_episodes=len(all_ids))
