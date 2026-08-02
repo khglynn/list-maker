@@ -65,6 +65,23 @@ def test_check_episode_freshness_flags_stale(monkeypatch) -> None:
     assert not any("sop: no new episode" in d for d in result.details)
 
 
+def test_check_episode_freshness_skips_ended_shows(monkeypatch) -> None:
+    """Culture Gabfest ended 2026-07-01. Without this skip the check fails every run
+    forever on a show that can never be fresh again — noise, not signal."""
+    import pipeline.data_health as dh
+
+    rows = [
+        {"slug": "culture-gabfest", "latest_episode": date(2026, 7, 1), "days_since": 400},
+        {"slug": "ai-daily-brief", "latest_episode": date(2026, 8, 1), "days_since": 1},
+    ]
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: rows)
+
+    result = check_episode_freshness(conn=None)
+    assert result.status == "pass"
+    assert not any("culture-gabfest: no new episode" in d for d in result.details)
+    assert any("culture-gabfest: show ended 2026-07-01" in d for d in result.details)
+
+
 def test_check_episode_freshness_passes_when_all_recent(monkeypatch) -> None:
     import pipeline.data_health as dh
 

@@ -56,6 +56,25 @@ def test_backfill_omits_the_window() -> None:
     assert conn.cursor_obj.sql.count("%s") == len(conn.cursor_obj.params)
 
 
+def test_require_transcript_will_not_fall_back_to_show_notes() -> None:
+    """Transcript-based (Taddy) shows must wait for the transcript. The show-notes
+    fallback is a race — Taddy publishes a transcript ~a day late, and an episode
+    extracted from its blurb is never re-extracted once the real text lands."""
+    conn = _Conn()
+    find_unextracted_episodes(conn, 3, require_transcript=True)
+    assert "et.transcript_text IS NOT NULL" in conn.cursor_obj.sql
+    assert "description_body" not in conn.cursor_obj.sql
+    assert conn.cursor_obj.sql.count("%s") == len(conn.cursor_obj.params)
+
+
+def test_show_notes_fallback_stays_for_shows_without_transcripts() -> None:
+    """Gabfest-style shows have no transcripts by design — the COALESCE is correct there."""
+    conn = _Conn()
+    find_unextracted_episodes(conn, 54, require_transcript=False)
+    assert "COALESCE(et.transcript_text, ep.description_body)" in conn.cursor_obj.sql
+    assert conn.cursor_obj.sql.count("%s") == len(conn.cursor_obj.params)
+
+
 def test_backfill_flag_parses(monkeypatch) -> None:
     monkeypatch.setattr(
         "sys.argv", ["run_new_episodes.py", "--shows", "ai-daily-brief", "--backfill"]

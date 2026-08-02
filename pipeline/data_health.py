@@ -20,7 +20,13 @@ from typing import Any, Iterable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import get_db_connection, load_environment, post_slack
 from feed_check import feed_recent_dates
-from show_config import BLOG_NOTION_SHOWS, SHOWS, TRANSCRIPT_NOTION_SHOWS, curated_show_slugs
+from show_config import (
+    BLOG_NOTION_SHOWS,
+    SHOWS,
+    TRANSCRIPT_NOTION_SHOWS,
+    curated_show_slugs,
+    ended_show_slugs,
+)
 
 
 @dataclass
@@ -311,12 +317,20 @@ def check_episode_freshness(conn) -> CheckResult:
     failures: list[str] = []
     details: list[str] = []
     curated = curated_show_slugs()
+    ended = ended_show_slugs()
     for row in rows:
         slug = row["slug"]
         if slug in curated:
             # Curated sources have no publishing cadence — "stale" just means Kevin
             # hasn't pulled anything lately, which is his call, not a pipeline failure.
             details.append(f"{slug}: curated source — staleness not applicable (skipped)")
+            continue
+        if slug in ended:
+            # A concluded show is permanently stale. Failing on it every run forever
+            # is the fastest way to teach ourselves to ignore this alert.
+            details.append(
+                f"{slug}: show ended {SHOWS[slug].ended_on} — staleness not applicable (skipped)"
+            )
             continue
         days_since = row["days_since"]
         threshold = STALENESS_MAX_DAYS.get(slug, DEFAULT_STALENESS_MAX_DAYS)
