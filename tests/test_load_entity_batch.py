@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import json
+
 from pipeline.scrapers.ai_daily.extract_entities import LOCKED_TYPES, MEDIA_TYPES
 from pipeline.scrapers.ai_daily.load_entity_batch import (
     VALID_ENTITY_TYPES,
@@ -8,6 +12,8 @@ from pipeline.scrapers.ai_daily.load_entity_batch import (
     normalize_name,
     parse_aliases,
     parse_facts_json,
+    read_provenance,
+    resolve_transcript_map,
 )
 
 
@@ -127,3 +133,79 @@ def test_delete_existing_run_scopes_to_show_and_batch_then_commits() -> None:
     # Both deletes commit together; returns the removed-run count (rowcount).
     assert conn.committed is True
     assert removed == 2
+
+
+class _LookupCursor:
+    """Cursor that answers the load-time transcript lookup."""
+
+    def __init__(self, rows: list[dict]) -> None:
+        self.rows = rows
+        self.executed = False
+
+    def __enter__(self) -> "_LookupCursor":
+        return self
+
+    def __exit__(self, *exc) -> bool:
+        return False
+
+    def execute(self, sql: str, params: tuple = ()) -> None:
+        self.executed = True
+
+    def fetchall(self) -> list[dict]:
+        return self.rows
+
+
+class _LookupConn:
+    def __init__(self, rows: list[dict] | None = None) -> None:
+        self._cursor = _LookupCursor(rows or [])
+
+    def cursor(self) -> _LookupCursor:
+        return self._cursor
+
+
+def test_recorded_provenance_wins_over_the_load_time_lookup() -> None:
+    """The database can only say whether a transcript exists NOW. Extraction takes
+    minutes, so a transcript landing mid-batch would otherwise be stamped onto mentions
+    that were mined from show notes — provenance nobody could later tell was fabricated."""
+    conn = _LookupConn(rows=[{"episode_id": 7261, "id": 2385}])
+
+    mapping, inferred = resolve_transcript_map(conn, [7261], provenance={7261: None})
+
+    assert mapping == {7261: None}
+    assert inferred == []
+    assert conn._cursor.executed is False  # never asked the DB
+
+
+def test_recorded_provenance_carries_the_transcript_actually_read() -> None:
+    conn = _LookupConn()
+    mapping, inferred = resolve_transcript_map(conn, [7262], provenance={7262: 2384})
+    assert mapping == {7262: 2384}
+    assert inferred == []
+
+
+def test_missing_provenance_falls_back_to_lookup_and_says_so() -> None:
+    """Hand-run batches have no provenance file. They still load — the fallback is
+    named in the return value so the caller can label the provenance inferred."""
+    conn = _LookupConn(rows=[{"episode_id": 999, "id": 42}])
+
+    mapping, inferred = resolve_transcript_map(conn, [999], provenance=None)
+
+    assert mapping == {999: 42}
+    assert inferred == [999]
+
+
+def test_partial_provenance_mixes_recorded_and_inferred() -> None:
+    conn = _LookupConn(rows=[{"episode_id": 999, "id": 42}])
+
+    mapping, inferred = resolve_transcript_map(conn, [7261, 999], provenance={7261: None})
+
+    assert mapping == {7261: None, 999: 42}
+    assert inferred == [999]
+
+
+def test_read_provenance_round_trips_ints_and_nulls(tmp_path) -> None:
+    path = tmp_path / "provenance.json"
+    path.write_text(json.dumps({"7261": None, "7262": 2384}), encoding="utf-8")
+
+    assert read_provenance(str(path)) == {7261: None, 7262: 2384}
+    assert read_provenance(None) is None

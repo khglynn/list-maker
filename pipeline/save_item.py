@@ -30,7 +30,11 @@ from urllib.parse import urlsplit
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from pipeline.common import get_db_connection, get_logger, load_environment  # noqa: E402
-from pipeline.run_new_episodes import step_entity_extraction, step_notion_sync  # noqa: E402
+from pipeline.run_new_episodes import (  # noqa: E402
+    EpisodeSource,
+    step_entity_extraction,
+    step_notion_sync,
+)
 from pipeline.scrapers.blog.import_blog import canonicalize_url, ingest_url  # noqa: E402
 from pipeline.show_config import SHOWS, get_show  # noqa: E402
 
@@ -126,7 +130,9 @@ def save_url(url: str, show_slug: str | None, skip_extract: bool = False) -> boo
     elif already_extracted:
         log.info("ep %s already has mentions — extraction skipped (idempotent re-save)", episode_id)
     else:
-        ok = step_entity_extraction(cfg, [episode_id], dry_run=False)
+        # ingest_url wrote the full markdown into episode_transcripts, so the source
+        # is a transcript, not a blurb — there is no show-notes fallback on this path.
+        ok = step_entity_extraction(cfg, [EpisodeSource(episode_id, "transcript")], dry_run=False)
 
     # Sync even when extraction partially failed — whatever DID load should reach
     # Notion; the False return still fails the run so the gap is visible.
