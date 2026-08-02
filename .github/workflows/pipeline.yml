@@ -75,6 +75,9 @@ jobs:
           SPOTIFY_REDIRECT_URI: ${{ secrets.SPOTIFY_REDIRECT_URI }}
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          # TAL's discovery step imports new episodes from Taddy before scraping songs.
+          TADDY_USER_ID: ${{ secrets.TADDY_USER_ID }}
+          TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
         run: |
           DRY_RUN_FLAG=""
           if [ "${{ steps.show.outputs.dry_run }}" = "true" ]; then
@@ -92,6 +95,33 @@ jobs:
 
           # Extract JSON summary for later steps
           sed -n '/--- JSON SUMMARY ---/,$ p' ../pipeline_output.txt | tail -n +2 > ../summary.json
+
+      # The silent-gap alarm. A music run that discovers nothing looks EXACTLY like a
+      # run with nothing to discover — that is how TAL sat 6 episodes behind its feed
+      # for ten weeks while every Monday run exited 0. Asking the feed (not the DB)
+      # whether we are caught up is the only way this run can prove it did its job.
+      # Scoped to the show that just ran: one Taddy call, not one per show.
+      - name: Feed second-source check (did this run actually catch up?)
+        if: steps.show.outputs.dry_run != 'true'
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          TADDY_USER_ID: ${{ secrets.TADDY_USER_ID }}
+          TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
+          SHOW_ID: ${{ steps.show.outputs.show_id }}
+        run: |
+          case "$SHOW_ID" in
+            1) SLUGS="sop" ;;
+            2) SLUGS="tal" ;;
+            all) SLUGS="sop,tal" ;;
+            *) echo "No feed second-source for show_id=$SHOW_ID — skipping."; exit 0 ;;
+          esac
+
+          # --strict: BEHIND exits non-zero, failing this step so the failure Slack and
+          # the issue-on-failure both fire. data_health also posts its own detail line.
+          cd pipeline
+          python data_health.py --feed-check-only --shows "$SLUGS" --strict \
+            | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Write job summary
         if: always()

@@ -36,10 +36,17 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 PIPELINE_DIR = Path(__file__).resolve().parent
+# Allow `from common import ...` both when run as a script from pipeline/ and when
+# imported as pipeline.run_pipeline (tests) — same pattern as run_new_episodes.py.
+sys.path.insert(0, str(PIPELINE_DIR))
+from common import get_db_connection  # noqa: E402
+
 # Prefer the project venv locally; fall back to the running interpreter — CI runs
 # on the runner's Python (deps installed there) where the venv path doesn't exist.
 _VENV_PYTHON = PIPELINE_DIR / "venv" / "bin" / "python"
 VENV_PYTHON = str(_VENV_PYTHON) if _VENV_PYTHON.exists() else sys.executable
+
+TAL_SHOW_ID = 2
 
 
 # =============================================================================
@@ -57,6 +64,17 @@ SHOWS = {
 # Pipeline Steps
 # =============================================================================
 
+def count_tal_episodes() -> int:
+    """Row count for TAL, used to report how many episodes discovery actually added."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS n FROM episodes WHERE show_id = %s;", (TAL_SHOW_ID,))
+            return int(cur.fetchone()["n"])
+    finally:
+        conn.close()
+
+
 def discover_tal_episodes(dry_run: bool, limit: int = 25) -> dict:
     """Insert newly published TAL episodes into `episodes` via the Taddy importer.
 
@@ -73,8 +91,9 @@ def discover_tal_episodes(dry_run: bool, limit: int = 25) -> dict:
     """
     if dry_run:
         print("  [dry-run] would import new TAL episodes from Taddy")
-        return {"imported": 0, "dry_run": True}
+        return {"discovered": 0, "dry_run": True}
 
+    before = count_tal_episodes()
     result = subprocess.run(
         [
             VENV_PYTHON,
@@ -93,7 +112,13 @@ def discover_tal_episodes(dry_run: bool, limit: int = 25) -> dict:
             f"TAL episode discovery failed (exit {result.returncode}): "
             f"{(result.stderr or '')[-500:]}"
         )
-    return {"discovery": "ok"}
+
+    # Report the row delta rather than parsing the importer's stdout — the count is
+    # what actually happened, and "discovered 0" every week is the signal that this
+    # step has stopped working. Silence is what cost us ten weeks.
+    discovered = count_tal_episodes() - before
+    print(f"  Discovered {discovered} new TAL episode(s)")
+    return {"discovered": discovered}
 
 
 def run_scrape(show_id: int, dry_run: bool, yes: bool) -> dict:
@@ -235,6 +260,10 @@ def run_pipeline(
         episodes_scraped = scrape.get("scraped", scrape.get("fetched", 0))
         songs_found = scrape.get("songs_found", scrape.get("songs_inserted", 0))
 
+        # Only shows with a discovery step report this. A run that scrapes 0 because
+        # it discovered 0 looks identical to "nothing published" without this line.
+        if "discovered" in scrape:
+            print(f"  Episodes discovered: {scrape['discovered']}")
         print(f"  Episodes scraped: {episodes_scraped}")
         print(f"  Songs found: {songs_found}")
         print(f"  Matched - HIGH: {match.get('high', 0)}, "

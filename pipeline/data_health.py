@@ -425,7 +425,7 @@ def check_notion_sync_freshness(conn) -> CheckResult:
     return CheckResult("notion_sync_freshness", status, summary, failures + warnings)
 
 
-def check_import_caught_up(conn) -> CheckResult:
+def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckResult:
     """SECOND-SOURCE freshness: is our import behind each show's REAL feed?
 
     episode_freshness_by_show only knows "days since OUR latest", which can't tell a show
@@ -433,7 +433,12 @@ def check_import_caught_up(conn) -> CheckResult:
     RSS via feed_check) what the latest episode is — if the feed is ahead of us, we're
     behind and missing episodes. A feed we can't reach is reported, not failed (don't cry
     wolf on a flaky feed); a confirmed BEHIND is a real, actionable failure.
+
+    `slugs` narrows the check to specific shows. The music workflow passes the one show
+    it just ran, so a single Taddy call proves that run actually discovered something,
+    without paying for a feed call per show on every music run.
     """
+    wanted = set(slugs) if slugs is not None else None
     rows = _rows(
         conn,
         """
@@ -448,6 +453,8 @@ def check_import_caught_up(conn) -> CheckResult:
     details: list[str] = []
     curated = curated_show_slugs()
     for slug, cfg in SHOWS.items():
+        if wanted is not None and slug not in wanted:
+            continue
         if slug in curated:
             # No feed to verify against — skipping avoids a permanent UNVERIFIED warn.
             details.append(f"{slug}: curated source — no feed second-source (skipped)")
@@ -688,16 +695,35 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Exit non-zero if any check fails. Use this in automation.",
     )
+    parser.add_argument(
+        "--feed-check-only",
+        action="store_true",
+        help=(
+            "Run ONLY the second-source feed comparison. The music workflow uses this "
+            "so a show that stopped discovering fails its own run instead of exiting 0."
+        ),
+    )
+    parser.add_argument(
+        "--shows",
+        help="Comma-separated slugs to limit the feed check to (default: all shows).",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
     load_environment()
+    slugs = [s.strip() for s in args.shows.split(",") if s.strip()] if args.shows else None
     conn = get_db_connection()
     try:
-        # Daily CLI run includes the second-source feed check (the loud import-behind alarm).
-        results = run_checks(conn, include_feed_check=True)
+        if args.feed_check_only:
+            # One feed comparison, scoped to the show(s) that just ran. Cheap enough to
+            # sit at the end of every music run, which is the point: the music pipeline
+            # had no way to fail when its discovery stopped finding anything.
+            results = [check_import_caught_up(conn, slugs)]
+        else:
+            # Daily CLI run includes the second-source feed check (the loud import-behind alarm).
+            results = run_checks(conn, include_feed_check=True)
     finally:
         conn.close()
 

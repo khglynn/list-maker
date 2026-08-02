@@ -21,6 +21,11 @@ class _Completed:
         self.stderr = stderr
 
 
+def _patch_counts(monkeypatch, counts: list[int]) -> None:
+    """count_tal_episodes is called before and after the import."""
+    monkeypatch.setattr(run_pipeline, "count_tal_episodes", lambda: counts.pop(0))
+
+
 def test_discovery_invokes_the_taddy_importer_for_tal(monkeypatch) -> None:
     calls: list[list[str]] = []
 
@@ -29,13 +34,26 @@ def test_discovery_invokes_the_taddy_importer_for_tal(monkeypatch) -> None:
         return _Completed(stdout="[tal] done: imported=2")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
+    _patch_counts(monkeypatch, [889, 891])
 
-    run_pipeline.discover_tal_episodes(dry_run=False)
+    result = run_pipeline.discover_tal_episodes(dry_run=False)
 
     assert len(calls) == 1
     cmd = calls[0]
     assert "import_transcripts.py" in " ".join(cmd)
     assert "--shows" in cmd and "tal" in cmd
+    # Bounded: never sweep the whole archive on a routine run.
+    assert "--per-show-limit" in cmd
+    assert result["discovered"] == 2
+
+
+def test_discovery_reports_zero_rather_than_staying_quiet(monkeypatch) -> None:
+    """A week with no new episodes must still SAY so — 'discovered 0' every week is
+    the signal that discovery itself has broken, which is what we missed for 10 weeks."""
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: _Completed(stdout=""))
+    _patch_counts(monkeypatch, [889, 889])
+
+    assert run_pipeline.discover_tal_episodes(dry_run=False)["discovered"] == 0
 
 
 def test_discovery_is_skipped_on_dry_run(monkeypatch) -> None:
@@ -53,6 +71,7 @@ def test_discovery_failure_raises_instead_of_passing_silently(monkeypatch) -> No
     monkeypatch.setattr(
         subprocess, "run", lambda *a, **k: _Completed(returncode=1, stderr="taddy 500")
     )
+    _patch_counts(monkeypatch, [889, 889])
 
     with pytest.raises(RuntimeError, match="TAL episode discovery failed"):
         run_pipeline.discover_tal_episodes(dry_run=False)
