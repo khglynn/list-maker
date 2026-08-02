@@ -27,12 +27,19 @@ Environment variables (loaded from .env files locally, from secrets in CI):
 import argparse
 import json
 import os
+import subprocess
 import sys
 import traceback
 from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+PIPELINE_DIR = Path(__file__).resolve().parent
+# Prefer the project venv locally; fall back to the running interpreter — CI runs
+# on the runner's Python (deps installed there) where the venv path doesn't exist.
+_VENV_PYTHON = PIPELINE_DIR / "venv" / "bin" / "python"
+VENV_PYTHON = str(_VENV_PYTHON) if _VENV_PYTHON.exists() else sys.executable
 
 
 # =============================================================================
@@ -50,6 +57,45 @@ SHOWS = {
 # Pipeline Steps
 # =============================================================================
 
+def discover_tal_episodes(dry_run: bool, limit: int = 25) -> dict:
+    """Insert newly published TAL episodes into `episodes` via the Taddy importer.
+
+    TAL had no discovery step at all. Its scraper starts from
+    `get_unscraped_episodes` (scrapers/tal/fetch.py:55), which reads rows ALREADY in
+    the table — so it can only fill songs for episodes something else inserted. SOP
+    discovers by diffing its episode-list page (scrapers/sop/scrape.py:271), which is
+    why SOP stayed current while TAL silently froze at 2026-05-17 and drifted 6
+    episodes behind its feed. Every Monday run still reported success in under a
+    minute, because finding no work is not an error.
+
+    The Taddy importer is already the discovery mechanism for every show with a
+    taddy_uuid, and it upserts ON CONFLICT (url), so re-running is safe.
+    """
+    if dry_run:
+        print("  [dry-run] would import new TAL episodes from Taddy")
+        return {"imported": 0, "dry_run": True}
+
+    result = subprocess.run(
+        [
+            VENV_PYTHON,
+            str(PIPELINE_DIR / "scrapers" / "taddy" / "import_transcripts.py"),
+            "--shows", "tal",
+            "--per-show-limit", str(limit),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=900,
+    )
+    print(result.stdout[-2000:] if result.stdout else "")
+    if result.returncode != 0:
+        # Surface it: a silent discovery failure is exactly how we got here.
+        raise RuntimeError(
+            f"TAL episode discovery failed (exit {result.returncode}): "
+            f"{(result.stderr or '')[-500:]}"
+        )
+    return {"discovery": "ok"}
+
+
 def run_scrape(show_id: int, dry_run: bool, yes: bool) -> dict:
     """Run the scraping step for a show. Returns scrape summary."""
     if show_id == 1:
@@ -59,10 +105,11 @@ def run_scrape(show_id: int, dry_run: bool, yes: bool) -> dict:
         return scrape_new_episodes(dry_run=dry_run, yes=yes)
 
     elif show_id == 2:
-        # TAL scraper
+        # TAL: discover first (insert new episode rows), then scrape songs for them.
+        discovery = discover_tal_episodes(dry_run)
         sys.path.insert(0, str(Path(__file__).parent / "scrapers" / "tal"))
         from scrapers.tal.scrape import scrape_new_episodes
-        return scrape_new_episodes(dry_run=dry_run, yes=yes)
+        return {**scrape_new_episodes(dry_run=dry_run, yes=yes), **discovery}
 
     elif show_id == 3:
         # AI Daily - entity extraction (different pipeline)
