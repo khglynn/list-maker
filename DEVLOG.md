@@ -4,6 +4,27 @@ Chronological session journal. Most recent at top. Never delete entries.
 
 ---
 
+## 2026-08-02 — The transcript race, healed: two damaged episodes re-extracted + a recovery loop
+
+**Trigger:** PR #1 prevented the race for future episodes but explicitly left the two already-damaged episodes alone ("the remedy is a delete + re-extract, which is a production write and Kevin's call"). Kevin's call came, with a wider steer: *"if that 'arrived a day late' thing isn't patched/allowed for in the code and'll cause issues again in the future please allow for that in the code… we keep hitting problems because the code isn't permissive enough and the builds aren't self-healing enough."*
+
+**The damage, confirmed against prod before touching anything:** exactly two episodes fleet-wide. Episode 5133 (hard-fork) extracted 06-17 11:09, transcript landed 06-18 11:06. Episode 7261 (ai-daily-brief) extracted 07-30 20:34, transcript landed 07-31 20:31. Both had mentions mined from show-notes boilerplate — 5133's included "Find 'Hard Fork' on YouTube and TikTok" twice; 7261's three mentions were *entirely* newsletter promos.
+
+**The detail that would have caused a second bug:** run 287 covered 7261 AND 7262, and 7262 was fine. `delete_existing_run` keys on `(show_id, batch_name)`, so re-extracting only the damaged episode under that batch name would have deleted 7262's four healthy mentions and never replaced them. The heal therefore re-extracts by **whole original batch**, which is why `find_transcript_race_batches` returns batches rather than episodes.
+
+**Result (runs 291/292):** 5133 now yields Figma-in-context, Claude Design, Sora, Substack, Bitcoin; 7261 now yields GPT-5.6, OpenAI Codex, Claude Code, OpenClaw, Copilot Super app, MAI models, the Zuckerberg WSJ op-ed. 7262 preserved and re-extracted through the same reload. 14 mentions → 21. Zero damaged episodes remain. Notion synced (1 create, 16 updates) so the user-facing surface matches.
+
+**Three holes closed so it cannot recur silently** (see `pipeline/README.md` § the transcript race):
+- **Recovery** — every run re-extracts up to 3 episodes whose mentions lack a transcript_id though a transcript now exists, loud in the run summary.
+- **Truthful provenance** — `transcript_id` was resolved at LOAD time, so a transcript landing mid-batch (extraction takes minutes) would be stamped onto notes-derived mentions. That fabricated provenance would have made the recovery loop permanently blind to the episode. Provenance is now recorded when the text is read and passed to the loader via `--provenance-json`.
+- **A bounded wait** — `require_transcript` blocked forever if Taddy never delivered. After 7 days the notes are extracted anyway, announced. No show is blocked today; nothing stopped it.
+
+**Also fixed:** `prepare_extraction_inputs` skipped writing a cached source file whenever one existed, so a heal on a machine holding the stale blurb would have silently re-mined the same wrong text — the self-heal would have been a no-op that reported success.
+
+**Observability:** `check_transcript_race_selfheal` warns while the queue drains and fails once an episode sits unhealed past 3 days — a count alone can't distinguish "healing in progress" from "healing broken." `check_ai_daily_extraction` narrowed to the orphan case so one problem raises one alert.
+
+**Tests:** 165 → 185.
+
 ## 2026-06-10/11 — Beyond podcasts: curated sources + the Notion-staleness fix
 
 **Trigger:** Kevin's ethical-AI-use talk (June 11) — he wanted blog posts, one-off articles, and his research-run citations in the same mentions DB, plus he caught AI Daily's Notion mirror stuck at June 6.

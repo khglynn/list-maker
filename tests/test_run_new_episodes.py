@@ -5,17 +5,24 @@ the SQL parameterizes the window via make_interval (no hardcoded literal) when
 recent_only, and omits it entirely under backfill.
 """
 
+from __future__ import annotations
+
 from pipeline.run_new_episodes import (
     RECENT_EPISODE_WINDOW_DAYS,
+    SELF_HEAL_MAX_EPISODES_PER_RUN,
+    TRANSCRIPT_GRACE_DAYS,
+    _take_batches_within_budget,
+    find_transcript_race_batches,
     find_unextracted_episodes,
     parse_args,
 )
 
 
 class _Cursor:
-    def __init__(self) -> None:
+    def __init__(self, rows: list | None = None) -> None:
         self.sql = ""
         self.params: list = []
+        self.rows = rows or []
 
     def __enter__(self) -> "_Cursor":
         return self
@@ -28,12 +35,12 @@ class _Cursor:
         self.params = list(params)
 
     def fetchall(self) -> list:
-        return []
+        return self.rows
 
 
 class _Conn:
-    def __init__(self) -> None:
-        self.cursor_obj = _Cursor()
+    def __init__(self, rows: list | None = None) -> None:
+        self.cursor_obj = _Cursor(rows)
 
     def cursor(self) -> _Cursor:
         return self.cursor_obj
@@ -56,15 +63,41 @@ def test_backfill_omits_the_window() -> None:
     assert conn.cursor_obj.sql.count("%s") == len(conn.cursor_obj.params)
 
 
-def test_require_transcript_will_not_fall_back_to_show_notes() -> None:
-    """Transcript-based (Taddy) shows must wait for the transcript. The show-notes
-    fallback is a race — Taddy publishes a transcript ~a day late, and an episode
-    extracted from its blurb is never re-extracted once the real text lands."""
+def test_require_transcript_waits_for_the_transcript_within_the_grace_window() -> None:
+    """Transcript-based (Taddy) shows wait for the transcript rather than mining the
+    blurb. The show-notes fallback is a race — Taddy publishes a transcript ~a day late,
+    and an episode extracted from its blurb was never re-extracted once the real text
+    landed. The notes are reachable only through the grace-window branch."""
     conn = _Conn()
     find_unextracted_episodes(conn, 3, require_transcript=True)
-    assert "et.transcript_text IS NOT NULL" in conn.cursor_obj.sql
-    assert "description_body" not in conn.cursor_obj.sql
-    assert conn.cursor_obj.sql.count("%s") == len(conn.cursor_obj.params)
+    sql = conn.cursor_obj.sql
+    assert "et.transcript_text IS NOT NULL" in sql
+    # Notes are gated behind the age test, never offered as an immediate alternative.
+    assert "COALESCE(et.transcript_text, ep.description_body)" not in sql
+    assert "ep.publish_date < CURRENT_DATE - make_interval(days => %s)" in sql
+    # grace window is parameterized ahead of the recency window
+    assert conn.cursor_obj.params == [3, TRANSCRIPT_GRACE_DAYS, RECENT_EPISODE_WINDOW_DAYS]
+    assert sql.count("%s") == len(conn.cursor_obj.params)
+
+
+def test_transcript_wait_is_bounded_not_forever() -> None:
+    """An episode whose transcript never arrives must still get extracted eventually.
+    Blocking forever would trade a wrong-source extraction for a missing one."""
+    conn = _Conn()
+    find_unextracted_episodes(conn, 3, require_transcript=True, grace_days=2)
+    assert "ep.description_body IS NOT NULL" in conn.cursor_obj.sql
+    assert conn.cursor_obj.params[1] == 2
+
+
+def test_selection_reports_which_source_each_episode_will_use() -> None:
+    """Provenance is recorded, not re-derived: the caller learns up front whether an
+    episode is being extracted from its transcript or from its notes."""
+    conn = _Conn(rows=[{"id": 7261, "source": "transcript"}, {"id": 9000, "source": "show_notes"}])
+    episodes = find_unextracted_episodes(conn, 3, require_transcript=True)
+    assert [(e.episode_id, e.source) for e in episodes] == [
+        (7261, "transcript"),
+        (9000, "show_notes"),
+    ]
 
 
 def test_show_notes_fallback_stays_for_shows_without_transcripts() -> None:
@@ -72,7 +105,35 @@ def test_show_notes_fallback_stays_for_shows_without_transcripts() -> None:
     conn = _Conn()
     find_unextracted_episodes(conn, 54, require_transcript=False)
     assert "COALESCE(et.transcript_text, ep.description_body)" in conn.cursor_obj.sql
+    assert conn.cursor_obj.params == [54, RECENT_EPISODE_WINDOW_DAYS]
     assert conn.cursor_obj.sql.count("%s") == len(conn.cursor_obj.params)
+
+
+def test_race_batches_return_whole_batches_not_loose_episodes() -> None:
+    """The heal re-extracts by original batch name because delete_existing_run keys on
+    it. Healing episode 7261 alone would delete healthy sibling 7262 and not replace it."""
+    conn = _Conn(rows=[{"batch_name": "incremental-7261-to-7262", "episode_ids": [7261, 7262]}])
+    batches = find_transcript_race_batches(conn, 3)
+    assert batches == [("incremental-7261-to-7262", [7261, 7262])]
+    assert "m.transcript_id IS NULL" in conn.cursor_obj.sql
+    assert "JOIN episode_transcripts et" in conn.cursor_obj.sql  # only if a transcript exists NOW
+    assert conn.cursor_obj.sql.count("%s") == len(conn.cursor_obj.params)
+
+
+def test_race_batch_budget_takes_whole_batches() -> None:
+    candidates = [("a", [1, 2]), ("b", [3, 4]), ("c", [5])]
+    # Budget of 3 fits batch "a" (2 episodes); "b" would take it to 4, so it waits.
+    assert _take_batches_within_budget(candidates, 3) == [("a", [1, 2])]
+
+
+def test_race_batch_budget_never_parks_an_oversized_batch_forever() -> None:
+    """A batch bigger than the per-run budget still runs — refusing it would leave the
+    episode permanently damaged, which is the exact failure the heal exists to end."""
+    assert _take_batches_within_budget([("big", [1, 2, 3, 4, 5])], 3) == [("big", [1, 2, 3, 4, 5])]
+
+
+def test_self_heal_budget_is_bounded() -> None:
+    assert 0 < SELF_HEAL_MAX_EPISODES_PER_RUN <= 8
 
 
 def test_backfill_flag_parses(monkeypatch) -> None:
@@ -153,3 +214,129 @@ def test_run_script_retries_on_timeout(monkeypatch) -> None:
 
     assert rne.run_script("x.py", [], dry_run=False, label="step") is True
     assert calls["n"] == 2  # a timeout is treated as a retryable failure
+
+
+class _PrepCursor:
+    def __init__(self, rows: list[dict]) -> None:
+        self.rows = rows
+
+    def __enter__(self) -> "_PrepCursor":
+        return self
+
+    def __exit__(self, *exc) -> bool:
+        return False
+
+    def execute(self, sql: str, params=()) -> None:
+        pass
+
+    def fetchall(self) -> list[dict]:
+        return self.rows
+
+
+class _PrepConn:
+    def __init__(self, rows: list[dict]) -> None:
+        self._cursor = _PrepCursor(rows)
+
+    def cursor(self) -> _PrepCursor:
+        return self._cursor
+
+    def close(self) -> None:
+        pass
+
+
+def _prep_row(episode_id: int, title: str, text: str, transcript_id: int | None) -> dict:
+    return {
+        "episode_id": episode_id,
+        "title": title,
+        "publish_date": "2026-07-30",
+        "episode_url": "https://example.test/ep",
+        "transcript_id": transcript_id,
+        "source_text": text,
+        "from_transcript": transcript_id is not None,
+    }
+
+
+def test_prepare_inputs_records_provenance_per_episode(monkeypatch, tmp_path) -> None:
+    from pipeline import run_new_episodes as rne
+
+    monkeypatch.setattr(rne, "PIPELINE_DIR", tmp_path)
+    conn = _PrepConn([
+        _prep_row(7261, "notes only", "blurb", None),
+        _prep_row(7262, "real transcript", "the actual episode text", 2384),
+    ])
+
+    _csv, _dir, provenance_path = rne.prepare_extraction_inputs(conn, [7261, 7262])
+
+    import json as _json
+
+    assert _json.loads(provenance_path.read_text()) == {"7261": None, "7262": 2384}
+
+
+def test_prepare_inputs_refreshes_a_stale_cached_source_file(monkeypatch, tmp_path) -> None:
+    """The cache can hold the show-notes blurb written by the run that lost the race.
+    Skipping the write because the file merely exists would re-extract the same wrong
+    text and make the self-heal a no-op."""
+    from pipeline import run_new_episodes as rne
+
+    monkeypatch.setattr(rne, "PIPELINE_DIR", tmp_path)
+    transcripts_dir = tmp_path / "_cache" / "ai_daily" / "transcripts"
+    transcripts_dir.mkdir(parents=True)
+    stale = transcripts_dir / "7261-late-transcript.txt"
+    stale.write_text("Our Newsletter is BACK", encoding="utf-8")
+
+    conn = _PrepConn([_prep_row(7261, "late transcript", "the real transcript text", 2385)])
+    rne.prepare_extraction_inputs(conn, [7261])
+
+    assert stale.read_text(encoding="utf-8") == "the real transcript text"
+
+
+def _heal_fixture(monkeypatch, tmp_path, *, post_heal, extract_ok=True):
+    """Wire step_self_heal_transcript_race with fake DB + extraction."""
+    from pipeline import run_new_episodes as rne
+
+    monkeypatch.setattr(rne, "get_db_connection", lambda: _PrepConn([]))
+    monkeypatch.setattr(
+        rne, "prepare_extraction_inputs",
+        lambda conn, ids: (tmp_path / "e.csv", tmp_path, tmp_path / "p.json"),
+    )
+    calls = {"n": 0}
+
+    def fake_find(conn, show_id, max_episodes=rne.SELF_HEAL_MAX_EPISODES_PER_RUN):
+        calls["n"] += 1
+        return [("incremental-7261-to-7262", [7261, 7262])] if calls["n"] == 1 else post_heal
+
+    monkeypatch.setattr(rne, "find_transcript_race_batches", fake_find)
+    monkeypatch.setattr(rne, "extract_and_load_batch", lambda *a, **k: extract_ok)
+    return rne
+
+
+def test_self_heal_reports_success_when_the_damage_is_gone(monkeypatch, tmp_path) -> None:
+    from pipeline.show_config import get_show
+
+    rne = _heal_fixture(monkeypatch, tmp_path, post_heal=[])
+    ok, healed = rne.step_self_heal_transcript_race(get_show("ai-daily-brief"), dry_run=False)
+
+    assert (ok, healed) == (True, 2)
+
+
+def test_self_heal_fails_loudly_when_the_episode_is_still_damaged(monkeypatch, tmp_path) -> None:
+    """A re-extraction that reports success but leaves the episode damaged would be
+    retried silently every run. Verifying afterwards turns that into one visible failure."""
+    from pipeline.show_config import get_show
+
+    rne = _heal_fixture(
+        monkeypatch, tmp_path, post_heal=[("incremental-7261-to-7262", [7261, 7262])]
+    )
+    ok, _healed = rne.step_self_heal_transcript_race(get_show("ai-daily-brief"), dry_run=False)
+
+    assert ok is False
+
+
+def test_self_heal_is_a_noop_when_nothing_is_damaged(monkeypatch, tmp_path) -> None:
+    from pipeline import run_new_episodes as rne
+    from pipeline.show_config import get_show
+
+    monkeypatch.setattr(rne, "get_db_connection", lambda: _PrepConn([]))
+    monkeypatch.setattr(rne, "find_transcript_race_batches", lambda *a, **k: [])
+
+    assert rne.step_self_heal_transcript_race(get_show("pchh"), dry_run=False) == (True, 0)

@@ -74,6 +74,12 @@ DEFAULT_STALENESS_MAX_DAYS = 14
 # freeze: pipeline green every day, Notion frozen at June 6).
 NOTION_SYNC_MAX_LAG_DAYS = 2
 
+# How long an episode may wait for its self-heal re-extraction before the queue counts
+# as stuck rather than merely pending. The pipeline runs daily and heals up to 3 episodes
+# a run, so anything older than this is the heal failing, not the heal working through a
+# backlog. Kept above the daily cadence so one skipped run is not an alert.
+SELF_HEAL_MAX_PENDING_DAYS = 3
+
 OPTIONAL_NULL_NOTES = {
     "episodes.raw_content": "Stored only for AI Daily/PCHH Taddy imports; null for SOP/TAL is expected.",
     "episodes.has_songs_discussed": "Legacy music-triage field; null means not evaluated or not applicable.",
@@ -500,24 +506,19 @@ def check_ai_daily_extraction(conn) -> CheckResult:
         """,
     )
     missing_mentions = int(row.get("transcripted_without_mentions") or 0)
-    # A NULL transcript_id is only an issue if the episode actually HAS a transcript that
-    # should have been linked. Show-notes-based shows (Culture Gabfest) extract from the
-    # RSS description and legitimately have no transcript, so their mentions are excluded.
-    # Still flag orphans (transcript_id points to a transcript that no longer exists).
-    null_transcript_mentions = int(
+    # Orphans only: transcript_id points at a transcript row that no longer exists.
+    # The other shape of broken provenance — NULL transcript_id on an episode that HAS a
+    # transcript — is the transcript race, and check_transcript_race_selfheal owns it. It
+    # used to be counted here too, which meant one problem raised two alerts and neither
+    # said whether the pipeline was already fixing it.
+    orphan_transcript_mentions = int(
         _one(
             conn,
             """
             SELECT COUNT(*) AS count
             FROM ai_mentions m
-            WHERE (
-                    m.transcript_id IS NULL
-                    AND EXISTS (SELECT 1 FROM episode_transcripts et2 WHERE et2.episode_id = m.episode_id)
-                  )
-               OR (
-                    m.transcript_id IS NOT NULL
-                    AND NOT EXISTS (SELECT 1 FROM episode_transcripts et WHERE et.id = m.transcript_id)
-                  );
+            WHERE m.transcript_id IS NOT NULL
+              AND NOT EXISTS (SELECT 1 FROM episode_transcripts et WHERE et.id = m.transcript_id);
             """,
         ).get("count")
         or 0
@@ -540,12 +541,14 @@ def check_ai_daily_extraction(conn) -> CheckResult:
         or 0
     )
 
-    issue_count = missing_mentions + null_transcript_mentions + zero_mention_runs
+    issue_count = missing_mentions + orphan_transcript_mentions + zero_mention_runs
     details = []
     if missing_mentions:
         details.append(f"AI Daily transcripted episodes without mentions: {missing_mentions}")
-    if null_transcript_mentions:
-        details.append(f"AI mentions without a valid transcript_id: {null_transcript_mentions}")
+    if orphan_transcript_mentions:
+        details.append(
+            f"AI mentions pointing at a deleted transcript: {orphan_transcript_mentions}"
+        )
     if zero_mention_runs:
         details.append(f"completed AI runs with zero mentions: {zero_mention_runs}")
 
@@ -554,6 +557,66 @@ def check_ai_daily_extraction(conn) -> CheckResult:
         f"{issue_count} AI extraction integrity issue(s) found."
     )
     return CheckResult("ai_daily_extraction_integrity", status, summary, details)
+
+
+def check_transcript_race_selfheal(conn) -> CheckResult:
+    """Is the transcript-race self-heal keeping up?
+
+    A pending episode is one whose mentions carry no transcript_id even though the episode
+    has a transcript — extracted from show notes before the real text arrived. The pipeline
+    re-extracts these on its own (run_new_episodes.step_self_heal_transcript_race), bounded
+    per run, so a small pending count right after a transcript lands is the system working,
+    not a fault.
+
+    What deserves an alert is a queue that is not draining: an episode still pending days
+    after its transcript arrived means the heal is failing or never running, and the check
+    that only counted rows could never tell those apart.
+    """
+    rows = _rows(
+        conn,
+        """
+        SELECT s.slug,
+               m.episode_id,
+               COUNT(*) AS mentions,
+               MAX(et.created_at)::date AS transcript_arrived,
+               (CURRENT_DATE - MAX(et.created_at)::date) AS days_pending
+        FROM ai_mentions m
+        JOIN episodes ep ON ep.id = m.episode_id
+        JOIN shows s ON s.id = ep.show_id
+        JOIN episode_transcripts et ON et.episode_id = m.episode_id
+        WHERE m.transcript_id IS NULL
+        GROUP BY s.slug, m.episode_id
+        ORDER BY days_pending DESC, m.episode_id;
+        """,
+    )
+    if not rows:
+        return CheckResult(
+            "transcript_race_selfheal",
+            "pass",
+            "No episodes are waiting to be re-extracted from a late transcript.",
+            [],
+        )
+
+    stuck = [r for r in rows if int(r["days_pending"] or 0) > SELF_HEAL_MAX_PENDING_DAYS]
+    details = [
+        f"{r['slug']} ep {r['episode_id']}: {r['mentions']} show-notes mention(s), "
+        f"transcript arrived {r['transcript_arrived']} ({r['days_pending']}d pending)"
+        for r in rows
+    ]
+    if stuck:
+        status = "fail"
+        summary = (
+            f"{len(stuck)} episode(s) still not re-extracted more than "
+            f"{SELF_HEAL_MAX_PENDING_DAYS} days after their transcript arrived — "
+            "the self-heal is not draining."
+        )
+    else:
+        status = "warn"
+        summary = (
+            f"{len(rows)} episode(s) queued for self-heal re-extraction; "
+            "the next pipeline run should clear them."
+        )
+    return CheckResult("transcript_race_selfheal", status, summary, details)
 
 
 def check_ai_mention_fields(conn) -> CheckResult:
@@ -658,6 +721,7 @@ def run_checks(conn, include_feed_check: bool = False) -> list[CheckResult]:
         check_episode_freshness(conn),
         check_notion_sync_freshness(conn),
         check_ai_daily_extraction(conn),
+        check_transcript_race_selfheal(conn),
         check_ai_mention_fields(conn),
         check_possible_entity_alias_splits(conn),
         check_optional_null_map(conn),

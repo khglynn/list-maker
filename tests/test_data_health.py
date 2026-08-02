@@ -163,3 +163,63 @@ def test_notion_sync_freshness_passes_when_clean(monkeypatch) -> None:
         monkeypatch, transcript_rows=[], stale_entities=0, failed_entities=0
     )
     assert check_notion_sync_freshness(conn=None).status == "pass"
+
+
+def test_selfheal_check_passes_when_queue_is_empty(monkeypatch) -> None:
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [])
+    result = dh.check_transcript_race_selfheal(conn=None)
+    assert result.status == "pass"
+
+
+def test_selfheal_check_warns_while_the_queue_is_still_draining(monkeypatch) -> None:
+    """A freshly-damaged episode is the system working, not a fault — the next run
+    heals it. Failing here would train us to ignore the alert."""
+    import pipeline.data_health as dh
+
+    rows = [{
+        "slug": "ai-daily-brief", "episode_id": 7261, "mentions": 3,
+        "transcript_arrived": date(2026, 8, 1), "days_pending": 1,
+    }]
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: rows)
+
+    result = dh.check_transcript_race_selfheal(conn=None)
+    assert result.status == "warn"
+    assert "queued for self-heal" in result.summary
+
+
+def test_selfheal_check_fails_when_the_queue_stops_draining(monkeypatch) -> None:
+    """Days-old pending episodes mean the heal is failing or never running. Counting
+    rows alone could not tell that apart from a heal in progress."""
+    import pipeline.data_health as dh
+
+    rows = [{
+        "slug": "hard-fork", "episode_id": 5133, "mentions": 7,
+        "transcript_arrived": date(2026, 6, 18), "days_pending": 45,
+    }]
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: rows)
+
+    result = dh.check_transcript_race_selfheal(conn=None)
+    assert result.status == "fail"
+    assert "not draining" in result.summary
+    assert any("hard-fork ep 5133" in d for d in result.details)
+
+
+def test_extraction_integrity_no_longer_double_reports_the_race(monkeypatch) -> None:
+    """The race has one owner (check_transcript_race_selfheal). This check keeps only
+    the orphan case: transcript_id pointing at a transcript that no longer exists."""
+    import pipeline.data_health as dh
+
+    seen: list[str] = []
+
+    def fake_one(conn, sql, params=None):
+        seen.append(" ".join(sql.split()))
+        return {"transcripted_without_mentions": 0, "count": 0}
+
+    monkeypatch.setattr(dh, "_one", fake_one)
+    result = dh.check_ai_daily_extraction(conn=None)
+
+    assert result.status == "pass"
+    orphan_sql = next(s for s in seen if "transcript_id IS NOT NULL" in s)
+    assert "m.transcript_id IS NULL" not in orphan_sql

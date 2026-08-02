@@ -142,13 +142,42 @@ What it does for music shows:
 
 ### run_new_episodes.py (AI Daily)
 
-Chains Taddy import → entity extraction → alias normalization → Notion sync.
+Chains Taddy import → transcript-race self-heal → entity extraction → alias
+normalization → Notion sync → Spotify sync.
 
 ```bash
 cd pipeline
 ./venv/bin/python3 run_new_episodes.py --shows ai-daily-brief
 ./venv/bin/python3 run_new_episodes.py --all
 ```
+
+#### The transcript race, and how it heals itself
+
+Taddy publishes a transcript roughly a day after the episode. A run that fires in
+between used to extract the show-notes blurb instead, and because the selection query
+skips any episode that already has mentions, nothing ever went back for the real text —
+episodes 5133 and 7261 ended up with mentions like "The AI Daily Brief Newsletter" and
+stayed that way. Three pieces keep that closed:
+
+- **Prevention.** Transcript-based (Taddy) shows wait for the transcript rather than
+  falling back to notes.
+- **A bound on the wait.** After `TRANSCRIPT_GRACE_DAYS` (7) the episode is extracted
+  from its notes anyway, announced in the run output. Waiting forever would trade a
+  wrong-source extraction for a missing one.
+- **Recovery.** Each run re-extracts episodes whose mentions carry no transcript_id
+  though the episode now has a transcript, capped at `SELF_HEAL_MAX_EPISODES_PER_RUN`
+  (3) and reported in the run summary. It re-extracts by ORIGINAL batch name, because
+  `delete_existing_run` keys on (show_id, batch_name) — healing one episode of a mixed
+  batch under a new name would delete its healthy siblings and never replace them.
+
+Provenance is recorded when the text is read (`extraction_provenance.json`, passed to
+`load_entity_batch --provenance-json`), not looked up at load time. Extraction of a
+batch takes minutes, and a transcript landing inside that window would otherwise be
+stamped onto mentions mined from show notes — provenance nobody could later tell was
+fabricated, and an episode the recovery loop would never revisit.
+
+`data_health.check_transcript_race_selfheal` is the backstop: it warns while the queue
+is draining and fails once an episode has sat unhealed for more than 3 days.
 
 ---
 

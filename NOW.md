@@ -1,6 +1,26 @@
 # NOW — list-maker
 
-**Last updated:** 2026-07-24
+**Last updated:** 2026-08-02
+
+> **✅ 2026-08-02 — the transcript race is now self-healing, and the two damaged episodes are repaired.**
+> PR #1 prevented the race going forward; this closes it. **Data:** episodes 5133 (hard-fork) and
+> 7261 (ai-daily-brief) re-extracted from their real transcripts (runs 291/292) — 5133's mentions went
+> from "Find 'Hard Fork' on YouTube and TikTok" to Figma-in-context / Claude Design / Sora / Substack;
+> 7261's three newsletter-promo mentions became GPT-5.6 / OpenAI Codex / Claude Code / OpenClaw /
+> Copilot Super app / MAI models / the Zuckerberg WSJ op-ed. Episode 7262 shared that batch and was
+> healthy — it was preserved through the same reload, which is *why* the heal re-extracts by whole
+> original batch (`delete_existing_run` keys on `(show_id, batch_name)`). Notion synced (1 create,
+> 16 updates). **0 damaged episodes remain fleet-wide.**
+> **Code (PR #2, branch `fix/transcript-race-self-healing`):** a recovery loop re-extracts up to 3
+> such episodes per run, loud in the run summary; provenance is recorded when the text is READ rather
+> than looked up at load time (a transcript landing mid-batch used to fabricate a transcript_id that
+> would have made the recovery permanently blind); `require_transcript` no longer blocks forever —
+> after 7 days the notes are extracted anyway, announced; and `prepare_extraction_inputs` now
+> overwrites a stale cached source file instead of trusting it (that alone would have made the heal a
+> silent no-op). `check_transcript_race_selfheal` warns while the queue drains, fails past 3 days.
+> Tests 165 → 185. Full narrative: DEVLOG 2026-08-02; mechanism: `pipeline/README.md`.
+> **Pre-existing, not addressed:** `import_caught_up_to_feed` shows ai-daily-brief 1 episode behind
+> (feed 08-02, we have 07-31) — the daily import lag, clears on the next scheduled run.
 
 > **⚠️ 2026-07-24 — two silent failures fixed (found by an eachie-side error sweep):**
 > (1) **Cloudflare cron day-of-week is 1=Sunday..7=Saturday** — the 06-11 crons assumed

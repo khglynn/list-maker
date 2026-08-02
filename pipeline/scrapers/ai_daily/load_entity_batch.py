@@ -99,6 +99,12 @@ def parse_args() -> argparse.Namespace:
         default="extract_entities_v2_lean",
         help="Prompt version label for run metadata",
     )
+    parser.add_argument(
+        "--provenance-json",
+        help="Path to the extraction provenance map written by run_new_episodes."
+        " Records which transcript (if any) was actually extracted, per episode."
+        " Omit only for a hand-run batch, where provenance falls back to a load-time lookup.",
+    )
     return parser.parse_args()
 
 
@@ -125,6 +131,41 @@ def get_transcript_map(conn, episode_ids: list[int]) -> dict[int, int]:
         )
         rows = cur.fetchall()
     return {int(r["episode_id"]): int(r["id"]) for r in rows}
+
+
+def read_provenance(path: str | None) -> dict[int, int | None] | None:
+    """Load the extraction provenance map, if one was passed. Keys are episode ids;
+    a null value means the extractor read show notes, not a transcript."""
+    if not path:
+        return None
+    raw = json.loads(Path(path).expanduser().read_text(encoding="utf-8"))
+    return {int(k): (int(v) if v is not None else None) for k, v in raw.items()}
+
+
+def resolve_transcript_map(
+    conn, episode_ids: list[int], provenance: dict[int, int | None] | None
+) -> tuple[dict[int, int | None], list[int]]:
+    """Decide each mention's transcript_id. Returns (map, episodes_inferred).
+
+    Recorded provenance wins wherever it exists, including an explicit null — that null
+    is the whole point. Asking the database "does this episode have a transcript?" at load
+    time answers a different question: extraction runs for minutes, and a transcript that
+    lands mid-batch would otherwise be stamped onto mentions mined from show notes. Those
+    mentions would then look transcript-derived forever, and the self-heal check in
+    run_new_episodes would never revisit the episode.
+
+    Episodes with no recorded provenance (a hand-run batch, or one extracted before this
+    field existed) fall back to the load-time lookup and are named in the return value so
+    the caller can say the provenance was inferred rather than observed.
+    """
+    inferred = [eid for eid in episode_ids if provenance is None or eid not in provenance]
+    resolved: dict[int, int | None] = {}
+    if inferred:
+        lookup = get_transcript_map(conn, inferred)
+        resolved.update({eid: lookup.get(eid) for eid in inferred})
+    if provenance:
+        resolved.update({eid: provenance[eid] for eid in episode_ids if eid in provenance})
+    return resolved, inferred
 
 
 def insert_run(
@@ -302,7 +343,7 @@ def insert_mention(
     conn,
     *,
     run_id: int,
-    transcript_map: dict[int, int],
+    transcript_map: dict[int, int | None],
     row: dict[str, str],
     entity_id: int,
 ) -> None:
@@ -400,10 +441,18 @@ def main() -> None:
 
     episode_ids = sorted({int(r["episode_id"]) for r in rows})
 
+    provenance = read_provenance(args.provenance_json)
+
     conn = get_db_connection()
     try:
         show_id = get_show_id(conn, args.show_slug)
-        transcript_map = get_transcript_map(conn, episode_ids)
+        transcript_map, inferred = resolve_transcript_map(conn, episode_ids, provenance)
+        if inferred:
+            print(
+                f"WARNING: no recorded extraction provenance for episode(s) {inferred} — "
+                "falling back to a load-time transcript lookup, which cannot tell whether "
+                "the extractor actually read that transcript."
+            )
         removed_runs = delete_existing_run(conn, show_id=show_id, batch_name=batch_name)
         if removed_runs:
             print(
@@ -457,9 +506,15 @@ def main() -> None:
             if row["needs_review"].strip().lower() == "true":
                 review_open += 1
 
+        from_transcript = sum(1 for eid in episode_ids if transcript_map.get(eid) is not None)
         print(f"Loaded batch: {batch_name}")
         print(f"Run ID: {run_id}")
         print(f"Episodes: {len(episode_ids)}")
+        print(
+            f"Provenance: {from_transcript} from transcript, "
+            f"{len(episode_ids) - from_transcript} from show notes"
+            f"{' (inferred)' if inferred else ''}"
+        )
         print(f"Entities upserted/used: {len(entity_cache)}")
         print(f"Mentions inserted: {mention_inserted}")
         print(f"Mentions needing review: {review_open}")
