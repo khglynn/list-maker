@@ -8,6 +8,7 @@ duplicated elsewhere. tests/test_show_config.py guards against drift.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Optional
 
 
@@ -27,6 +28,13 @@ class ShowConfig:
     # nothing to import on a scheduled run (curated sources). Taddy shows are keyed
     # off taddy_uuid itself — the uuid IS the importer config.
     importer: Optional[str] = None
+
+    # Date of the show's final episode, for shows that have concluded. A finished show
+    # can never be "fresh" again, so data_health skips its STALENESS check — otherwise
+    # it fails every single run forever, which is how a Slack alert becomes noise you
+    # learn to ignore. The feed check deliberately keeps running: it costs nothing extra
+    # and is how we'd find out if the show ever came back.
+    ended_on: Optional[date] = None
 
     # Taddy
     taddy_uuid: Optional[str] = None
@@ -110,6 +118,9 @@ SHOWS: dict[str, ShowConfig] = {
         importer="gabfest_rss",
         taddy_uuid=None,  # Taddy won't transcribe Gabfest (iHeart rights) — Megaphone RSS show-notes instead
         fallback_website_url="https://feeds.megaphone.fm/slatesculturegabfest",
+        # Slate ended the show: final episode 2026-07-01, "So Long, and Thanks for All
+        # the Granola Edition". https://slate.com/podcasts/culture-gabfest/2026/07/the-last-episode-of-the-slate-culture-gabfest-ever
+        ended_on=date(2026, 7, 1),
         store_raw_content=True,
         notion_database_id="3780501ef95081a783ebf8a32fa94657",  # shared Media DB (Option A)
         notion_min_mentions=1,  # media: a single recommendation is meaningful
@@ -199,6 +210,14 @@ def shows_with_notion() -> list[ShowConfig]:
 def shows_with_spotify() -> list[ShowConfig]:
     """Return shows that have a Spotify playlist configured."""
     return [s for s in SHOWS.values() if s.spotify_playlist_id]
+
+
+def ended_show_slugs() -> set[str]:
+    """Slugs of shows that have published their final episode (see ShowConfig.ended_on).
+
+    data_health skips STALENESS for these — a concluded show is permanently stale by
+    definition, and a check that can never pass again is noise, not signal."""
+    return {slug for slug, cfg in SHOWS.items() if cfg.ended_on is not None}
 
 
 def curated_show_slugs() -> set[str]:

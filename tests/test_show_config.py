@@ -1,4 +1,6 @@
-from pipeline.show_config import SHOWS, curated_show_slugs
+from datetime import date
+
+from pipeline.show_config import SHOWS, curated_show_slugs, ended_show_slugs
 from pipeline.scrapers.taddy.import_transcripts import SHOWS as TADDY_SHOWS
 
 TECH_DB = "982dafa0ad374d618e25207e67860e33"
@@ -55,6 +57,20 @@ def test_curated_set_matches_expected() -> None:
         "openai-blog", "anthropic-blog", "saved-articles", "agentic-research",
         "saved-episodes",
     }
+
+
+def test_ended_shows_are_dated_and_expected() -> None:
+    """An ended show still imports (a revival would be picked up) — it only stops
+    counting as 'stale'. Keep the set explicit so retiring a show is a deliberate act."""
+    assert ended_show_slugs() == {"culture-gabfest"}
+    assert SHOWS["culture-gabfest"].ended_on == date(2026, 7, 1)
+
+
+def test_ended_on_is_a_date_not_a_string() -> None:
+    """A stringly-typed date would compare wrong and format wrong in the health report."""
+    for slug, cfg in SHOWS.items():
+        if cfg.ended_on is not None:
+            assert isinstance(cfg.ended_on, date), f"{slug}: ended_on must be a datetime.date"
 
 
 def test_scheduled_non_taddy_importers_are_known() -> None:

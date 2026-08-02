@@ -93,21 +93,40 @@ def run_script(script_path: str, args: list[str], dry_run: bool, label: str, tim
     return False
 
 
-def find_unextracted_episodes(conn, show_id: int, recent_only: bool = True) -> list[int]:
+def find_unextracted_episodes(
+    conn,
+    show_id: int,
+    recent_only: bool = True,
+    require_transcript: bool = False,
+) -> list[int]:
     """Find episodes that have source text (transcript OR show-notes) but no extraction run.
 
     If recent_only=True (default), only returns episodes published within the last
     RECENT_EPISODE_WINDOW_DAYS days — this avoids re-processing old episodes that
     pre-date the current quality bar. Use recent_only=False (the --backfill flag)
     for the full archive, e.g. when onboarding a show.
+
+    require_transcript=True holds an episode back until its transcript exists, instead
+    of falling back to show notes. Callers set it for transcript-based (Taddy) shows,
+    because that fallback is a RACE, not a safety net: Taddy publishes a transcript
+    about a day after the episode, so a same-day run would extract the show-notes blurb
+    instead — and since the episode then HAS mentions, the exclusion below means it is
+    never re-extracted once the real transcript lands. That silently cost us episodes
+    5133 (hard-fork) and 7261 (ai-daily-brief), whose only mentions are boilerplate like
+    "The AI Daily Brief Newsletter". Waiting one run is strictly better than mining the
+    wrong text once and never revisiting it. Show-notes-only shows (Gabfest) pass False.
     """
     with conn.cursor() as cur:
-        sql = """
+        source_text = (
+            "et.transcript_text" if require_transcript
+            else "COALESCE(et.transcript_text, ep.description_body)"
+        )
+        sql = f"""
             SELECT DISTINCT ep.id
             FROM episodes ep
             LEFT JOIN episode_transcripts et ON et.episode_id = ep.id
             WHERE ep.show_id = %s
-              AND COALESCE(et.transcript_text, ep.description_body) IS NOT NULL
+              AND {source_text} IS NOT NULL
               AND ep.id NOT IN (
                   SELECT DISTINCT m.episode_id FROM ai_mentions m
               )
@@ -304,7 +323,12 @@ def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> list
         conn = get_db_connection()
         try:
             unextracted = find_unextracted_episodes(
-                conn, cfg.show_id, recent_only=not backfill
+                conn,
+                cfg.show_id,
+                recent_only=not backfill,
+                # Taddy shows are transcript-based; anything else (Gabfest) is
+                # legitimately show-notes-only.
+                require_transcript=bool(cfg.taddy_uuid),
             )
         finally:
             conn.close()
