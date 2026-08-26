@@ -1,26 +1,31 @@
 // list-maker-cron — Cloudflare Worker: the DURABLE control plane for the pipeline.
 //
-// On a set of crons it calls GitHub's workflow_dispatch for the repo's workflows.
-// HARD CONSTRAINT: Workers Free allows max 5 cron triggers per Worker — the 2026-06-11
-// deploy with 7 crons failed exactly there. So music shares ONE Mon/Wed/Fri cron and
-// the Worker picks the show by day. The 5:
-//   - daily 11:00 UTC     → entities.yml  (AI Daily, Hard Fork, PCHH, Culture Gabfest)
-//   - Mon/Wed/Fri 10:00   → pipeline.yml  (Mon → show_id=2 TAL; Wed+Fri → show_id=1 SOP)
-//   - Mon   12:00 UTC     → eval.yml      (weekly extraction-quality eval — gated)
-//   - Mon   13:00 UTC     → blogs.yml     (weekly blog pull queue: discover + ingest checked)
-//   - 1st+15th 13:30      → pulse.yml     (biweekly Slack health heartbeat)
+// ONE daily cron (20:30 UTC ≈ 3:30pm CT) fans out to the day's GitHub
+// workflow_dispatch calls. Consolidated from five crons on 2026-08-26: the
+// Workers Free plan caps cron triggers at 5 PER ACCOUNT, and other projects
+// (remembrall-hub) need slots. Per-workflow cadence is unchanged in kind:
+//   - entities.yml  every day            (AI Daily, Hard Fork, PCHH, Culture Gabfest)
+//   - pipeline.yml  Mon/Wed/Fri          (Mon → show_id=2 TAL; Wed+Fri → show_id=1 SOP)
+//   - eval.yml      Mon                  (weekly extraction-quality eval — gated)
+//   - blogs.yml     Mon                  (weekly blog pull queue)
+//   - pulse.yml     1st + 15th           (biweekly Slack health heartbeat)
+// Only the minute moved — everything dispatches at the entities slot, 20:30 UTC,
+// so the AI Daily brief's timing is exactly what it was. Day-of-week logic uses
+// JS Date (Mon=1) here, NOT cron day fields — Cloudflare's 1=Sun..7=Sat cron
+// convention already cost six weeks of missed Mondays once (2026-06/07).
 //
 // Why this exists: GitHub silently disables `schedule:` crons in public repos after
 // 60 days of repo inactivity. A Cloudflare Worker Cron has no such limit, so THIS
-// Worker — not GitHub's own scheduler — is what "starts the work." Both workflows
+// Worker — not GitHub's own scheduler — is what "starts the work." The workflows
 // have their `schedule:` blocks removed; this Worker is their only trigger.
 //
-// Observability: this Worker is now the single point that starts everything, so a
+// Observability: this Worker is the single point that starts everything, so a
 // silent dispatch failure (expired PAT, GitHub outage) would stop the whole pipeline
 // with no signal — the downstream Slack alerts only fire once a workflow actually
-// RUNS, and the staleness check lives inside the workflow that wouldn't fire. So a
-// failed dispatch posts to Slack here, at the trigger. (Set the optional
-// SLACK_WEBHOOK_URL secret to enable; without it, failures still hit console.error.)
+// RUNS. So a failed dispatch posts to Slack here, at the trigger, and each
+// workflow's dispatch is isolated: one failure never blocks the rest of the day's
+// fan-out. (Set the optional SLACK_WEBHOOK_URL secret to enable; without it,
+// failures still hit console.error.)
 //
 // Secrets:
 //   GH_PAT            (required) fine-grained GitHub PAT for khglynn/list-maker,
@@ -31,30 +36,28 @@
 
 const REPO = "khglynn/list-maker";
 
-// cron string (MUST match wrangler.toml [triggers].crons) → workflow file + inputs.
-// Keeping the schedule here, in one place, is the point: the Worker is the single
-// control plane. Changing cadence means editing this map + wrangler.toml together.
-const SCHEDULE = {
-  // 2026-07-27: everything consolidated into Kevin's ~3pm-CT anchor window so
-  // non-critical Slack pings (these workflows notify on failure) arrive at a
-  // predictable hour instead of pre-dawn. Content lands ~3-4pm now, not ~6am —
-  // Kevin's accepted tradeoff.
-  "30 20 * * *": { workflow: "entities.yml", inputs: {} },              // daily ~3:30pm CT
-  // One cron, two music shows (free-plan 5-cron cap): the fire day picks the show.
-  // Cron days use CLOUDFLARE's 1=Sun..7=Sat convention (Mon=2/Wed=4/Fri=6 — see
-  // wrangler.toml); the JS check below uses Date's own Mon=1. With the cron actually
-  // firing on real Mon/Wed/Fri, getUTCDay()===1 correctly selects TAL on Mondays.
-  // (20:45 UTC is still the same UTC day, so the Monday check is unaffected.)
-  "45 20 * * 2,4,6": {
-    workflow: "pipeline.yml",
-    inputsFor: (event) => ({
-      show_id: new Date(event.scheduledTime).getUTCDay() === 1 ? "2" : "1",
-    }),
-  },
-  "55 20 * * 2": { workflow: "eval.yml", inputs: {} },                  // Mon ~3:55pm CT — weekly eval
-  "0 20 * * 2": { workflow: "blogs.yml", inputs: {} },                  // Mon ~3pm CT — blog pull queue
-  "15 20 1,15 * *": { workflow: "pulse.yml", inputs: {} },              // 1st+15th ~3:15pm CT — pulse
-};
+// The single cron string — MUST match wrangler.toml [triggers].crons.
+const DAILY_CRON = "30 20 * * *";
+
+// What the daily fire dispatches, decided by the fire timestamp. Exported shape
+// kept simple on purpose: given a Date, return [{workflow, inputs}].
+function dispatchesFor(when) {
+  const day = when.getUTCDay(); // JS convention: Sun=0, Mon=1 ... Sat=6
+  const date = when.getUTCDate();
+  const out = [{ workflow: "entities.yml", inputs: {} }]; // the AI Daily brief — every day
+  if (day === 1 || day === 3 || day === 5) {
+    // Mon/Wed/Fri music: Monday is TAL (show_id=2), Wed+Fri are SOP (show_id=1).
+    out.push({ workflow: "pipeline.yml", inputs: { show_id: day === 1 ? "2" : "1" } });
+  }
+  if (day === 1) {
+    out.push({ workflow: "eval.yml", inputs: {} });
+    out.push({ workflow: "blogs.yml", inputs: {} });
+  }
+  if (date === 1 || date === 15) {
+    out.push({ workflow: "pulse.yml", inputs: {} });
+  }
+  return out;
+}
 
 // Best-effort failure alert. Logs always; posts to Slack if the webhook is set. Never
 // throws — a notify failure must not mask the original error in the cron path.
@@ -100,23 +103,26 @@ async function dispatch(env, workflow, inputs) {
 }
 
 export default {
-  // Fired by the crons in wrangler.toml. event.cron tells us which one fired.
+  // Fired by the single daily cron in wrangler.toml.
   async scheduled(event, env, ctx) {
     if (!env.GH_PAT) {
       ctx.waitUntil(notifyFailure(env, "GH_PAT secret not set — cannot dispatch"));
       return;
     }
-    const target = SCHEDULE[event.cron];
-    if (!target) {
-      ctx.waitUntil(
-        notifyFailure(env, `no SCHEDULE mapping for cron "${event.cron}"`)
-      );
+    if (event.cron !== DAILY_CRON) {
+      // A cron fired that this code doesn't know — config and code drifted.
+      ctx.waitUntil(notifyFailure(env, `unexpected cron "${event.cron}" — wrangler.toml and worker.js are out of sync`));
       return;
     }
-    const inputs = target.inputsFor ? target.inputsFor(event) : target.inputs;
+    const targets = dispatchesFor(new Date(event.scheduledTime));
+    // Isolated per-workflow: one failed dispatch alerts but never blocks the rest.
     ctx.waitUntil(
-      dispatch(env, target.workflow, inputs).catch((e) =>
-        notifyFailure(env, `dispatch ${target.workflow} failed — ${e.message}`)
+      Promise.all(
+        targets.map((t) =>
+          dispatch(env, t.workflow, t.inputs).catch((e) =>
+            notifyFailure(env, `dispatch ${t.workflow} failed — ${e.message}`)
+          )
+        )
       )
     );
   },
