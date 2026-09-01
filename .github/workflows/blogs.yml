@@ -19,6 +19,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   pull-queue:
     runs-on: ubuntu-latest

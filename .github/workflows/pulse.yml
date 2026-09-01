@@ -6,8 +6,11 @@ name: Pulse Report (health heartbeat)
 # arriving, the trigger itself is down. For an ACTIVE dead-trigger alert, pair with a
 # Sentry Cron Monitor check-in in the Cloudflare Worker.
 #
-# workflow_dispatch only (no schedule:) — the Cloudflare Worker drives the cadence
-# (1st + 15th), same as the rest of the pipeline, so there's no GitHub 60-day-disable.
+# No schedule: — the Cloudflare Worker drives the cadence (1st + 15th), same as the rest
+# of the pipeline, so there's no GitHub 60-day-disable. Since 2026-09-01 the Worker asks
+# entities.yml to run this as a follow-on job (workflow_call) instead of dispatching it
+# separately: a same-minute dispatch read Neon before the day's import and cried
+# "BEHIND". workflow_dispatch stays for a manual pulse from the Actions tab.
 # shell: bash turns on pipefail for run steps — without it, `cmd | tee` reports tee's
 # exit code and a crashed script reads as "success" (bit pipeline.yml for six weeks).
 defaults:
@@ -16,6 +19,10 @@ defaults:
 
 on:
   workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   pulse:
@@ -41,4 +48,5 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           TADDY_USER_ID: ${{ secrets.TADDY_USER_ID }}   # second source (are we behind the feed?)
           TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}     # Blog Pull Queue count (the nudge)
         run: cd pipeline && python pulse_report.py

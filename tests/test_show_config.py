@@ -78,3 +78,18 @@ def test_scheduled_non_taddy_importers_are_known() -> None:
     known = {None, "gabfest_rss"}
     for slug, cfg in SHOWS.items():
         assert cfg.importer in known, f"{slug}: unknown importer {cfg.importer!r}"
+
+
+def test_feed_grace_matches_each_show_import_cadence() -> None:
+    """The feed check's tolerance must cover a show's real publish→import gap, or the
+    daily alarm fires on every fresh episode. That was August 2026: SOP publishes
+    Tuesdays and imports Wed/Fri, so "1 show behind" hit Slack most days for nothing."""
+    for slug, cfg in SHOWS.items():
+        if cfg.medium != "podcast":
+            continue  # curated sources have no feed; the check skips them entirely
+        assert isinstance(cfg.feed_grace_days, int) and cfg.feed_grace_days >= 1, slug
+    assert SHOWS["sop"].feed_grace_days >= 4  # Tue publish; Wed + Fri imports both get a turn
+    assert SHOWS["tal"].feed_grace_days >= 2  # Mon publish; Mon import at the same minute as the check
+    for slug in ("ai-daily-brief", "hard-fork", "pchh"):
+        # Daily-imported shows: a grace longer than this would hide a real multi-day gap.
+        assert SHOWS[slug].feed_grace_days <= 3, slug

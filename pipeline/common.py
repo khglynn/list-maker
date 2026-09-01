@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -66,8 +67,21 @@ def load_environment(repo_root: Path | None = None) -> None:
     load_dotenv(repo_root / "pipeline" / ".env.local")
 
 
+# A Neon connection that can't be made should fail in seconds, not minutes. libpq's
+# default is NO connect timeout, and the pooler hostname resolves to six addresses
+# (three IPv6 that GitHub runners can't route, three IPv4). On 2026-08-31 Neon was
+# unreachable from CI for ~40 minutes and every step waited ~7 minutes per attempt
+# before the orchestrator's retry even started — the run burned 41 minutes to report
+# one outage. The timeout applies per address, so one attempt is bounded at roughly
+# 6 × DB_CONNECT_TIMEOUT_SECONDS worst case; three attempts with short backoff still
+# ride out a brief blip, and a real outage surfaces as one clear error within minutes.
+DB_CONNECT_TIMEOUT_SECONDS = int(os.getenv("DB_CONNECT_TIMEOUT") or "20")
+DB_CONNECT_ATTEMPTS = 3
+DB_CONNECT_BACKOFF_SECONDS = (10, 30)
+
+
 def get_db_connection():
-    """Connect to Neon database with RealDictCursor."""
+    """Connect to Neon with RealDictCursor, a connect timeout, and a bounded retry."""
     try:
         import psycopg2
         from psycopg2.extras import RealDictCursor
@@ -77,7 +91,28 @@ def get_db_connection():
     db_url = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL")
     if not db_url:
         raise RuntimeError("DATABASE_URL (or NEON_DATABASE_URL) is required")
-    return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+
+    last_exc: Exception | None = None
+    for attempt in range(1, DB_CONNECT_ATTEMPTS + 1):
+        try:
+            return psycopg2.connect(
+                db_url, cursor_factory=RealDictCursor, connect_timeout=DB_CONNECT_TIMEOUT_SECONDS
+            )
+        except psycopg2.OperationalError as exc:
+            last_exc = exc
+            if attempt == DB_CONNECT_ATTEMPTS:
+                break
+            wait = DB_CONNECT_BACKOFF_SECONDS[attempt - 1]
+            first_line = (str(exc).strip().splitlines() or ["?"])[0][:200]
+            get_logger("pipeline.common").warning(
+                "db connect attempt %d/%d failed, retrying in %ds: %s",
+                attempt, DB_CONNECT_ATTEMPTS, wait, first_line,
+            )
+            time.sleep(wait)
+    raise RuntimeError(
+        f"could not connect to Neon after {DB_CONNECT_ATTEMPTS} attempts "
+        f"({DB_CONNECT_TIMEOUT_SECONDS}s connect timeout each): {last_exc}"
+    ) from last_exc
 
 
 # THE canonical Spotify scope — the UNION of every script's needs. All three

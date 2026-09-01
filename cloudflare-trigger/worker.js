@@ -8,11 +8,14 @@
 //   - pipeline.yml  Mon/Wed/Fri          (Mon → show_id=2 TAL; Wed+Fri → show_id=1 SOP)
 //   - eval.yml      Mon                  (weekly extraction-quality eval — gated)
 //   - blogs.yml     Mon                  (weekly blog pull queue)
-//   - pulse.yml     1st + 15th           (biweekly Slack health heartbeat)
+//   - pulse         1st + 15th           (biweekly Slack heartbeat — NOT its own
+//                                         dispatch: entities.yml runs it after the
+//                                         import when asked, via inputs.pulse)
 // Only the minute moved — everything dispatches at the entities slot, 20:30 UTC,
 // so the AI Daily brief's timing is exactly what it was. Day-of-week logic uses
 // JS Date (Mon=1) here, NOT cron day fields — Cloudflare's 1=Sun..7=Sat cron
 // convention already cost six weeks of missed Mondays once (2026-06/07).
+// dispatchesFor is exported so worker.test.js can pin that logic in CI.
 //
 // Why this exists: GitHub silently disables `schedule:` crons in public repos after
 // 60 days of repo inactivity. A Cloudflare Worker Cron has no such limit, so THIS
@@ -41,10 +44,18 @@ const DAILY_CRON = "30 20 * * *";
 
 // What the daily fire dispatches, decided by the fire timestamp. Exported shape
 // kept simple on purpose: given a Date, return [{workflow, inputs}].
-function dispatchesFor(when) {
+export function dispatchesFor(when) {
   const day = when.getUTCDay(); // JS convention: Sun=0, Mon=1 ... Sat=6
   const date = when.getUTCDate();
-  const out = [{ workflow: "entities.yml", inputs: {} }]; // the AI Daily brief — every day
+  const entities = { workflow: "entities.yml", inputs: {} }; // the AI Daily brief — every day
+  if (date === 1 || date === 15) {
+    // The pulse reads the tables entities.yml fills. Until 2026-09-01 it was a
+    // separate dispatch at this same minute, so it usually queried Neon BEFORE the
+    // day's import landed and reported shows "BEHIND" that were caught up five
+    // minutes later. entities.yml now runs it as a follow-on job when asked.
+    entities.inputs = { pulse: "true" };
+  }
+  const out = [entities];
   if (day === 1 || day === 3 || day === 5) {
     // Mon/Wed/Fri music: Monday is TAL (show_id=2), Wed+Fri are SOP (show_id=1).
     out.push({ workflow: "pipeline.yml", inputs: { show_id: day === 1 ? "2" : "1" } });
@@ -52,9 +63,6 @@ function dispatchesFor(when) {
   if (day === 1) {
     out.push({ workflow: "eval.yml", inputs: {} });
     out.push({ workflow: "blogs.yml", inputs: {} });
-  }
-  if (date === 1 || date === 15) {
-    out.push({ workflow: "pulse.yml", inputs: {} });
   }
   return out;
 }

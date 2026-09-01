@@ -12,7 +12,7 @@ import argparse
 import json
 import sys
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -87,6 +87,31 @@ OPTIONAL_NULL_NOTES = {
     "episodes.audio_url": "Expected on recent Taddy imports; old website-scraped rows may not have it.",
     "episodes.image_url": "Helpful but not source-of-truth; missing art is not a data integrity failure.",
 }
+
+
+DEFAULT_FEED_GRACE_DAYS = 2  # mirrors ShowConfig.feed_grace_days for callers holding no cfg
+
+
+def _today() -> date:
+    return datetime.now(timezone.utc).date()
+
+
+def split_missing_feed_dates(
+    feed: Iterable[date], db_latest: date | None, grace_days: int, today: date | None = None
+) -> tuple[list[date], list[date]]:
+    """Split the feed dates we don't hold yet into (overdue, pending).
+
+    A feed date is MISSING when it is newer than the newest episode we have. It is only
+    OVERDUE — a real gap, worth waking someone — once it is older than the show's grace
+    window (ShowConfig.feed_grace_days). Inside the window it is merely PENDING: the
+    episode is out, but the scheduled import that normally fetches it hasn't had its
+    turn. The daily check and the pulse both use this, so they can't disagree about
+    what "behind" means.
+    """
+    today = today or _today()
+    cutoff = today - timedelta(days=grace_days)
+    missing = [d for d in feed if db_latest is None or d > db_latest]
+    return [d for d in missing if d <= cutoff], [d for d in missing if d > cutoff]
 
 
 def _rows(conn, sql: str, params: Iterable[Any] | None = None) -> list[dict[str, Any]]:
@@ -443,6 +468,11 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
     `slugs` narrows the check to specific shows. The music workflow passes the one show
     it just ran, so a single Taddy call proves that run actually discovered something,
     without paying for a feed call per show on every music run.
+
+    A missing episode only counts as BEHIND once it is older than the show's
+    feed_grace_days (see show_config) — newer ones are reported as pending. Without
+    that, this check fired on nearly every August-2026 run for SOP, whose Tuesday
+    episode simply hadn't met its Wednesday import yet.
     """
     wanted = set(slugs) if slugs is not None else None
     rows = _rows(
@@ -473,9 +503,17 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             # WARN so it can't hide as a silent pass, without crying wolf on a flaky run.
             warnings.append(f"{slug}: feed UNVERIFIED — second source unreachable")
             continue
-        behind = sum(1 for d in feed if latest is None or d > latest)
-        if behind:
-            failures.append(f"{slug}: BEHIND {behind} — feed at {feed[0]}, we have {latest}")
+        overdue, pending = split_missing_feed_dates(feed, latest, cfg.feed_grace_days)
+        if overdue:
+            failures.append(
+                f"{slug}: BEHIND {len(overdue)} — feed at {feed[0]}, we have {latest} "
+                f"(oldest missing {min(overdue)}, past the {cfg.feed_grace_days}-day import window)"
+            )
+        elif pending:
+            details.append(
+                f"{slug}: caught up ({latest}) — {len(pending)} newer feed episode(s) pending "
+                f"inside the {cfg.feed_grace_days}-day import window (feed at {feed[0]})"
+            )
         else:
             details.append(f"{slug}: caught up ({latest})")
     if failures:

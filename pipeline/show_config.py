@@ -36,6 +36,20 @@ class ShowConfig:
     # and is how we'd find out if the show ever came back.
     ended_on: Optional[date] = None
 
+    # How long a feed episode may be absent from our DB before that is a real gap.
+    # The daily feed check (data_health.check_import_caught_up, also the pulse) asks
+    # each show's real feed for its latest episodes and compares to what we hold.
+    # Without a grace window it fires the moment an episode publishes — hours or days
+    # before the import that would normally fetch it. The music shows import only on
+    # Mon/Wed/Fri (pipeline.yml) and SOP publishes Tuesdays, so through August 2026 the
+    # channel got a "1 show behind" alarm nearly every day while nothing was wrong —
+    # exactly the noise that trains a reader to ignore the one real alert.
+    # Size it as the longest normal wait between publish and the next scheduled import
+    # that would catch it, plus a day for Taddy's transcript lag (measured 2026-09-01:
+    # p90 = 1 day for the daily shows). A missing episode OLDER than this still fails
+    # loudly — TAL's 10-week gap in 2026-07 would have tripped it on day three.
+    feed_grace_days: int = 2
+
     # Taddy
     taddy_uuid: Optional[str] = None
     fallback_website_url: Optional[str] = None
@@ -59,6 +73,9 @@ SHOWS: dict[str, ShowConfig] = {
         name="Switched On Pop",
         show_id=1,
         content_types=["music"],
+        # Publishes Tuesdays; imported Wed + Fri. By Saturday both runs have had their
+        # chance, so a Tuesday episode still missing then is a real miss.
+        feed_grace_days=4,
         taddy_uuid="97ed51a4-460e-4dc8-8db5-30df96ad59bc",
         fallback_website_url="https://switchedonpop.com",
         spotify_playlist_id="0cEVeX4pdHf5RJOiTRzgxX",
@@ -70,6 +87,9 @@ SHOWS: dict[str, ShowConfig] = {
         name="This American Life",
         show_id=2,
         content_types=["music"],
+        # Publishes Sun/Mon; imported Mondays (same minute as the daily check, so the
+        # Monday check can't see Monday's import). Missing by Wednesday = Monday missed.
+        feed_grace_days=2,
         taddy_uuid="d682a935-ad2d-46ee-a0ac-139198b83bcc",
         fallback_website_url="https://www.thisamericanlife.org/podcast/rss.xml",
         spotify_playlist_id="3d7fjfrTTKvrl7VHv5JzIz",

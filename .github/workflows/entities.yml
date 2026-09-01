@@ -29,6 +29,20 @@ on:
         required: false
         type: boolean
         default: false
+      pulse:
+        description: 'Post the biweekly pulse AFTER this run (the Worker sets this on the 1st + 15th)'
+        required: false
+        type: boolean
+        default: false
+
+# The failure step below files a tracking issue. This repo's GITHUB_TOKEN is read-only by
+# default, so without `issues: write` that step failed on every failure it ever handled
+# ("Resource not accessible by integration", 2026-06 → 2026-08-31): the Slack ping fired,
+# the issue never existed, and a failing notify step looks exactly like the failure it
+# was reporting. Least privilege otherwise.
+permissions:
+  contents: read
+  issues: write
 
 jobs:
   run-entities:
@@ -126,3 +140,14 @@ jobs:
               body: `The scheduled entity pipeline run failed.\n\n**Run:** ${runUrl}`,
               labels: ['pipeline-failure'],
             });
+
+  pulse:
+    # The biweekly heartbeat reads the same tables run-entities just filled. From June to
+    # 2026-09-01 it was its own workflow, dispatched at the same minute, so it usually
+    # queried Neon BEFORE the day's import landed and reported shows "BEHIND" that were
+    # caught up five minutes later. Running it here, after the import, is the fix.
+    # `always()` on purpose: a failed import is exactly when a truthful pulse matters.
+    needs: run-entities
+    if: always() && github.event.inputs.pulse == 'true'
+    uses: ./.github/workflows/pulse.yml
+    secrets: inherit

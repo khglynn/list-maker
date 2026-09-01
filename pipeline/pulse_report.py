@@ -19,18 +19,27 @@ unposted heartbeat would defeat "no pulse = trigger down".
 from __future__ import annotations
 
 import argparse
+import os
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from common import get_db_connection, load_environment, post_slack
-from data_health import DEFAULT_STALENESS_MAX_DAYS, STALENESS_MAX_DAYS, run_checks
+from data_health import (
+    DEFAULT_FEED_GRACE_DAYS,
+    DEFAULT_STALENESS_MAX_DAYS,
+    STALENESS_MAX_DAYS,
+    _today,
+    run_checks,
+    split_missing_feed_dates,
+)
 from feed_check import feed_recent_dates
 from show_config import SHOWS
 
 HUB_URL = "https://www.notion.so/31c0501ef95080d1a3fde8fa8d5ce907"  # Pod Lists hub
+QUEUE_URL = "https://www.notion.so/37c0501ef9508139b52be5d5f7d71f53"  # Blog Pull Queue
 RECENT_WINDOW_DAYS = 15  # ~the pulse cadence; "recent episodes we've processed"
 
 SHOW_SHORT = {
@@ -40,6 +49,11 @@ SHOW_SHORT = {
     "culture-gabfest": "Culture Gabfest",
     "sop": "SOP",
     "tal": "TAL",
+    "openai-blog": "OpenAI blog",
+    "anthropic-blog": "Anthropic blog",
+    "saved-articles": "Saved articles",
+    "agentic-research": "Research docs",
+    "saved-episodes": "Saved episodes",
 }
 
 
@@ -92,21 +106,34 @@ def gather(conn) -> tuple[list[dict], dict]:
     return shows, totals
 
 
-def show_status(s: dict) -> tuple[str, str]:
-    """Return (status_text, state) where state is 'ok' | 'behind' | 'unverified'.
+def show_status(s: dict, today: date | None = None) -> tuple[str, str]:
+    """Return (status_text, state), state in 'ok' | 'behind' | 'unverified' | 'curated'.
 
     'unverified' (feed_check returned None — unreachable / error / empty) is its own state
     on purpose: it must NEVER be counted as green, or the pulse lies by omission.
+
+    'curated' is for sources with no feed at all (blogs, saved articles, research docs):
+    their "latest" is just the last time something was saved by hand. Until 2026-09-01
+    they rendered as "❓ feed unverified" — five alarms on every pulse for something that
+    was working exactly as designed.
     """
+    cfg = s.get("cfg")
     db_latest = s["latest"]
+    if cfg is not None and getattr(cfg, "medium", "podcast") != "podcast":
+        return f"📌 curated — {s['episodes']} item(s), last saved {db_latest}", "curated"
+
     feed = s["feed_dates"]
     if not feed:  # None — couldn't get a trustworthy answer from the feed
         return f"❓ feed unverified — we have {db_latest}", "unverified"
 
     feed_latest = feed[0]
-    behind = sum(1 for d in feed if db_latest is None or d > db_latest)
-    if behind > 0:
-        return f"🚨 BEHIND {behind} — feed at {feed_latest}, we have {db_latest}", "behind"
+    grace = getattr(cfg, "feed_grace_days", DEFAULT_FEED_GRACE_DAYS)
+    overdue, pending = split_missing_feed_dates(feed, db_latest, grace, today=today)
+    if overdue:
+        return f"🚨 BEHIND {len(overdue)} — feed at {feed_latest}, we have {db_latest}", "behind"
+    if pending:
+        # Published, not yet imported, inside the show's normal import window — fine.
+        return f"✅ caught up ({db_latest}) — {len(pending)} newer pending import", "ok"
 
     age = s["days_since"]
     threshold = STALENESS_MAX_DAYS.get(s["slug"], DEFAULT_STALENESS_MAX_DAYS)
@@ -116,23 +143,69 @@ def show_status(s: dict) -> tuple[str, str]:
     return f"✅ caught up ({db_latest})", "ok"
 
 
-def build_digest(shows: list[dict], totals: dict, checks: list) -> str:
-    today = datetime.now(timezone.utc).date()
+def pull_queue_counts() -> dict | None:
+    """Candidate / checked counts from the Blog Pull Queue, or None if it can't be read.
+
+    The queue is the one place the blog sources wait on a human, and nothing else
+    nudges: between 2026-06-14 and 2026-09-01 it held 31 unchecked candidates and no
+    report said so. The pulse is the natural place — it is already the note that says
+    where things stand. A Notion hiccup must not sink the heartbeat, so this never
+    raises; the digest says "couldn't read it" instead of pretending.
+    """
+    token = os.getenv("NOTION_TOKEN")
+    if not token:
+        return None
+    try:
+        from build_pull_queue import QUEUE_DB_ID
+        from sync_notion import NOTION_API, notion_request
+
+        counts = {"candidates": 0, "checked": 0}
+        cursor = None
+        while True:
+            body: dict = {
+                "page_size": 100,
+                "filter": {"property": "Status", "select": {"equals": "candidate"}},
+            }
+            if cursor:
+                body["start_cursor"] = cursor
+            result = notion_request("POST", f"{NOTION_API}/databases/{QUEUE_DB_ID}/query", token, body)
+            for page in result.get("results", []):
+                counts["candidates"] += 1
+                if page.get("properties", {}).get("Pull", {}).get("checkbox"):
+                    counts["checked"] += 1
+            if not result.get("has_more"):
+                break
+            cursor = result.get("next_cursor")
+        return counts
+    except Exception as exc:  # noqa: BLE001 — see docstring
+        print(f"WARNING: could not read the Blog Pull Queue: {exc}", file=sys.stderr)
+        return None
+
+
+def build_digest(
+    shows: list[dict], totals: dict, checks: list, queue: dict | None = None,
+    today: date | None = None,
+) -> str:
+    today = today or _today()
     fails = [c for c in checks if c.status == "fail"]
     warns = [c for c in checks if c.status == "warn"]
 
     show_lines: list[str] = []
+    curated_lines: list[str] = []
     behind_count = 0
     unverified_count = 0
     for s in shows:
-        status, state = show_status(s)
+        status, state = show_status(s, today=today)
         if state == "behind":
             behind_count += 1
         elif state == "unverified":
             unverified_count += 1
         short = SHOW_SHORT.get(s["slug"], s["slug"])
         dest = destination_link(s.get("cfg"))
-        show_lines.append(f"• *{short}*  {status}  ·  +{s['recent']} recent  ·  {dest}")
+        if state == "curated":
+            curated_lines.append(f"• *{short}*  {status}  ·  {dest}".rstrip(" ·"))
+        else:
+            show_lines.append(f"• *{short}*  {status}  ·  +{s['recent']} recent  ·  {dest}")
 
     lines: list[str] = [f"📊 *list-maker pulse* — {today.isoformat()}", f"<{HUB_URL}|→ Pod Lists hub (all links)>", ""]
     warn_suffix = f" (+{len(warns)} warning(s))" if warns else ""
@@ -148,11 +221,27 @@ def build_digest(shows: list[dict], totals: dict, checks: list) -> str:
 
     lines.append("*Shows* — are we caught up to the real feed?")
     lines.extend(show_lines)
+    if curated_lines:
+        lines.append("")
+        lines.append("*Curated sources* — pulled by hand, no feed to be behind")
+        lines.extend(curated_lines)
     lines.append("")
     lines.append(
         f"*Library:* {totals['entities']:,} entities · {totals['mentions']:,} mentions · "
         f"{totals['notion_transcripts']:,} transcripts in Notion"
     )
+    if queue is None:
+        lines.append("📥 *Blog Pull Queue:* couldn't read it this time (NOTION_TOKEN missing or Notion error)")
+    elif queue["candidates"] == 0:
+        lines.append(f"📥 *Blog Pull Queue:* empty — nothing waiting on you · <{QUEUE_URL}|queue>")
+    else:
+        checked = (
+            f" ({queue['checked']} checked, ingesting Monday)" if queue["checked"] else ""
+        )
+        lines.append(
+            f"📥 *Blog Pull Queue:* {queue['candidates']} candidate(s) waiting for your "
+            f"checkbox{checked} · <{QUEUE_URL}|open the queue>"
+        )
 
     if fails:
         lines.append("")
@@ -179,8 +268,9 @@ def main() -> None:
         checks = run_checks(conn)
     finally:
         conn.close()
+    queue = pull_queue_counts()
 
-    digest = build_digest(shows, totals, checks)
+    digest = build_digest(shows, totals, checks, queue)
     print(digest)
     if not args.dry_run:
         # The pulse IS the heartbeat — a "success" that didn't actually post would make a

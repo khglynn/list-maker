@@ -1,25 +1,32 @@
 # list-maker-cron — durable pipeline trigger (Cloudflare Worker)
 
-This Worker is the **durable control plane** for the whole pipeline. On a set of
-crons it calls GitHub `workflow_dispatch` for both workflows:
+This Worker is the **durable control plane** for the whole pipeline. ONE cron
+(`30 20 * * *`, ~3:30pm CT) fires daily; `dispatchesFor()` in `worker.js` decides
+what that day dispatches via GitHub `workflow_dispatch` (pinned by `worker.test.js`):
 
-| Cron (UTC)      | Workflow       | What runs                                   |
-|-----------------|----------------|---------------------------------------------|
-| `0 11 * * *`    | `entities.yml` | AI Daily, Hard Fork, PCHH, Culture Gabfest  |
-| `0 10 * * 1`    | `pipeline.yml` | This American Life (music → Spotify)        |
-| `0 10 * * 3`    | `pipeline.yml` | Switched on Pop (music → Spotify)           |
-| `0 10 * * 5`    | `pipeline.yml` | Switched on Pop (music → Spotify)           |
+| When (UTC 20:30)  | Workflow                    | What runs                                          |
+|-------------------|-----------------------------|----------------------------------------------------|
+| every day         | `entities.yml`              | AI Daily, Hard Fork, PCHH, Culture Gabfest → Notion |
+| Mon               | `pipeline.yml` show_id=2    | This American Life (music → Spotify)               |
+| Wed, Fri          | `pipeline.yml` show_id=1    | Switched on Pop (music → Spotify)                  |
+| Mon               | `eval.yml`, `blogs.yml`     | extraction eval; Blog Pull Queue build + ingest    |
+| 1st + 15th        | `entities.yml` `pulse=true` | the biweekly Slack pulse, run AFTER that day's import |
 
 **Why it exists:** GitHub auto-disables `schedule:` crons in public repos after 60
-days of inactivity — silently. A Cloudflare Worker Cron has no such limit. Once this
-is deployed, the `schedule:` blocks are removed from **both** workflows, so this
-Worker is their only trigger. (The cron strings live in two places that must stay in
-sync: `wrangler.toml [triggers].crons` and the `SCHEDULE` map in `worker.js`.)
+days of inactivity — silently. A Cloudflare Worker Cron has no such limit, so every
+workflow's `schedule:` block is gone and this Worker is their only trigger. Why one
+cron: the Workers Free plan caps cron triggers at 5 **per account** (verified
+2026-08-26) and other projects need slots. The single cron string lives in two places
+that must match: `wrangler.toml [triggers].crons` and `DAILY_CRON` in `worker.js` —
+the Worker alerts to Slack if they ever drift.
 
 ## Deploy (personal **trimm** Cloudflare — account_id already set)
 
-The global `CLOUDFLARE_API_TOKEN` is the **Tecovas** token, so every command unsets
-it (`env -u CLOUDFLARE_API_TOKEN ...`) to use the trimm OAuth login.
+Deploy from a **personal-profile** Claude session or your own terminal, never from
+the Tecovas profile. Check first — `npx wrangler whoami` must say
+`Kevin@trimm.co's Account` (verified 2026-09-01: the personal profile's
+`CLOUDFLARE_API_TOKEN` is the trimm token; a bare terminal falls back to your trimm
+OAuth login). If it names Tecovas, stop. Then: `npx wrangler deploy`.
 
 `account_id` is already filled in `wrangler.toml` (`759a850a…`, kevin@trimm.co).
 

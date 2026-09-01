@@ -49,18 +49,15 @@ VALID_ENTITY_TYPES = {
 
 
 def get_db_connection():
-    try:
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-    except ImportError as exc:
-        raise RuntimeError(
-            "Missing dependency: psycopg2-binary. Install pipeline requirements first."
-        ) from exc
+    # Shared implementation (connect timeout + bounded retry) — see pipeline/common.py.
+    # Lazy path insert + import so this file still runs as a script from pipeline/ AND
+    # imports cleanly as pipeline.scrapers.ai_daily.load_entity_batch under pytest.
+    pipeline_dir = str(Path(__file__).resolve().parents[2])
+    if pipeline_dir not in sys.path:
+        sys.path.insert(0, pipeline_dir)
+    from common import get_db_connection as shared_connection
 
-    db_url = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL")
-    if not db_url:
-        raise RuntimeError("DATABASE_URL (or NEON_DATABASE_URL) is required")
-    return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+    return shared_connection()
 
 
 def normalize_name(value: str) -> str:

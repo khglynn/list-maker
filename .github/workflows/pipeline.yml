@@ -32,6 +32,13 @@ on:
         type: boolean
         default: false
 
+# `issues: write` so "Create issue on failure" can actually create one — GITHUB_TOKEN is
+# read-only by default here, and that step had silently failed on every failure since
+# June 2026 (see entities.yml for the story). Least privilege otherwise.
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
