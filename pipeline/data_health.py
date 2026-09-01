@@ -540,7 +540,13 @@ def check_ai_daily_extraction(conn) -> CheckResult:
           ) AS transcripted_without_mentions
         FROM episodes ep
         JOIN ai_show s ON s.id = ep.show_id
-        JOIN episode_transcripts et ON et.episode_id = ep.id;
+        JOIN episode_transcripts et ON et.episode_id = ep.id
+        -- A transcript that landed within the last few hours is simply waiting for its
+        -- extraction (the daily run imports, then extracts ~3 minutes later). Any reader
+        -- in that gap — the pulse did on 2026-09-01 — would otherwise report a phantom
+        -- integrity issue. 6h is far past that gap and far short of the 1–2 day real
+        -- holes this check caught on 2026-08-01.
+        WHERE et.created_at < NOW() - INTERVAL '6 hours';
         """,
     )
     missing_mentions = int(row.get("transcripted_without_mentions") or 0)
@@ -582,7 +588,9 @@ def check_ai_daily_extraction(conn) -> CheckResult:
     issue_count = missing_mentions + orphan_transcript_mentions + zero_mention_runs
     details = []
     if missing_mentions:
-        details.append(f"AI Daily transcripted episodes without mentions: {missing_mentions}")
+        details.append(
+            f"AI Daily episodes transcripted >6h ago without mentions: {missing_mentions}"
+        )
     if orphan_transcript_mentions:
         details.append(
             f"AI mentions pointing at a deleted transcript: {orphan_transcript_mentions}"

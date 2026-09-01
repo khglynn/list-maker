@@ -156,27 +156,9 @@ def pull_queue_counts() -> dict | None:
     if not token:
         return None
     try:
-        from build_pull_queue import QUEUE_DB_ID
-        from sync_notion import NOTION_API, notion_request
+        from build_pull_queue import QUEUE_DB_ID, queue_counts  # the queue's own I/O module
 
-        counts = {"candidates": 0, "checked": 0}
-        cursor = None
-        while True:
-            body: dict = {
-                "page_size": 100,
-                "filter": {"property": "Status", "select": {"equals": "candidate"}},
-            }
-            if cursor:
-                body["start_cursor"] = cursor
-            result = notion_request("POST", f"{NOTION_API}/databases/{QUEUE_DB_ID}/query", token, body)
-            for page in result.get("results", []):
-                counts["candidates"] += 1
-                if page.get("properties", {}).get("Pull", {}).get("checkbox"):
-                    counts["checked"] += 1
-            if not result.get("has_more"):
-                break
-            cursor = result.get("next_cursor")
-        return counts
+        return queue_counts(token, QUEUE_DB_ID)
     except Exception as exc:  # noqa: BLE001 — see docstring
         print(f"WARNING: could not read the Blog Pull Queue: {exc}", file=sys.stderr)
         return None
@@ -238,9 +220,10 @@ def build_digest(
         checked = (
             f" ({queue['checked']} checked, ingesting Monday)" if queue["checked"] else ""
         )
+        oldest = f", oldest {queue['oldest_days']}d" if queue.get("oldest_days") else ""
         lines.append(
             f"📥 *Blog Pull Queue:* {queue['candidates']} candidate(s) waiting for your "
-            f"checkbox{checked} · <{QUEUE_URL}|open the queue>"
+            f"checkbox{checked}{oldest} · <{QUEUE_URL}|open the queue>"
         )
 
     if fails:
@@ -264,6 +247,11 @@ def main() -> None:
     load_environment()
     conn = get_db_connection()
     try:
+        # One snapshot for both reads. The freshness lines and the health checks must
+        # describe the same instant, or the digest contradicts itself — on 2026-09-01
+        # it said "we have 08-29" next to "08-31's transcript has no mentions yet",
+        # because the day's import committed between the two reads.
+        conn.set_session(isolation_level="REPEATABLE READ", readonly=True)
         shows, totals = gather(conn)
         checks = run_checks(conn)
     finally:

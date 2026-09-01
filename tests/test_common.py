@@ -198,7 +198,7 @@ def test_get_db_connection_gives_up_with_one_clear_error(monkeypatch) -> None:
     monkeypatch.setattr(psycopg2, "connect", always_fail)
     monkeypatch.setattr(common.time, "sleep", lambda _s: None)
 
-    with pytest.raises(RuntimeError, match=f"after {common.DB_CONNECT_ATTEMPTS} attempts"):
+    with pytest.raises(RuntimeError, match=rf"after {common.DB_CONNECT_ATTEMPTS} attempt"):
         common.get_db_connection()
 
 
