@@ -4,6 +4,25 @@ Chronological session journal. Most recent at top. Never delete entries.
 
 ---
 
+## 2026-09-01 — Why the channel cried wolf all August, what happened to the blogs, and the fix (PR #4)
+
+**Trigger:** Kevin, from the 09-01 pulse: "what's causing all these behinds and failures? what happened with the blogs?" — plus a call for a ground-it cleanup pass on a repo built months ago.
+
+**Method:** root-cause the four symptoms against the actual runs, logs and live Neon; then six Opus refuters tried to knock each root cause down, and six Sonnet auditors read the repo against the four foundation docs. Two claims were refuted and the fixes changed shape because of it.
+
+**What the alerts actually were (9 of 9 August "behind" alarms were false):**
+- *"1 show(s) behind their feed"* — SOP publishes Tuesday, imports Wednesday; TAL publishes Monday, imports Monday at the same minute as the check. The feed check ran daily with no grace window, so it fired most Mon/Tue/Wed. It never once observed a same-day music import (entities' health ran ~20:34–20:44, the music import ~20:45–20:47). The pipeline.yml post-import `--strict` check, the one correctly ordered, has never failed. Fix: `feed_grace_days` per show (SOP 4, TAL 2, daily 2); missing-but-inside-window is *pending*, older is BEHIND and still loud.
+- *Pulse "AI Daily BEHIND 1 / PCHH BEHIND 2 / integrity issue"* — the pulse had no ordering dependency on the import (08-01 and 08-15 at 20:16 lied the same way), and read Neon twice on READ COMMITTED so one digest contradicted itself. Fix: the Worker asks entities.yml to run the pulse as a follow-on job after the import; one REPEATABLE READ snapshot; 6h grace on "transcripted without mentions."
+- *Five "❓ feed unverified" lines* — curated sources have no feed. Fix: a curated state, plus a Blog Pull Queue line.
+- *Two entities.yml failures.* **08-31 was not Neon** (two sibling jobs connected to the same pooler the same minute); one runner VM had a dead path to all three IPv4 addresses and every step paid ~7 minutes rediscovering it — 41 minutes for one fact. Fix: per-address connect timeout + keepalives + bounded retry in one shared function, and a DB preflight as the first step of every workflow (about a minute to a diagnostic Slack line). **08-23 was not "the LLM found nothing"** — token counts prove it emitted a comparable mention list both days; the post-filters removed every candidate on 08-23, and the next day's "recovery" stored two sponsor reads (Blitzy, HyperAgent) as editorial mentions. That is a data-quality design fix, deferred to its own PR (see NOW.md).
+- *"Create issue on failure" never worked* — GITHUB_TOKEN is read-only here and no workflow granted `issues: write`; zero `pipeline-failure` issues exist. Fix: permissions blocks + idempotent create (comment on the open issue, not one per day).
+
+**What happened with the blogs:** nothing broke. The design waits on Kevin's checkbox in the Blog Pull Queue; he triaged once on 06-14 (14 skipped, 0 pulled) and 31 candidates have sat since. Discovery produced zero new candidates in eleven weeks because it only surfaces URLs the podcasts cite — and the newest ones were cited by the two blog posts Kevin ingested himself, so the queue can only grow from work it exists to trigger. The weekly job was silent by construction on a dry week. OpenAI has an official RSS feed; Anthropic has none (only community mirrors) — a feed/index poll is the decision in front of Kevin. Fix so far: the weekly line posts every week, and the pulse shows the count.
+
+**Shipped:** PR #4 (`fix/alert-noise-and-failure-paths`, commits 77b7067 + b8e03d3), CI green. Tests 185 → 206 (+6 node tests on the Worker's day logic, now in CI). Worker redeploy after merge.
+
+**Left for the plan:** compare feed episode identities (a re-dated TAL episode inflated a BEHIND count; MAX(publish_date) is blind to holes mid-series); a watchdog for runs that never start (08-06 was a silent day); the sponsor-read / empty-extraction design; ~18 private copies of `get_db_connection`; and the doc-truth / layout / dependency cleanup the auditors are writing up.
+
 ## 2026-08-02 — The transcript race, healed: two damaged episodes re-extracted + a recovery loop
 
 **Trigger:** PR #1 prevented the race for future episodes but explicitly left the two already-damaged episodes alone ("the remedy is a delete + re-extract, which is a production write and Kevin's call"). Kevin's call came, with a wider steer: *"if that 'arrived a day late' thing isn't patched/allowed for in the code and'll cause issues again in the future please allow for that in the code… we keep hitting problems because the code isn't permissive enough and the builds aren't self-healing enough."*

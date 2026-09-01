@@ -1,6 +1,23 @@
 # NOW — list-maker
 
-**Last updated:** 2026-08-02
+**Last updated:** 2026-09-01 · **Mode:** live
+
+> **▶ 2026-09-01 — alert noise diagnosed and fixed (PR #4, open, CI green); ground-it cleanup pass planned.**
+> Read `DEVLOG.md` (2026-09-01) for what the August alerts actually were. Short version: 9 of 9
+> "behind" alarms were false (no grace window vs. the Mon/Wed/Fri music imports), the pulse had no
+> ordering dependency on the import, curated sources rendered as "unverified", the failure-issue step
+> never had permission, and 08-31 was one runner's dead network path (not Neon) amplified by a missing
+> connect timeout. **Blogs:** nothing broke — 31 Pull Queue candidates have waited since 06-14 and
+> discovery found zero new ones in eleven weeks; nothing said so. All fixed in PR #4 except the
+> extraction-filter / sponsor-read design (next PR).
+>
+> **Next step (exact):** Kevin merges PR #4 → deploy the Worker (`cd cloudflare-trigger && npx wrangler
+> whoami` must say trimm, then `npx wrangler deploy`) → run the ground-it cleanup plan at
+> `claude-plans/2026-09-01-ground-it-cleanup-plan.md` (being written from the six-auditor pass).
+> Everything below this line is history from the June–August build and will be folded into that plan.
+
+---
+
 
 > **✅ 2026-08-02 — the transcript race is now self-healing, and the two damaged episodes are repaired.**
 > PR #1 prevented the race going forward; this closes it. **Data:** episodes 5133 (hard-fork) and
