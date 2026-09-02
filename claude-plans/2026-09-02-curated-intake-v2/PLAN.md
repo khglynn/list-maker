@@ -61,7 +61,7 @@ Each: one concern per commit, tests, CI green, Kevin merges. Never Fable in a fa
 ### Cost
 ~60 candidates/week × 2 judges × ~3k tokens ≈ $0.30/week on the $15 cap; ~60 Firecrawl scrapes/week; hard cap 60 new candidates per run, overflow logged.
 
-## Open questions for Kevin (from the rubric panel, 2026-09-02 — each changes verdicts)
+## Open questions for Kevin (from the rubric panel, 2026-09-02) — **answered 2026-09-02 evening: Kevin approved all 75 labels unchanged and every default below stands** ("the calls are great, no notes or disagreements")
 1. **Volume.** The rubric saves ~40% of OpenAI's feed (about 4–5 posts a week from that source alone). Fine, or should the bar rise? His label pass on the 75 candidates answers this empirically.
 2. **AI-only, or technology-broad?** The domain gate admits only AI/agents/how-tech-changes-work. His research library has a `tecovas-business` folder; retail tech and e-commerce platforms may belong. Default until answered: AI-only.
 3. **Education, teens, consumer safety.** Saves the randomized study of 1,000 students (a live board question); skips teacher rollouts, the teen product, the teen-access position. Default: as is.

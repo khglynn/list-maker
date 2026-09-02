@@ -26,10 +26,10 @@ and a sha256 of the text the judge saw. **The texts are not in the repo** (they 
 people's copyright): they live in `pipeline/_cache/intake-eval/` (gitignored) and re-scrape
 when missing; an upstream edit reports as *drifted*, never as a judge regression.
 
-`_meta.labeled_by` says whose labels these are. **`opus-panel-provisional`** (2026-09-02)
-means five Opus reviewers labeled them against the rubric and Kevin's grounding; Kevin's
-own pass on the correction page replaces them — rebuild with `build_fixture.py` and
-`--labeled-by kevin` when it lands. Re-freeze only on an intentional re-baseline.
+`_meta.labeled_by` says whose labels these are. Five Opus reviewers labeled them against
+the rubric and Kevin's grounding (2026-09-02); Kevin reviewed all 75 on the correction page
+the same day and approved them unchanged ("no notes or disagreements"), so these are his
+labels. Re-freeze only on an intentional re-baseline (`build_fixture.py`).
 
 ## Run it
 
@@ -47,7 +47,7 @@ Needs `OPENROUTER_API_KEY` (and `FIRECRAWL_API_KEY` to refill missing texts).
 | Date | Rubric | Labels | Recall | Precision | Agreement | Note |
 |---|---|---|---|---|---|---|
 | 2026-09-02 | v1 `e414eb19` | opus-panel | 0.925 | 0.86 | — | archival pages saved for stale facts; JS-shell scrape saved |
-| 2026-09-02 | v2 `60f3a098` | opus-panel | 0.962 | 0.91 | 0.84 | floors ok; the residue is the torn band (grants with criteria, teen safeguards, rollout mechanism inside a customer story) |
+| 2026-09-02 | v2 `60f3a098` | kevin-approved | 0.962 | 0.91 | 0.84 | floors ok; the residue is the torn band (grants with criteria, teen safeguards, rollout mechanism inside a customer story) |
 
 ## CI
 
