@@ -39,19 +39,28 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: 'pip'
-          cache-dependency-path: pipeline/requirements.txt
+          cache-dependency-path: pipeline/requirements-dev.txt
 
       - name: Install dependencies
-        # pytest is already in pipeline/requirements.txt, so this is the same install
-        # every other workflow does — no test-only dependency set to drift out of sync.
-        run: pip install -r pipeline/requirements.txt
+        # requirements-dev.txt = the runtime set (-r requirements.txt) + pytest + pip-audit.
+        # The scheduled workflows install requirements.txt alone, so production never
+        # carries the test tools and the audit below stays about production.
+        run: pip install -r pipeline/requirements-dev.txt
+
+      - name: Audit runtime dependencies (the red X you didn't cause)
+        # Fails the build on any known advisory in the RUNTIME set. Deliberately no
+        # continue-on-error: a gate with an escape hatch is a gate nobody trusts. If a
+        # Low advisory in a package we can't bump blocks unrelated work, add
+        # `--ignore-vuln <ID>` here WITH a dated comment saying why — a reviewed,
+        # visible exception, not a silent one. Dev tools are excluded by the split above.
+        run: pip-audit -r pipeline/requirements.txt --progress-spinner off
 
       - name: Run tests
         # No env: block on purpose. The suite is hermetic — it fakes DB connections and

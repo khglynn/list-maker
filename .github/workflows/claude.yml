@@ -17,20 +17,24 @@ jobs:
     if: contains(github.event.comment.body, '@claude')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Fetch shared instructions
+        # The canonical CLAUDE.md sources live in khglynn/helper/claude-configs/ (the
+        # repo was renamed from HG-Skills-Private; the old single file CLAUDE-DEVKEV.md
+        # became global-personal.md + workspace.md). Until 2026-09-01 this step fetched
+        # a 404 and quietly prepended the error JSON onto CLAUDE.md — `--fail` makes a
+        # bad path or an expired HELPER_REPO_PAT fail the step out loud instead.
         env:
           GH_TOKEN: ${{ secrets.HELPER_REPO_PAT }}
         run: |
-          # Fetch main CLAUDE.md from HG-Skills-Private repo
-          curl -H "Authorization: token $GH_TOKEN" \
-            -H "Accept: application/vnd.github.v3.raw" \
-            "https://api.github.com/repos/khglynn/HG-Skills-Private/contents/helper/CLAUDE-DEVKEV.md" \
-            > /tmp/main-claude.md
-
-          # Combine: main instructions first, then project-specific
-          cat /tmp/main-claude.md CLAUDE.md > /tmp/combined.md
+          fetch() {
+            curl --fail --silent --show-error \
+              -H "Authorization: token $GH_TOKEN" \
+              -H "Accept: application/vnd.github.v3.raw" \
+              "https://api.github.com/repos/khglynn/helper/contents/claude-configs/$1"
+          }
+          { fetch global-personal.md; echo; fetch workspace.md; echo; cat CLAUDE.md; } > /tmp/combined.md
           mv /tmp/combined.md CLAUDE.md
 
       - uses: anthropics/claude-code-action@v1

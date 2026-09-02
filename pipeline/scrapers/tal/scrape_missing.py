@@ -5,11 +5,13 @@ TAL Missing Episode Scraper
 Scrapes episodes that exist in DB but don't have JSON files.
 
 Usage:
-    python tal_scrape_missing.py --dry-run           # Show what would be scraped
-    python tal_scrape_missing.py --limit 10          # Scrape first 10 missing
-    python tal_scrape_missing.py --execute           # Scrape all missing
-    python tal_scrape_missing.py --execute --skip-after 877  # Skip recent episodes
+    python scrape_missing.py --dry-run           # Show what would be scraped
+    python scrape_missing.py --limit 10          # Scrape first 10 missing
+    python scrape_missing.py --execute           # Scrape all missing
+    python scrape_missing.py --execute --skip-after 877  # Skip recent episodes
 """
+
+from __future__ import annotations
 
 import argparse
 import json

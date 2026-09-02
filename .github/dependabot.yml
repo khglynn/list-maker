@@ -1,0 +1,37 @@
+# Dependabot: version-update PRs for the three ecosystems this repo actually runs.
+# Added 2026-09-01 — until then the repo had no dependabot config AND vulnerability
+# alerts were switched off (a public repo where GitHub's default is on), so the entire
+# advisory feed was silently unchecked. Alerts + security updates were enabled the
+# same day via the API. Grouped minor/patch bumps keep the PR count to one per
+# ecosystem per week; majors arrive alone and get a human's eyes (never blind-merge a
+# major — see the dependency-security guide in hg-ground-it).
+#
+# web/ (npm) is deliberately NOT listed: the Next.js scaffold is undeployed and its
+# fate is a decision in claude-plans/2026-09-01-ground-it-cleanup-plan.md. Add an npm
+# entry the day it is kept on purpose; delete this comment the day it is removed.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /pipeline
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      pip-minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: pip
+    directory: /marketing
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      pip-minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions-minor-and-patch:
+        update-types: [minor, patch]

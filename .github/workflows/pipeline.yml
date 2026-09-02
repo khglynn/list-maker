@@ -10,7 +10,8 @@ defaults:
 
 on:
   # No schedule: block on purpose — the Cloudflare Worker cron (cloudflare-trigger/)
-  # is the durable trigger (SOP Wed+Fri, TAL Mon, 10:00 UTC via workflow_dispatch).
+  # is the durable trigger (SOP Wed+Fri, TAL Mon; the time lives in worker.js's
+  # dispatchesFor — don't restate it here).
   # GitHub's own cron silently disables on public repos after 60 idle days; the
   # Worker doesn't, and a failed dispatch alerts. Verified live 2026-06-11.
 
@@ -39,7 +40,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Determine show to run
         id: show
@@ -50,7 +51,7 @@ jobs:
           echo "dry_run=${{ inputs.dry_run }}" >> $GITHUB_OUTPUT
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -184,7 +185,7 @@ jobs:
 
       - name: Create issue on failure
         if: failure()  # all triggers — 'schedule' events no longer exist post Worker migration
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const showId = '${{ steps.show.outputs.show_id }}';

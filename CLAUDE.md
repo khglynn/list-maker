@@ -146,7 +146,7 @@ list-maker/
 
 The pipeline runs automatically. The **durable trigger** is the Cloudflare Worker (`cloudflare-trigger/`) calling `workflow_dispatch` — NOT GitHub's own `schedule:` (which silently disables after 60 idle days). Workflows: `pipeline.yml` (music → Spotify), `entities.yml` (tech + media → Notion), `eval.yml` (weekly extraction eval).
 
-**Schedule (in the Worker + each workflow):** entities daily 11:00 UTC; SOP Wed+Fri, TAL Mon 10:00 UTC; eval Mon 12:00 UTC.
+**Schedule:** one Cloudflare cron fans out by day — entities daily; SOP Wed+Fri, TAL Mon; eval + blogs Mon; pulse 1st/15th (after the import). The time and the day logic live in `cloudflare-trigger/worker.js` (`dispatchesFor`, tested) — read it there rather than trusting a restated copy.
 
 **Manual trigger:** Actions tab → the workflow → Run workflow (or the Worker's `/?token=…` endpoint).
 
@@ -181,7 +181,7 @@ The pipeline uses a Python venv and `.env.local` files that don't use `export`. 
 
 **Working command pattern:**
 ```bash
-cd /Users/KevinHG/DevKev/personal/list-maker && set -a && source .env.local && source pipeline/.env.local && set +a && cd pipeline && ./venv/bin/python3 <script>
+cd ~/DevKev/personal/list-maker && set -a && source .env.local && source pipeline/.env.local && set +a && cd pipeline && ./venv/bin/python3 <script>
 ```
 
 - `set -a` / `set +a` — exports all sourced vars to child processes
