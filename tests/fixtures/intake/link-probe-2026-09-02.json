@@ -1,0 +1,368 @@
+[
+ {
+  "mention": {
+   "mention_type": "paper",
+   "canonical_name": "AI as Normal Technology",
+   "ctx": "Arvind Narayanan is the co-author of AI as Normal Technology, the essay we brought him on to talk about about a year and a half ago.",
+   "show": "Hard Fork",
+   "publish_date": "2026-08-28"
+  },
+  "results": [
+   {
+    "url": "https://knightcolumbia.org/content/ai-as-normal-technology",
+    "title": "AI as Normal Technology - | Knight First Amendment Institute"
+   },
+   {
+    "url": "https://www.normaltech.ai/",
+    "title": "AI as Normal Technology | Sayash Kapoor | Substack"
+   },
+   {
+    "url": "https://www.normaltech.ai/p/a-guide-to-understanding-ai-as-normal",
+    "title": "A guide to understanding AI as normal technology"
+   },
+   {
+    "url": "https://oliviahelens.substack.com/p/ai-is-not-normal-technology",
+    "title": "AI is Not Normal Technology - by O.H. Scharfman"
+   }
+  ]
+ },
+ {
+  "mention": {
+   "mention_type": "report",
+   "canonical_name": "Meter investigation",
+   "ctx": "We also got a separate investigation from Meter. The OpenAI report is 38 pages long, while the Meter investigation is more like 90.",
+   "show": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+   "publish_date": "2026-08-27"
+  },
+  "results": [
+   {
+    "url": "https://www.nationalgridus.com/Upstate-NY-Home/Shared-Meters/Investigation-Request",
+    "title": "Shared Meter Investigation Request - National Grid"
+   },
+   {
+    "url": "https://www.coned.com/en/accounts-billing/how-to-read-your-meter/shared-meters",
+    "title": "Are You Paying for More Than You Use? | Con Edison"
+   },
+   {
+    "url": "https://www.nationalfuel.com/utility/your-meter-ny-home-business/understanding-shared-meters-ny-home-business/",
+    "title": "Understanding Shared Meters | WNY | National Fuel Gas Company"
+   },
+   {
+    "url": "https://www.nationalgridus.com/Upstate-NY-Home/Shared-Meters/",
+    "title": "Shared Meters | National Grid"
+   }
+  ]
+ },
+ {
+  "mention": {
+   "mention_type": "report",
+   "canonical_name": "Hugging Face hacking incident",
+   "ctx": "The OpenAI Hugging Face hacking incident. The incident in which a set of agents escaped their containment and hacked into Hugging Face's systems...",
+   "show": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+   "publish_date": "2026-08-27"
+  },
+  "results": [
+   {
+    "url": "https://metr.org/blog/2026-08-26-openai-hugging-face-incident-investigation/",
+    "title": "Brief independent investigation of agents' behavior, reasoning ... - METR"
+   },
+   {
+    "url": "https://www.reddit.com/r/slatestarcodex/comments/1w0eezz/metrs_independent_investigation_of_openai_hugging/",
+    "title": "METR's independent investigation of OpenAI Hugging Face hacking ..."
+   },
+   {
+    "url": "https://labs.cloudsecurityalliance.org/research/csa-research-note-rogue-agent-swarm-huggingface-20260901-csa/",
+    "title": "What 700 Rogue AI Agents Did to Hugging Face \u2013 Lab Space"
+   },
+   {
+    "url": "https://politifact.com/article/2026/aug/31/ai-agents-rogue-openai-hugging-face/",
+    "title": "AI agents are hacking without human oversight. How did we get here?"
+   }
+  ]
+ },
+ {
+  "mention": {
+   "mention_type": "report",
+   "canonical_name": "Enterprise Signals, What Frontier Firms Are Doing Differently",
+   "ctx": "The big through line signal in this piece, which was called Enterprise Signals, What Frontier Firms Are Doing Differently, was two parts.",
+   "show": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+   "publish_date": "2026-08-25"
+  },
+  "results": [
+   {
+    "url": "https://openai.com/signals/enterprise-data/",
+    "title": "Enterprise signals: What frontier firms are doing differently - OpenAI"
+   },
+   {
+    "url": "https://aidailybrief.ai/e/2026-08-25",
+    "title": "What the Top AI Users Are Doing Differently - The AI Daily Brief"
+   },
+   {
+    "url": "https://www.linkedin.com/posts/kevin-suvagiya_artificialintelligence-ai-aitransformation-activity-7497899317140279297-FdrC",
+    "title": "AI Adoption Gap Widens Between Companies - LinkedIn"
+   },
+   {
+    "url": "https://atlacis.com/blog/openai-frontier-ai-usage-gap-what-business-owners-should-know",
+    "title": "OpenAI's Frontier AI Usage Gap: What It Means for You | Atlacis ..."
+   }
+  ]
+ },
+ {
+  "mention": {
+   "mention_type": "report",
+   "canonical_name": "RAMP AI Index",
+   "ctx": "This data comes from the RAMP AI Index and was shared by RAMP's lead economist Eric Harazian about two weeks ago.",
+   "show": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+   "publish_date": "2026-08-24"
+  },
+  "results": [
+   {
+    "url": "https://ramp.com/data/ai-index",
+    "title": "Ramp AI Index"
+   },
+   {
+    "url": "https://ramp.com/data/ai-index-august-2026",
+    "title": "August 2026 Ramp AI Index: Cracks in the AI thesis"
+   },
+   {
+    "url": "https://econlab.substack.com/p/how-ramp-data-works",
+    "title": "How Ramp data works - by Ara Kharazian - Ramp Economics Lab"
+   },
+   {
+    "url": "https://ramp.com/data/ai-index-june-2026",
+    "title": "How much does it cost to be AI-pilled? - Ramp"
+   }
+  ]
+ },
+ {
+  "mention": {
+   "mention_type": "report",
+   "canonical_name": "White House AI safety testing framework",
+   "ctx": "continued questions around the details of the administration's safety testing framework",
+   "show": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+   "publish_date": "2026-08-20"
+  },
+  "results": [
+   {
+    "url": "https://www.alexgoryachev.com/alex-posts/white-house-ai-safety-framework-agent-accountability",
+    "title": "White House AI Safety Framework: Who Signs It? | Alex Goryachev"
+   },
+   {
+    "url": "https://valueaddvc.com/pulse/white-house-ai-safety-framework-meeting-2026",
+    "title": "White House Meets AI Labs on Voluntary Safety Testing"
+   },
+   {
+    "url": "https://happyrock.cloud/blog/2026-08-04_white_house_ai_safety_testing_framework_deep_dive_voluntary_to_de_facto_standard_en/",
+    "title": "White House AI Safety Testing Framework Deep Dive - HappyRock"
+   },
+   {
+    "url": "https://whitecube.ai/ai-daily-news/2026-08/2026-08-13-white-house-develops-ai-safety-framework-with-tech-giants/",
+    "title": "White House Develops AI Safety Framework ... | WhiteCube.ai"
+   }
+  ]
+ },
+ {
+  "mention": {
+   "mention_type": "blog_post",
+   "canonical_name": "AI Engineering Skills Map",
+   "ctx": "The inspiration for this came from Coursera founder Andrew Ng's AI Engineering Skills Map, a post that he dropped on X last week.",
+   "show": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+   "publish_date": "2026-08-18"
+  },
+  "results": [
+   {
+    "url": "https://www.linkedin.com/pulse/ai-engineering-skills-map-andrew-ng-m479c",
+    "title": "The AI Engineering Skills Map - LinkedIn"
+   },
+   {
+    "url": "https://x.com/AndrewYNg/article/2090840747738374568",
+    "title": "AI Engineering Skills Map: Building and Deploying AI Applications"
+   },
+   {
+    "url": "https://www.truefoundry.com/blog/andrew-ng-ai-engineering-skills-map",
+    "title": "Andrew Ng's AI Engineering Skills Map | TrueFoundry"
+   },
+   {
+    "url": "https://community.deeplearning.ai/t/ai-engineering-skills-map/894735",
+    "title": "AI Engineering Skills Map - DeepLearning.AI Community"
+   }
+  ]
+ },
+ {
+  "mention": {
+   "mention_type": "paper",
+   "canonical_name": "Machines of Loving Grace",
+   "ctx": "In fact, I wrote Machines of Loving Grace because I didn't feel the AI industry was painting an inspiring enough picture of how the technology could radically transform the world for the better.",
+   "show": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+   "publish_date": "2026-08-17"
+  },
+  "results": [
+   {
+    "url": "https://darioamodei.com/essay/machines-of-loving-grace",
+    "title": "Machines of Loving Grace - Dario Amodei"
+   },
+   {
+    "url": "https://www.reddit.com/r/TheCulture/comments/1g1j4es/machines_of_loving_grace_how_ai_could_transform/",
+    "title": "Machines of Loving Grace - How AI Could Transform the World ... - Reddit"
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Machines_of_Loving_Grace",
+    "title": "Machines of Loving Grace - Wikipedia"
+   },
+   {
+    "url": "https://www.linkedin.com/posts/ristouuk_dario-amodei-machines-of-loving-grace-activity-7252629682347544577-360n",
+    "title": "Dario Amodei \u2014 Machines of Loving Grace | Risto Uuk - LinkedIn"
+   }
+  ]
+ },
+ {
+  "mention": {
+   "mention_type": "paper",
+   "canonical_name": "The Adolescence of Technology",
+   "ctx": "January 26th to promote another essay of his, The Adolescence of Technology.",
+   "show": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+   "publish_date": "2026-08-17"
+  },
+  "results": [
+   {
+    "url": "https://darioamodei.com/essay/the-adolescence-of-technology",
+    "title": "The Adolescence of Technology - Dario Amodei"
+   },
+   {
+    "url": "https://www.linkedin.com/posts/dustin-li_dario-amodei-the-adolescence-of-technology-activity-7421664904346021890-r5-G",
+    "title": "Dario Amodei \u2014 The Adolescence of Technology | Dustin L. | 19 comments"
+   },
+   {
+    "url": "https://x.com/DarioAmodei/status/2015833046327402527",
+    "title": "Dario Amodei on X: \"The Adolescence of Technology: an essay on the ..."
+   },
+   {
+    "url": "https://www.reddit.com/r/aiwars/comments/1t8ntc8/the_adolescence_of_technology_by_dario_amodei_why/",
+    "title": "The Adolescence of Technology by Dario Amodei - Why every Anti ..."
+   }
+  ]
+ },
+ {
+  "mention": {
+   "mention_type": "report",
+   "canonical_name": "Anthropic Risk Report",
+   "ctx": "The second edition of the Anthropic Risk Report included a discussion of unreleased models that are currently being used internally.",
+   "show": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+   "publish_date": "2026-08-17"
+  },
+  "results": [
+   {
+    "url": "https://thezvi.substack.com/p/anthropic-risk-report-august-2026",
+    "title": "Anthropic Risk Report: August 2026 - Zvi Mowshowitz | Substack"
+   },
+   {
+    "url": "https://metr.org/blog/2026-05-08-rd-section-anthropic-risk-report-feb-2026-review/",
+    "title": "Review of the \"Risks from automated R&D\" section in the Anthropic Risk ..."
+   },
+   {
+    "url": "https://www.linkedin.com/posts/peterslattery1_anthropic-risk-report-august-2026-activity-7497367071157248001-HzDY",
+    "title": "Anthropic Risk Report August 2026 | Peter Slattery, PhD - LinkedIn"
+   },
+   {
+    "url": "https://m.youtube.com/watch?v=-ZG50XcHdm4",
+    "title": "Anthropic's 2026 AI Risk Report: \u201cLow\u201d Risk, Big Warnings - YouTube"
+   }
+  ]
+ },
+ {
+  "mention": {
+   "mention_type": "report",
+   "canonical_name": "KPMG adaptability report",
+   "ctx": "In their recent adaptability report, KPMG argues that leaders are overspending on technology and underspending on talent.",
+   "show": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+   "publish_date": "2026-08-16"
+  },
+  "results": [
+   {
+    "url": "https://pod.wave.co/podcast/the-ai-daily-brief-formerly-the-ai-breakdown-artificial-intelligence-news-and-analysis/the-new-problems-ai-is-creating-and-how-people-are-solving-them",
+    "title": "The New Problems AI Is Creating (And How People Are Solving ..."
+   }
+  ]
+ },
+ {
+  "mention": {
+   "mention_type": "paper",
+   "canonical_name": "The Tragedy of the Cognitive Commons",
+   "ctx": "One that I saw Zara Zhang posting about on X this week that is a super interesting one to contemplate comes from a recent paper called The Tragedy of the Cognitive Commons.",
+   "show": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+   "publish_date": "2026-08-16"
+  },
+  "results": [
+   {
+    "url": "https://arxiv.org/abs/2607.29380",
+    "title": "The Tragedy of the Cognitive Commons: How AI Could Disrupt ..."
+   },
+   {
+    "url": "https://journals.sagepub.com/doi/10.1177/15344843261470602",
+    "title": "The Tragedy of the Cognitive Commons: How AI Could Disrupt ..."
+   },
+   {
+    "url": "https://harmoniousdiscourse.substack.com/p/the-tragedy-of-the-cognitive-commons",
+    "title": "The Tragedy of the Cognitive Commons: How the Smartest AI ..."
+   },
+   {
+    "url": "https://www.linkedin.com/posts/nicholasxthompson_the-most-interesting-thing-in-tech-the-tragedy-activity-7493105883804028928--MOq",
+    "title": "Cognitive Commons Tragedy in Tech | Nicholas Thompson posted on the ..."
+   }
+  ]
+ },
+ {
+  "mention": {
+   "mention_type": "paper",
+   "canonical_name": "BCG paper",
+   "ctx": "Pointing to another BCG paper that argues when everyone uses AI, companies risk losing critical skills, Ridges Yunin writes...",
+   "show": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+   "publish_date": "2026-08-16"
+  },
+  "results": [
+   {
+    "url": "https://www.linkedin.com/posts/matthew-abel-191bab141_bcg-paper-how-fles-boost-productivity-and-activity-7335492959225696256-rqeS",
+    "title": "BCG white paper on boosting productivity with frontline enablement."
+   },
+   {
+    "url": "https://www.bcg.com/united-kingdom/centre-for-growth/insights/to-cut-electricity-bills-britain-needs-to-use-more-not-less",
+    "title": "To Cut Electricity Bills, Britain Needs to Use More, Not Less | BCG"
+   },
+   {
+    "url": "https://lightcast.io/resources/research/bcg-paper-ceiling",
+    "title": "Competence over Credentials: The Rise of Skills-Based Hiring, with BCG"
+   },
+   {
+    "url": "https://bcgpension.com/about/news/BCG_Pension_Risk_Transfer_Annuity_Placement_Pricing-Will_It_Last.asp",
+    "title": "New BCG Paper Highlights Currently Exceptional Pension Risk Transfer ..."
+   }
+  ]
+ },
+ {
+  "mention": {
+   "mention_type": "report",
+   "canonical_name": "European Union's AI Act",
+   "ctx": "Anthropic has just agreed to watermark all of its texts to comply with the European Union's AI Act.",
+   "show": "Hard Fork",
+   "publish_date": "2026-08-14"
+  },
+  "results": [
+   {
+    "url": "https://www.facebook.com/eucouncil/posts/the-eus-ai-act-is-the-worlds-first-law-on-artificial-intelligence-the-act-aims-t/1557765646379337/",
+    "title": "The EU's AI act is the world's first law on artificial intelligence ... - Facebook"
+   },
+   {
+    "url": "https://www.wilmerhale.com/en/insights/publications/20250414-wilmerhales-guide-to-the-eus-ai-act",
+    "title": "WilmerHale's Guide to the European Union's AI Act"
+   },
+   {
+    "url": "https://www.cambridge.org/core/books/cambridge-handbook-of-the-law-ethics-and-policy-of-artificial-intelligence/european-unions-ai-act/D41DE1DB8D6A8C7319DB82598410F5DA",
+    "title": "The European Union's AI Act (Chapter 12)"
+   },
+   {
+    "url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6314258",
+    "title": "European Union's AI Act: Protecting the Public at the Cost of Innovation?"
+   }
+  ]
+ }
+]
