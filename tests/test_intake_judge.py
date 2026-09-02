@@ -82,6 +82,8 @@ def test_judge_once_falls_through_to_the_next_model(monkeypatch) -> None:
             if self.model == "bad/model":
                 raise J.httpx.HTTPError("503")
         def json(self):
+            if self.model == "empty/model":  # a reasoning model that spent its budget thinking
+                return {"choices": [{"message": {"content": None}}]}
             return {"choices": [{"message": {"content": '{"verdict":"save","confidence":0.8,"reason":"ok"}'}}]}
 
     class FakeClient:
@@ -89,8 +91,11 @@ def test_judge_once_falls_through_to_the_next_model(monkeypatch) -> None:
             calls.append(json["model"])
             return FakeResp(json["model"])
 
-    v = J.judge_once([{"role": "user", "content": "x"}], ("bad/model", "good/model"), "k", client=FakeClient())
-    assert v.model == "good/model" and calls == ["bad/model", "good/model"]
+    v = J.judge_once([{"role": "user", "content": "x"}], ("bad/model", "empty/model", "good/model"), "k", client=FakeClient())
+    assert v.model == "good/model" and calls == ["bad/model", "empty/model", "good/model"]
+    assert FakeClient().post("u", {}, {"model": "good/model"}).json()  # sanity: the fake answers
+    with pytest.raises(RuntimeError):
+        J.judge_once([{"role": "user", "content": "x"}], ("empty/model",), "k", client=FakeClient())
 
 
 def test_flags_are_whole_document_facts() -> None:

@@ -171,10 +171,17 @@ def judge_once(messages: list[dict], models: tuple[str, ...], api_key: str,
                              "HTTP-Referer": "https://github.com/khglynn/list-maker",
                              "X-Title": "list-maker intake judge"},
                     json={"model": model, "messages": messages, "temperature": 0,
-                          "response_format": {"type": "json_object"}, "max_tokens": 400},
+                          "response_format": {"type": "json_object"},
+                          # generous: the answer is ~60 tokens, but a reasoning model's thinking
+                          # counts against this budget and a tight cap truncates the JSON
+                          "max_tokens": 2000},
                 )
                 resp.raise_for_status()
-                content = resp.json()["choices"][0]["message"]["content"]
+                # Reasoning models can spend the whole output budget thinking and hand
+                # back an empty or truncated content string (seen on gemini-3.5-flash,
+                # 2026-09-02: 27 of 75 calls); treat that as "this model didn't answer"
+                # and fall through, never as a crash.
+                content = resp.json()["choices"][0]["message"].get("content") or ""
                 return parse_verdict(content, model)
             except (httpx.HTTPError, KeyError, ValueError, json.JSONDecodeError) as exc:
                 last_error = exc
