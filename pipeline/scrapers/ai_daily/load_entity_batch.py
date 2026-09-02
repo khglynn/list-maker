@@ -622,6 +622,8 @@ def main() -> None:
         sponsor_inserted = 0
         first_seen_as_ad = 0
         entity_cache: dict[tuple[str, str, str], int] = {}
+        # (entity_id, publish_date) per ad mention, stamped after the batch lands.
+        sponsor_stamps: list[tuple[int, Any]] = []
         publish_dates = get_episode_publish_dates(conn, episode_ids)
 
         for row in rows:
@@ -654,13 +656,20 @@ def main() -> None:
                 review_open += 1
             if normalize_sponsor_source(row.get("sponsor_source")):
                 sponsor_inserted += 1
-                # Runs AFTER insert_mention so this mention counts as "every other
-                # mention" — otherwise an entity introduced by an ad would see no rows
-                # at all and the NOT EXISTS guard would pass for the wrong reason.
-                if record_first_seen_as_ad(
-                    conn, entity_id, publish_dates.get(int(row["episode_id"]))
-                ):
-                    first_seen_as_ad += 1
+                sponsor_stamps.append(
+                    (entity_id, publish_dates.get(int(row["episode_id"])))
+                )
+
+        # Stamp first_seen_as_ad only once the WHOLE batch has landed. The guard inside
+        # record_first_seen_as_ad asks "does an earlier mention of this entity exist?",
+        # and mentions.csv arrives in episode order — which for a multi-episode catch-up
+        # is newest-first, because Taddy inserts newest-first and the newer episode gets
+        # the smaller id. Stamping inline therefore let an ad in the NEWER episode claim
+        # "first seen" before the older episode's editorial mention had been inserted,
+        # writing a date that is real but wrong. A second pass sees every row.
+        for entity_id, publish_date in sponsor_stamps:
+            if record_first_seen_as_ad(conn, entity_id, publish_date):
+                first_seen_as_ad += 1
 
         from_transcript = sum(1 for eid in episode_ids if transcript_map.get(eid) is not None)
         print(f"Loaded batch: {batch_name}")

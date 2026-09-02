@@ -394,3 +394,32 @@ class _RecordingConn:
 
     def commit(self):
         self.committed = True
+
+
+def test_first_seen_as_ad_is_stamped_after_the_batch_not_during_it() -> None:
+    """A batch arrives newest-episode-first, so an inline stamp can be wrong.
+
+    mentions.csv is written in episode order and a multi-episode catch-up runs
+    newest-first (Taddy inserts newest-first, and the newer episode gets the smaller
+    id). record_first_seen_as_ad's guard asks "does an earlier mention exist?", which is
+    only as good as what has been inserted when it runs — so stamping inline lets an ad
+    in the NEWER episode claim first-seen before the OLDER episode's editorial mention
+    has landed, writing a date that is real but wrong.
+
+    Pinned structurally: main() must collect stamps during the row loop and apply them
+    after it, rather than calling record_first_seen_as_ad inside the loop.
+    """
+    import inspect
+
+    from pipeline.scrapers.ai_daily import load_entity_batch as leb
+
+    source = inspect.getsource(leb.main)
+    loop_at = source.index("for row in rows:")
+    stamp_at = source.index("record_first_seen_as_ad(")
+    collect_at = source.index("sponsor_stamps.append(")
+    second_pass_at = source.index("for entity_id, publish_date in sponsor_stamps:")
+
+    assert loop_at < collect_at, "stamps are collected inside the row loop"
+    assert collect_at < second_pass_at < stamp_at, (
+        "record_first_seen_as_ad must be called from the second pass, after the loop"
+    )
