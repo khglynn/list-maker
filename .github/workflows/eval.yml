@@ -28,6 +28,10 @@ on:
         description: 'Only score the first N episodes (blank = all)'
         required: false
         default: ''
+      intake_limit:
+        description: 'Intake eval: only score the first N labeled candidates (blank = all)'
+        required: false
+        default: ''
 
 # One run of this workflow at a time. A manual re-run or the Worker's HTTP trigger
 # overlapping a scheduled dispatch would run two orchestrators against the same Neon
@@ -108,3 +112,59 @@ jobs:
           [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
           curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' \
             --data "{\"text\": \":rotating_light: *list-maker: extraction eval FAILED* — extraction quality moved past a floor.\n<${RUN_URL}|View logs>\"}"
+
+  # The intake judge's gradient (evals/intake): the two cheap models against Kevin's
+  # labeled set. Separate job so a Neon blip can't hide a judge regression and vice
+  # versa; no DB preflight because it needs no database — texts re-scrape into the
+  # gitignored cache when missing (~75 Firecrawl credits a week), verdicts cost ~$0.30.
+  # Floors: recall ≥ 0.90 on `save`, precision ≥ 0.70. A breach fails the job and
+  # Slacks; auto-ingest (run_intake.AUTO_INGEST) stays off until this passes.
+  intake-eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: pipeline/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Run intake eval (gated)
+        timeout-minutes: 25
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          INTAKE_LIMIT_INPUT: ${{ github.event.inputs.intake_limit }}
+        run: |
+          set -euo pipefail
+          ARGS=(--ci --json intake_eval_report.json)
+          if [ -n "${INTAKE_LIMIT_INPUT:-}" ]; then ARGS+=(--limit "${INTAKE_LIMIT_INPUT}"); fi
+          python evals/intake/run_eval.py "${ARGS[@]}"
+
+      - name: Upload intake eval report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: intake-eval-report
+          path: intake_eval_report.json
+          if-no-files-found: ignore
+
+      - name: Notify Slack (failure)
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' \
+            --data "{\"text\": \":rotating_light: *list-maker: intake judge eval FAILED* — the judge moved past a floor.\n<${RUN_URL}|View logs>\"}"
+
