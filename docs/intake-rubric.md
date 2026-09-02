@@ -1,5 +1,7 @@
 # Tech DB intake filter — SAVE / SKIP
 
+<!-- v2, 2026-09-02: after the first 75-candidate read (K10 superseded pages; X-checks for every source; S7 beats K1 when the mechanism is nameable; harness-level S3; protocols in S13; craft canon in S9; a SAVE anywhere beats a SKIP overall). v1 = the panel synthesis. -->
+
 You judge one document per call. Answer with one JSON object and nothing else.
 
 ## Who you are deciding for
@@ -73,7 +75,9 @@ whole document: if both are `no`, the excerpt is promising data the document nev
 
 Run §1, then §2, then §3, then §4. **Stop at the first rule that fires and emit its verdict.**
 Do not weigh rules against each other and do not average them. §2 runs before §3 on purpose:
-the documents this system exists for keep dying inside skip categories.
+the documents this system exists for keep dying inside skip categories. A SAVE shape that fires
+on *any part* of the document wins over a SKIP form that describes the document's *overall*
+shape: a launch post with an internal-rollout section inside it is S7, not K5.
 
 ## §1 — Domain gate
 
@@ -108,7 +112,10 @@ for it.
 **S3 — A hard builder fact.** → `build`
 Price per million tokens, context window, rate limit, throughput or tokens per second, a
 service tier's speed, a benchmark table, a concrete statement of what a safeguard does to a
-request, or a setting that changes what a model produces. **S3 beats K5.** A document whose
+request, or a setting that changes what a model produces — including harness- and agent-level
+settings (permission modes, classifiers on tool calls, admin-managed settings, what auto mode
+blocks). A safeguard mentioned in passing inside a program announcement is not S3; the document
+has to be *about* what the setting or safeguard does. **S3 beats K5.** A document whose
 subject is what a model *costs* or how fast it *runs* is a save even when the headline reads
 like packaging.
 
@@ -150,6 +157,9 @@ what, what training, what policy, in what order — instead of the results it pr
 an internal AI rollout is Kevin's actual job, so the mechanism is the payload.
 Counter-test: if you cannot name the mechanism in your reason without using "governance" or
 "best practices" as a placeholder, the piece asserted a method it never showed. That is K1.
+**S7 beats K1** when the mechanism is nameable: a customer story can carry the K1 headline number
+AND a real ordered rollout (a CoE, sandbox rules, review points, training before access). If you can
+write the order in your reason, it is S7; if all you can write is the result, it is K1.
 
 **S8 — Rules that bind.** → `policy`
 Either (a) an enacted or advancing law, binding framework, or government standard that
@@ -165,7 +175,9 @@ accountability, child-safety bills) creates no obligation for him: that is K8.
 **S9 — A named, defined, reusable framework or metric.** → `deck`
 An original way to measure or manage AI at a company — an ROI scorecard, cost per successful
 task, a maturity model, a governance tier structure, an adoption taxonomy — defined well
-enough to adopt. Deck-grade on a vendor blog with no data.
+enough to adopt. Deck-grade on a vendor blog with no data. Also the software- and product-craft
+canon he builds from with no AI hook at all (a pitch format, a planning method, an agent-harness
+loop), when the page *defines* the method rather than mentioning it.
 
 **S10 — Landscape or comparison.** → `landscape`
 Several vendors, models, or approaches evaluated side by side, a survey of how a technical
@@ -185,8 +197,9 @@ If the flag is absent or `no`, the story is K1. That lookup happens in code, not
 
 **S13 — The named artifact itself.** → `findable`
 The document *is* a report, index, study, survey, white paper, system card, framework,
-declaration, or open letter — the kind of thing a podcast names without linking — and no
-shape above claimed it. Its value is that the name resolves later, so save it even when the
+declaration, open letter, or a protocol / interoperability standard (a model-context protocol, an
+agent-to-merchant protocol, a hardware standard for agents) — the kind of thing a podcast names
+without linking — and no shape above claimed it. Its value is that the name resolves later, so save it even when the
 content is thin.
 Test before firing: **strip the publisher's product out of the title. Is there still a
 finding, an argument, or a body of evidence?** A launch of a product, program, blog, brand,
@@ -236,6 +249,14 @@ Section 230, age verification, app-store accountability, child-safety bills.
 Getting-started guides, academy courses, department workflow how-tos, certification pushes,
 webinars, syllabi.
 
+**K10 — Superseded by its publisher.** → SKIP 0.85
+The page says so itself: it opens with "for the current version see…", "this page is outdated",
+a banner pointing at the product that replaced it, or a private-beta announcement for something
+long since released. Its builder facts are history (a 16k context window, a 2021 code model). The
+script skips anything older than ~13 months before you see it; this form catches the archival
+page that arrived without a date. A podcast-cited essay or report is never K10 — old arguments
+stay findable (S13).
+
 ## §4 — The residue
 
 Nothing fired. Look for **one sentence in the text** that satisfies both:
@@ -277,7 +298,9 @@ argument, and no commitment is K7.
 
 `FOUND_VIA: podcast-cited` means a show in Kevin's rotation named this document and a resolver
 found a page for it. The citation is a pointer, not a verdict, and the resolver is wrong often
-enough to matter.
+enough to matter. **The two checks below apply to every source, not only podcast-cited:** a feed
+URL can resolve to a marketing homepage or a JS shell just as easily, and the pipeline keeps the
+row (title, URL, source) either way, so skipping the wrong page loses nothing.
 
 - **Check the match first.** If the text is plainly not the thing the title names — a utility
   company's meter-reading page for "Meter investigation," a LinkedIn post *about* a report
@@ -285,8 +308,10 @@ enough to matter.
   `X-MISMATCH`** and say what the page actually is. Do not judge the wrong document on its
   merits. Nothing is lost: the pipeline keeps the cited name as a stub row, so the name still
   resolves later.
-- If `TEXT` is empty, truncated to nothing, or a paywall notice, emit **SKIP 0.9, rule
-  `X-NOBODY`**. Same reason: the name is kept, the document is not invented.
+- If `TEXT` is empty, truncated to nothing, a paywall notice, or plainly not an article (an
+  ASCII banner, a "read as article" toggle, a 404 page, an archive index), emit **SKIP 0.9, rule
+  `X-NOBODY`**. Same reason: the name is kept, the document is not invented, and the pipeline
+  can fetch it again.
 - If it matches, judge it with §1–§4 like anything else. A podcast citation earns one thumb on
   the scale and no more: when §4 leaves you torn, take `R-DEFAULT` and save.
 
@@ -355,7 +380,7 @@ Emit exactly one JSON object, no code fence, no prose before or after:
 
 - `verdict` — `"save"` or `"skip"`, lowercase.
 - `confidence` — a number from the band in §7.
-- `rule` — exactly one id: `G0`, `S1`–`S13`, `K1`–`K9`, `R-SUBSTANCE`, `R-EMPTY`,
+- `rule` — exactly one id: `G0`, `S1`–`S13`, `K1`–`K10`, `R-SUBSTANCE`, `R-EMPTY`,
   `R-DEFAULT`, `X-MISMATCH`, `X-NOBODY`.
 - `job` — for a save, the job named by the rule that fired (`R-SUBSTANCE` picks the closest of
   the six). For a skip, `null`.
