@@ -11,10 +11,15 @@
 > discovery found zero new ones in eleven weeks; nothing said so. All fixed in PR #4 except the
 > extraction-filter / sponsor-read design (next PR).
 >
-> **Next step (exact):** Kevin merges PR #4 → deploy the Worker (`cd cloudflare-trigger && npx wrangler
-> whoami` must say trimm, then `npx wrangler deploy`) → run the ground-it cleanup plan at
-> `claude-plans/2026-09-01-ground-it-cleanup-plan.md` (being written from the six-auditor pass).
-> Everything below this line is history from the June–August build and will be folded into that plan.
+> **Open PRs (all CI green):** #4 alert noise + failure paths · #5 declared-empty extraction (stacked on #4)
+> · #11 hygiene + dependency gate (from main) · #6–#10 Dependabot bumps for `web/` — hold those until
+> `web/`'s fate is decided (plan, decision 3).
+>
+> **Next step (exact):** Kevin answers the numbered decisions in
+> `claude-plans/2026-09-01-ground-it-cleanup-plan.md` → merges #4 (then retargets #5 to main and merges
+> it) and #11 → deploys the Worker (`cd cloudflare-trigger && npx wrangler whoami` must say trimm, then
+> `npx wrangler deploy`) → a fresh session runs Phase 1 of the plan with its kickoff paste.
+> Everything below this line is history from the June–August build; Phase 1 folds it into DEVLOG.
 
 ---
 
