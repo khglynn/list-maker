@@ -19,7 +19,7 @@
 ### Sources (weekly, `blogs.yml`, dispatched by the Worker on Mondays)
 1. **OpenAI RSS** (`openai.com/news/rss.xml`): items published since the last run.
 2. **Anthropic** `/news` (featured block + list) and `/engineering` (list), scraped once each via Firecrawl and parsed for date, category, title, URL.
-3. **Podcast-cited reports** (`report`/`paper`/`survey`/`blog_post` mentions from the tech shows, last 14 days): resolve a URL by (a) matching the episode's show-notes links, (b) Firecrawl search on the mention name + host, capped at 15 per run. A resolved URL becomes a candidate; unresolved stays visible in the log line.
+3. **Podcast-cited reports** (`report`/`paper`/`survey`/`blog_post` mentions from the tech shows, last 14 days): resolve a URL by web search on the cited name (`intake/links.py`, capped at 40 per run). *Show-notes matching was dropped 2026-09-02 after measuring: AI Daily's notes carry 248 links in 30 days, all sponsor or host promos, none to a cited report.* The probe of 14 real mentions: specific titles resolve to the primary source at search rank 1 (openai.com/signals, ramp.com, arxiv, the author's own site); generic names ("BCG paper") never auto-resolve — their hits are stored as candidates. A full-title match is trusted only at rank 1 or on the org's own domain. Resolved URLs are written back to the mention (`source_url`, `link_status=auto_verified`, `link_candidates`) and become `podcast-cited` candidates; mentions that already carried a URL are a third deterministic source (`intake/mentions.py`). Runs daily (`--sources podcast-cited`) so a report cited Monday is judged Tuesday.
 4. **Manual door:** `save_item.py --url` bypasses the judge (Kevin chose it).
 
 ### Candidate lifecycle and schema — `intake_candidates` (sql/009, Kevin's paste)
@@ -65,4 +65,5 @@ Each: one concern per commit, tests, CI green, Kevin merges. Never Fable in a fa
 *(filled from the rubric panel's synthesis; only questions whose answer changes a verdict)*
 
 ## Log
+- 2026-09-02 11:45 — on the arc branch: `intake/sources.py` (feed + index parsers on frozen fixtures), `intake/judge.py` (pre-checks, two models, the disputed-save rule), `sql/010_intake_candidates.sql`, `intake/links.py` (the probe is its fixture). Two Opus agents building PR 1 (ads) and PR 2's plumbing (store, Notion log, run_intake, blogs.yml) in worktrees; the rubric panel still running.
 - 2026-09-02 09:34 — grounding banked (scratchpad), OpenRouter key verified, rubric panel launched (Opus ×3 + adversary + synthesis), OpenAI 60-day feed (102) and Anthropic index (10 + featured) pulled.
