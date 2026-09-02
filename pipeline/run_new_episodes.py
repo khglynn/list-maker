@@ -31,6 +31,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import load_environment, get_db_connection, get_logger
 from show_config import SHOWS, get_show, ShowConfig
+from scrapers.ai_daily.sponsors import roster_from_raw_content
 
 PIPELINE_DIR = Path(__file__).resolve().parent
 # Prefer the project venv locally; fall back to the running interpreter — CI runs
@@ -287,10 +288,17 @@ def step_import(cfg: ShowConfig, dry_run: bool, per_show_limit: int = 50) -> boo
     return True
 
 
-def prepare_extraction_inputs(conn, episode_ids: list[int]) -> tuple[Path, Path, Path]:
+def prepare_extraction_inputs(conn, episode_ids: list[int]) -> tuple[Path, Path, Path, Path]:
     """Export source text from Neon to the file cache and generate extractor inputs.
 
-    Returns (csv_path, transcripts_dir, provenance_path).
+    Returns (csv_path, transcripts_dir, provenance_path, sponsor_roster_path).
+
+    The sponsor roster sidecar carries each episode's declared "Brought to you by:"
+    block, parsed from `episodes.raw_content`. It is a SIDECAR rather than columns on
+    the episodes CSV because that CSV is also a hand-authored input (the
+    codex-notes/*.csv used for one-off batches), and a required new column would break
+    every existing one; a missing sidecar simply means "no roster signal", which is the
+    correct reading for Hard Fork and PCHH, whose show notes have no such block at all.
 
     The provenance file is the point of this function beyond file-shuffling. It records,
     per episode, the transcript row whose text was actually handed to the extractor — or
@@ -305,12 +313,14 @@ def prepare_extraction_inputs(conn, episode_ids: list[int]) -> tuple[Path, Path,
     transcripts_dir.mkdir(parents=True, exist_ok=True)
     csv_path = PIPELINE_DIR / "_cache" / "ai_daily" / "unextracted_episodes.csv"
     provenance_path = PIPELINE_DIR / "_cache" / "ai_daily" / "extraction_provenance.json"
+    sponsor_roster_path = PIPELINE_DIR / "_cache" / "ai_daily" / "sponsor_rosters.json"
 
     with conn.cursor() as cur:
         cur.execute(
             """
             SELECT ep.id AS episode_id, ep.title, ep.publish_date,
                    ep.url AS episode_url,
+                   ep.raw_content,
                    et.id AS transcript_id,
                    COALESCE(et.transcript_text, ep.description_body) AS source_text,
                    (et.transcript_text IS NOT NULL) AS from_transcript
@@ -325,6 +335,7 @@ def prepare_extraction_inputs(conn, episode_ids: list[int]) -> tuple[Path, Path,
 
     csv_rows = []
     provenance: dict[str, int | None] = {}
+    rosters: dict[str, list[dict[str, str | None]]] = {}
     written = 0
     refreshed = 0
     for row in rows:
@@ -343,6 +354,9 @@ def prepare_extraction_inputs(conn, episode_ids: list[int]) -> tuple[Path, Path,
             refreshed += 1
 
         provenance[str(eid)] = int(row["transcript_id"]) if row["from_transcript"] else None
+        roster = roster_from_raw_content(row.get("raw_content"))
+        if roster:
+            rosters[str(eid)] = [{"name": s.name, "url": s.url} for s in roster]
         csv_rows.append({
             "episode_id": eid,
             "title": row["title"],
@@ -356,6 +370,9 @@ def prepare_extraction_inputs(conn, episode_ids: list[int]) -> tuple[Path, Path,
         writer.writerows(csv_rows)
 
     provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8")
+    # Always rewrite, even when empty: a stale file from a previous run would hand the
+    # extractor another episode's sponsors, and a wrong roster is worse than none.
+    sponsor_roster_path.write_text(json.dumps(rosters, indent=2, sort_keys=True), encoding="utf-8")
 
     from_transcript = sum(1 for v in provenance.values() if v is not None)
     print(
@@ -363,9 +380,13 @@ def prepare_extraction_inputs(conn, episode_ids: list[int]) -> tuple[Path, Path,
         f"({from_transcript} from transcript, {len(csv_rows) - from_transcript} from show notes; "
         f"{written} newly cached, {refreshed} refreshed)"
     )
+    print(
+        f"  Sponsor rosters parsed for {len(rosters)}/{len(csv_rows)} episode(s) "
+        f"({sum(len(v) for v in rosters.values())} sponsor entries)"
+    )
     if refreshed:
         log.warning("refreshed %d stale cached source file(s) before extraction", refreshed)
-    return csv_path, transcripts_dir, provenance_path
+    return csv_path, transcripts_dir, provenance_path, sponsor_roster_path
 
 
 EXTRACTION_BATCH_SIZE = 5  # each episode takes ~60-90s of OpenAI time
@@ -378,6 +399,7 @@ def extract_and_load_batch(
     csv_path: Path,
     transcripts_dir: Path,
     provenance_path: Path,
+    sponsor_roster_path: Path,
     dry_run: bool,
     label: str,
 ) -> bool:
@@ -399,6 +421,7 @@ def extract_and_load_batch(
         "--batch-name", batch_name,
         "--output-dir", output_root,
         "--extraction-type", cfg.extraction_type or "entity_extraction",
+        "--sponsor-roster-json", str(sponsor_roster_path),
     ]
     if not run_script(extract_script, extract_args, dry_run, label=label, timeout=900):
         print(f"  WARNING: {label} failed.")
@@ -439,7 +462,9 @@ def step_entity_extraction(cfg: ShowConfig, episodes: list[EpisodeSource], dry_r
 
     conn = get_db_connection()
     try:
-        csv_path, transcripts_dir, provenance_path = prepare_extraction_inputs(conn, episode_ids)
+        csv_path, transcripts_dir, provenance_path, sponsor_roster_path = (
+            prepare_extraction_inputs(conn, episode_ids)
+        )
     finally:
         conn.close()
 
@@ -455,6 +480,7 @@ def step_entity_extraction(cfg: ShowConfig, episodes: list[EpisodeSource], dry_r
             csv_path,
             transcripts_dir,
             provenance_path,
+            sponsor_roster_path,
             dry_run,
             label=f"Entity extraction (batch {batch_num}/{total_batches}, {len(batch)} eps)",
         )
@@ -495,7 +521,9 @@ def step_self_heal_transcript_race(cfg: ShowConfig, dry_run: bool) -> tuple[bool
     all_ids = sorted({eid for _, ids in batches for eid in ids})
     conn = get_db_connection()
     try:
-        csv_path, transcripts_dir, provenance_path = prepare_extraction_inputs(conn, all_ids)
+        csv_path, transcripts_dir, provenance_path, sponsor_roster_path = (
+            prepare_extraction_inputs(conn, all_ids)
+        )
     finally:
         conn.close()
 
@@ -503,7 +531,8 @@ def step_self_heal_transcript_race(cfg: ShowConfig, dry_run: bool) -> tuple[bool
     ok = True
     for batch_name, ids in batches:
         if extract_and_load_batch(
-            cfg, ids, batch_name, csv_path, transcripts_dir, provenance_path, dry_run,
+            cfg, ids, batch_name, csv_path, transcripts_dir, provenance_path,
+            sponsor_roster_path, dry_run,
             label=f"Self-heal re-extraction ({batch_name}, {len(ids)} eps)",
         ):
             healed += len(ids)

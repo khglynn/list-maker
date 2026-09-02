@@ -361,6 +361,57 @@ def upsert_entity(
     return int(row["id"])
 
 
+def record_first_seen_as_ad(conn, entity_id: int, publish_date: Any) -> bool:
+    """Stamp attributes.first_seen_as_ad when an entity's EARLIEST mention is an ad.
+
+    Why this is worth a column: "we only know about this product because someone paid to
+    tell us" is a different provenance from "the hosts brought it up", and it is exactly
+    the thing that disappears once the entity accumulates later editorial mentions. It
+    is written only when absent, and only when the ad is at or before every other
+    mention of that entity — so a sponsor read that follows real coverage does not
+    rewrite the entity's origin story.
+
+    Returns True if it wrote. Idempotent: a re-load of the same batch is a no-op because
+    the key already exists.
+    """
+    if publish_date is None:
+        return False
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE ai_entities e
+            SET attributes = jsonb_set(
+                    COALESCE(e.attributes, '{}'::jsonb),
+                    '{first_seen_as_ad}', to_jsonb(%s::text), true
+                ),
+                updated_at = NOW()
+            WHERE e.id = %s
+              AND NOT (COALESCE(e.attributes, '{}'::jsonb) ? 'first_seen_as_ad')
+              AND NOT EXISTS (
+                  SELECT 1 FROM ai_mentions m
+                  JOIN episodes ep ON ep.id = m.episode_id
+                  WHERE m.entity_id = e.id AND ep.publish_date < %s::date
+              );
+            """,
+            (str(publish_date), entity_id, str(publish_date)),
+        )
+        wrote = cur.rowcount > 0
+    conn.commit()
+    return wrote
+
+
+def get_episode_publish_dates(conn, episode_ids: list[int]) -> dict[int, Any]:
+    """publish_date per episode — needed to decide whether an ad is an entity's first
+    sighting. One query for the batch rather than one per mention."""
+    if not episode_ids:
+        return {}
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, publish_date FROM episodes WHERE id = ANY(%s);", (episode_ids,)
+        )
+        return {int(r["id"]): r["publish_date"] for r in cur.fetchall()}
+
+
 def parse_facts_json(raw: str) -> list[dict[str, Any]]:
     raw = raw.strip()
     if not raw:
@@ -395,6 +446,21 @@ def derive_tags(mention_type: str, platform: str | None, facts: list[dict[str, A
     return tags
 
 
+VALID_SPONSOR_SOURCES = {"roster", "phrase", "model"}
+
+
+def normalize_sponsor_source(raw: str | None) -> str | None:
+    """CSV cell -> ai_mentions.sponsor_source, or None for an editorial mention.
+
+    None becomes SQL NULL: "no sponsor evidence" is an absence, not a category, and
+    sql/009's CHECK constraint only admits the three real values. An unrecognized
+    string is dropped to NULL rather than smuggled past the constraint and failing the
+    whole batch on one bad cell.
+    """
+    value = (raw or "").strip().lower()
+    return value if value in VALID_SPONSOR_SOURCES else None
+
+
 def insert_mention(
     conn,
     *,
@@ -409,6 +475,7 @@ def insert_mention(
 
     confidence = float(row["confidence"]) if row["confidence"] else None
     is_editorial = row["is_editorial"].strip().lower() == "true"
+    sponsor_source = normalize_sponsor_source(row.get("sponsor_source"))
     needs_review = row["needs_review"].strip().lower() == "true"
     sentiment = (row["sentiment_label"] or "unknown").strip().lower() or "unknown"
     platform = row["platform"].strip() or None
@@ -433,7 +500,7 @@ def insert_mention(
               mention_text, canonical_name, mention_type, mention_count, platform,
               context_snippet, quoted_text, source_url,
               link_status, link_confidence, link_candidates,
-              sentiment_label, confidence, is_editorial,
+              sentiment_label, confidence, is_editorial, sponsor_source,
               needs_review, review_reason, review_status,
               facts, tags, created_at, updated_at
             )
@@ -442,7 +509,7 @@ def insert_mention(
               %s, %s, %s, 1, %s,
               %s, %s, %s,
               %s, %s, '[]'::jsonb,
-              %s, %s, %s,
+              %s, %s, %s, %s,
               %s, %s, 'open',
               %s::jsonb, %s::jsonb, NOW(), NOW()
             );
@@ -464,6 +531,7 @@ def insert_mention(
                 sentiment,
                 confidence,
                 is_editorial,
+                sponsor_source,
                 needs_review,
                 review_reason,
                 json.dumps(facts),
@@ -551,7 +619,12 @@ def main() -> None:
 
         mention_inserted = 0
         review_open = 0
+        sponsor_inserted = 0
+        first_seen_as_ad = 0
         entity_cache: dict[tuple[str, str, str], int] = {}
+        # (entity_id, publish_date) per ad mention, stamped after the batch lands.
+        sponsor_stamps: list[tuple[int, Any]] = []
+        publish_dates = get_episode_publish_dates(conn, episode_ids)
 
         for row in rows:
             entity_type = normalize_entity_type(row["entity_type"])
@@ -581,6 +654,22 @@ def main() -> None:
             mention_inserted += 1
             if row["needs_review"].strip().lower() == "true":
                 review_open += 1
+            if normalize_sponsor_source(row.get("sponsor_source")):
+                sponsor_inserted += 1
+                sponsor_stamps.append(
+                    (entity_id, publish_dates.get(int(row["episode_id"])))
+                )
+
+        # Stamp first_seen_as_ad only once the WHOLE batch has landed. The guard inside
+        # record_first_seen_as_ad asks "does an earlier mention of this entity exist?",
+        # and mentions.csv arrives in episode order — which for a multi-episode catch-up
+        # is newest-first, because Taddy inserts newest-first and the newer episode gets
+        # the smaller id. Stamping inline therefore let an ad in the NEWER episode claim
+        # "first seen" before the older episode's editorial mention had been inserted,
+        # writing a date that is real but wrong. A second pass sees every row.
+        for entity_id, publish_date in sponsor_stamps:
+            if record_first_seen_as_ad(conn, entity_id, publish_date):
+                first_seen_as_ad += 1
 
         from_transcript = sum(1 for eid in episode_ids if transcript_map.get(eid) is not None)
         print(f"Loaded batch: {batch_name}")
@@ -593,6 +682,10 @@ def main() -> None:
         )
         print(f"Entities upserted/used: {len(entity_cache)}")
         print(f"Mentions inserted: {mention_inserted}")
+        print(
+            f"  sponsor reads: {sponsor_inserted} "
+            f"({first_seen_as_ad} entity/entities first seen in an ad)"
+        )
         print(f"Mentions needing review: {review_open}")
     finally:
         conn.close()

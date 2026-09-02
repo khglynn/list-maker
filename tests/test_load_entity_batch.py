@@ -262,3 +262,164 @@ def test_insert_run_defaults_to_completed() -> None:
     insert_run(conn, show_id=3, batch_name="b", model="m", prompt_version="v", parameters={})
     _, params = conn._cursor.calls[-1]
     assert params[-1] == "completed"
+
+
+# --- sponsor provenance (sql/009) -------------------------------------------------
+
+
+def test_sponsor_source_normalizes_to_the_closed_vocabulary() -> None:
+    """sql/009 has a CHECK constraint; an unrecognized cell must become NULL rather than
+    failing the whole batch on one bad value."""
+    from pipeline.scrapers.ai_daily.load_entity_batch import normalize_sponsor_source
+
+    assert normalize_sponsor_source("roster") == "roster"
+    assert normalize_sponsor_source("  PHRASE ") == "phrase"
+    assert normalize_sponsor_source("model") == "model"
+    # Editorial is an absence, not a fourth value.
+    assert normalize_sponsor_source("") is None
+    assert normalize_sponsor_source(None) is None
+    assert normalize_sponsor_source("none") is None
+    assert normalize_sponsor_source("sponsored") is None
+
+
+def test_insert_mention_writes_sponsor_source() -> None:
+    from pipeline.scrapers.ai_daily.load_entity_batch import insert_mention
+
+    conn = _RecordingConn()
+    insert_mention(
+        conn,
+        run_id=1,
+        transcript_map={7: 70},
+        row={
+            "episode_id": "7",
+            "entity_type": "software_product",
+            "canonical_name": "Blitzy",
+            "mention_text": "Blitzy",
+            "platform": "",
+            "source_url": "",
+            "sentiment_label": "neutral",
+            "is_editorial": "false",
+            "sponsor_source": "roster",
+            "confidence": "0.9",
+            "needs_review": "false",
+            "review_reason": "",
+            "context_snippet": "Brought to you by Blitzy.",
+            "quoted_text": "",
+            "facts_json": "[]",
+        },
+        entity_id=42,
+    )
+    assert "sponsor_source" in conn.cur.sql
+    assert False in conn.cur.params and "roster" in conn.cur.params
+
+
+def test_insert_mention_writes_null_for_an_editorial_row() -> None:
+    from pipeline.scrapers.ai_daily.load_entity_batch import insert_mention
+
+    conn = _RecordingConn()
+    insert_mention(
+        conn,
+        run_id=1,
+        transcript_map={},
+        row={
+            "episode_id": "7",
+            "entity_type": "model",
+            "canonical_name": "Gemini",
+            "mention_text": "Gemini",
+            "platform": "",
+            "source_url": "",
+            "sentiment_label": "neutral",
+            "is_editorial": "true",
+            "sponsor_source": "",
+            "confidence": "0.9",
+            "needs_review": "false",
+            "review_reason": "",
+            "context_snippet": "Gemini models were a distant second.",
+            "quoted_text": "",
+            "facts_json": "[]",
+        },
+        entity_id=43,
+    )
+    assert True in conn.cur.params and None in conn.cur.params
+
+
+def test_first_seen_as_ad_only_writes_when_absent_and_earliest() -> None:
+    """The guard clauses are the whole point: a sponsor read that FOLLOWS real coverage
+    must not rewrite an entity's origin story, and a re-load must be a no-op."""
+    from pipeline.scrapers.ai_daily.load_entity_batch import record_first_seen_as_ad
+
+    conn = _RecordingConn()
+    record_first_seen_as_ad(conn, 42, "2026-08-31")
+    sql = " ".join(conn.cur.sql.split())
+    assert "first_seen_as_ad" in sql
+    assert "NOT (COALESCE(e.attributes, '{}'::jsonb) ? 'first_seen_as_ad')" in sql
+    assert "publish_date < %s::date" in sql
+
+    # No date, no claim — never a guessed one.
+    conn2 = _RecordingConn()
+    assert record_first_seen_as_ad(conn2, 42, None) is False
+    assert conn2.cur.sql == ""
+
+
+class _RecordingCursor:
+    def __init__(self) -> None:
+        self.sql = ""
+        self.params: tuple = ()
+        self.rowcount = 1
+
+    def execute(self, sql, params=()):
+        self.sql = sql
+        self.params = tuple(params)
+
+    def fetchone(self):
+        return None
+
+    def fetchall(self):
+        return []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+class _RecordingConn:
+    def __init__(self) -> None:
+        self.cur = _RecordingCursor()
+        self.committed = False
+
+    def cursor(self):
+        return self.cur
+
+    def commit(self):
+        self.committed = True
+
+
+def test_first_seen_as_ad_is_stamped_after_the_batch_not_during_it() -> None:
+    """A batch arrives newest-episode-first, so an inline stamp can be wrong.
+
+    mentions.csv is written in episode order and a multi-episode catch-up runs
+    newest-first (Taddy inserts newest-first, and the newer episode gets the smaller
+    id). record_first_seen_as_ad's guard asks "does an earlier mention exist?", which is
+    only as good as what has been inserted when it runs — so stamping inline lets an ad
+    in the NEWER episode claim first-seen before the OLDER episode's editorial mention
+    has landed, writing a date that is real but wrong.
+
+    Pinned structurally: main() must collect stamps during the row loop and apply them
+    after it, rather than calling record_first_seen_as_ad inside the loop.
+    """
+    import inspect
+
+    from pipeline.scrapers.ai_daily import load_entity_batch as leb
+
+    source = inspect.getsource(leb.main)
+    loop_at = source.index("for row in rows:")
+    stamp_at = source.index("record_first_seen_as_ad(")
+    collect_at = source.index("sponsor_stamps.append(")
+    second_pass_at = source.index("for entity_id, publish_date in sponsor_stamps:")
+
+    assert loop_at < collect_at, "stamps are collected inside the row loop"
+    assert collect_at < second_pass_at < stamp_at, (
+        "record_first_seen_as_ad must be called from the second pass, after the loop"
+    )

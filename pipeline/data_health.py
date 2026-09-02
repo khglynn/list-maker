@@ -759,6 +759,98 @@ def check_ai_mention_fields(conn) -> CheckResult:
     return CheckResult("ai_mention_required_fields", status, summary, details)
 
 
+# Share of a show's recent mentions that may be sponsor reads before it looks wrong.
+# Measured 2026-09-02 over the 30-day window this check actually scans, with the retag
+# applied: AI Daily 5.8% (21/360), Hard Fork 0% (0/33), PCHH 0% (0/121). 30% is ~5x the
+# observed ceiling, so it fires on a real regime change (a roster parse that starts
+# matching prose, a cue phrase that starts matching editorial speech) and not on a week
+# with more ads than usual.
+SPONSOR_SHARE_WARN_THRESHOLD = 0.30
+SPONSOR_SHARE_WINDOW_DAYS = 30
+# Below this many mentions the ratio is noise — three mentions, two of them ads, is 67%
+# and means nothing. Shows with a quiet month are reported as "too few to judge".
+SPONSOR_SHARE_MIN_MENTIONS = 20
+# Podcasts only, and only those still publishing. Curated sources (blogs, saved
+# articles) carry no ad reads by construction, and an ended show has no recent window —
+# both would report a permanent, meaningless 0%. Derived from show_config rather than
+# listed here so onboarding a podcast does not silently leave it unwatched.
+SPONSOR_SHARE_SHOWS = {
+    slug
+    for slug, cfg in SHOWS.items()
+    if cfg.medium == "podcast"
+    and cfg.extraction_type in {"entity_extraction", "media_extraction"}
+    and slug not in ended_show_slugs()
+}
+
+
+def check_sponsor_share(conn) -> CheckResult:
+    """What fraction of each tech show's recent mentions are tagged as sponsor reads.
+
+    Two different failures show up here, which is why the thresholds are asymmetric.
+    A HIGH share means the detector has started over-claiming — a roster entry parsed
+    out of prose, or a cue phrase that matches ordinary speech — and that quietly caps
+    real entities out of the rankings. A share of exactly 100% means the opposite kind
+    of broken: nothing editorial got through at all, which is not a bad week, it is a
+    pipeline that stopped working (the 2026-08-23 shape, where post-filters removed
+    every candidate).
+
+    Grace-window discipline, as elsewhere in this file: a show with too few recent
+    mentions to form a meaningful ratio is reported, not judged. A quiet week must never
+    turn into a red run.
+    """
+    rows = _rows(
+        conn,
+        """
+        SELECT s.slug,
+               COUNT(*) AS mentions,
+               COUNT(*) FILTER (WHERE m.sponsor_source IS NOT NULL) AS ads
+        FROM ai_mentions m
+        JOIN episodes ep ON ep.id = m.episode_id
+        JOIN shows s ON s.id = ep.show_id
+        WHERE ep.publish_date >= CURRENT_DATE - make_interval(days => %s)
+          AND s.slug = ANY(%s)
+        GROUP BY s.slug
+        ORDER BY s.slug;
+        """,
+        (SPONSOR_SHARE_WINDOW_DAYS, sorted(SPONSOR_SHARE_SHOWS)),
+    )
+
+    details: list[str] = []
+    status = "pass"
+    for row in rows:
+        mentions = int(row["mentions"] or 0)
+        ads = int(row["ads"] or 0)
+        if mentions < SPONSOR_SHARE_MIN_MENTIONS:
+            details.append(
+                f"{row['slug']}: {mentions} mention(s) in {SPONSOR_SHARE_WINDOW_DAYS}d "
+                f"— too few to judge"
+            )
+            continue
+        share = ads / mentions
+        if ads == mentions:
+            status = "fail"
+            details.append(
+                f"{row['slug']}: ALL {mentions} recent mention(s) are sponsor reads — "
+                f"no editorial content got through"
+            )
+        elif share > SPONSOR_SHARE_WARN_THRESHOLD:
+            if status != "fail":
+                status = "warn"
+            details.append(
+                f"{row['slug']}: {ads}/{mentions} ({share:.0%}) sponsor reads, over the "
+                f"{SPONSOR_SHARE_WARN_THRESHOLD:.0%} threshold"
+            )
+        else:
+            details.append(f"{row['slug']}: {ads}/{mentions} ({share:.0%}) sponsor reads")
+
+    summary = {
+        "pass": "Sponsor-read share is within range for every tech show.",
+        "warn": "A tech show's sponsor-read share is above the expected range.",
+        "fail": "A tech show has no editorial mentions at all in the recent window.",
+    }[status]
+    return CheckResult("sponsor_share", status, summary, details)
+
+
 def check_possible_entity_alias_splits(conn) -> CheckResult:
     rows = _rows(
         conn,
@@ -835,6 +927,7 @@ def run_checks(conn, include_feed_check: bool = False) -> list[CheckResult]:
         check_ai_daily_extraction(conn),
         check_transcript_race_selfheal(conn),
         check_ai_mention_fields(conn),
+        check_sponsor_share(conn),
         check_possible_entity_alias_splits(conn),
         check_optional_null_map(conn),
     ]

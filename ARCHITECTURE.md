@@ -44,7 +44,7 @@ Cascading source strategy (cheapest first): website show-notes → free transcri
 - `episodes` — per-show episodes (publish_date, url, title; `raw_content` for Taddy shows).
 - `episode_transcripts` — transcript text per episode. Generated `search_vector` (tsvector + GIN) powers FTS; `notion_transcript_page_id` tracks the Notion mirror (idempotent sync).
 - `songs` — music-show song rows (+ Spotify match state).
-- `ai_runs` / `ai_entities` / `ai_mentions` — entity-extraction store. `ai_mentions.run_id → ai_runs` (ON DELETE CASCADE); `ai_entities` deduped by (entity_type, normalized_name, platform); `ai_mentions.entity_id` ON DELETE SET NULL.
+- `ai_runs` / `ai_entities` / `ai_mentions` — entity-extraction store. `ai_mentions.run_id → ai_runs` (ON DELETE CASCADE); `ai_entities` deduped by (entity_type, normalized_name, platform); `ai_mentions.entity_id` ON DELETE SET NULL. `ai_mentions.sponsor_source` (`roster` | `phrase` | `model`; NULL = editorial) records why a mention counts as an ad — see **Ads are data** below.
 
 ## Code map
 
@@ -88,6 +88,18 @@ Since shipped: A4 per-entity Notion sync state (migration 003 + `mark_sync_faile
 A **Cloudflare Worker Cron** (`cloudflare-trigger/`, trimm account) calls GitHub `workflow_dispatch` for the workflows — entities daily, music Mon/Wed/Fri, eval Mon, **blogs (pull queue) Mon ~3pm CT**, pulse 1st/15th ~3:15pm CT — so GitHub's own `schedule:` cron (which silently disables after 60 idle days on a public repo) is no longer the trigger. A failed dispatch posts to Slack (the trigger itself is observable). Every run also Slacks on success / failure / staleness. Chosen over Inngest (no rewrite, no new account) per the rebuild plan.
 
 *Live as of 2026-06-11: `GH_PAT` = the reused fine-grained `GITHUB_HG_CLAUDE_TOKEN` (expires 2027-01-20 — dispatch failures alert at the trigger when it does); all `schedule:` blocks removed — the Worker is the only trigger. **Constraint learned the hard way: Workers Free caps a Worker at 5 cron triggers** (a 7-cron deploy failed), so music runs on ONE Mon/Wed/Fri cron and worker.js picks the show by fire day. **Second constraint learned the hard way (2026-07-24): Cloudflare cron day-of-week is 1=Sunday..7=Saturday, NOT standard cron's 0=Sunday — the original 1,3,5 values fired Sun/Tue/Thu for six weeks and TAL never auto-synced. Cloudflare Mon=2/Wed=4/Fri=6.***
+
+## Ads are data (2026-09-02)
+
+Sponsor reads are **kept, tagged, and weight-capped — never deleted** (Kevin, 2026-09-01: *"sometimes the ads are helpful… we shouldn't have them overweight by mentions"*). Extraction used to drop every mention the model flagged as an ad, which meant the database held only the ads the model *missed*, stored as editorial at full weight — 73 of them for Blitzy alone. Now `pipeline/scrapers/ai_daily/sponsors.py` classifies each mention from three sources, in descending order of trust, and the winning one is stored on the row:
+
+1. **`roster`** — the episode's own "Brought to you by:" block, parsed from `episodes.raw_content` (a TEXT column holding Taddy JSON). Publisher-declared, so it is the only signal that is a statement rather than an inference. Parses 558/558 AI Daily blocks across two years of drifting markup; Hard Fork and PCHH have no such block, and all 117 Culture Gabfest descriptions containing the phrase are article titles being discussed, correctly yielding no roster.
+2. **`phrase`** — the mention sits inside a sponsor-formula window in the transcript **and** the entity is named inside that window. Both halves are required: an ad break interrupts the episode, so mere proximity proves adjacency, not advertising.
+3. **`model`** — the extractor's own `is_editorial=false`. Least reliable (2026-08-24 is what it looks like when it misses) but the only signal for a show with neither a roster nor a cue.
+
+Downstream, `fetch_entity_rollup` counts editorial mentions in full and ad mentions at most `MAX_AD_MENTIONS_COUNTED` (5), and qualifies entities on that capped number; Notion gains **Sponsor**, **Ad mentions**, and **First seen as ad**. `data_health.check_sponsor_share` warns above 30% ads for a tech show over 30 days and fails only at 100%.
+
+**Where the two errors trade off, the detector prefers missing an ad to mis-tagging an editorial mention** — a missed ad costs a few points of ranking weight; a mis-tag puts a wrong Sponsor checkbox on a product Kevin cares about. **Accepted gap (2026-09-02):** a company that sponsors an episode *and* is cited editorially in it has that citation counted as an ad (2 of KPMG's 7 mentions; 4 of Gemini's 197). The entity-level Sponsor flag is true either way, both counts are published side by side, and the cap bounds the cost.
 
 ## Quality gradient — the eval harness
 
