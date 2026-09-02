@@ -67,19 +67,44 @@ class Decision:
 @dataclass
 class Precheck:
     """The script's verdict before any model runs. `skip_reason` None = proceed."""
-    skip_reason: Optional[str]   # duplicate | thin | pdf | dead
+    skip_reason: Optional[str]   # duplicate | pdf | dead | thin | stale | academy | people-news
     status: str = "skipped"      # skipped, or 'held' for pdf
+
+
+# Structural skips the rubric panel (2026-09-02) measured on the real feed and asked the
+# script to take, so no token is spent on them:
+#   - OpenAI's "OpenAI Academy" category is onboarding collateral, every time (3/102 posts).
+#   - People news is recognisable from the title alone (appointments, board seats).
+#   - Anything older than ~13 months is history, not intake — unless a show just cited it,
+#     in which case it arrives as podcast-cited and is judged.
+SKIP_CATEGORIES = {"openai academy"}
+PEOPLE_NEWS_TITLE = re.compile(
+    r"\b(joins? (?:the )?board|appoints?|appointed|named (?:as )?(?:chief|head|president|ceo|cto|cfo)|"
+    r"to join .{0,40}\bas (?:chief|head|president)|steps? down|departure of|welcomes? .{0,40}\bas (?:chief|head))\b", re.I)
+STALE_DAYS = 400
 
 
 # ── 1. pre-checks ────────────────────────────────────────────────────────────
 
-def precheck(url: str, *, already_ingested: bool, words: Optional[int], scrape_error: Optional[str]) -> Precheck:
+def precheck(url: str, *, already_ingested: bool, words: Optional[int], scrape_error: Optional[str],
+             title: str = "", category: Optional[list[str]] = None, published_on=None,
+             source: str = "", today=None) -> Precheck:
+    """Ordered: the cheapest, most certain reasons first. Every reason is a fact about the
+    candidate, never a judgment about its content — content is the model's job."""
     if already_ingested:
         return Precheck("duplicate")
     if url.lower().split("?")[0].endswith(".pdf"):
         # PDFs live as files in the Obsidian research folder (save_item's rule) — a
         # local-only step, so the row is HELD and the weekly line names it.
         return Precheck("pdf", status="held")
+    if any((c or "").strip().lower() in SKIP_CATEGORIES for c in (category or [])):
+        return Precheck("academy")
+    if title and PEOPLE_NEWS_TITLE.search(title):
+        return Precheck("people-news")
+    if published_on is not None and source != "podcast-cited":
+        from datetime import date as _date, timedelta
+        if (today or _date.today()) - published_on > timedelta(days=STALE_DAYS):
+            return Precheck("stale")
     if scrape_error:
         return Precheck("dead")
     if words is not None and words < THIN_WORDS:
@@ -100,7 +125,7 @@ def build_messages(rubric: str, *, title: str, source: str, published_on: str, c
                    words: Optional[int], links_out: Optional[int], found_via: str, text: str) -> list[dict]:
     body = text[:MAX_TEXT_CHARS]
     truncated = len(text) > MAX_TEXT_CHARS
-    flags = compute_flags(text)  # over the WHOLE text — the model only sees the excerpt
+    flags = compute_flags(text, title)  # over the WHOLE text — the model only sees the excerpt
     user = (
         f"TITLE: {title}\nSOURCE: {source}\nPUBLISHED: {published_on or 'unknown'}\n"
         f"CATEGORY: {', '.join(category) or 'none'}\nWORDS: {words if words is not None else 'unknown'}"

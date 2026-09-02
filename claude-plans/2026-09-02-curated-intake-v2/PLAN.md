@@ -61,8 +61,14 @@ Each: one concern per commit, tests, CI green, Kevin merges. Never Fable in a fa
 ### Cost
 ~60 candidates/week × 2 judges × ~3k tokens ≈ $0.30/week on the $15 cap; ~60 Firecrawl scrapes/week; hard cap 60 new candidates per run, overflow logged.
 
-## Open questions for Kevin
-*(filled from the rubric panel's synthesis; only questions whose answer changes a verdict)*
+## Open questions for Kevin (from the rubric panel, 2026-09-02 — each changes verdicts)
+1. **Volume.** The rubric saves ~40% of OpenAI's feed (about 4–5 posts a week from that source alone). Fine, or should the bar rise? His label pass on the 75 candidates answers this empirically.
+2. **AI-only, or technology-broad?** The domain gate admits only AI/agents/how-tech-changes-work. His research library has a `tecovas-business` folder; retail tech and e-commerce platforms may belong. Default until answered: AI-only.
+3. **Education, teens, consumer safety.** Saves the randomized study of 1,000 students (a live board question); skips teacher rollouts, the teen product, the teen-access position. Default: as is.
+4. **Who is a peer?** `PEER_INDUSTRY` fires on consumer retail, apparel, footwear, DTC, specialty retail, e-commerce marketplaces named in the title or lede. Default: that list.
+5. **The consumer-channel rule (S11).** Ads, shopping, checkout, agentic purchasing inside an assistant save as a deck item because his employer sells to consumers — the one rule invented on his behalf. Default: on.
+6. **Frontier science and safety artifacts** (math proofs, system cards, safeguard notices) save at 0.60–0.70 as the board's "how fast this moves" slide. Default: on; ~4 posts per 60 days.
+7. **Podcast-named items no rule wants** (a lawsuit, a codename) skip; the candidate row keeps the name findable. Default: skip.
 
 ## Log
 - 2026-09-02 11:45 — on the arc branch: `intake/sources.py` (feed + index parsers on frozen fixtures), `intake/judge.py` (pre-checks, two models, the disputed-save rule), `sql/010_intake_candidates.sql`, `intake/links.py` (the probe is its fixture). Two Opus agents building PR 1 (ads) and PR 2's plumbing (store, Notion log, run_intake, blogs.yml) in worktrees; the rubric panel still running.
