@@ -3,13 +3,13 @@
 **Last updated:** 2026-09-02 (evening) · **Mode:** live (routine cron-driven operation since 2026-06-07; hardening on top)
 
 ## Right now
-- **The curated-intake arc landed on `main` 2026-09-02 17:02 CT** (PR #33: intake in shadow mode + ads as data, 446 tests). Kevin pasted `sql/009` + `sql/010`; the sponsor retag was applied (230 mentions, 45 entities, no deletes); the first real judged run ran in CI the same evening: 69 candidates, 40 would-save, 7 skips, 13 thin scrapes, 9 waiting for the cap, 60 rows mirrored to the 📥 Blog Intake log. `AUTO_INGEST = False` — nothing is ingested until the eval clears on Kevin's labels and one shadow week reads right (that flip is PR 3).
+- **The curated-intake arc landed on `main` 2026-09-02 17:02 CT** (PR #33: intake in shadow mode + ads as data, 446 tests). Kevin pasted `sql/009` + `sql/010`; the sponsor retag was applied (230 mentions, 45 entities, no deletes); the first real judged run ran in CI the same evening: 69 candidates, 40 would-save, 7 skips, 13 thin scrapes, 9 waiting for the cap, 60 rows mirrored to the 📥 Blog Intake log. `AUTO_INGEST` flipped to True the same evening (Kevin approved all 75 eval labels unchanged, read the 40 would-saves, and chose to go live): saves are ingested in the run, and the 40 shadow-mode saves are caught up on the first live run.
 - Hotfix PR #30 merged 16:34 CT; today's 15:30 daily run had already failed on that bug and was re-run for the tech shows (extraction fine; the health check stayed red on the PCHH backfill's Notion drift, which tomorrow's run clears). Issue #34 closed with the cause.
 - The Cloudflare Worker is unchanged (`92b6a638`): entities daily, blogs Mondays now run `run_intake.py`.
 - Full story: `DEVLOG.md` 2026-09-02; design and eval reads: `claude-plans/2026-09-02-curated-intake-v2/PLAN.md`.
 
 ## Open items (need Kevin)
-1. ~~The labels page~~ — done 2026-09-02 evening: Kevin approved all 75 labels unchanged and kept every rubric default. The eval floor is cleared on his labels (recall 0.96 / precision 0.91). **The remaining gate for auto-ingest is one clean shadow week:** read Monday 09-07's Blog Intake verdicts; if they read right, PR 3 flips `AUTO_INGEST` in `run_intake.py`.
+1. ~~The labels page~~ / ~~the shadow week~~ — both done 2026-09-02 evening: labels approved unchanged, the eval floor cleared on them, and auto-ingest is live. Watch the next Monday Slack line say "saved N" and check a couple of the new Tech DB / Blog Posts rows.
 2. **Read the first shadow verdicts** in 📥 Blog Intake (40 would-saves, 11 of them disputed — the second judge is save-happy on OpenAI's feed, e.g. the teachers rollout post). Tick **Pull anyway** on anything skipped that you want; nothing waits on you.
 3. **Dependabot #27–#29** still open.
 4. ~~Backfill (decision 6)~~ — **complete 2026-09-02 17:38 CT:** PCHH 2,073 mentions + Culture Gabfest 3,660, every media entity mirrored to Notion (the ten-minute sync steps timed out and resumed until done; the limit is parked in `BACKLOG.md`). Working tree back on `main`, worktrees and merged branches removed.

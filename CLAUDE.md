@@ -79,7 +79,7 @@ list-maker/
 │   ├── pulse_report.py      # Biweekly Slack digest (runs after the import on the 1st/15th)
 │   ├── feed_check.py        # The independent second source: what each show's real feed says is latest
 │   ├── sync_notion.py / sync_transcripts_notion.py / sync_playlist.py / spotify_match.py
-│   ├── run_intake.py         # Weekly curated intake: discover → pre-check → judge → Notion log (shadow mode)
+│   ├── run_intake.py         # Weekly curated intake: discover → pre-check → judge → ingest saves → Notion log
 │   ├── save_item.py / save_episode.py / highlight_clips.py / search_transcripts.py
 │   ├── scrapers/            # sop/, tal/ (music) · taddy/ (transcript import) · ai_daily/ (LLM extraction + sql/ migrations)
 │   │                        # blog/, gabfest/, research/ (curated + RSS sources)
