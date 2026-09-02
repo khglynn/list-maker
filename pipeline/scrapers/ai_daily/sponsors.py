@@ -509,16 +509,31 @@ def named_in_window(
 
     Matching is done on squashed text (lowercase alphanumerics, no spaces) so a
     transcript that renders "Robots and Pencils" for "Robots & Pencils", or splits
-    "AssemblyAI" into two words, still matches.
+    "AssemblyAI" into two words, still matches — but the hit must land on a TOKEN START.
+    A bare substring test over squashed text is the same hole names_match rule 4 closes:
+    it finds "Intel" inside "super-INTEL-ligent" and "Vanta" inside "ad-VANTA-ge", which
+    is how two real editorial mentions were labelled as advertising. Anchoring keeps the
+    spelling tolerance and drops the mid-word collisions.
     """
     start, end = window
-    squashed_window = squash_name(normalized_transcript[start:end])
+    tokens = _tokens(normalized_transcript[start:end])
+    squashed_window = "".join(tokens)
     if not squashed_window:
         return False
+    token_starts: set[int] = set()
+    offset = 0
+    for token in tokens:
+        token_starts.add(offset)
+        offset += len(token)
     for name in candidate_names:
         squashed = squash_name(name)
-        if len(squashed) >= _MIN_NAME_CHARS_FOR_WINDOW and squashed in squashed_window:
-            return True
+        if len(squashed) < _MIN_NAME_CHARS_FOR_WINDOW:
+            continue
+        idx = squashed_window.find(squashed)
+        while idx >= 0:
+            if idx in token_starts:
+                return True
+            idx = squashed_window.find(squashed, idx + 1)
     return False
 
 

@@ -504,3 +504,22 @@ def test_the_window_trail_is_the_core_of_a_read_not_the_whole_break() -> None:
     trail from 150 to 600 while phrase verdicts grew from 46 to 164. Width buys no
     recall and only costs precision, so it sits just above the floor."""
     assert SPONSOR_WINDOW_TRAIL_CHARS <= 250
+
+
+def test_named_in_window_will_not_match_mid_word() -> None:
+    """The phrase path must hold the same line names_match rule 4 holds.
+
+    A bare substring test over squashed text finds "Intel" inside "superINTELligent" and
+    "Vanta" inside "adVANTAge" — the exact collisions that labelled two real editorial
+    mentions as advertising when the roster matcher had this bug. The two matchers must
+    not drift apart.
+    """
+    normalized = normalize_text_for_matching(
+        "today's sponsor is the agent readiness audit from superintelligent, "
+        "and separately trump can keep america's ai advantage"
+    )
+    window = (0, len(normalized))
+    assert not named_in_window(["Intel"], normalized, window)
+    assert not named_in_window(["Vanta"], normalized, window)
+    # …while the spelling tolerance the other tests pin is untouched.
+    assert named_in_window(["Superintelligent"], normalized, window)
