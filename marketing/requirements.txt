@@ -4,4 +4,4 @@ python-dotenv>=1.0.0
 Pillow>=10.0.0
 numpy>=2.5.2
 tqdm>=4.65.0
-psycopg2-binary>=2.9.9  # Optional: only needed for --from-db mode
+psycopg2-binary>=2.9.12  # Optional: only needed for --from-db mode
