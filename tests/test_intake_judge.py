@@ -17,6 +17,18 @@ def test_precheck_orders_duplicate_pdf_dead_thin() -> None:
     assert ok.skip_reason is None and ok.status == "judged"
 
 
+def test_precheck_structural_skips_from_the_rubric_panel() -> None:
+    from datetime import date
+    base = dict(already_ingested=False, words=900, scrape_error=None, today=date(2026, 9, 2))
+    assert J.precheck("https://x/a", category=["OpenAI Academy"], **base).skip_reason == "academy"
+    assert J.precheck("https://x/a", title="Tino Cuéllar to join Anthropic as Chief Global Affairs Officer", **base).skip_reason == "people-news"
+    assert J.precheck("https://x/a", title="Introducing Claude Opus 5", **base).skip_reason is None
+    assert J.precheck("https://x/a", published_on=date(2025, 6, 1), source="openai-rss", **base).skip_reason == "stale"
+    # a show just cited it: history is judged, not dropped
+    assert J.precheck("https://x/a", published_on=date(2024, 10, 1), source="podcast-cited", **base).skip_reason is None
+    assert J.precheck("https://x/a", published_on=date(2026, 8, 1), source="openai-rss", **base).skip_reason is None
+
+
 def test_parse_verdict_tolerates_fences_and_clamps_confidence() -> None:
     v = J.parse_verdict('```json\n{"verdict": "Save", "confidence": 1.4, "reason": "usage numbers", "rule": "S1", "job": "Deck"}\n```', "m")
     assert (v.verdict, v.confidence, v.reason, v.model, v.rule, v.job) == ("save", 1.0, "usage numbers", "m", "S1", "deck")
@@ -87,7 +99,9 @@ def test_flags_are_whole_document_facts() -> None:
             "In a randomized experiment with more than 1,000 students, 43% improved. "
             "Pricing is $0.20 per million input tokens.\n| a | b |\n|---|---|\n| 1 | 2 |\n"
             "A retailer in the apparel industry deployed it.")
-    f = compute_flags(text)
+    f = compute_flags(text, title="How a footwear retailer scaled support")
     assert f == {"HAS_PERCENT": True, "HAS_SAMPLE": True, "HAS_PRICE": True, "HAS_TABLE": True,
                  "CUSTOMER_STORY": True, "PEER_INDUSTRY": True}
     assert compute_flags("Introducing our new office in Brazil.") == {k: False for k in f}
+    # PEER_INDUSTRY reads the title + lede only — a passing "retail" deep in the body is not a peer
+    assert compute_flags("filler " * 500 + "the retail sector", title="How Acme Bank ships faster")["PEER_INDUSTRY"] is False

@@ -33,15 +33,22 @@ _PRICE = re.compile(r"(?:\$\s?\d[\d,.]*\s*(?:per|/)\s*(?:1m|million|1k|thousand)
 _TABLE = re.compile(r"^\s*\|.+\|\s*$\n^\s*\|[\s:|-]+\|\s*$", re.M)
 
 
-def compute_flags(text: str) -> dict[str, bool]:
+LEDE_CHARS = 1200  # the title + first paragraphs: where a customer story names its customer
+
+
+def compute_flags(text: str, title: str = "") -> dict[str, bool]:
     low = (text or "").lower()
+    # PEER_INDUSTRY is read from the title and the lede only. Read over the whole text it
+    # fires on any passing "retail" and turns a generic case study into a 0.6 save (S12);
+    # the customer and its industry are introduced up top or not at all.
+    lede = f"{title}\n{(text or '')[:LEDE_CHARS]}".lower()
     return {
         "HAS_PERCENT": bool(_PERCENT.search(text or "")),
         "HAS_SAMPLE": bool(_SAMPLE.search(text or "")),
         "HAS_PRICE": bool(_PRICE.search(text or "")),
         "HAS_TABLE": bool(_TABLE.search(text or "")),
         "CUSTOMER_STORY": any(t in low for t in CUSTOMER_STORY_TERMS),
-        "PEER_INDUSTRY": any(t in low for t in PEER_INDUSTRY_TERMS),
+        "PEER_INDUSTRY": any(t in lede for t in PEER_INDUSTRY_TERMS),
     }
 
 
