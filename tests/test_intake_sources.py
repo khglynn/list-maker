@@ -63,3 +63,23 @@ def test_anthropic_index_since_and_source_slug() -> None:
     assert recent and all(c.published_on >= date(2026, 8, 27) for c in recent)
     assert {c.source for c in recent} == {"anthropic-engineering"}
     assert all(c.discovered_via["index"].endswith("/engineering") for c in recent)
+
+
+def test_anthropic_engineering_cards_wrap_thumbnails_and_the_hero_is_undated() -> None:
+    """/engineering: every card wraps an image inside the link text; the featured post
+    carries no date. Both were invisible on the /news fixture (found 2026-09-02 by a
+    dry run that reported 0 engineering posts when there were 24)."""
+    md = (FIX / "anthropic-engineering-index-sample.md").read_text()
+    posts = parse_anthropic_index(md, source="anthropic-engineering")
+    by_url = {c.url: c for c in posts}
+    assert len(posts) >= 20
+    card = by_url["https://www.anthropic.com/engineering/claude-code-auto-mode"]
+    assert card.title == "How we built Claude Code auto mode: a safer way to skip permissions"
+    assert card.published_on == date(2026, 3, 25) and card.category == []
+    hero = by_url["https://www.anthropic.com/engineering/how-we-contain-claude"]
+    assert hero.title == "How we contain Claude across products" and hero.published_on is None
+    assert hero.discovered_via["hero"] is True and hero.blurb.startswith("As agents grow")
+    assert posts[-1] is hero  # undated sorts last
+    recent = parse_anthropic_index(md, source="anthropic-engineering", since=date(2026, 4, 1))
+    assert hero in recent and all(c.published_on is None or c.published_on >= date(2026, 4, 1) for c in recent)
+    assert not any("![" in c.title for c in posts)
