@@ -2,4 +2,4 @@
 # CI (test.yml) installs this; the five scheduled workflows install requirements.txt only.
 -r requirements.txt
 pytest>=8.0.0             # unit tests for the pipeline guardrails (tests/)
-pip-audit>=2.7.0          # the CI vulnerability gate (test.yml) — runtime deps only
+pip-audit>=2.10.1          # the CI vulnerability gate (test.yml) — runtime deps only
