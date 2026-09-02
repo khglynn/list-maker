@@ -121,5 +121,7 @@ def feed_recent_dates(cfg, limit: int = 15) -> Optional[list[date]]:
     if dates is None:
         return None
     today = datetime.now(timezone.utc).date()
-    dates = [d for d in dates if d <= today]
+    # Sort here, not just in the sources: "newest first" is this function's contract and
+    # every caller reads feed[0] as the latest — don't let it depend on who fed us.
+    dates = sorted((d for d in dates if d <= today), reverse=True)
     return dates or None  # empty (genuinely, or after dropping future dates) -> unverified
