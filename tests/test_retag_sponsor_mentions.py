@@ -7,6 +7,7 @@ fixtures and no database. Hermetic: no DB, no network.
 import json
 
 from pipeline.scrapers.ai_daily.retag_sponsor_mentions import (
+    apply_changes,
     plan_changes,
     render_summary,
     summarize_by_entity,
@@ -235,3 +236,72 @@ def test_render_summary_names_the_counts_and_the_entities() -> None:
     text = render_summary(stats, summarize_by_entity(changes))
     assert "would tag as ads : 2" in text
     assert "Blitzy" in text and "roster=2" in text
+
+
+# --- apply_changes: the write half (independent review, 2026-09-02) ----------------
+
+
+class _RecordingCursor:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, tuple]] = []
+
+    def execute(self, sql, params=()):
+        self.calls.append((" ".join(sql.split()), tuple(params)))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+class _RecordingConn:
+    def __init__(self) -> None:
+        self.cur = _RecordingCursor()
+        self.commits = 0
+
+    def cursor(self):
+        return self.cur
+
+    def commit(self):
+        self.commits += 1
+
+
+def test_apply_touches_the_entity_rows_so_notion_resyncs() -> None:
+    """Without this the retag lands in Neon and never reaches Notion.
+
+    sync_notion.compute_diff re-pushes an entity only when its own row changed
+    (updated_at > notion_synced_at) or a newer episode arrived. A retag moves neither —
+    it edits ai_mentions — so the capped Mentions count and the Sponsor / Ad mentions
+    columns would stay blank on the page. Worst for a lapsed sponsor, which gets no new
+    mentions to carry the change for it.
+    """
+    changes, _ = plan_changes([_row(id=1), _row(id=2), _row(id=3, entity_id=99)])
+    conn = _RecordingConn()
+
+    mentions, entities = apply_changes(conn, changes)
+
+    assert (mentions, entities) == (3, 2)
+    entity_updates = [c for c in conn.cur.calls if "UPDATE ai_entities" in c[0]]
+    assert len(entity_updates) == 1
+    assert entity_updates[0][0] == "UPDATE ai_entities SET updated_at = NOW() WHERE id = ANY(%s);"
+    assert entity_updates[0][1] == ([28, 99],)
+    # One transaction: the entity touch commits with the mention updates or not at all.
+    assert conn.commits == 1
+
+
+def test_apply_skips_entities_detached_by_a_delete() -> None:
+    """ai_mentions.entity_id is ON DELETE SET NULL, so a change row can carry None."""
+    changes, _ = plan_changes([_row(id=1, entity_id=None)])
+    conn = _RecordingConn()
+
+    mentions, entities = apply_changes(conn, changes)
+
+    assert (mentions, entities) == (1, 0)
+    assert not [c for c in conn.cur.calls if "UPDATE ai_entities" in c[0]]
+
+
+def test_apply_writes_nothing_when_there_is_nothing_to_change() -> None:
+    conn = _RecordingConn()
+    assert apply_changes(conn, []) == (0, 0)
+    assert conn.cur.calls == [] and conn.commits == 0

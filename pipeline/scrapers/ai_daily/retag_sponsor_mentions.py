@@ -281,16 +281,32 @@ def summarize_by_entity(changes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
-def apply_changes(conn, changes: list[dict[str, Any]]) -> int:
-    """Write every change in ONE transaction — all or nothing.
+def apply_changes(conn, changes: list[dict[str, Any]]) -> tuple[int, int]:
+    """Write every change in ONE transaction — all or nothing. Returns (mentions, entities).
 
     A partial retag is the worst outcome available here: the rollup would show some of
     an entity's ads capped and the rest not, and there would be no way to tell how far
     the run got. psycopg2 opens a transaction implicitly, so the single commit at the
     end is the boundary; any exception propagates with nothing committed.
+
+    IT ALSO TOUCHES ai_entities.updated_at, and that is not incidental. Notion's
+    incremental sync decides what to re-push from sync_notion.compute_diff, which
+    re-sends an entity only when its own row changed (updated_at > notion_synced_at) or
+    a newer episode arrived. A retag moves NEITHER — it edits ai_mentions — so without
+    this the capped Mentions count and the new Sponsor / Ad mentions columns would sit
+    in Neon and never reach the page. Worst for exactly the entities this is for: a
+    lapsed sponsor gets no new mentions to carry the change for it, so its page would
+    stay wrong indefinitely. Bumping the entity row inside the same transaction makes
+    the next scheduled sync republish it.
+
+    updated_at is safe to use this way: load_entity_batch writes it on upsert and
+    compute_diff is its only reader, so it means "something about this entity changed"
+    and nothing else.
     """
     if not changes:
-        return 0
+        return 0, 0
+    # entity_id is nullable — ai_mentions.entity_id is ON DELETE SET NULL.
+    entity_ids = sorted({c["entity_id"] for c in changes if c.get("entity_id") is not None})
     with conn.cursor() as cur:
         for change in changes:
             cur.execute(
@@ -303,8 +319,13 @@ def apply_changes(conn, changes: list[dict[str, Any]]) -> int:
                 """,
                 (change["to"]["is_editorial"], change["to"]["sponsor_source"], change["mention_id"]),
             )
+        if entity_ids:
+            cur.execute(
+                "UPDATE ai_entities SET updated_at = NOW() WHERE id = ANY(%s);",
+                (entity_ids,),
+            )
     conn.commit()
-    return len(changes)
+    return len(changes), len(entity_ids)
 
 
 def render_summary(stats: dict[str, int], by_entity: list[dict[str, Any]], limit: int = 40) -> str:
@@ -396,9 +417,16 @@ def main() -> None:
             print("\nDry run — nothing was written. Re-run with --apply to commit.")
             return
 
-        written = apply_changes(conn, changes)
-        log.info("retagged %d mention(s) as sponsor reads", written)
+        written, touched = apply_changes(conn, changes)
+        log.info(
+            "retagged %d mention(s) as sponsor reads across %d entity/entities",
+            written, touched,
+        )
         print(f"\nApplied: {written} mention(s) updated. No rows deleted.")
+        print(
+            f"Touched {touched} entity row(s) so the next Notion sync republishes them "
+            f"with the capped Mentions count and the Sponsor / Ad mentions columns."
+        )
     finally:
         conn.close()
 
