@@ -372,10 +372,17 @@ def mark_failed(conn, candidate_id: int, reason: str, *, override_by: Optional[s
 
 
 def record_notion_page(conn, candidate_id: int, page_id: str) -> None:
+    """The log now holds this row's current state.
+
+    Deliberately does NOT touch `updated_at`: that column means "the row's content
+    last changed", and `needs_mirroring` compares it against `notion_synced_at` to
+    decide what the log is behind on. Bumping it here would make every mirror look
+    like a fresh change and re-push the same row on every run forever.
+    """
     with conn.cursor() as cur:
         cur.execute(
-            f"UPDATE {TABLE} SET notion_page_id = %s, notion_synced_at = now(), "
-            "updated_at = now() WHERE id = %s",
+            f"UPDATE {TABLE} SET notion_page_id = %s, notion_synced_at = now() "
+            "WHERE id = %s",
             (page_id, candidate_id),
         )
     conn.commit()

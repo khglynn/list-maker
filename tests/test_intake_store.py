@@ -239,6 +239,17 @@ def test_mark_saved_and_failed_record_provenance() -> None:
 
 # ── what the weekly line reads ──────────────────────────────────────────────
 
+def test_record_notion_page_does_not_bump_updated_at() -> None:
+    conn = _Conn()
+    store.record_notion_page(conn, 4, "page-9")
+    sql, params = conn.calls[0]
+    assert params == ("page-9", 4)
+    # `updated_at` means "content last changed"; needs_mirroring compares the two, so
+    # bumping it here would re-push the same row to Notion on every run forever
+    assert "updated_at" not in sql
+    assert "notion_synced_at = now()" in sql
+
+
 def test_weekly_counts_asks_the_table_and_splits_the_precheck_reasons() -> None:
     conn = _Conn([
         {"judged": 12, "would_save": 4, "held": 1},

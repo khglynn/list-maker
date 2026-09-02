@@ -475,3 +475,21 @@ def test_a_failed_mirror_fails_the_run(monkeypatch) -> None:
     monkeypatch.setattr(R, "post_slack", lambda text: True)
     # the Slack line still posts — the week is still reported — but the run is red
     assert R.run(R.parse_args([]), object(), "tok", "fc", "or") == 1
+
+
+def test_mirror_records_the_sync_even_when_the_page_already_existed(monkeypatch) -> None:
+    """Otherwise a row whose content changed after its first mirror never catches up.
+
+    An override ingest bumps `updated_at` but reuses the same Notion page, so
+    recording the sync only on a NEW page id left `notion_synced_at` behind
+    `updated_at` forever — and needs_mirroring re-pushed that row every single run.
+    """
+    recorded: list = []
+    monkeypatch.setattr(store, "get_by_id",
+                        lambda conn, cid: {"id": cid, "url": "https://x/a",
+                                           "status": "saved", "notion_page_id": "p1"})
+    monkeypatch.setattr(R.notion_log, "upsert_row", lambda t, d, row, pages=None: "p1")
+    monkeypatch.setattr(store, "record_notion_page",
+                        lambda conn, cid, pid: recorded.append((cid, pid)))
+    assert R._mirror(object(), "tok", "db", 5) is True
+    assert recorded == [(5, "p1")]

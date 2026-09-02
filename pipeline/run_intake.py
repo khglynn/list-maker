@@ -365,8 +365,11 @@ def _mirror(conn, token: str, db_id: str, candidate_id: int,
     except Exception as exc:  # noqa: BLE001
         log.error("notion mirror FAILED for %s: %s", row["url"], exc)
         return False
-    if page_id != row.get("notion_page_id"):
-        store.record_notion_page(conn, candidate_id, page_id)
+    # Unconditionally, even when the page id is unchanged: this is what marks the row
+    # as caught up. Recording only on a NEW page id left every row whose content
+    # changed after its first mirror (an override ingest, say) permanently behind, so
+    # `needs_mirroring` re-pushed it on every run for the rest of its life.
+    store.record_notion_page(conn, candidate_id, page_id)
     return True
 
 
