@@ -28,8 +28,20 @@ from urllib.parse import urlsplit
 
 from pipeline.common import get_logger
 from pipeline.scrapers.blog.import_blog import canonicalize_url, is_probable_post_url
+from pipeline.scrapers.intake.links import REPORT_TYPES
 from pipeline.scrapers.intake.sources import Candidate
 from pipeline.show_config import SHOWS
+
+# A cited DOCUMENT (report / paper / survey / blog_post) is `podcast-cited`: something
+# a show pointed at because of what it says, which stays worth reading when it is old —
+# so judge.precheck exempts it from the 400-day staleness skip. A URL carried by any
+# other mention type (software_product, model, organization, account…) is a page a host
+# name-dropped, and an archival product page IS stale: those emit `podcast-linked` and
+# the staleness check applies. Same split Kevin asked for on 2026-09-02, after nine of
+# twelve first-run misses turned out to be pages like openai.com/dall-e-2.
+# Keyed on the mention type, not on which module found the URL, so links.py's resolved
+# citations and the URLs that arrived inside a mention land the same way.
+DOCUMENT_TYPES = set(REPORT_TYPES)
 
 log = get_logger("pipeline.intake.mentions")
 
@@ -68,6 +80,7 @@ def discover_cited_candidates(conn, since_days: Optional[int] = None) -> list[Ca
                    MAX(ep.publish_date)::date AS last_cited,
                    (ARRAY_AGG(m.context_snippet ORDER BY ep.publish_date DESC NULLS LAST))[1] AS why,
                    (ARRAY_AGG(m.canonical_name ORDER BY ep.publish_date DESC NULLS LAST))[1] AS cited_as,
+                   ARRAY_AGG(DISTINCT m.mention_type) AS mention_types,
                    ARRAY_AGG(DISTINCT s.name) AS shows
             FROM ai_mentions m
             JOIN episodes ep ON ep.id = m.episode_id
@@ -97,6 +110,8 @@ def discover_cited_candidates(conn, since_days: Optional[int] = None) -> list[Ca
         merged = by_canonical.setdefault(url, {**row, "url": url, "cited_in_episodes": 0})
         merged["cited_in_episodes"] += int(row["cited_in_episodes"] or 0)
         merged["shows"] = sorted({*(merged.get("shows") or []), *(row["shows"] or [])})
+        merged["mention_types"] = sorted({*(merged.get("mention_types") or []),
+                                          *(row["mention_types"] or [])})
 
     if not by_canonical:
         log.info("podcast-cited: %d cited URL(s), none of them post-shaped", len(rows))
@@ -113,11 +128,22 @@ def discover_cited_candidates(conn, since_days: Optional[int] = None) -> list[Ca
     return [_as_candidate(row) for row in fresh]
 
 
+def source_for(mention_types: Optional[list[str]]) -> str:
+    """`podcast-cited` if ANY mention of this URL was a document, else `podcast-linked`.
+
+    Any, not all: one show citing the Ramp AI Index as a report is enough to make the
+    URL a document, even if another mention name-dropped it as a product.
+    """
+    if set(mention_types or []) & DOCUMENT_TYPES:
+        return "podcast-cited"
+    return "podcast-linked"
+
+
 def _as_candidate(row: dict) -> Candidate:
     """Title is left empty on purpose: the scrape knows the post's real name, and this
     row only knows what the host called it. `cited_as` rides in the provenance."""
     return Candidate(
-        source="podcast-cited",
+        source=source_for(row.get("mention_types")),
         title="",
         url=row["url"],
         published_on=None,  # the CITE date is not the POST date; don't pretend otherwise
@@ -125,6 +151,7 @@ def _as_candidate(row: dict) -> Candidate:
         blurb=str(row.get("why") or "")[:500],
         discovered_via={
             "cited_as": row.get("cited_as"),
+            "mention_types": row.get("mention_types") or [],
             "shows": row.get("shows") or [],
             "cited_in_episodes": int(row.get("cited_in_episodes") or 0),
             "last_cited": str(row["last_cited"]) if row.get("last_cited") else None,

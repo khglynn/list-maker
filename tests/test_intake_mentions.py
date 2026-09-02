@@ -42,7 +42,7 @@ class _Conn:
 def _row(url: str, **kw) -> dict:
     base = {"source_url": url, "cited_in_episodes": 1, "last_cited": date(2026, 8, 30),
             "why": "the Ramp index says seat growth flattened", "cited_as": "Ramp AI Index",
-            "shows": ["The AI Daily Brief"]}
+            "mention_types": ["report"], "shows": ["The AI Daily Brief"]}
     base.update(kw)
     return base
 
@@ -64,7 +64,7 @@ def test_section_indexes_and_ingested_urls_never_become_candidates(monkeypatch) 
                         lambda c, urls: {"https://anthropic.com/news/already-here"})
     out = M.discover_cited_candidates(conn)
     assert [c.url for c in out] == ["https://openai.com/index/a-real-post"]
-    assert all(c.source == "podcast-cited" for c in out)
+    assert all(c.source in ("podcast-cited", "podcast-linked") for c in out)
 
 
 def test_http_and_utm_twins_collapse_into_one_candidate(monkeypatch) -> None:
@@ -119,3 +119,48 @@ def test_an_empty_result_is_reported_not_silently_returned(caplog) -> None:
         assert M.discover_cited_candidates(conn) == []
     # "nothing to do" must be distinguishable from "didn't check" (docs/principles.md)
     assert "none of them post-shaped" in caplog.text
+
+
+# ── what the mention IS decides the source, and the source decides staleness ─
+
+def test_source_splits_documents_from_name_dropped_pages() -> None:
+    """A cited report stays worth reading when it is old; a 2022 product page does not.
+
+    judge.precheck exempts `podcast-cited` from the 400-day staleness skip, so this
+    split is what keeps openai.com/dall-e-2 from riding that exemption into the judge.
+    Keyed on the mention type, not on which module found the URL, so links.py's
+    resolved citations and URLs that arrived inside a mention land the same way.
+    """
+    for doc_type in ("report", "paper", "survey", "blog_post"):
+        assert M.source_for([doc_type]) == "podcast-cited"
+    for other in ("software_product", "model", "organization", "account"):
+        assert M.source_for([other]) == "podcast-linked"
+    # ANY document mention is enough — one show citing it as a report settles it
+    assert M.source_for(["software_product", "report"]) == "podcast-cited"
+    # nothing known: the conservative read is "a page someone linked", which is checked
+    assert M.source_for([]) == "podcast-linked"
+    assert M.source_for(None) == "podcast-linked"
+
+
+def test_a_name_dropped_product_page_is_podcast_linked(monkeypatch) -> None:
+    conn = _Conn([[_row("https://openai.com/dall-e-2", mention_types=["software_product"])]])
+    monkeypatch.setattr("pipeline.scrapers.intake.store.already_ingested_urls",
+                        lambda c, urls: set())
+    cand = M.discover_cited_candidates(conn)[0]
+    assert cand.source == "podcast-linked"
+    assert cand.discovered_via["mention_types"] == ["software_product"]
+
+
+def test_the_staleness_exemption_follows_the_split() -> None:
+    from datetime import date as _date
+
+    from pipeline.scrapers.intake import judge
+
+    def check(source):
+        return judge.precheck("https://openai.com/dall-e-2", already_ingested=False,
+                              words=3000, scrape_error=None, title="DALL-E 2",
+                              published_on=_date(2022, 4, 6), source=source,
+                              today=_date(2026, 9, 2)).skip_reason
+
+    assert check("podcast-linked") == "stale"   # an archival product page IS stale
+    assert check("podcast-cited") is None       # a cited document is not

@@ -49,7 +49,10 @@ INTAKE_DESCRIPTION = (
 # including its type, so a property Kevin re-typed by hand is never clobbered.
 REQUIRED_PROPERTIES: dict[str, dict] = {
     "URL": {"url": {}},
-    "Source": {"select": {}},          # intake source slug: openai-rss, podcast-cited, …
+    # Options deliberately left empty: Notion creates a select option on first write,
+    # so a new source slug (podcast-linked, added 2026-09-02) needs no schema change.
+    # Pinning a closed list here would silently drop rows carrying an unlisted source.
+    "Source": {"select": {}},          # openai-rss | anthropic-* | podcast-cited | podcast-linked
     "Published": {"date": {}},
     "Words": {"number": {}},
     "Links Out": {"number": {}},
