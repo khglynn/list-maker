@@ -244,7 +244,13 @@ class _PrepConn:
         pass
 
 
-def _prep_row(episode_id: int, title: str, text: str, transcript_id: int | None) -> dict:
+def _prep_row(
+    episode_id: int,
+    title: str,
+    text: str,
+    transcript_id: int | None,
+    raw_content: str | None = None,
+) -> dict:
     return {
         "episode_id": episode_id,
         "title": title,
@@ -253,6 +259,7 @@ def _prep_row(episode_id: int, title: str, text: str, transcript_id: int | None)
         "transcript_id": transcript_id,
         "source_text": text,
         "from_transcript": transcript_id is not None,
+        "raw_content": raw_content,
     }
 
 
@@ -265,11 +272,44 @@ def test_prepare_inputs_records_provenance_per_episode(monkeypatch, tmp_path) ->
         _prep_row(7262, "real transcript", "the actual episode text", 2384),
     ])
 
-    _csv, _dir, provenance_path = rne.prepare_extraction_inputs(conn, [7261, 7262])
+    _csv, _dir, provenance_path, _roster = rne.prepare_extraction_inputs(conn, [7261, 7262])
 
     import json as _json
 
     assert _json.loads(provenance_path.read_text()) == {"7261": None, "7262": 2384}
+
+
+def test_prepare_inputs_writes_the_sponsor_roster_sidecar(monkeypatch, tmp_path) -> None:
+    """The roster travels to the extractor as a sidecar keyed by episode id.
+
+    It is written even when empty: a leftover file from a previous batch would hand the
+    extractor another episode's sponsors, and a wrong roster is worse than none.
+    """
+    from pipeline import run_new_episodes as rne
+
+    monkeypatch.setattr(rne, "PIPELINE_DIR", tmp_path)
+    sponsored = _json_raw_content(
+        "<p>Today's news.</p><p><strong>Brought to you by:</strong></p>"
+        '<p><strong>Blitzy - </strong>Build faster <a href="https://blitzy.com/">x</a></p>'
+    )
+    conn = _PrepConn([
+        _prep_row(7261, "sponsored", "the transcript", 2384, raw_content=sponsored),
+        _prep_row(7262, "no sponsors", "the transcript", 2385, raw_content=None),
+    ])
+
+    *_rest, roster_path = rne.prepare_extraction_inputs(conn, [7261, 7262])
+
+    import json as _json
+
+    rosters = _json.loads(roster_path.read_text())
+    assert rosters == {"7261": [{"name": "Blitzy", "url": "https://blitzy.com/"}]}
+
+
+def _json_raw_content(description: str) -> str:
+    """episodes.raw_content is a TEXT column holding the Taddy JSON payload."""
+    import json as _json
+
+    return _json.dumps({"provider": "taddy", "description": description})
 
 
 def test_prepare_inputs_refreshes_a_stale_cached_source_file(monkeypatch, tmp_path) -> None:
@@ -297,7 +337,9 @@ def _heal_fixture(monkeypatch, tmp_path, *, post_heal, extract_ok=True):
     monkeypatch.setattr(rne, "get_db_connection", lambda: _PrepConn([]))
     monkeypatch.setattr(
         rne, "prepare_extraction_inputs",
-        lambda conn, ids: (tmp_path / "e.csv", tmp_path, tmp_path / "p.json"),
+        lambda conn, ids: (
+            tmp_path / "e.csv", tmp_path, tmp_path / "p.json", tmp_path / "r.json"
+        ),
     )
     calls = {"n": 0}
 

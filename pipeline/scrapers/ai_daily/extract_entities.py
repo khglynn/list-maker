@@ -31,10 +31,33 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
 import requests
 from dotenv import load_dotenv
+
+# Sponsor detection lives beside this file. Two import paths because this module has
+# two lives: the orchestrator runs it as a SCRIPT (no package, relative import fails)
+# and pytest imports it as pipeline.scrapers.ai_daily.extract_entities. Trying the
+# package form first keeps a single module identity under test — importing it twice
+# under two names would give the tests a different Sponsor class than the code uses.
+try:  # pragma: no cover - exercised by whichever entry point is in use
+    from .sponsors import (
+        Sponsor,
+        apply_sponsor_verdict,
+        classify_sponsor,
+        normalize_text_for_matching,
+        sponsor_windows,
+    )
+except ImportError:  # pragma: no cover - direct script execution
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from sponsors import (  # type: ignore[no-redef]
+        Sponsor,
+        apply_sponsor_verdict,
+        classify_sponsor,
+        normalize_text_for_matching,
+        sponsor_windows,
+    )
 
 
 OPENAI_CHAT_COMPLETIONS_ENDPOINT = "https://api.openai.com/v1/chat/completions"
@@ -202,10 +225,19 @@ def parse_args() -> argparse.Namespace:
         help="Keep all extracted types (including organization/person-heavy output)",
     )
     parser.add_argument(
-        "--include-non-editorial",
+        "--drop-sponsor-mentions",
         action="store_true",
         default=False,
-        help="Include sponsor/ad mentions; default is to exclude them",
+        help="Discard sponsor/ad mentions instead of keeping them tagged (not the "
+        "pipeline default; ads are kept, tagged and weight-capped downstream)",
+    )
+    parser.add_argument(
+        "--sponsor-roster-json",
+        type=str,
+        default="",
+        help="Path to the per-episode sponsor roster sidecar written by "
+        "run_new_episodes.prepare_extraction_inputs. Optional: without it the roster "
+        "signal is unavailable and only transcript cues + the model's own flag apply.",
     )
     parser.add_argument(
         "--extraction-type",
@@ -278,7 +310,11 @@ def _tech_system_prompt(type_list: str) -> str:
         "Important rules:\n"
         "1) Never invent URLs. If unknown, set source_url=null.\n"
         "2) If type is unclear, use type='other' and set needs_review=true.\n"
-        "3) Set is_editorial=true for normal host commentary/news analysis; set false only for explicit sponsor/ad reads.\n"
+        # The ad read is DATA now, not noise to be skipped: a mention flagged false is
+        # kept, tagged and weight-capped downstream, so telling the model to extract
+        # sponsor reads rather than ignore them is what makes the tag reachable.
+        "3) Set is_editorial=true for normal host commentary/news analysis; set false for explicit sponsor/ad "
+        "reads. DO extract products named in a sponsor read — mark them false rather than omitting them.\n"
         "4) Keep only meaningful references, not every generic noun.\n"
         "5) For account mentions, use platform when clear (x/linkedin/youtube/etc).\n"
         "6) Prioritize these types: software_product, model, benchmark, report, survey, paper, account, social_post, blog_post.\n"
@@ -310,7 +346,8 @@ def _media_system_prompt(type_list: str) -> str:
         "4) Never invent URLs or facts. If unknown, omit the fact or set source_url=null.\n"
         "5) sentiment_label reflects the hosts' take: positive=recommend/love, negative=pan, mixed=liked-with-"
         "reservations, neutral=mentioned-without-judgment.\n"
-        "6) Set is_editorial=true for normal host discussion; false only for explicit sponsor/ad reads.\n"
+        "6) Set is_editorial=true for normal host discussion; false for explicit sponsor/ad reads. DO extract "
+        "works named in a sponsor read — mark them false rather than omitting them.\n"
         "7) If a work's type is genuinely unclear, use type='other' and set needs_review=true.\n"
         "8) Keep meaningful recommendations, not every passing pop-culture reference.\n"
         "9) Return valid JSON only. No duplicate rows with identical mention_text + context.\n"
@@ -594,6 +631,9 @@ def sanitize_mention(
         "context_snippet": context_snippet,
         "sentiment_label": sentiment,
         "is_editorial": is_editorial,
+        # Placeholder until classify_sponsor rules on it; NULL/None is "editorial",
+        # never a stand-in value. process_episode_mentions_with_stats always overwrites.
+        "sponsor_source": None,
         "confidence": confidence,
         "needs_review": needs_review,
         "review_reason": review_reason,
@@ -714,7 +754,54 @@ def postprocess_mention_types(
     return mention
 
 
-FILTER_STAT_KEYS = ("raw", "sanitize_dropped", "non_editorial_dropped", "non_core_type_dropped", "kept")
+# Per-episode counters describing what happened to the model's candidates.
+# `sponsor_tagged` counts the mentions KEPT and marked as ads — it is a subset of
+# `kept`, not a drop, and it exists so an episode whose only content was a sponsor read
+# says so out loud instead of looking like an empty extraction.
+# `non_editorial_dropped` now only moves under --drop-sponsor-mentions; the pipeline
+# keeps ads (Kevin, 2026-09-01), so a nonzero value in a production batch means someone
+# passed that flag.
+FILTER_STAT_KEYS = (
+    "raw",
+    "sanitize_dropped",
+    "non_editorial_dropped",
+    "non_core_type_dropped",
+    "sponsor_tagged",
+    "kept",
+)
+
+# Columns of mentions.csv, in order — the file the loader reads. Same lockstep contract
+# as EPISODE_SUMMARY_FIELDS below, and pinned by the same test: csv.DictWriter refuses a
+# row carrying a key this list lacks, which is exactly how PR #23 broke 64/64 batches.
+MENTION_CSV_FIELDS = [
+    "episode_id",
+    "entity_type",
+    "canonical_name",
+    "mention_text",
+    "platform",
+    "source_url",
+    "sentiment_label",
+    "is_editorial",
+    "sponsor_source",
+    "confidence",
+    "needs_review",
+    "review_reason",
+    "context_snippet",
+    "quoted_text",
+    "facts_json",
+]
+
+REVIEW_CSV_FIELDS = [
+    "episode_id",
+    "entity_type",
+    "canonical_name",
+    "mention_text",
+    "confidence",
+    "review_reason",
+    "platform",
+    "source_url",
+    "context_snippet",
+]
 
 # Columns of episode_summary.csv, in order. episode_summary_row() builds rows in this
 # exact order, and tests/test_extract_entities.py pins the two together, because
@@ -730,6 +817,7 @@ EPISODE_SUMMARY_FIELDS = [
     "transcript_path",
     "mention_count",
     "raw_mention_count",
+    "sponsor_mention_count",
     "dropped_non_editorial",
     "dropped_non_core_type",
     "dropped_invalid",
@@ -756,6 +844,7 @@ def episode_summary_row(
         "transcript_path": str(episode.transcript_path),
         "mention_count": len(sanitized_mentions),
         "raw_mention_count": filter_stats["raw"],
+        "sponsor_mention_count": filter_stats["sponsor_tagged"],
         "dropped_non_editorial": filter_stats["non_editorial_dropped"],
         "dropped_non_core_type": filter_stats["non_core_type_dropped"],
         "dropped_invalid": filter_stats["sanitize_dropped"],
@@ -774,29 +863,47 @@ def process_episode_mentions_with_stats(
     episode_id: int,
     profile: ExtractionProfile,
     confidence_review_threshold: float = DEFAULT_CONFIDENCE_REVIEW_THRESHOLD,
-    include_non_editorial: bool = False,
+    drop_sponsor_mentions: bool = False,
     focus_core_types: bool = True,
+    roster: Sequence[Sponsor] | None = None,
+    transcript_text: str | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
     """Turn a raw LLM response into the mentions that actually get loaded — and say
     what happened to the rest.
 
-    This is the single per-episode pipeline — sanitize -> postprocess types -> filter —
-    used by BOTH main() and the eval harness, so "what production extracts" has one
-    definition that can't drift. The defaults mirror the production CLI defaults
-    (editorial-only, core-types-only), which is what the orchestrator runs.
+    This is the single per-episode pipeline — sanitize -> postprocess types -> classify
+    -> filter — used by BOTH main() and the eval harness, so "what production extracts"
+    has one definition that can't drift. The defaults mirror the production CLI
+    defaults (keep ads tagged, core types only), which is what the orchestrator runs.
+
+    ADS ARE TAGGED, NOT DROPPED (Kevin, 2026-09-01). This function used to discard every
+    mention with is_editorial=false, which is why the database contains only the ads the
+    model MISSED: 891 untagged sponsor reads counted at full weight, including 76 for
+    Blitzy. Each surviving mention now gets a sponsor verdict from the deterministic
+    detector (roster → phrase → model, see sponsors.classify_sponsor) that OVERRIDES the
+    model's own flag in both directions, and carries `sponsor_source` so the row says
+    where the verdict came from. The rollup caps ad weight; nothing is deleted.
 
     The stats exist because of 2026-08-23: the model returned ~5,000 tokens of
     candidates for episode 8429 and these filters removed every one, but nothing
     recorded that — the batch just looked like "the model found nothing", the loader
     raised on the empty file, and the only surviving evidence was a token count in an
     expiring CI log. `raw` vs `kept`, with the per-filter drops, is what makes an empty
-    result explainable instead of mysterious.
+    result explainable instead of mysterious. `sponsor_tagged` extends that: an episode
+    whose only mentions were ads is NOT an empty extraction, and now it can prove it.
     """
     stats = {key: 0 for key in FILTER_STAT_KEYS}
     mentions_raw = raw.get("mentions", [])
     if not isinstance(mentions_raw, list):
         return [], stats
     stats["raw"] = len(mentions_raw)
+
+    roster = list(roster or [])
+    # Normalize the transcript once per episode, not once per mention: these are
+    # 50k-character strings and an episode can carry 40 mentions.
+    normalized_transcript = normalize_text_for_matching(transcript_text or "")
+    windows = sponsor_windows(transcript_text) if transcript_text else []
+
     out: list[dict[str, Any]] = []
     for mention in mentions_raw:
         normalized = sanitize_mention(
@@ -813,7 +920,11 @@ def process_episode_mentions_with_stats(
             valid_types=profile.types,
             apply_tech_heuristics=profile.apply_tech_heuristics,
         )
-        if not include_non_editorial and not normalized["is_editorial"]:
+        verdict = classify_sponsor(
+            normalized, roster, windows, normalized_transcript=normalized_transcript
+        )
+        apply_sponsor_verdict(normalized, verdict)
+        if drop_sponsor_mentions and verdict.is_sponsor:
             stats["non_editorial_dropped"] += 1
             continue
         if (
@@ -823,6 +934,8 @@ def process_episode_mentions_with_stats(
         ):
             stats["non_core_type_dropped"] += 1
             continue
+        if verdict.is_sponsor:
+            stats["sponsor_tagged"] += 1
         out.append(normalized)
     stats["kept"] = len(out)
     return out, stats
@@ -833,8 +946,10 @@ def process_episode_mentions(
     episode_id: int,
     profile: ExtractionProfile,
     confidence_review_threshold: float = DEFAULT_CONFIDENCE_REVIEW_THRESHOLD,
-    include_non_editorial: bool = False,
+    drop_sponsor_mentions: bool = False,
     focus_core_types: bool = True,
+    roster: Sequence[Sponsor] | None = None,
+    transcript_text: str | None = None,
 ) -> list[dict[str, Any]]:
     """The mentions that actually get loaded (see process_episode_mentions_with_stats)."""
     mentions, _stats = process_episode_mentions_with_stats(
@@ -842,8 +957,10 @@ def process_episode_mentions(
         episode_id,
         profile,
         confidence_review_threshold=confidence_review_threshold,
-        include_non_editorial=include_non_editorial,
+        drop_sponsor_mentions=drop_sponsor_mentions,
         focus_core_types=focus_core_types,
+        roster=roster,
+        transcript_text=transcript_text,
     )
     return mentions
 
@@ -887,6 +1004,29 @@ def read_episode_inputs(
             )
         )
     return episodes
+
+
+def read_sponsor_roster_sidecar(path: str | None) -> dict[int, list[Sponsor]]:
+    """Load the per-episode sponsor roster written by prepare_extraction_inputs.
+
+    Shape: {"<episode_id>": [{"name": ..., "url": ...}, ...]}. A sidecar is optional —
+    a hand-run batch has none, and an episode absent from it simply has no roster
+    signal. Missing evidence degrades the verdict to phrase + model rather than
+    failing the batch, which is the difference between a weaker answer and no answer.
+    """
+    if not path:
+        return {}
+    file = Path(path).expanduser()
+    if not file.exists():
+        print(f"  WARNING: sponsor roster sidecar not found: {file} — roster signal unavailable")
+        return {}
+    raw = json.loads(file.read_text(encoding="utf-8"))
+    rosters: dict[int, list[Sponsor]] = {}
+    for episode_id, entries in raw.items():
+        rosters[int(episode_id)] = [
+            Sponsor(name=e["name"], url=e.get("url")) for e in entries if e.get("name")
+        ]
+    return rosters
 
 
 def write_json(path: Path, payload: Any) -> None:
@@ -1034,7 +1174,15 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     episodes_dir.mkdir(parents=True, exist_ok=True)
 
+    sponsor_rosters = read_sponsor_roster_sidecar(args.sponsor_roster_json)
+
     print(f"Running extraction for {len(episodes)} episodes into {output_dir}", flush=True)
+    with_roster = sum(1 for e in episodes if sponsor_rosters.get(e.episode_id))
+    print(
+        f"Sponsor rosters: {with_roster}/{len(episodes)} episode(s) declare sponsors in "
+        f"their show notes",
+        flush=True,
+    )
 
     all_mentions: list[dict[str, Any]] = []
     per_episode_results: list[dict[str, Any]] = []
@@ -1078,20 +1226,32 @@ def main() -> None:
             episode.episode_id,
             profile,
             confidence_review_threshold=args.confidence_review_threshold,
-            include_non_editorial=args.include_non_editorial,
+            drop_sponsor_mentions=args.drop_sponsor_mentions,
             focus_core_types=args.focus_core_types,
+            roster=sponsor_rosters.get(episode.episode_id),
+            # The same text the model saw, so a window offset and a context_snippet
+            # refer to the same string. Passing the untruncated file would put windows
+            # past --max-chars, where no snippet can ever land.
+            transcript_text=transcript_text,
         )
         for key in FILTER_STAT_KEYS:
             filter_totals[key] += filter_stats[key]
         if filter_stats["raw"] and not filter_stats["kept"]:
             # Say it where the run summary will show it: the model spoke, the filters
             # removed everything. Not an error — the loader records it as a declared
-            # empty result so the episode is not re-queued every day.
+            # empty result so the episode is not re-queued every day. Since ads are now
+            # kept rather than dropped, an episode whose only content was a sponsor read
+            # can no longer reach this line (it has mentions); that is the point.
             print(
                 f"  episode {episode.episode_id}: {filter_stats['raw']} candidate(s) from the model, "
                 f"0 kept (non-editorial {filter_stats['non_editorial_dropped']}, non-core type "
                 f"{filter_stats['non_core_type_dropped']}, invalid {filter_stats['sanitize_dropped']}) "
                 f"— declared empty"
+            )
+        elif filter_stats["sponsor_tagged"]:
+            print(
+                f"  episode {episode.episode_id}: {filter_stats['sponsor_tagged']} of "
+                f"{filter_stats['kept']} kept mention(s) tagged as sponsor reads"
             )
 
         new_type_candidates = raw.get("new_type_candidates", [])
@@ -1129,6 +1289,7 @@ def main() -> None:
             "model": args.model,
             "mention_count": len(sanitized_mentions),
             "raw_mention_count": filter_stats["raw"],
+            "sponsor_mention_count": filter_stats["sponsor_tagged"],
             "dropped": {
                 "non_editorial": filter_stats["non_editorial_dropped"],
                 "non_core_type": filter_stats["non_core_type_dropped"],
@@ -1167,6 +1328,8 @@ def main() -> None:
             "source_url": mention["source_url"] or "",
             "sentiment_label": mention["sentiment_label"],
             "is_editorial": str(mention["is_editorial"]).lower(),
+            # Empty cell, not the string "none" — the loader turns "" into SQL NULL.
+            "sponsor_source": mention.get("sponsor_source") or "",
             "confidence": f"{mention['confidence']:.4f}",
             "needs_review": str(mention["needs_review"]).lower(),
             "review_reason": mention["review_reason"] or "",
@@ -1190,41 +1353,8 @@ def main() -> None:
                 }
             )
 
-    write_csv(
-        output_dir / "mentions.csv",
-        mention_rows,
-        [
-            "episode_id",
-            "entity_type",
-            "canonical_name",
-            "mention_text",
-            "platform",
-            "source_url",
-            "sentiment_label",
-            "is_editorial",
-            "confidence",
-            "needs_review",
-            "review_reason",
-            "context_snippet",
-            "quoted_text",
-            "facts_json",
-        ],
-    )
-    write_csv(
-        output_dir / "review_queue.csv",
-        review_rows,
-        [
-            "episode_id",
-            "entity_type",
-            "canonical_name",
-            "mention_text",
-            "confidence",
-            "review_reason",
-            "platform",
-            "source_url",
-            "context_snippet",
-        ],
-    )
+    write_csv(output_dir / "mentions.csv", mention_rows, MENTION_CSV_FIELDS)
+    write_csv(output_dir / "review_queue.csv", review_rows, REVIEW_CSV_FIELDS)
     write_csv(output_dir / "episode_summary.csv", per_episode_results, EPISODE_SUMMARY_FIELDS)
 
     usage_summary = {
@@ -1253,7 +1383,10 @@ def main() -> None:
                 "max_chars": args.max_chars,
                 "confidence_review_threshold": args.confidence_review_threshold,
                 "focus_core_types": args.focus_core_types,
-                "include_non_editorial": args.include_non_editorial,
+                "drop_sponsor_mentions": args.drop_sponsor_mentions,
+                "sponsor_roster_episodes": sorted(
+                    eid for eid, r in sponsor_rosters.items() if r
+                ),
             },
         "episodes": per_episode_results,
         "summary": summary,
@@ -1286,6 +1419,11 @@ def main() -> None:
     print("Done.", flush=True)
     print(f"Batch: {batch_name}", flush=True)
     print(f"Mentions: {summary['mention_count']}", flush=True)
+    print(
+        f"  of which sponsor reads: {filter_totals['sponsor_tagged']} "
+        f"(kept and tagged, weight-capped at rollup)",
+        flush=True,
+    )
     print(f"Needs review: {summary['review_count']}", flush=True)
     print(f"Prompt tokens: {usage_summary['prompt_tokens']}", flush=True)
     print(f"Completion tokens: {usage_summary['completion_tokens']}", flush=True)

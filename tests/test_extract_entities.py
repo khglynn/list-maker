@@ -6,6 +6,8 @@ confidence stays in [0,1], core fields are required, unknown entity_types fall
 back to 'other' + needs_review, and low-confidence mentions are flagged.
 """
 
+from pathlib import Path
+
 import pytest
 
 from pipeline.scrapers.ai_daily.extract_entities import (
@@ -214,7 +216,30 @@ def test_process_episode_mentions_focus_core_types_keeps_other() -> None:
     assert types.get("Mystery Thing") == "other"  # unknown kept for review
 
 
-def test_process_episode_mentions_can_include_non_core_and_ads() -> None:
+def test_process_episode_mentions_keeps_ads_tagged_by_default() -> None:
+    """Ads are kept and tagged, not dropped (Kevin, 2026-09-01).
+
+    Before this, an ad the model flagged was discarded — which is why the only ads in
+    the database are the ones the model MISSED, stored as editorial at full weight.
+    """
+    tech = get_profile("entity_extraction")
+    raw = {
+        "mentions": [
+            _mention(canonical_name="Sam Altman", entity_type="person", is_editorial=True),
+            _mention(canonical_name="SponsorCo", entity_type="organization", is_editorial=False),
+        ]
+    }
+    out = process_episode_mentions(raw, 1, tech, focus_core_types=False)
+    by_name = {m["canonical_name"]: m for m in out}
+    assert set(by_name) == {"Sam Altman", "SponsorCo"}
+    assert by_name["SponsorCo"]["is_editorial"] is False
+    assert by_name["SponsorCo"]["sponsor_source"] == "model"
+    # Editorial keeps a NULL source — the absence of evidence, not a fourth value.
+    assert by_name["Sam Altman"]["is_editorial"] is True
+    assert by_name["Sam Altman"]["sponsor_source"] is None
+
+
+def test_process_episode_mentions_can_still_drop_ads_on_request() -> None:
     tech = get_profile("entity_extraction")
     raw = {
         "mentions": [
@@ -223,10 +248,9 @@ def test_process_episode_mentions_can_include_non_core_and_ads() -> None:
         ]
     }
     out = process_episode_mentions(
-        raw, 1, tech, include_non_editorial=True, focus_core_types=False
+        raw, 1, tech, drop_sponsor_mentions=True, focus_core_types=False
     )
-    names = {m["canonical_name"] for m in out}
-    assert names == {"Sam Altman", "SponsorCo"}
+    assert {m["canonical_name"] for m in out} == {"Sam Altman"}
 
 
 def test_process_episode_mentions_handles_bad_input() -> None:
@@ -242,16 +266,37 @@ def test_filter_stats_explain_an_all_filtered_result() -> None:
 
     tech = get_profile("entity_extraction")
     raw = {"mentions": [
-        _mention(canonical_name="HyperAgent", mention_text="HyperAgent",
-                 context_snippet="This episode is brought to you by HyperAgent.", is_editorial=False),
         _mention(canonical_name="Every", mention_text="Every", entity_type="organization",
                  context_snippet="Dan Shipper of Every wrote the essay."),
         {"mention_text": "", "canonical_name": "", "context_snippet": ""},  # invalid
     ]}
     kept, stats = process_episode_mentions_with_stats(raw, 8429, tech)
     assert kept == []
-    assert stats == {"raw": 3, "sanitize_dropped": 1, "non_editorial_dropped": 1,
-                     "non_core_type_dropped": 1, "kept": 0}
+    assert stats == {"raw": 2, "sanitize_dropped": 1, "non_editorial_dropped": 0,
+                     "non_core_type_dropped": 1, "sponsor_tagged": 0, "kept": 0}
+
+
+def test_an_ad_only_episode_is_not_a_declared_empty_result() -> None:
+    """The 2026-08-23 failure in its new form.
+
+    Episode 8429's candidates were all removed by the filters, the loader saw an empty
+    file, and the day went red. An episode whose only content is a sponsor read used to
+    land in that same hole — every mention dropped for being non-editorial. Now the ad
+    is KEPT and tagged, so the batch has mentions, the loader takes the normal path, and
+    the stats say plainly that the content was advertising.
+    """
+    from pipeline.scrapers.ai_daily.extract_entities import process_episode_mentions_with_stats
+
+    tech = get_profile("entity_extraction")
+    raw = {"mentions": [
+        _mention(canonical_name="HyperAgent", mention_text="HyperAgent",
+                 context_snippet="This episode is brought to you by HyperAgent.", is_editorial=False),
+    ]}
+    kept, stats = process_episode_mentions_with_stats(raw, 8429, tech)
+    assert len(kept) == 1
+    assert stats["kept"] == 1 and stats["sponsor_tagged"] == 1
+    assert stats["non_editorial_dropped"] == 0
+    assert kept[0]["is_editorial"] is False and kept[0]["sponsor_source"] == "model"
 
 
 def test_filter_stats_count_what_survives() -> None:
@@ -288,3 +333,52 @@ def test_episode_summary_row_matches_the_csv_columns(tmp_path) -> None:
     assert row["review_count"] == 1 and row["mention_count"] == 1
     write_csv(tmp_path / "s.csv", [row], EPISODE_SUMMARY_FIELDS)
     assert (tmp_path / "s.csv").read_text().splitlines()[0] == ",".join(EPISODE_SUMMARY_FIELDS)
+
+
+def test_mention_csv_columns_match_what_the_loader_reads(tmp_path) -> None:
+    """mentions.csv gets the same lockstep guard as episode_summary.csv.
+
+    That file is the loader's actual input, so a column added to the row and not to the
+    list fails the whole batch the same way PR #23 did — and a column added to the list
+    and not read by the loader is a value that silently never lands. Both halves are
+    pinned here: the writer accepts the row, and load_entity_batch names every field it
+    consumes.
+    """
+    from pipeline.scrapers.ai_daily.extract_entities import MENTION_CSV_FIELDS
+    from pipeline.scrapers.ai_daily import load_entity_batch as leb
+
+    row = {
+        "episode_id": 1,
+        "entity_type": "software_product",
+        "canonical_name": "Blitzy",
+        "mention_text": "Blitzy",
+        "platform": "",
+        "source_url": "",
+        "sentiment_label": "neutral",
+        "is_editorial": "false",
+        "sponsor_source": "roster",
+        "confidence": "0.9000",
+        "needs_review": "false",
+        "review_reason": "",
+        "context_snippet": "Brought to you by Blitzy.",
+        "quoted_text": "",
+        "facts_json": "[]",
+    }
+    assert sorted(row) == sorted(MENTION_CSV_FIELDS)
+    write_csv(tmp_path / "m.csv", [row], MENTION_CSV_FIELDS)
+    assert (tmp_path / "m.csv").read_text().splitlines()[0] == ",".join(MENTION_CSV_FIELDS)
+
+    # The loader reads these by key; a rename here would KeyError at load time.
+    source = (Path(leb.__file__)).read_text(encoding="utf-8")
+    for field in ("sponsor_source", "is_editorial", "context_snippet", "facts_json"):
+        assert f'"{field}"' in source or f"'{field}'" in source, field
+
+
+def test_sponsor_source_is_written_as_an_empty_cell_not_the_string_none() -> None:
+    """The loader turns "" into SQL NULL; the string "none" would trip sql/009's CHECK."""
+    from pipeline.scrapers.ai_daily.extract_entities import process_episode_mentions
+
+    tech = get_profile("entity_extraction")
+    kept = process_episode_mentions({"mentions": [_mention()]}, 1, tech)
+    assert kept[0]["sponsor_source"] is None
+    assert (kept[0].get("sponsor_source") or "") == ""
