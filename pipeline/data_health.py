@@ -584,10 +584,30 @@ def check_ai_daily_extraction(conn) -> CheckResult:
         -- in that gap — the pulse did on 2026-09-01 — would otherwise report a phantom
         -- integrity issue. 6h is far past that gap and far short of the 1–2 day real
         -- holes this check caught on 2026-08-01.
-        WHERE et.created_at < NOW() - INTERVAL '6 hours';
+        WHERE et.created_at < NOW() - INTERVAL '6 hours'
+          -- An episode the extractor ran on and kept nothing for is a declared empty
+          -- result (ai_runs.status = 'completed_empty', reasons in parameters), not a
+          -- missing extraction. Counting it here would pin this check red forever.
+          AND NOT EXISTS (
+            SELECT 1 FROM ai_runs r
+            WHERE r.status = 'completed_empty'
+              AND r.parameters->'episodes' @> to_jsonb(ep.id)
+          );
         """,
     )
     missing_mentions = int(row.get("transcripted_without_mentions") or 0)
+    declared_empty_runs = int(
+        _one(
+            conn,
+            """
+            SELECT COUNT(*) AS count
+            FROM ai_runs r
+            WHERE r.status = 'completed_empty'
+              AND r.created_at >= NOW() - INTERVAL '30 days';
+            """,
+        ).get("count")
+        or 0
+    )
     # Orphans only: transcript_id points at a transcript row that no longer exists.
     # The other shape of broken provenance — NULL transcript_id on an episode that HAS a
     # transcript — is the transcript race, and check_transcript_race_selfheal owns it. It
@@ -635,6 +655,14 @@ def check_ai_daily_extraction(conn) -> CheckResult:
         )
     if zero_mention_runs:
         details.append(f"completed AI runs with zero mentions: {zero_mention_runs}")
+    if declared_empty_runs:
+        # Informational — a declared empty result is an answer, not an issue. Listed so
+        # a sudden run of them (a broken prompt, a filter that eats everything) is
+        # visible without turning the check red.
+        details.append(
+            f"batches declared empty after extraction in the last 30 days: {declared_empty_runs} "
+            f"(ai_runs.status = 'completed_empty'; reasons in parameters.dropped)"
+        )
 
     status = _status_from_count(issue_count)
     summary = "AI Daily transcripts, mentions, transcripts, and runs line up." if status == "pass" else (
