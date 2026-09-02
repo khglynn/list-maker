@@ -9,14 +9,20 @@ back to 'other' + needs_review, and low-confidence mentions are flagged.
 import pytest
 
 from pipeline.scrapers.ai_daily.extract_entities import (
+    EPISODE_SUMMARY_FIELDS,
+    FILTER_STAT_KEYS,
     LOCKED_TYPES,
     MEDIA_TYPES,
+    EpisodeInput,
+    UsageInfo,
+    episode_summary_row,
     get_profile,
     parse_json_object,
     postprocess_mention_types,
     process_episode_mentions,
     sanitize_fact,
     sanitize_mention,
+    write_csv,
 )
 
 
@@ -264,3 +270,21 @@ def test_filter_stats_on_bad_input_are_all_zero() -> None:
 
     kept, stats = process_episode_mentions_with_stats({"mentions": "nope"}, 1, get_profile("entity_extraction"))
     assert kept == [] and stats == {k: 0 for k in FILTER_STAT_KEYS}
+
+
+def test_episode_summary_row_matches_the_csv_columns(tmp_path) -> None:
+    """The per-episode row and the episode_summary.csv column list stay in lockstep.
+
+    PR #23 (2026-09-01) added four filter counters to the row and not to the column
+    list; csv.DictWriter then refused every batch ("dict contains fields not in
+    fieldnames") and the media backfill failed 64/64 batches before a single mention
+    loaded. A row is built through the real function and written through the real
+    writer, so the next added stat fails here instead of in production.
+    """
+    episode = EpisodeInput(1, "2026-09-01", "t", "https://x", tmp_path / "1.txt")
+    usage = UsageInfo(10, 5, 15, None, None, None)
+    row = episode_summary_row(episode, [_mention(needs_review=True)], dict.fromkeys(FILTER_STAT_KEYS, 0), usage)
+    assert list(row) == EPISODE_SUMMARY_FIELDS
+    assert row["review_count"] == 1 and row["mention_count"] == 1
+    write_csv(tmp_path / "s.csv", [row], EPISODE_SUMMARY_FIELDS)
+    assert (tmp_path / "s.csv").read_text().splitlines()[0] == ",".join(EPISODE_SUMMARY_FIELDS)

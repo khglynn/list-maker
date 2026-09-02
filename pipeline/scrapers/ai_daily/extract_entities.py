@@ -716,6 +716,58 @@ def postprocess_mention_types(
 
 FILTER_STAT_KEYS = ("raw", "sanitize_dropped", "non_editorial_dropped", "non_core_type_dropped", "kept")
 
+# Columns of episode_summary.csv, in order. episode_summary_row() builds rows in this
+# exact order, and tests/test_extract_entities.py pins the two together, because
+# csv.DictWriter refuses a row carrying a key the column list lacks. On 2026-09-01
+# PR #23 added four filter counters to the row and not to this list, and every batch
+# of the media backfill failed with "dict contains fields not in fieldnames" (the
+# daily entities run would have followed the next day).
+EPISODE_SUMMARY_FIELDS = [
+    "episode_id",
+    "publish_date",
+    "title",
+    "episode_url",
+    "transcript_path",
+    "mention_count",
+    "raw_mention_count",
+    "dropped_non_editorial",
+    "dropped_non_core_type",
+    "dropped_invalid",
+    "review_count",
+    "prompt_tokens",
+    "completion_tokens",
+    "total_tokens",
+    "estimated_total_cost_usd",
+]
+
+
+def episode_summary_row(
+    episode: EpisodeInput,
+    sanitized_mentions: list[dict[str, Any]],
+    filter_stats: dict[str, int],
+    usage: UsageInfo,
+) -> dict[str, Any]:
+    """One episode_summary.csv row; keys are EPISODE_SUMMARY_FIELDS in order."""
+    return {
+        "episode_id": episode.episode_id,
+        "publish_date": episode.publish_date,
+        "title": episode.title,
+        "episode_url": episode.episode_url,
+        "transcript_path": str(episode.transcript_path),
+        "mention_count": len(sanitized_mentions),
+        "raw_mention_count": filter_stats["raw"],
+        "dropped_non_editorial": filter_stats["non_editorial_dropped"],
+        "dropped_non_core_type": filter_stats["non_core_type_dropped"],
+        "dropped_invalid": filter_stats["sanitize_dropped"],
+        "review_count": sum(1 for m in sanitized_mentions if m["needs_review"]),
+        "prompt_tokens": usage.prompt_tokens,
+        "completion_tokens": usage.completion_tokens,
+        "total_tokens": usage.total_tokens,
+        "estimated_total_cost_usd": (
+            f"{usage.estimated_total_cost_usd:.8f}" if usage.estimated_total_cost_usd is not None else ""
+        ),
+    }
+
 
 def process_episode_mentions_with_stats(
     raw: dict[str, Any],
@@ -1099,27 +1151,7 @@ def main() -> None:
         all_mentions.extend(sanitized_mentions)
         all_new_type_candidates.extend(normalized_new_type_candidates)
         all_notes.extend(notes)
-        per_episode_results.append(
-            {
-                "episode_id": episode.episode_id,
-                "publish_date": episode.publish_date,
-                "title": episode.title,
-                "episode_url": episode.episode_url,
-                "transcript_path": str(episode.transcript_path),
-                "mention_count": len(sanitized_mentions),
-                "raw_mention_count": filter_stats["raw"],
-                "dropped_non_editorial": filter_stats["non_editorial_dropped"],
-                "dropped_non_core_type": filter_stats["non_core_type_dropped"],
-                "dropped_invalid": filter_stats["sanitize_dropped"],
-                "review_count": sum(1 for m in sanitized_mentions if m["needs_review"]),
-                "prompt_tokens": usage.prompt_tokens,
-                "completion_tokens": usage.completion_tokens,
-                "total_tokens": usage.total_tokens,
-                "estimated_total_cost_usd": (
-                    f"{usage.estimated_total_cost_usd:.8f}" if usage.estimated_total_cost_usd is not None else ""
-                ),
-            }
-        )
+        per_episode_results.append(episode_summary_row(episode, sanitized_mentions, filter_stats, usage))
 
     summary = summarize_mentions(all_mentions)
 
@@ -1193,23 +1225,7 @@ def main() -> None:
             "context_snippet",
         ],
     )
-    write_csv(
-        output_dir / "episode_summary.csv",
-        per_episode_results,
-        [
-            "episode_id",
-            "publish_date",
-            "title",
-            "episode_url",
-            "transcript_path",
-            "mention_count",
-            "review_count",
-            "prompt_tokens",
-            "completion_tokens",
-            "total_tokens",
-            "estimated_total_cost_usd",
-        ],
-    )
+    write_csv(output_dir / "episode_summary.csv", per_episode_results, EPISODE_SUMMARY_FIELDS)
 
     usage_summary = {
         "model": args.model,
