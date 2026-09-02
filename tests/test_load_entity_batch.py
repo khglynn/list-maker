@@ -209,3 +209,56 @@ def test_read_provenance_round_trips_ints_and_nulls(tmp_path) -> None:
 
     assert read_provenance(str(path)) == {7261: None, 7262: 2384}
     assert read_provenance(None) is None
+
+
+# ---- declared empty batches (2026-08-23): recorded, not raised ----
+
+class _RunCursor(_FakeCursor):
+    def __init__(self) -> None:
+        super().__init__()
+        self.rowcount = 0
+
+    def fetchone(self) -> dict:
+        return {"id": 77}
+
+
+class _RunConn(_FakeConn):
+    def __init__(self) -> None:
+        super().__init__()
+        self._cursor = _RunCursor()
+
+
+def test_record_empty_batch_writes_a_completed_empty_run_with_reasons() -> None:
+    from pathlib import Path
+
+    from pipeline.scrapers.ai_daily.load_entity_batch import EMPTY_RUN_STATUS, record_empty_batch
+
+    conn = _RunConn()
+    manifest = {
+        "episodes": [{"episode_id": 8429}],
+        "filter_summary": {"raw": 5, "sanitize_dropped": 0, "non_editorial_dropped": 3,
+                           "non_core_type_dropped": 2, "kept": 0},
+    }
+    run_id, episodes = record_empty_batch(
+        conn, show_id=3, batch_name="incremental-8429-to-8429", model="gpt-4.1-mini",
+        prompt_version="v1", manifest=manifest, batch_dir=Path("/tmp/b"),
+    )
+    assert run_id == 77 and episodes == [8429]
+    insert_sql, params = next((s, p) for s, p in conn._cursor.calls if "INSERT INTO ai_runs" in s)
+    assert params[-1] == EMPTY_RUN_STATUS == "completed_empty"
+    recorded = json.loads(params[4])
+    assert recorded["episodes"] == [8429] and recorded["empty_result"] is True
+    assert recorded["raw_mention_count"] == 5
+    assert recorded["dropped"] == {"non_editorial": 3, "non_core_type": 2, "invalid": 0}
+    # Idempotent like every other load: the prior run for this batch name is cleared first.
+    assert any("DELETE FROM ai_runs" in s for s, _ in conn._cursor.calls)
+    assert conn.committed
+
+
+def test_insert_run_defaults_to_completed() -> None:
+    from pipeline.scrapers.ai_daily.load_entity_batch import insert_run
+
+    conn = _RunConn()
+    insert_run(conn, show_id=3, batch_name="b", model="m", prompt_version="v", parameters={})
+    _, params = conn._cursor.calls[-1]
+    assert params[-1] == "completed"

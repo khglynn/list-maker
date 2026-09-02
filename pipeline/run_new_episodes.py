@@ -147,6 +147,11 @@ def find_unextracted_episodes(
     the returned `source` says so out loud. Waiting forever would trade one silent data
     loss for another. Show-notes-only shows (Gabfest) pass require_transcript=False and
     take the notes immediately.
+
+    Episodes covered by a declared-empty run (status completed_empty — the extractor ran,
+    the filters kept nothing, the reasons are on the run row) are excluded too: one
+    declared answer is final. Re-asking the model daily is how a sponsor read got stored
+    as editorial content on 2026-08-24.
     """
     with conn.cursor() as cur:
         params: list = [show_id]
@@ -173,6 +178,17 @@ def find_unextracted_episodes(
               AND {source_predicate}
               AND ep.id NOT IN (
                   SELECT DISTINCT m.episode_id FROM ai_mentions m
+              )
+              -- An extraction that kept nothing is recorded as a declared empty run
+              -- (load_entity_batch.record_empty_batch). Without this clause such an
+              -- episode has no mentions and would be re-extracted every day until it
+              -- aged out of the window — ~90 model calls and 90 red runs for one
+              -- episode whose answer was "nothing worth storing".
+              AND NOT EXISTS (
+                  SELECT 1 FROM ai_runs r
+                  WHERE r.show_id = ep.show_id
+                    AND r.status = 'completed_empty'
+                    AND r.parameters->'episodes' @> to_jsonb(ep.id)
               )
         """
         if recent_only:
@@ -502,12 +518,12 @@ def step_self_heal_transcript_race(cfg: ShowConfig, dry_run: bool) -> tuple[bool
     # a loop nobody can see. Naming it here turns that into one visible failure, and
     # data_health fails outright once an episode sits unhealed for a few days.
     #
-    # The known way to land here: an extraction that yields no mentions at all makes
-    # load_entity_batch raise on the empty mentions.csv, so the damaged run survives and
-    # the episode stays queued. That is deliberately left to retry rather than guarded —
-    # it is capped at SELF_HEAL_MAX_EPISODES_PER_RUN a day and data_health's
-    # transcript_race_selfheal check fails after 3 days, so the loop is bounded and
-    # visible rather than silent. Add a guard only if it ever actually fires.
+    # A re-extraction that keeps no mentions is recorded by the loader as a declared
+    # empty run under the ORIGINAL batch name (replacing the damaged run), so the
+    # episode leaves the race queue with its reasons on record rather than sitting
+    # damaged and retried daily. (Until 2026-09-01 the loader raised on an empty
+    # mentions.csv instead — "add a guard only if it ever fires" — and it fired on
+    # 2026-08-23 in the normal extraction path.)
     conn = get_db_connection()
     try:
         still_damaged = find_transcript_race_batches(conn, cfg.show_id, max_episodes=len(all_ids))

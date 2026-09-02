@@ -173,6 +173,7 @@ def insert_run(
     model: str,
     prompt_version: str,
     parameters: dict[str, Any],
+    status: str = "completed",
 ) -> int:
     with conn.cursor() as cur:
         cur.execute(
@@ -182,14 +183,72 @@ def insert_run(
               parameters, status, started_at, completed_at, created_at
             )
             VALUES (%s, %s, 'entity_extraction', 'openai', %s, %s, %s::jsonb,
-                    'completed', NOW(), NOW(), NOW())
+                    %s, NOW(), NOW(), NOW())
             RETURNING id;
             """,
-            (show_id, batch_name, model, prompt_version, json.dumps(parameters)),
+            (show_id, batch_name, model, prompt_version, json.dumps(parameters), status),
         )
         row = cur.fetchone()
     conn.commit()
     return int(row["id"])
+
+
+EMPTY_RUN_STATUS = "completed_empty"
+
+
+def record_empty_batch(
+    conn,
+    *,
+    show_id: int,
+    batch_name: str,
+    model: str,
+    prompt_version: str,
+    manifest: dict[str, Any],
+    batch_dir: Path,
+) -> tuple[int, list[int]]:
+    """Record a batch whose extraction kept zero mentions as a DECLARED outcome.
+
+    Why a run row instead of an error: on 2026-08-23 the model returned ~5,000 tokens
+    of candidates for episode 8429 and the editorial / core-type filters removed every
+    one. The loader raised on the empty file, the orchestrator retried a deterministic
+    result three times, the day went red, and the next day's re-extraction "succeeded"
+    by storing two sponsor reads as editorial mentions. An empty result with its
+    reasons on record is what lets the orchestrator stop re-queuing the episode and
+    lets data_health tell "nothing worth storing" from "extraction broken".
+
+    Status is EMPTY_RUN_STATUS, not 'completed', so the integrity check's existing
+    "completed runs with zero mentions" term keeps meaning what it meant: a run that
+    claimed success and loaded nothing.
+    """
+    episodes = sorted(
+        {int(e["episode_id"]) for e in manifest.get("episodes", []) if e.get("episode_id") is not None}
+    )
+    filter_summary = manifest.get("filter_summary") or {}
+    removed = delete_existing_run(conn, show_id=show_id, batch_name=batch_name)
+    if removed:
+        print(f"Idempotent re-load: removed {removed} prior run(s) for batch '{batch_name}'.")
+    run_id = insert_run(
+        conn,
+        show_id=show_id,
+        batch_name=batch_name,
+        model=model,
+        prompt_version=prompt_version,
+        status=EMPTY_RUN_STATUS,
+        parameters={
+            "batch_dir": str(batch_dir),
+            "episodes": episodes,
+            "source": "extract_entities.py",
+            "empty_result": True,
+            "raw_mention_count": filter_summary.get("raw"),
+            "dropped": {
+                "non_editorial": filter_summary.get("non_editorial_dropped"),
+                "non_core_type": filter_summary.get("non_core_type_dropped"),
+                "invalid": filter_summary.get("sanitize_dropped"),
+            },
+            "loaded_at_utc": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+    return run_id, episodes
 
 
 def delete_existing_run(conn, *, show_id: int, batch_name: str) -> int:
@@ -433,16 +492,36 @@ def main() -> None:
 
     with mentions_path.open("r", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
-    if not rows:
-        raise RuntimeError("mentions.csv is empty")
-
-    episode_ids = sorted({int(r["episode_id"]) for r in rows})
 
     provenance = read_provenance(args.provenance_json)
 
     conn = get_db_connection()
     try:
         show_id = get_show_id(conn, args.show_slug)
+        if not rows:
+            # Nothing kept is an outcome, not a failure — record it (see record_empty_batch).
+            run_id, episodes = record_empty_batch(
+                conn,
+                show_id=show_id,
+                batch_name=batch_name,
+                model=model,
+                prompt_version=args.prompt_version,
+                manifest=manifest,
+                batch_dir=batch_dir,
+            )
+            fs = manifest.get("filter_summary") or {}
+            print(f"Loaded batch: {batch_name}")
+            print(f"Run ID: {run_id}")
+            print(
+                f"Declared EMPTY: 0 mentions kept of {fs.get('raw', '?')} candidate(s) — "
+                f"dropped non-editorial {fs.get('non_editorial_dropped', '?')}, "
+                f"non-core type {fs.get('non_core_type_dropped', '?')}, "
+                f"invalid {fs.get('sanitize_dropped', '?')}. "
+                f"Episodes {episodes} will not be re-queued."
+            )
+            return
+
+        episode_ids = sorted({int(r["episode_id"]) for r in rows})
         transcript_map, inferred = resolve_transcript_map(conn, episode_ids, provenance)
         if inferred:
             print(

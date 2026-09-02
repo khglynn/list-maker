@@ -324,3 +324,24 @@ def test_transcript_coverage_tolerates_a_transcript_that_is_not_out_yet(monkeypa
     result = dh.check_transcript_coverage(conn=None)
     assert result.status == "fail"
     assert any("missing transcripts past the 2-day window" in d for d in result.details)
+def test_extraction_integrity_ignores_declared_empty_episodes(monkeypatch) -> None:
+    """An episode the extractor ran on and kept nothing for is an answer, not a gap —
+    otherwise the first legitimately-empty episode pins this check red forever."""
+    import pipeline.data_health as dh
+
+    seen: list[str] = []
+
+    def fake_one(conn, sql, params=None):
+        flat = " ".join(sql.split())
+        seen.append(flat)
+        if "completed_empty' AND r.created_at" in flat:
+            return {"count": 2}
+        return {"transcripted_without_mentions": 0, "count": 0}
+
+    monkeypatch.setattr(dh, "_one", fake_one)
+    result = dh.check_ai_daily_extraction(conn=None)
+
+    assert result.status == "pass"  # declared empties are informational
+    missing_sql = next(s for s in seen if "transcripted_without_mentions" in s)
+    assert "completed_empty" in missing_sql and "6 hours" in missing_sql
+    assert any("declared empty" in d and "2" in d for d in result.details)
