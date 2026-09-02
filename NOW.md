@@ -9,7 +9,7 @@
 - Full story: `DEVLOG.md` 2026-09-02; design and eval reads: `claude-plans/2026-09-02-curated-intake-v2/PLAN.md`.
 
 ## Open items (need Kevin)
-1. **The labels page** (artifact 69d95337): flip what's wrong, answer seven questions, press Done. This is the gate for turning auto-ingest on; until then the eval runs on the reviewers' provisional labels (recall 0.96 / precision 0.91 under rubric v2).
+1. ~~The labels page~~ — done 2026-09-02 evening: Kevin approved all 75 labels unchanged and kept every rubric default. The eval floor is cleared on his labels (recall 0.96 / precision 0.91). **The remaining gate for auto-ingest is one clean shadow week:** read Monday 09-07's Blog Intake verdicts; if they read right, PR 3 flips `AUTO_INGEST` in `run_intake.py`.
 2. **Read the first shadow verdicts** in 📥 Blog Intake (40 would-saves, 11 of them disputed — the second judge is save-happy on OpenAI's feed, e.g. the teachers rollout post). Tick **Pull anyway** on anything skipped that you want; nothing waits on you.
 3. **Dependabot #27–#29** still open.
 4. **Backfill (decision 6):** PCHH done and mostly mirrored; Culture Gabfest's 909 episodes are still extracting locally (hours). The main working tree stays on the pre-merge commit until it finishes (the run reads pipeline files from disk); `main` is the truth.
