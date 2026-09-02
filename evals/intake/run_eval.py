@@ -83,6 +83,7 @@ def judge_row(cand: dict, text: str, decide: Callable[..., J.Decision]) -> dict:
         "checker_verdict": d.checker.verdict if d.checker else None,
         "checker_model": d.checker.model if d.checker else None,
         "disputed": d.disputed, "prompt_version": d.prompt_version,
+        "rule": d.rule, "job": d.job,
     }
 
 
