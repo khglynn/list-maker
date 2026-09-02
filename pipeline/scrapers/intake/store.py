@@ -309,17 +309,33 @@ def record_precheck(conn, candidate_id: int, precheck: Precheck,
                     detail: Optional[str] = None) -> None:
     """A pre-check decided; no model was asked, so `verdict` stays NULL on purpose.
 
-    `precheck` holds the bare token (duplicate | thin | pdf | dead) so the weekly line
-    can GROUP BY it; the specifics live in columns that already exist — the word count
-    in `words`, a dead link's error in `failed_reason`. One fact, one column: a
-    "thin (117 words)" token would split the grouping into one bucket per post.
+    `precheck` holds the bare token (duplicate | thin | pdf | dead | academy |
+    people-news | stale) so the weekly line can GROUP BY it; the specifics live in
+    columns that already exist — the word count in `words`, a dead link's error in
+    `failed_reason`. One fact, one column: a "thin (117 words)" token would split the
+    grouping into one bucket per post.
+
+    The judge columns are cleared in the same statement, mirroring what
+    `record_decision` does with `precheck = NULL`. A row CAN arrive here already
+    judged: a rubric edit re-opens it (that is what prompt_version is for), and this
+    pass may then find it stale, already ingested, 404, or newly paywalled. Leaving
+    the old verdict behind would freeze a self-contradicting row forever — `precheck`
+    saying a script decided while `verdict`/`judge_model` still show a model's answer
+    under a `prompt_version` it no longer earned — and, because a non-NULL precheck is
+    excluded from re-judging by design, it could never be corrected. Misleading
+    provenance is precisely what this table exists to prevent.
     """
     if precheck.skip_reason is None:
         raise ValueError("record_precheck called on a candidate that passed its pre-checks")
     with conn.cursor() as cur:
         cur.execute(
             f"""UPDATE {TABLE}
-                SET precheck = %s, status = %s, failed_reason = %s, updated_at = now()
+                SET precheck = %s, status = %s, failed_reason = %s,
+                    verdict = NULL, confidence = NULL, reason = NULL,
+                    rule = NULL, job = NULL,
+                    judge_model = NULL, checker_model = NULL, checker_verdict = NULL,
+                    disputed = FALSE, prompt_version = NULL, judged_at = NULL,
+                    updated_at = now()
                 WHERE id = %s""",
             (precheck.skip_reason, precheck.status,
              str(detail)[:500] if detail else None, candidate_id),

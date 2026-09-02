@@ -187,21 +187,38 @@ def build_properties(row: dict) -> dict:
         props["Words"] = {"number": int(row["words"])}
     if row.get("links_out") is not None:
         props["Links Out"] = {"number": int(row["links_out"])}
+    # A judged row that a later pre-check overturned has these cleared in Neon, and an
+    # already-mirrored page would otherwise keep displaying the old verdict forever —
+    # a PATCH only touches the properties it sends. So when a pre-check owns the row,
+    # send the judge cells as explicit empties rather than omitting them.
+    overturned = bool(row.get("precheck"))
     if row.get("verdict"):
         props["Verdict"] = {"select": {"name": row["verdict"]}}
+    elif overturned:
+        props["Verdict"] = {"select": None}
     if row.get("confidence") is not None:
         props["Confidence"] = {"number": float(row["confidence"])}
+    elif overturned:
+        props["Confidence"] = {"number": None}
     if row.get("reason"):
         props["Reason"] = {"rich_text": [{"text": {"content": str(row["reason"])[:1900]}}]}
+    elif overturned:
+        props["Reason"] = {"rich_text": []}
     if row.get("rule"):
         props["Rule"] = {"select": {"name": str(row["rule"])[:100]}}
+    elif overturned:
+        props["Rule"] = {"select": None}
     if row.get("job"):
         props["Job"] = {"select": {"name": str(row["job"])[:100]}}
+    elif overturned:
+        props["Job"] = {"select": None}
     if row.get("judge_model"):
         judge = row["judge_model"]
         if row.get("checker_model"):
             judge = f"{judge} | {row['checker_model']}"
         props["Judge"] = {"rich_text": [{"text": {"content": judge[:1900]}}]}
+    elif overturned:
+        props["Judge"] = {"rich_text": []}
     props["Disputed"] = {"checkbox": bool(row.get("disputed"))}
     precheck = _precheck_text(row)
     if precheck:

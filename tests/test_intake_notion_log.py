@@ -224,3 +224,33 @@ def test_override_rows_filter_on_the_tick_and_exclude_only_saved(monkeypatch) ->
 def test_override_rows_ignore_a_row_with_no_url(monkeypatch) -> None:
     _fake_notion(monkeypatch, [{"results": [{"id": "p1", "properties": {}}], "has_more": False}])
     assert N.override_rows("tok", "db") == []
+
+
+def test_a_pre_check_that_overturned_a_verdict_clears_the_mirrored_cells() -> None:
+    """A Notion PATCH only touches the properties it sends.
+
+    So a page that already showed verdict=save keeps showing it forever unless the
+    cleared cells are sent as explicit empties — Neon would be corrected and the
+    surface Kevin reads would still be lying.
+    """
+    props = N.build_properties(_row(precheck="stale", verdict=None, confidence=None,
+                                    reason=None, rule=None, job=None,
+                                    judge_model=None, checker_model=None,
+                                    status="skipped"))
+    assert props["Verdict"] == {"select": None}
+    assert props["Confidence"] == {"number": None}
+    assert props["Reason"] == {"rich_text": []}
+    assert props["Rule"] == {"select": None} and props["Job"] == {"select": None}
+    assert props["Judge"] == {"rich_text": []}
+    assert props["Precheck"]["rich_text"][0]["text"]["content"] == "stale"
+
+
+def test_an_unjudged_row_still_omits_the_judge_cells_entirely() -> None:
+    # No precheck and no verdict = "we haven't got there yet". Sending explicit
+    # empties there would write to a page for no reason on every discovery.
+    props = N.build_properties(_row(precheck=None, verdict=None, confidence=None,
+                                    reason=None, rule=None, job=None,
+                                    judge_model=None, checker_model=None,
+                                    status="discovered"))
+    for absent in ("Verdict", "Confidence", "Reason", "Rule", "Job", "Judge"):
+        assert absent not in props

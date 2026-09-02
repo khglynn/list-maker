@@ -193,6 +193,34 @@ def test_record_precheck_stores_the_bare_token_and_the_detail_separately() -> No
     assert "precheck = %s" in sql and "failed_reason = %s" in sql
 
 
+def test_record_precheck_clears_a_verdict_it_overturns() -> None:
+    """A rubric edit re-opens a judged row; this pass may then find it stale or dead.
+
+    Leaving the old verdict behind would freeze a self-contradicting row — precheck
+    saying a script decided while judge_model still shows a model's answer under a
+    prompt_version it no longer earned — and a non-NULL precheck is excluded from
+    re-judging by design, so it could never be corrected.
+    """
+    conn = _Conn()
+    store.record_precheck(conn, 3, Precheck("stale"))
+    sql = " ".join(conn.calls[0][0].split())
+    for cleared in ("verdict = NULL", "confidence = NULL", "reason = NULL",
+                    "rule = NULL", "job = NULL", "judge_model = NULL",
+                    "checker_model = NULL", "checker_verdict = NULL",
+                    "prompt_version = NULL", "judged_at = NULL"):
+        assert cleared in sql, f"{cleared} should be cleared"
+    assert "disputed = FALSE" in sql  # NOT NULL in the DDL, so it resets rather than nulls
+    # the mirror image of record_decision, which clears precheck the same way
+    assert "precheck = NULL" in " ".join(
+        _decision_sql().split()), "record_decision still clears precheck"
+
+
+def _decision_sql() -> str:
+    conn = _Conn()
+    store.record_decision(conn, 1, _decision())
+    return conn.calls[0][0]
+
+
 def test_record_precheck_refuses_a_candidate_that_passed() -> None:
     with pytest.raises(ValueError):
         store.record_precheck(_Conn(), 3, Precheck(None, status="judged"))
