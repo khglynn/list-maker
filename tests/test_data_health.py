@@ -345,3 +345,89 @@ def test_extraction_integrity_ignores_declared_empty_episodes(monkeypatch) -> No
     missing_sql = next(s for s in seen if "transcripted_without_mentions" in s)
     assert "completed_empty" in missing_sql and "6 hours" in missing_sql
     assert any("declared empty" in d and "2" in d for d in result.details)
+
+
+# --- sponsor share (ads as data, 2026-09-02) ---------------------------------------
+
+
+def _sponsor_rows(monkeypatch, rows):
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: rows)
+
+
+def test_sponsor_share_passes_at_observed_levels(monkeypatch) -> None:
+    """Measured over all 16,285 stored mentions on 2026-09-02: AI Daily 5.6%,
+    PCHH 7.5%, Hard Fork 3.8%. Normal must stay quiet."""
+    from pipeline.data_health import check_sponsor_share
+
+    _sponsor_rows(monkeypatch, [
+        {"slug": "ai-daily-brief", "mentions": 500, "ads": 28},
+        {"slug": "hard-fork", "mentions": 100, "ads": 4},
+    ])
+    result = check_sponsor_share(None)
+    assert result.status == "pass"
+    assert len(result.details) == 2
+
+
+def test_sponsor_share_warns_when_the_detector_over_claims(monkeypatch) -> None:
+    """A roster parse that starts matching prose shows up here — it quietly caps real
+    entities out of the rankings."""
+    from pipeline.data_health import check_sponsor_share
+
+    _sponsor_rows(monkeypatch, [{"slug": "ai-daily-brief", "mentions": 100, "ads": 45}])
+    result = check_sponsor_share(None)
+    assert result.status == "warn"
+    assert "45%" in result.details[0]
+
+
+def test_sponsor_share_fails_only_when_nothing_editorial_got_through(monkeypatch) -> None:
+    """100% is not a heavy ad week, it is the 2026-08-23 shape: a pipeline that stopped
+    producing editorial content at all."""
+    from pipeline.data_health import check_sponsor_share
+
+    _sponsor_rows(monkeypatch, [{"slug": "ai-daily-brief", "mentions": 40, "ads": 40}])
+    result = check_sponsor_share(None)
+    assert result.status == "fail"
+    assert "no editorial content" in result.details[0]
+
+
+def test_sponsor_share_does_not_judge_a_quiet_window(monkeypatch) -> None:
+    """Grace-window discipline: three mentions, two of them ads, is 67% and means
+    nothing. A quiet week must never turn into a red run."""
+    from pipeline.data_health import check_sponsor_share
+
+    _sponsor_rows(monkeypatch, [{"slug": "hard-fork", "mentions": 3, "ads": 2}])
+    result = check_sponsor_share(None)
+    assert result.status == "pass"
+    assert "too few to judge" in result.details[0]
+
+
+def test_sponsor_share_is_a_pass_when_no_show_has_recent_episodes(monkeypatch) -> None:
+    from pipeline.data_health import check_sponsor_share
+
+    _sponsor_rows(monkeypatch, [])
+    assert check_sponsor_share(None).status == "pass"
+
+
+def test_sponsor_share_watches_podcasts_not_curated_sources() -> None:
+    """Blogs carry no ad reads by construction; an ended show has no recent window.
+    Both would report a permanent, meaningless 0%."""
+    from pipeline.data_health import SPONSOR_SHARE_SHOWS
+
+    assert "ai-daily-brief" in SPONSOR_SHARE_SHOWS
+    assert "hard-fork" in SPONSOR_SHARE_SHOWS
+    assert "pchh" in SPONSOR_SHARE_SHOWS
+    assert "openai-blog" not in SPONSOR_SHARE_SHOWS
+    assert "agentic-research" not in SPONSOR_SHARE_SHOWS
+    assert "culture-gabfest" not in SPONSOR_SHARE_SHOWS  # ended 2026-07-01
+    assert "sop" not in SPONSOR_SHARE_SHOWS  # song extraction, no entity mentions
+
+
+def test_sponsor_share_is_in_the_standard_check_set() -> None:
+    """A check nothing runs is a check that does not exist."""
+    import inspect
+
+    from pipeline import data_health
+
+    assert "check_sponsor_share(conn)" in inspect.getsource(data_health.run_checks)
