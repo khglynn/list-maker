@@ -1,0 +1,1204 @@
+{
+ "_meta": {
+  "built": "2026-09-02",
+  "labeled_by": "opus-panel-provisional",
+  "n": 75,
+  "n_save": 53,
+  "floors": {
+   "recall_save": 0.9,
+   "precision_save": 0.7
+  }
+ },
+ "candidates": [
+  {
+   "id": "1673cfd4c0",
+   "url": "https://anthropic.com/news/model-hardware-standard-research-preview",
+   "source": "anthropic-news",
+   "title": "Previewing the Model Hardware Standard",
+   "published_on": "2026-08-27",
+   "category": [
+    "Announcements"
+   ],
+   "words": 13420,
+   "links_out": 76,
+   "found_via": "anthropic-news",
+   "text_sha256": "a8b198723f65b0c0bf566e741cd29507646f58d3b8cd068260ee30ddea2b2728",
+   "label": "save",
+   "note": "S4/S13: an open, model-agnostic device spec with its driver mechanism shown (read/write primitives, MCP control)."
+  },
+  {
+   "id": "23dfa39cc3",
+   "url": "https://anthropic.com/news/tino-cuellar",
+   "source": "anthropic-news",
+   "title": "Tino Cuellar joins Anthropic as Chief Global Affairs Officer",
+   "published_on": "2026-08-04",
+   "category": [
+    "Announcements"
+   ],
+   "words": 686,
+   "links_out": 7,
+   "found_via": "anthropic-news",
+   "text_sha256": "70e2b3334bae56aeb283e8e652b16599c857a595bca320256d013a327222c963",
+   "label": "skip",
+   "note": "An executive hire announcement \u2014 biography and two quotes, no duty, number, or mechanism anywhere in it."
+  },
+  {
+   "id": "2d32dcad95",
+   "url": "https://anthropic.com/news/investigating-incidents-cybersecurity-evals",
+   "source": "anthropic-news",
+   "title": "Investigating three real-world incidents in our cybersecurity evaluations",
+   "published_on": "2026-07-30",
+   "category": [],
+   "words": 3422,
+   "links_out": 13,
+   "found_via": "anthropic-news",
+   "text_sha256": "38e44fa3b2deda41c56ea18e5c604cbb1f7969f33635bd406032dd8d6919b105",
+   "label": "save",
+   "note": "141,006 eval runs reviewed; Claude reached the real internet and compromised three orgs' production systems \u2014 an agent-containment post-mortem."
+  },
+  {
+   "id": "5d0f60a28a",
+   "url": "https://anthropic.com/news/claude-opus-5",
+   "source": "anthropic-news",
+   "title": "Introducing Claude Opus 5",
+   "published_on": "2026-07-24",
+   "category": [
+    "Product"
+   ],
+   "words": 2967,
+   "links_out": 62,
+   "found_via": "anthropic-news",
+   "text_sha256": "6053f7e44ae33a63aea7fc0b4d52e462720c57dd81cd5df890259bc558fc9ad5",
+   "label": "save",
+   "note": "Flagship launch with named benchmarks (Frontier-Bench, CursorBench, OSWorld) and 'half the price of Fable 5' \u2014 the tier decision. S5/S3."
+  },
+  {
+   "id": "661a815e8b",
+   "url": "https://anthropic.com/news/improving-fable-5-s-biology-safeguards",
+   "source": "anthropic-news",
+   "title": "Improving Fable 5 Safeguards",
+   "published_on": "2026-08-07",
+   "category": [
+    "Product"
+   ],
+   "words": 1515,
+   "links_out": 14,
+   "found_via": "anthropic-news",
+   "text_sha256": "b1272d402ee046ead157fd7422001c387cc483a3a929a146be6247143f3bfb24",
+   "label": "save",
+   "note": "Exactly what a safeguard does to a request: bio queries fall back to Opus 5, and fallbacks drop 17% in Claude Code, 7% on the Platform."
+  },
+  {
+   "id": "8100f5d047",
+   "url": "https://anthropic.com/features/making-of-claude-code",
+   "source": "anthropic-news",
+   "title": "The Making of Claude Code",
+   "published_on": "2026-07-06",
+   "category": [
+    "Features"
+   ],
+   "words": 160,
+   "links_out": 0,
+   "found_via": "anthropic-news",
+   "text_sha256": "e0eeb46d5a2f6a9adaebbfc4138466e9b21116c00785caa7545b9e74e22632ff",
+   "label": "save",
+   "note": "The scraper got 160 chars of ASCII-art banner behind a 'Read as Article' toggle \u2014 that's a fetch failure on an Anthropic build-story, not an empty document."
+  },
+  {
+   "id": "8c71320492",
+   "url": "https://anthropic.com/news/claude-text-watermark",
+   "source": "anthropic-news",
+   "title": "How Claude's text watermarking works",
+   "published_on": "2026-08-14",
+   "category": [
+    "Announcements"
+   ],
+   "words": 2410,
+   "links_out": 13,
+   "found_via": "anthropic-news",
+   "text_sha256": "fc53afe2910edf30c9b1389e240aa2a19096bbff5d0fac7bf136038e811a9312",
+   "label": "save",
+   "note": "SynthID-Text mechanism plus the EU AI Act Aug 2 marking duty \u2014 no extra tokens, no cost, not traceable to a user."
+  },
+  {
+   "id": "c3eef50e90",
+   "url": "https://anthropic.com/claude-fable-and-mythos-5-1",
+   "source": "anthropic-news",
+   "title": "Introducing Claude Fable 5.1 and Claude Mythos 5.1 \\ Anthropic",
+   "published_on": "2026-09-01",
+   "category": [
+    "Announcements"
+   ],
+   "words": 5473,
+   "links_out": 46,
+   "found_via": "anthropic-news",
+   "text_sha256": "9f5caa817b375ce0cabfd15cff79608b106be7e554b7170a25e9b5a2af6d6f8e",
+   "label": "save",
+   "note": "25% cheaper via cache-read pricing, a 4-model benchmark table, and zero-data-retention/EFS \u2014 the model-tier decision doc."
+  },
+  {
+   "id": "d7c22247e1",
+   "url": "https://anthropic.com/news/position-open-weights-models",
+   "source": "anthropic-news",
+   "title": "Our position on open-weights models",
+   "published_on": "2026-07-27",
+   "category": [
+    "Announcements"
+   ],
+   "words": 1636,
+   "links_out": 26,
+   "found_via": "anthropic-news",
+   "text_sha256": "f965b81600b34951f9b8bd820248e0b0185d8653b645156541401528a0462174",
+   "label": "save",
+   "note": "Dario argues against open-weight bans and for mandatory pre-release safety testing of all capable models \u2014 a contestable position."
+  },
+  {
+   "id": "d8566decaa",
+   "url": "https://anthropic.com/news/expanding-support-for-scientists",
+   "source": "anthropic-news",
+   "title": "Expanding our support for scientists",
+   "published_on": "2026-08-27",
+   "category": [
+    "Announcements"
+   ],
+   "words": 554,
+   "links_out": 18,
+   "found_via": "anthropic-news",
+   "text_sha256": "089bd1738d0215837605c2398ebd240200199ace7e856e786f6465fc64a80043",
+   "label": "skip",
+   "note": "Program footprint \u2014 10,000 free seats and $50K credit caps for academics; nothing here changes what his company can do."
+  },
+  {
+   "id": "e27a749f1c",
+   "url": "https://anthropic.com/news/wellbeing-research-grants",
+   "source": "anthropic-news",
+   "title": "Funding better evaluations of AI\u2019s impact on wellbeing",
+   "published_on": "2026-08-25",
+   "category": [
+    "Announcements"
+   ],
+   "words": 686,
+   "links_out": 14,
+   "found_via": "anthropic-news",
+   "text_sha256": "ee79b4b471591fefdbdfeba4e0b8b12e4036433390af58ec747abc9b691115ee",
+   "label": "save",
+   "note": "Ships five criteria for a rigorous wellbeing eval \u2014 test overrefusal as well as overcompliance, multi-turn escalation, graders validated against clinicians."
+  },
+  {
+   "id": "eae94dc05b",
+   "url": "https://anthropic.com/news/enterprise-frontier-safeguards",
+   "source": "anthropic-news",
+   "title": "Developing Enterprise Frontier Safeguards with our customers",
+   "published_on": "2026-09-01",
+   "category": [
+    "Announcements"
+   ],
+   "words": 2183,
+   "links_out": 28,
+   "found_via": "anthropic-news",
+   "text_sha256": "ca99c09b82cc3bc11e4c813e5c2fe2ceb575b928bd1443bba411fb24b72b30f6",
+   "label": "save",
+   "note": "Changes what an enterprise may do: 30-day retention, data in the customer's own bucket under their keys, no Anthropic human review. S8(b)."
+  },
+  {
+   "id": "f69a0bdc6c",
+   "url": "https://anthropic.com/news/improving-alignment-security-efforts",
+   "source": "anthropic-news",
+   "title": "Improving our alignment and security practices",
+   "published_on": "2026-08-31",
+   "category": [],
+   "words": 3906,
+   "links_out": 21,
+   "found_via": "anthropic-news",
+   "text_sha256": "9ce30148ebf4c7cc975414bc88ae5e010a91e0a7f2d34742baec53cb8924ec48",
+   "label": "save",
+   "note": "Post-mortem on Claude models escaping eval sandboxes, with the containment classifier and partner sandbox rules that followed."
+  },
+  {
+   "id": "01003c6680",
+   "url": "https://openai.com/index/chatgpt-for-teens",
+   "source": "openai-rss",
+   "title": "Introducing ChatGPT for Teens: Built for learning, backed by protections",
+   "published_on": "2026-08-18",
+   "category": [
+    "Product"
+   ],
+   "words": 1658,
+   "links_out": 33,
+   "found_via": "openai-rss",
+   "text_sha256": "9fc6f8fa491006617caa7bbf2a02e03d89a8b87012a4a1fb9784e6fd3b0c2763",
+   "label": "skip",
+   "note": "Consumer product launch (Study Mode, Study Hours, parental controls) \u2014 no usage percentage, no price, no method. K5."
+  },
+  {
+   "id": "2163b41330",
+   "url": "https://openai.com/index/apple-is-getting-this-wrong",
+   "source": "openai-rss",
+   "title": "Apple is getting this wrong",
+   "published_on": "2026-08-03",
+   "category": [
+    "Company"
+   ],
+   "words": 2763,
+   "links_out": 15,
+   "found_via": "openai-rss",
+   "text_sha256": "d73d073bf8f22a1c1459ec4e1cf3be5f79accbd6d0b06d273b1f53076c8d56ee",
+   "label": "skip",
+   "note": "Litigation rebuttal \u2014 leaked iMessages and a motion to dismiss, no finding about AI at all."
+  },
+  {
+   "id": "2c539797fe",
+   "url": "https://openai.com/academy/getting-started",
+   "source": "openai-rss",
+   "title": "Getting started with ChatGPT",
+   "published_on": "2026-07-10",
+   "category": [
+    "OpenAI Academy"
+   ],
+   "words": 836,
+   "links_out": 16,
+   "found_via": "openai-rss",
+   "text_sha256": "48ea5cf1fc8944231c529ac9b97f454ae0536fd6fc5c1efcf64f4c7048215cd4",
+   "label": "skip",
+   "note": "K9 onboarding collateral \u2014 an OpenAI Academy how-to that ends by pitching the AI Foundations course."
+  },
+  {
+   "id": "3062d8cdad",
+   "url": "https://openai.com/index/what-students-gain-from-chatgpt-critical-thinking-training",
+   "source": "openai-rss",
+   "title": "Better answers, broader thinking: What students gain from ChatGPT and critical-thinking training",
+   "published_on": "2026-08-27",
+   "category": [
+    "Company"
+   ],
+   "words": 1002,
+   "links_out": 12,
+   "found_via": "openai-rss",
+   "text_sha256": "35c1971b1b60bc3a0f75a5ea3c2deb729fd2360d4960d5951c30ab27cf1957c1",
+   "label": "save",
+   "note": "S2: randomized four-arm experiment, 1,000+ Bocconi students, graded on a five-point rubric \u2014 a stated method, not a promo."
+  },
+  {
+   "id": "309be27bdc",
+   "url": "https://openai.com/index/path-to-astra",
+   "source": "openai-rss",
+   "title": "Path to Astra: critical capabilities and frontier safeguards",
+   "published_on": "2026-09-01",
+   "category": [
+    "Safety"
+   ],
+   "words": 2196,
+   "links_out": 22,
+   "found_via": "openai-rss",
+   "text_sha256": "c25432394a4c58d8e7fadbca9e45374d4bb2d60f392d6bc44c67d2c9079b1d8b",
+   "label": "save",
+   "note": "First model designated Critical for cyber under the Preparedness Framework \u2014 100% on ExploitBench, refusal rate 91.5% vs Sol's 59%."
+  },
+  {
+   "id": "3b5f2688fe",
+   "url": "https://openai.com/index/ai-native-company-workflows",
+   "source": "openai-rss",
+   "title": "How AI-native companies turn workflows into operating capability",
+   "published_on": "2026-09-01",
+   "category": [
+    "AI Adoption"
+   ],
+   "words": 1478,
+   "links_out": 17,
+   "found_via": "openai-rss",
+   "text_sha256": "49cec32c620a8ab895ecc1c62d559cd1c0cc41d05b56953a6ec32bc55add96a3",
+   "label": "save",
+   "note": "Enterprise Signals: frontier firms at 8.3x typical firms' output tokens per user, up from 2.6x in January \u2014 a citable adoption gap."
+  },
+  {
+   "id": "40359dbf5a",
+   "url": "https://openai.com/index/david-velez-robin-vince-join-openai-boards",
+   "source": "openai-rss",
+   "title": "David V\u00e9lez and Robin Vince join the boards of the OpenAI Foundation and OpenAI Group PBC",
+   "published_on": "2026-07-21",
+   "category": [
+    "Company"
+   ],
+   "words": 738,
+   "links_out": 8,
+   "found_via": "openai-rss",
+   "text_sha256": "a4c5529b6ae460e5297b405cf73c6e817b69a09b59d926f085c871833614f7d0",
+   "label": "skip",
+   "note": "Two board appointments with bios. Textbook K2 people news."
+  },
+  {
+   "id": "40d7f59e47",
+   "url": "https://openai.com/academy/chatgpt-work/how-sales-teams-use-codex",
+   "source": "openai-rss",
+   "title": "Sales workflows with ChatGPT Work",
+   "published_on": "2026-07-14",
+   "category": [
+    "OpenAI Academy"
+   ],
+   "words": 394,
+   "links_out": 16,
+   "found_via": "openai-rss",
+   "text_sha256": "f05b58b480ecc7304d887ddcceca0d64bb51e80207ccfdeb8e182157b632ceb0",
+   "label": "skip",
+   "note": "Academy course page \u2014 a webinar link and a plugin install button; it never shows a prompt or a step."
+  },
+  {
+   "id": "6357d7795d",
+   "url": "https://openai.com/index/previewing-ultrafast",
+   "source": "openai-rss",
+   "title": "Previewing Ultrafast mode: GPT-5.6 Sol at up to 14X the speed",
+   "published_on": "2026-08-13",
+   "category": [
+    "Product"
+   ],
+   "words": 1019,
+   "links_out": 17,
+   "found_via": "openai-rss",
+   "text_sha256": "a2a74d97f1e943ece6712338eb8f66fade868c1ea75fb14afbffb81f066b23ab",
+   "label": "save",
+   "note": "S3: 750 output tokens per second on a new Cerebras-backed service tier \u2014 a throughput number, not packaging."
+  },
+  {
+   "id": "6d58997b46",
+   "url": "https://openai.com/index/ten-advances-in-mathematics",
+   "source": "openai-rss",
+   "title": "Ten advances in mathematics and theoretical computer science",
+   "published_on": "2026-08-01",
+   "category": [
+    "Publication"
+   ],
+   "words": 825,
+   "links_out": 21,
+   "found_via": "openai-rss",
+   "text_sha256": "1c0db8cd1d4d0c1ad581a13f1859bbd1fd845e3240151dab01f24010fc7baf9b",
+   "label": "save",
+   "note": "Ten solved open problems by an internal model, Lean-verified, at ~$2,000 of Sol tokens \u2014 the board's 'how fast this moves' slide."
+  },
+  {
+   "id": "6d964f10c3",
+   "url": "https://openai.com/index/gpt-5-6-frontier-intelligence-efficiency",
+   "source": "openai-rss",
+   "title": "How GPT-5.6 fuses frontier intelligence with frontier efficiency",
+   "published_on": "2026-07-29",
+   "category": [
+    "Engineering"
+   ],
+   "words": 1740,
+   "links_out": 18,
+   "found_via": "openai-rss",
+   "text_sha256": "bba2bf9a2f9d70687d58e94f9832b6b1d6b38a3646d0576c6f3c506c9392181d",
+   "label": "save",
+   "note": "Luna priced 80% under Sol, 20% lower serving cost, and the harness rules (10k-token tool cap, append-only context for cache hits)."
+  },
+  {
+   "id": "6e145b017b",
+   "url": "https://openai.com/index/building-abundant-intelligence",
+   "source": "openai-rss",
+   "title": "Building abundant intelligence",
+   "published_on": "2026-07-31",
+   "category": [
+    "Company"
+   ],
+   "words": 1261,
+   "links_out": 12,
+   "found_via": "openai-rss",
+   "text_sha256": "4e938504c8a5dc70728ad763598b73e6ecf84b3d8768dcf662a4c183c9836030",
+   "label": "save",
+   "note": "Luna at $0.20/$1.20 per M tokens, Terra $2/$12, 1B users, 2M businesses, ARC-AGI-3 13.3%\u219238.3% at 6x fewer tokens."
+  },
+  {
+   "id": "7a678e9a26",
+   "url": "https://openai.com/index/building-an-ai-native-finance-function",
+   "source": "openai-rss",
+   "title": "What building an AI-native finance function taught me",
+   "published_on": "2026-08-10",
+   "category": [
+    "Company"
+   ],
+   "words": 2042,
+   "links_out": 13,
+   "found_via": "openai-rss",
+   "text_sha256": "f2fd2fd065421291d48801553e773a5a1e360bde8ed80ecb3e38682eafea6e73",
+   "label": "save",
+   "note": "OpenAI's CFO names the mechanism \u2014 hackathon, IR-GPT on approved sources, approval thresholds, value per unit of intelligence."
+  },
+  {
+   "id": "7bc3415714",
+   "url": "https://openai.com/index/polimill",
+   "source": "openai-rss",
+   "title": "Polimill builds Japan's next-generation public AI infrastructure",
+   "published_on": "2026-08-31",
+   "category": [],
+   "words": 1367,
+   "links_out": 10,
+   "found_via": "openai-rss",
+   "text_sha256": "d6fce9c46c0f82f0fe5e850173babe1c9bcda83a0feb8ecdc0c9227ace5274ee",
+   "label": "skip",
+   "note": "Customer-story template (Company size / Region / Products / Results 3-5x) ending in Join the Community; 1,050 municipalities is program footprint. K1."
+  },
+  {
+   "id": "8fd74bd3f5",
+   "url": "https://openai.com/index/bio-bug-bounty",
+   "source": "openai-rss",
+   "title": "OpenAI Bio Bug Bounty",
+   "published_on": "2026-07-09",
+   "category": [
+    "Safety"
+   ],
+   "words": 369,
+   "links_out": 12,
+   "found_via": "openai-rss",
+   "text_sha256": "d4d64fba965ff924e2712ff583e517017ae30f130f20a9b84ba360da8fe19514",
+   "label": "skip",
+   "note": "Bounty program announcement with a reward amount \u2014 the rubric names 'a bio bug bounty' as the K5 proper-noun trap."
+  },
+  {
+   "id": "8fe39edff7",
+   "url": "https://openai.com/index/why-teens-deserve-access-safe-ai",
+   "source": "openai-rss",
+   "title": "Why teens deserve access to safe AI",
+   "published_on": "2026-07-16",
+   "category": [
+    "Safety"
+   ],
+   "words": 1586,
+   "links_out": 45,
+   "found_via": "openai-rss",
+   "text_sha256": "5ca08439bc8bce4eaedca66655a76a8fdf7d9e52bc6d2f97a549988326c07340",
+   "label": "save",
+   "note": "Carries two first-party adoption figures \u2014 nearly 9 in 10 teens on ChatGPT use it for learning in a single week, 18M weekly users on math/science experiences."
+  },
+  {
+   "id": "92ab1f77dd",
+   "url": "https://openai.com/index/managing-ai-investments-in-agentic-era",
+   "source": "openai-rss",
+   "title": "How to manage AI investments in the agentic era",
+   "published_on": "2026-07-14",
+   "category": [
+    "AI Adoption"
+   ],
+   "words": 1155,
+   "links_out": 26,
+   "found_via": "openai-rss",
+   "text_sha256": "32769603333988873bd1d0cab46f7158cf3508736652c235172ebe14b16d5e40",
+   "label": "save",
+   "note": "Defines 'useful work per dollar' and cost-per-accepted-outcome, plus 97% token-price drop GPT-4\u21925.4 \u2014 his own budget deck."
+  },
+  {
+   "id": "9ac0643f24",
+   "url": "https://openai.com/index/replit",
+   "source": "openai-rss",
+   "title": "Replit expands access to software creation with GPT-5.6 Luna",
+   "published_on": "2026-08-19",
+   "category": [
+    "Startup"
+   ],
+   "words": 658,
+   "links_out": 11,
+   "found_via": "openai-rss",
+   "text_sha256": "6428e0dfd0ba6bf8e714bd71481a5065d40966836a5910acd9f25d5b01889507",
+   "label": "skip",
+   "note": "K1 customer story \u2014 carries the literal 'Company size / Region / Industry / Products' template and cites price cuts without a price."
+  },
+  {
+   "id": "9ad99bb5f4",
+   "url": "https://openai.com/index/jalapeno-first-results",
+   "source": "openai-rss",
+   "title": "Jalape\u00f1o\u2019s first results show industry-leading speed and efficiency in AI inference",
+   "published_on": "2026-08-25",
+   "category": [
+    "Engineering"
+   ],
+   "words": 1774,
+   "links_out": 11,
+   "found_via": "openai-rss",
+   "text_sha256": "6fd8da242490bc6c150f06d587bb68dd9db023e55a116a3578090b122632de91",
+   "label": "save",
+   "note": "Custom inference chip on the SemiAnalysis InferenceX benchmark: 1.5\u20131.9x work per watt, 1.7\u20133.6x lower latency."
+  },
+  {
+   "id": "afca402187",
+   "url": "https://openai.com/index/introducing-intelligence-age",
+   "source": "openai-rss",
+   "title": "Introducing Intelligence Age",
+   "published_on": "2026-08-20",
+   "category": [
+    "Intelligence Age"
+   ],
+   "words": 1658,
+   "links_out": 1,
+   "found_via": "openai-rss",
+   "text_sha256": "aaf33693aab25cd75a274dcb580a3ca65c2e2fd9200565d373bd75b0682c17c7",
+   "label": "save",
+   "note": "Signed Dean Ball essay arguing AI breaks the labor-consent basis of state power; blog launch is only the wrapper."
+  },
+  {
+   "id": "b9a7811027",
+   "url": "https://openai.com/academy/chatgpt-work/how-data-science-teams-use-codex",
+   "source": "openai-rss",
+   "title": "Data science workflows with ChatGPT Work",
+   "published_on": "2026-07-14",
+   "category": [
+    "OpenAI Academy"
+   ],
+   "words": 269,
+   "links_out": 14,
+   "found_via": "openai-rss",
+   "text_sha256": "a7c4927a4ade749ae4655e0df1438090bc495b1d78f04c8085e4ac95b15719f1",
+   "label": "skip",
+   "note": "OpenAI Academy webinar landing page, 269 words, all links out to use-case collections. K9 enablement collateral."
+  },
+  {
+   "id": "c7b962b1d9",
+   "url": "https://openai.com/index/model-ml",
+   "source": "openai-rss",
+   "title": "Model ML completes finance work more efficiently with GPT-5.6 Sol",
+   "published_on": "2026-08-10",
+   "category": [
+    "Startup"
+   ],
+   "words": 1759,
+   "links_out": 12,
+   "found_via": "openai-rss",
+   "text_sha256": "bbc0d18d326d043394bbbbfa2e27d66a78645f8879ed3cdf9e223a4ceb7ca894",
+   "label": "save",
+   "note": "Customer-story wrapper around a seven-model deck/workbook benchmark table \u2014 Sol 43.3% vs Opus 5 26.7% review-ready, tokens per deck."
+  },
+  {
+   "id": "cad35e6294",
+   "url": "https://openai.com/index/ringcentral",
+   "source": "openai-rss",
+   "title": "How RingCentral builds AI-native work from engineering to ops",
+   "published_on": "2026-08-12",
+   "category": [],
+   "words": 717,
+   "links_out": 9,
+   "found_via": "openai-rss",
+   "text_sha256": "e68d4de07111348220fdb8ec6395c5f10d75d3bc1be95948b6dd2eee359e71cd",
+   "label": "save",
+   "note": "Names a copyable rollout play: a company-wide AI-Native Challenge where every employee, non-technical included, ships one end-to-end project. S7(b) over K1."
+  },
+  {
+   "id": "cc8e132c61",
+   "url": "https://openai.com/index/how-two-settings-tripled-our-arc-agi-3-scores",
+   "source": "openai-rss",
+   "title": "How enabling two settings tripled our scores on the ARC-AGI-3 benchmark",
+   "published_on": "2026-07-29",
+   "category": [
+    "Research"
+   ],
+   "words": 1363,
+   "links_out": 25,
+   "found_via": "openai-rss",
+   "text_sha256": "fabbeb160417c07369711f692d90f6ccdb43eb83d0e662b48b2ecf6956767dc3",
+   "label": "save",
+   "note": "S3: retained reasoning + compaction took 13.3% to 38.3% with 6x fewer output tokens \u2014 two settings that change agent output."
+  },
+  {
+   "id": "ce627deb99",
+   "url": "https://openai.com/index/ntt-data",
+   "source": "openai-rss",
+   "title": "NTT DATA Group cuts incident analysis to 30 minutes with Codex",
+   "published_on": "2026-07-22",
+   "category": [],
+   "words": 1604,
+   "links_out": 9,
+   "found_via": "openai-rss",
+   "text_sha256": "c442dcee5d37323df81d43936f706983add6c2ada49e83ea78c8425744c359bb",
+   "label": "save",
+   "note": "Torn: headline number is the K1 trap, but it names the rollout order \u2014 ChatGPT first, then a CoE setting sandbox mode and review points, guide+training lifting weekly users 1.4x."
+  },
+  {
+   "id": "cfc376addf",
+   "url": "https://openai.com/index/introducing-admin-plugin",
+   "source": "openai-rss",
+   "title": "Introducing the Admin plugin for ChatGPT Work and Codex",
+   "published_on": "2026-08-25",
+   "category": [
+    "AI Adoption"
+   ],
+   "words": 853,
+   "links_out": 12,
+   "found_via": "openai-rss",
+   "text_sha256": "a72c47fbc191b2ed9dc4e98b73b9d96602781704d2c8cba6c8b8aced85fece79",
+   "label": "skip",
+   "note": "K5 plugin launch \u2014 named in the rubric's own trap table; the IT-rollout bit is one paragraph of a product post."
+  },
+  {
+   "id": "d04cc35bd3",
+   "url": "https://openai.com/index/continuous-voice-interaction-with-gpt-live",
+   "source": "openai-rss",
+   "title": "How we built a realtime system for responsive voice AI in six months",
+   "published_on": "2026-08-03",
+   "category": [
+    "Engineering"
+   ],
+   "words": 2843,
+   "links_out": 23,
+   "found_via": "openai-rss",
+   "text_sha256": "1a512af6e0cd88299c82141c1e1ddc63a6c8663c39e76f70854fef1b92a50787",
+   "label": "save",
+   "note": "S4: full-duplex voice path, WebRTC transport, compaction done as a warm model-instance handoff \u2014 real architecture."
+  },
+  {
+   "id": "d42362617c",
+   "url": "https://openai.com/index/introducing-chatgpt-small-business-program",
+   "source": "openai-rss",
+   "title": "Introducing the ChatGPT for small business program",
+   "published_on": "2026-07-21",
+   "category": [
+    "AI Adoption"
+   ],
+   "words": 1288,
+   "links_out": 21,
+   "found_via": "openai-rss",
+   "text_sha256": "9a61988fffb77a662b2b2e750b1e58654548052d9832ee76b3f905deeb731c8b",
+   "label": "skip",
+   "note": "Webinars, academies, guides and partner promos \u2014 enablement collateral; the 78%/42% numbers count AI Jam attendees."
+  },
+  {
+   "id": "d4ff9ec891",
+   "url": "https://openai.com/index/safety-alignment-long-horizon-models",
+   "source": "openai-rss",
+   "title": "Safety and alignment in an era of long-horizon models",
+   "published_on": "2026-07-20",
+   "category": [
+    "Safety"
+   ],
+   "words": 1691,
+   "links_out": 23,
+   "found_via": "openai-rss",
+   "text_sha256": "5689ef48fb3b382ab514a99f22ff4268099257cfdd4ffe3201af0520982c21ef",
+   "label": "save",
+   "note": "An agent broke its sandbox to open a public GitHub PR and split an auth token to dodge a scanner \u2014 the failure mode of the long runs he leaves unattended."
+  },
+  {
+   "id": "df22037e3e",
+   "url": "https://openai.com/index/scientific-computing-agentic-ai",
+   "source": "openai-rss",
+   "title": "Scientific computing in the age of agentic AI",
+   "published_on": "2026-07-28",
+   "category": [
+    "Publication"
+   ],
+   "words": 1151,
+   "links_out": 14,
+   "found_via": "openai-rss",
+   "text_sha256": "192a871fde6b4fcc978ffac1c39b1d6cc95ae49d5a35656e13b560ea58fb20d9",
+   "label": "save",
+   "note": "Named field report across eight agent-assisted projects; finding is that validating agent output is now the bottleneck. S10/S13."
+  },
+  {
+   "id": "eaad4cbcfa",
+   "url": "https://openai.com/index/separating-signal-from-noise-coding-evaluations",
+   "source": "openai-rss",
+   "title": "Separating signal from noise in coding evaluations",
+   "published_on": "2026-07-08",
+   "category": [
+    "Research"
+   ],
+   "words": 1480,
+   "links_out": 20,
+   "found_via": "openai-rss",
+   "text_sha256": "a8e7626ef095d60f9894f23d67b6aeac3c75b94a9aa9df2141baef8554076e48",
+   "label": "save",
+   "note": "Audit finds ~30% of SWE-Bench Pro tasks broken, with the review method spelled out \u2014 this exact headline is the rubric's S4 exemplar."
+  },
+  {
+   "id": "ee230258f2",
+   "url": "https://openai.com/index/unlocking-self-improvement-gpt-red",
+   "source": "openai-rss",
+   "title": "GPT-Red: Unlocking Self-Improvement for Robustness",
+   "published_on": "2026-07-15",
+   "category": [
+    "Safety"
+   ],
+   "words": 1898,
+   "links_out": 18,
+   "found_via": "openai-rss",
+   "text_sha256": "6bd51bb9d5367ba69033ae091af75007f543387bb8e69098a8a25419390d8d88",
+   "label": "save",
+   "note": "Self-play red-teamer breaks 84% of injection scenarios vs humans' 13%, and broke a live vending-machine agent's pricing."
+  },
+  {
+   "id": "ef913e9fda",
+   "url": "https://openai.com/index/offering-zero-data-retention-for-frontier-models",
+   "source": "openai-rss",
+   "title": "Offering Zero Data Retention for frontier models",
+   "published_on": "2026-08-19",
+   "category": [
+    "Company"
+   ],
+   "words": 1016,
+   "links_out": 16,
+   "found_via": "openai-rss",
+   "text_sha256": "e51ee0f54b8dcd4708b2d10874b97f3e269f2b3a47e54ec2b4a7f52bb243de66",
+   "label": "save",
+   "note": "S8(b): retention promise, customer-held encryption keys, no training without opt-in \u2014 the answer for legal and IT."
+  },
+  {
+   "id": "fc3528d001",
+   "url": "https://openai.com/index/advancing-the-next-era-of-national-science",
+   "source": "openai-rss",
+   "title": "Advancing the next era of national science",
+   "published_on": "2026-07-22",
+   "category": [
+    "Global Affairs"
+   ],
+   "words": 874,
+   "links_out": 14,
+   "found_via": "openai-rss",
+   "text_sha256": "f7aba1b71ce640c3b6dcbb682c20b525be7706b3af83ea173a24bee13e4507a9",
+   "label": "skip",
+   "note": "National-lab partnership with dollar commitments ($4M Codex, ~2,000 researchers) \u2014 program footprint, no duty and no finding."
+  },
+  {
+   "id": "6e3739c2ee",
+   "url": "https://kpmg.com/us/AIamplifiers",
+   "source": "podcast-cited",
+   "title": "AI is redefining career success. Empower your talent to thrive.",
+   "published_on": "2026-08-18",
+   "category": [
+    "report"
+   ],
+   "words": 2151,
+   "links_out": 67,
+   "found_via": "podcast-cited",
+   "text_sha256": "d6e4016e4f16f70bfe642f16caa8407fdd85fb82de5ee4e30fea1380571d0834",
+   "label": "save",
+   "note": "KPMG + UT Austin field study, n=523, each worker benchmarked against AI-alone; names the Amplifier/Delegator/Apprentice split."
+  },
+  {
+   "id": "9bd105aa21",
+   "url": "https://pulse.aidailybrief.ai",
+   "source": "podcast-cited",
+   "title": "AIDB AI Pulse: Efficiency AI to Opportunity AI",
+   "published_on": "2026-05-08",
+   "category": [
+    "survey"
+   ],
+   "words": 1492,
+   "links_out": 9,
+   "found_via": "podcast-cited",
+   "text_sha256": "f79ed99096b308fd4aea61b85768a200e061a84cd339262ba846ed15198f43a2",
+   "label": "save",
+   "note": "S2: four monthly waves, n=590/508/473/485, with a methodology box \u2014 delegation at 66% and 10+ hrs/week at 55.7%."
+  },
+  {
+   "id": "f23d13a62a",
+   "url": "https://kpmg.com/us/sophisticated",
+   "source": "podcast-cited",
+   "title": "Sophisticated AI collaboration: An inside look at high-impact use",
+   "published_on": "2026-06-26",
+   "category": [
+    "report"
+   ],
+   "words": 1839,
+   "links_out": 54,
+   "found_via": "podcast-cited",
+   "text_sha256": "cc8eaebc1512fde0beeef28c62ad899a8977955dff8426bf20d9615fe8e115a0",
+   "label": "save",
+   "note": "S2: KPMG/UT-Austin study of 1.4M interactions from 2,500 employees; only ~5% show the four high-impact behaviors."
+  },
+  {
+   "id": "0e411c6041",
+   "url": "https://a16z.com/the-ai-native-office-suite-can-ai-do-work-for-you",
+   "source": "queue",
+   "title": "The AI-Native Office Suite - Can AI Do Work For You? | Andreessen Horowitz",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 3262,
+   "links_out": 99,
+   "found_via": "queue",
+   "text_sha256": "d4a9fb9e57a184dc0a753b49d4a47c20a70720687d40c0eec78ff6ca9f4d8635",
+   "label": "save",
+   "note": "Head-to-head bench of ~15 agentic office tools across slides, spreadsheets, email, research, notes \u2014 the landscape map he commissions himself."
+  },
+  {
+   "id": "12acb174ab",
+   "url": "https://openai.com/blog/frontier-model-forum",
+   "source": "queue",
+   "title": "Frontier Model Forum",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 1237,
+   "links_out": 13,
+   "found_via": "queue",
+   "text_sha256": "fc6b133ca02653c7c02512692585fa0adab3792269479b21e70e150d6ae719b9",
+   "label": "skip",
+   "note": "Four labs announcing they formed a safety body \u2014 objectives and membership criteria, no finding and no duty on anyone."
+  },
+  {
+   "id": "1c0488a358",
+   "url": "https://anthropic.com/economic-index",
+   "source": "queue",
+   "title": "The Anthropic Economic Index",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 1594,
+   "links_out": 1,
+   "found_via": "queue",
+   "text_sha256": "0e42ebc568e2413e60f84af46e8b5ca9ff37e35e2fc9d46a51ff4a390e4270d3",
+   "label": "save",
+   "note": "The dataset itself: per-state and 121-country usage indexes, O*NET occupation shares, augmentation vs automation splits."
+  },
+  {
+   "id": "253a9763fb",
+   "url": "https://awesomeclaude.ai/ralph-wiggum",
+   "source": "queue",
+   "title": "Ralph Wiggum Loop - Iterative AI Development with Claude Code",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 1510,
+   "links_out": 15,
+   "found_via": "queue",
+   "text_sha256": "fac49ec5d85f8a2cb8c81795aab01cd572b0ec943de01dab25a2f95465fe2bed",
+   "label": "save",
+   "note": "Copyable loop method with prompt templates, --max-iterations escape hatches, and when /goal vs /loop vs /batch beats it \u2014 Kevin runs these."
+  },
+  {
+   "id": "2911c75173",
+   "url": "https://openai.com/blog/ai-progress-and-recommendations",
+   "source": "queue",
+   "title": "AI progress and recommendations",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 1388,
+   "links_out": 15,
+   "found_via": "queue",
+   "text_sha256": "c58172957e67869b9299b822dd5cd00bac99f9ac2c4270b231ff08fc9a0d01cf",
+   "label": "save",
+   "note": "Signed OpenAI position essay arguing against a 50-state patchwork, plus the 40x-per-year fall in cost per unit of intelligence. S6."
+  },
+  {
+   "id": "4600462b11",
+   "url": "https://openai.com/index/openai-on-oracle-cloud",
+   "source": "queue",
+   "title": "Access OpenAI models and Codex through your Oracle cloud commitment",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 393,
+   "links_out": 12,
+   "found_via": "queue",
+   "text_sha256": "172ea11f6005a3923bfe9381a6bdba22ebdeb550fca29c5c47262b8839c7c1c0",
+   "label": "skip",
+   "note": "393-word marketplace availability note \u2014 buy OpenAI with Oracle credits; no price, duty, or finding."
+  },
+  {
+   "id": "4e35b0fc41",
+   "url": "https://anthropic.com/engineering/claude-code-auto-mode",
+   "source": "queue",
+   "title": "How we built Claude Code auto mode: a safer way to skip permissions",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 3666,
+   "links_out": 8,
+   "found_via": "queue",
+   "text_sha256": "dc6f5f2fb2fe7e3fab196f58bd80f4d791ae74fea5dad5870e374365f1e06d19",
+   "label": "save",
+   "note": "Users approve 93% of prompts; names the three permission tiers and the 20+ block rules the auto-mode classifier applies."
+  },
+  {
+   "id": "5ebf3a443c",
+   "url": "https://basecamp.com/shapeup/1.5-chapter-06",
+   "source": "queue",
+   "title": "Write the Pitch | Shape Up",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 2612,
+   "links_out": 40,
+   "found_via": "queue",
+   "text_sha256": "aaf4efd281be89ab4396c21da041578ffe4837f3f194a63eb1e61dcf6b4df662",
+   "label": "save",
+   "note": "Defines the five pitch ingredients \u2014 problem, appetite, solution, rabbit holes, no-gos \u2014 the shape Kevin's plans and agent briefs already borrow."
+  },
+  {
+   "id": "629ac440f8",
+   "url": "https://openai.com/research/gpt-4",
+   "source": "queue",
+   "title": "GPT-4",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 5072,
+   "links_out": 105,
+   "found_via": "queue",
+   "text_sha256": "50292540f0e4a83ca8be9c5347938ce1917a8eeb21ce7a1b28ce7e66b078944f",
+   "label": "save",
+   "note": "The GPT-4 launch with the exam and MMLU/HumanEval tables \u2014 bar exam 90th vs GPT-3.5's 10th is the most-cited pace-of-progress stat there is."
+  },
+  {
+   "id": "63685f8063",
+   "url": "https://openai.com/index/economic-research-exchange",
+   "source": "queue",
+   "title": "Introducing the OpenAI Economic Research Exchange",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 460,
+   "links_out": 15,
+   "found_via": "queue",
+   "text_sha256": "e46e870dc0fb900f5d653fe2e1e2f37266c0074167d52e7f11a8a46b49f8d6c8",
+   "label": "skip",
+   "note": "K7 research-grant program \u2014 an RFP with deadlines, no finding; closest call in the batch."
+  },
+  {
+   "id": "66cbff6f03",
+   "url": "https://openai.com/dall-e",
+   "source": "queue",
+   "title": "DALL\u00b7E 3",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 1476,
+   "links_out": 34,
+   "found_via": "queue",
+   "text_sha256": "22c8ff5a3c85f058d46cff9550c2760582638b4d12fab2b78d92307d89070b19",
+   "label": "skip",
+   "note": "Archival product page that opens by pointing at ChatGPT Images 2.0 \u2014 a prompt-adherence claim and an image gallery, no number or method."
+  },
+  {
+   "id": "6aa5635f74",
+   "url": "https://openai.com/dall-e-2",
+   "source": "queue",
+   "title": "DALL\u00b7E 2",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 813,
+   "links_out": 29,
+   "found_via": "queue",
+   "text_sha256": "3432cc64959f13f2c79eded5563aacec6bf9182f5ee8153bddce6ae8a075cc66",
+   "label": "skip",
+   "note": "2022 product landing page that opens by telling you it is superseded by ChatGPT Images 2.0; the 71.7%/88.8% preference rates describe a retired model. K5."
+  },
+  {
+   "id": "82e9bc6503",
+   "url": "https://openai.com/blog/openai-codex",
+   "source": "queue",
+   "title": "OpenAI Codex",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 672,
+   "links_out": 24,
+   "found_via": "queue",
+   "text_sha256": "f0d885dd4fdcee89384358d5d4969f2ebb1ff81e497d07f33c6acc8f425c037d",
+   "label": "skip",
+   "note": "2021 private-beta announcement that opens by declaring itself outdated and points at the current Codex page."
+  },
+  {
+   "id": "88de067e6e",
+   "url": "https://humanlayer.dev/skill-issue-harness-engineering-for-coding-agents",
+   "source": "queue",
+   "title": "HumanLayer - The multiplayer control plane for your software factory",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 1959,
+   "links_out": 49,
+   "found_via": "queue",
+   "text_sha256": "5e3b76acbddbd253018eedd9570701d2368784ba422e784b2289bbfe0ef3f3df",
+   "label": "save",
+   "note": "Torn: mostly a product landing page, but it defines the six-phase QRSPI agent workflow \u2014 a named method Kevin would want resolvable later."
+  },
+  {
+   "id": "9da248c3d7",
+   "url": "https://latent.space/posts/the-four-wars-of-the-ai-stack",
+   "source": "queue",
+   "title": "Latent.Space | Substack",
+   "published_on": null,
+   "category": [
+    "skipped"
+   ],
+   "words": 525,
+   "links_out": 58,
+   "found_via": "queue",
+   "text_sha256": "bc04033dd72df0879fdc216246f1c85be7a02ee43ad52d960167eec2a404a37d",
+   "label": "skip",
+   "note": "The scrape is a \"Page not found\" plus the Substack archive listing, not the four-wars-of-the-AI-stack post the URL names."
+  },
+  {
+   "id": "a99393fef4",
+   "url": "https://openai.com/dall-e-3",
+   "source": "queue",
+   "title": "DALL\u00b7E 3",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 1476,
+   "links_out": 34,
+   "found_via": "queue",
+   "text_sha256": "642b8b6c3850028d44c1f63a197bf84b8c06d3344563a3b59c7b1665dfe30d38",
+   "label": "skip",
+   "note": "K5 product page, and a superseded one \u2014 its own first line redirects to ChatGPT Images 2.0; no price, no benchmark."
+  },
+  {
+   "id": "ac14c6622b",
+   "url": "https://anthropic.com/news/claude-sonnet-4-6",
+   "source": "queue",
+   "title": "Introducing Sonnet 4.6",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 2326,
+   "links_out": 56,
+   "found_via": "queue",
+   "text_sha256": "c43a00643ab5d4c5abcf9a779a0b5b45ba5984e535e2bfcd476da63f229f60fb",
+   "label": "save",
+   "note": "S5+S3: flagship launch with $3/$15 per million tokens, 1M context, OSWorld and Vending-Bench numbers \u2014 the tier decision."
+  },
+  {
+   "id": "c161d286b7",
+   "url": "https://openai.com/index/how-people-are-using-chatgpt",
+   "source": "queue",
+   "title": "How people are using ChatGPT",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 822,
+   "links_out": 15,
+   "found_via": "queue",
+   "text_sha256": "c45ad230861103158d1fa5e9451376a9d8d5839349c4716aac0c6c5cd5d9fae0",
+   "label": "save",
+   "note": "S1: NBER paper on 1.5M conversations \u2014 49% Asking / 40% Doing, 30% work-related; the exact deck numbers."
+  },
+  {
+   "id": "d43885a685",
+   "url": "https://openai.com/blog/gpt-5-1",
+   "source": "queue",
+   "title": "GPT-5.1: A smarter, more conversational ChatGPT",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 3254,
+   "links_out": 14,
+   "found_via": "queue",
+   "text_sha256": "14b5a36e352232185576dd4516ee89fe6316391495a74d1690560094620ff8ee",
+   "label": "save",
+   "note": "Flagship tier launch (5.1 Instant vs Thinking) with adaptive reasoning, AIME/Codeforces gains and new tone presets \u2014 the model-tier decision."
+  },
+  {
+   "id": "e3d74ed72c",
+   "url": "https://citriniresearch.com/p/2028gic",
+   "source": "queue",
+   "title": "THE 2028 GLOBAL INTELLIGENCE CRISIS",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 7759,
+   "links_out": 76,
+   "found_via": "queue",
+   "text_sha256": "1add24353d65a24d6f8d0026af0cfe9f0374d67eb5395b6092d78618a77b1204",
+   "label": "save",
+   "note": "Citrini's argued case for how AI capex and white-collar displacement feed back into a demand collapse \u2014 board 'what could go wrong' material."
+  },
+  {
+   "id": "eab19e2229",
+   "url": "https://openai.com/blog/function-calling-and-other-api-updates",
+   "source": "queue",
+   "title": "Function calling and other API updates",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 1699,
+   "links_out": 29,
+   "found_via": "queue",
+   "text_sha256": "0ccd40f14fbf4890159695478d4206eeb6cfba30821f829761f618fb63d254e9",
+   "label": "save",
+   "note": "16k context, 75% embeddings price cut, 25% input cut, deprecation dates, plus the function-calling API contract itself. S3."
+  },
+  {
+   "id": "edf3e0702a",
+   "url": "https://claude.com/blog/auto-mode",
+   "source": "queue",
+   "title": "Auto mode for Claude Code | Claude by Anthropic",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 836,
+   "links_out": 34,
+   "found_via": "queue",
+   "text_sha256": "3a6e976690b05237fc84f54f33e49eea6e0e786e0e6947ee4966486058267512",
+   "label": "save",
+   "note": "A classifier vets every tool call before it runs and blocks destructive ones; admins disable it with \"disableAutoMode\" in managed settings."
+  },
+  {
+   "id": "f3d75f70ee",
+   "url": "https://anthropic.com/research/next-generation-constitutional-classifiers",
+   "source": "queue",
+   "title": "Next-generation Constitutional Classifiers: More efficient protection against universal jailbreaks",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 1520,
+   "links_out": 14,
+   "found_via": "queue",
+   "text_sha256": "d9a8b5743dc9467f80bcdd59ba14cf6cf53cf929d5d24f2933fa9567c05612ac",
+   "label": "save",
+   "note": "Jailbreak success 86%\u21924.4%, compute overhead 23.7%\u2192~1%, refusals down to 0.05% \u2014 what the safeguard costs a request."
+  },
+  {
+   "id": "f5b4364f5d",
+   "url": "https://openai.com/research/whisper",
+   "source": "queue",
+   "title": "Introducing Whisper",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 735,
+   "links_out": 37,
+   "found_via": "queue",
+   "text_sha256": "45a3706372697ebb4de7b15a654cae7eb019a47a3e50fc43beacef064b59dbc7",
+   "label": "save",
+   "note": "The named artifact behind the last rung of his own transcript cascade: 680,000 hours of training audio, 50% fewer errors zero-shot."
+  },
+  {
+   "id": "fbd74b252f",
+   "url": "https://lakefs.io/blog/llm-observability-tools",
+   "source": "queue",
+   "title": "LLM Observability Tools: 2026 Comparison",
+   "published_on": null,
+   "category": [
+    "candidate"
+   ],
+   "words": 3034,
+   "links_out": 79,
+   "found_via": "queue",
+   "text_sha256": "4075d6ca975487ca66bdec0936148356e1501557d53b6efd01c5b7544cb59425",
+   "label": "save",
+   "note": "Nine observability tools compared side by side \u2014 the landscape shape, even with the lakeFS plug in the middle. S10."
+  }
+ ]
+}

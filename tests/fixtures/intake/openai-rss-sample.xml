@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title><![CDATA[OpenAI News]]></title>
+        <description><![CDATA[The OpenAI blog]]></description>
+        <link>https://openai.com/news</link>
+        <image>
+            <url>https://openai.com/apple-icon.png</url>
+            <title>OpenAI News</title>
+            <link>https://openai.com/news</link>
+        </image>
+        <generator>OpenAI</generator>
+        <lastBuildDate>Wed, 02 Sep 2026 15:51:41 GMT</lastBuildDate>
+        <atom:link href="https://openai.com/news/rss.xml" rel="self" type="application/rss+xml"/>
+        <item>
+            <title><![CDATA[How AI-native companies turn workflows into operating capability]]></title>
+            <description><![CDATA[Basis, Clay, and Exa Labs use AI agents to improve onboarding, account management, and developer integrations. See what enterprise leaders can apply.]]></description>
+            <link>https://openai.com/index/ai-native-company-workflows</link>
+            <guid isPermaLink="true">https://openai.com/index/ai-native-company-workflows</guid>
+            <category><![CDATA[AI Adoption]]></category>
+            <pubDate>Tue, 01 Sep 2026 17:00:00 GMT</pubDate>
+        </item>
+        <item>
+            <title><![CDATA[Path to Astra: critical capabilities and frontier safeguards]]></title>
+            <description><![CDATA[Astra is the first OpenAI model to meet the Critical cybersecurity capability threshold under the Preparedness Framework, with stronger safeguards for release.]]></description>
+            <link>https://openai.com/index/path-to-astra</link>
+            <guid isPermaLink="true">https://openai.com/index/path-to-astra</guid>
+            <category><![CDATA[Safety]]></category>
+            <pubDate>Tue, 01 Sep 2026 13:00:00 GMT</pubDate>
+        </item>
+        <item>
+            <title><![CDATA[Healthcare organizations can now connect EHR and additional industry data to ChatGPT]]></title>
+            <description><![CDATA[ChatGPT can now connect to trusted healthcare data, helping clinicians securely access patient context, medical research, and more.]]></description>
+            <link>https://openai.com/index/chatgpt-connects-health-records-and-healthcare-sources</link>
+            <guid isPermaLink="true">https://openai.com/index/chatgpt-connects-health-records-and-healthcare-sources</guid>
+            <category><![CDATA[Product]]></category>
+            <pubDate>Tue, 01 Sep 2026 12:00:00 GMT</pubDate>
+        </item>
+        <item>
+            <title><![CDATA[How law firm Gilbert + Tobin governs and scales AI with OpenAI]]></title>
+            <description><![CDATA[See how Gilbert + Tobin combines CEO-led commitment, rigorous governance, and human accountability to scale ChatGPT Enterprise and Codex across the firm.]]></description>
+            <link>https://openai.com/index/gilbert-tobin</link>
+            <guid isPermaLink="true">https://openai.com/index/gilbert-tobin</guid>
+            <pubDate>Tue, 01 Sep 2026 01:00:00 GMT</pubDate>
+        </item>
+        <item>
+            <title><![CDATA[OpenAI supports California’s bill to advance youth AI safety]]></title>
+            <description><![CDATA[OpenAI supports California SB 1119, advancing strong, age-appropriate AI safeguards for teens while preserving opportunities to learn, create, and explore.]]></description>
+            <link>https://openai.com/index/supporting-california-bill-advance-ai-youth-safety</link>
+            <guid isPermaLink="true">https://openai.com/index/supporting-california-bill-advance-ai-youth-safety</guid>
+            <category><![CDATA[Company]]></category>
+            <pubDate>Mon, 31 Aug 2026 07:00:00 GMT</pubDate>
+        </item>
+        <item>
+            <title><![CDATA[Polimill builds Japan's next-generation public AI infrastructure]]></title>
+            <description><![CDATA[Polimill uses OpenAI GPT models and Codex to help municipalities search and use administrative knowledge while accelerating development.]]></description>
+            <link>https://openai.com/index/polimill</link>
+            <guid isPermaLink="true">https://openai.com/index/polimill</guid>
+            <pubDate>Mon, 31 Aug 2026 07:00:00 GMT</pubDate>
+        </item>
+</channel>
+</rss>

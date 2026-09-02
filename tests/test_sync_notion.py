@@ -211,10 +211,159 @@ def test_fetch_entity_rollup_curated_qualifier() -> None:
         def cursor(self):
             return _Cursor()
 
+    from pipeline.sync_notion import MAX_AD_MENTIONS_COUNTED as CAP
+
     fetch_entity_rollup(_Conn(), [3, 48, 62], {}, 2, [62])
-    assert "HAVING COUNT(*) >= %s" in _Cursor.sql
+    # The threshold is tested against the CAPPED count, not the raw one: an entity must
+    # not qualify on 40 ad mentions that the rollup will then only count 5 of.
+    assert "LEAST(COUNT(*) FILTER (WHERE m.sponsor_source IS NOT NULL), %s) >= %s" in _Cursor.sql
     assert "FILTER (WHERE ep.show_id = ANY(%s)) >= 1" in _Cursor.sql
-    assert _Cursor.params == ([3, 48, 62], 2, [62])
+    assert _Cursor.params == (CAP, [3, 48, 62], CAP, 2, [62])
 
     fetch_entity_rollup(_Conn(), [3, 48], {}, 2)
-    assert _Cursor.params == ([3, 48], 2, [])
+    assert _Cursor.params == (CAP, [3, 48], CAP, 2, [])
+
+
+# --- ads as data: the weight cap and the sponsor properties -----------------------
+
+
+def test_ad_mentions_are_capped_in_the_rollup_sql() -> None:
+    """Editorial counts in full; ads count at most MAX_AD_MENTIONS_COUNTED.
+
+    73 of Blitzy's 77 mentions are ad reads (retag_sponsor_mentions.py --dry-run, 2026-09-02). Uncapped it outranks
+    every tool the hosts actually discussed, which is exactly what Kevin asked to stop.
+    """
+    from pipeline.sync_notion import MAX_AD_MENTIONS_COUNTED, fetch_entity_rollup
+
+    class _Cursor:
+        sql = ""
+        params = None
+
+        def execute(self, sql, params=None):
+            _Cursor.sql, _Cursor.params = sql, params
+
+        def fetchall(self):
+            return []
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    class _Conn:
+        def cursor(self):
+            return _Cursor()
+
+    fetch_entity_rollup(_Conn(), [3, 48], {}, 2)
+    sql = " ".join(_Cursor.sql.split())
+    assert (
+        "COUNT(*) FILTER (WHERE m.sponsor_source IS NULL) "
+        "+ LEAST(COUNT(*) FILTER (WHERE m.sponsor_source IS NOT NULL), %s) AS mention_count"
+    ) in sql
+    assert "COUNT(*) FILTER (WHERE m.sponsor_source IS NOT NULL) AS ad_mention_count" in sql
+    assert "COUNT(*) FILTER (WHERE m.sponsor_source IS NULL) AS editorial_mention_count" in sql
+    assert MAX_AD_MENTIONS_COUNTED == 5
+
+
+def test_rollup_prefers_an_editorial_snippet_for_the_visible_context() -> None:
+    """Showing ad copy as the entity's Context makes a sponsor read look like Kevin's
+    own note about the product."""
+    from pipeline.sync_notion import fetch_entity_rollup
+
+    class _Cursor:
+        sql = ""
+
+        def execute(self, sql, params=None):
+            _Cursor.sql = sql
+
+        def fetchall(self):
+            return []
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    class _Conn:
+        def cursor(self):
+            return _Cursor()
+
+    fetch_entity_rollup(_Conn(), [3], {}, 2)
+    sql = " ".join(_Cursor.sql.split())
+    assert "ORDER BY (m.sponsor_source IS NOT NULL), ep.publish_date DESC NULLS LAST" in sql
+
+
+def test_sponsor_properties_are_built_from_the_uncapped_ad_count() -> None:
+    props = build_notion_properties(entity(ad_mention_count=76, editorial_mention_count=1,
+                                           mention_count=6))
+    assert props["Sponsor"]["checkbox"] is True
+    # Uncapped, so a reader can see how much of Mentions was withheld.
+    assert props["Ad mentions"]["number"] == 76
+    assert props["Mentions"]["number"] == 6
+
+
+def test_an_entity_with_no_ads_is_not_flagged_a_sponsor() -> None:
+    props = build_notion_properties(entity())
+    assert props["Sponsor"]["checkbox"] is False
+    assert props["Ad mentions"]["number"] == 0
+    assert "First seen as ad" not in props
+
+
+def test_first_seen_as_ad_reaches_notion_when_recorded() -> None:
+    props = build_notion_properties(
+        entity(ad_mention_count=3, attributes={"first_seen_as_ad": "2026-07-06"})
+    )
+    assert props["First seen as ad"]["date"]["start"] == "2026-07-06"
+
+
+def test_ensure_database_properties_adds_only_what_is_missing(monkeypatch) -> None:
+    """Additive only: a hand-configured property of the same name is left alone, and a
+    second run adds nothing."""
+    import pipeline.sync_notion as sn
+
+    calls = []
+
+    def fake_request(method, url, token, body=None):
+        calls.append((method, url, body))
+        if method == "GET":
+            return {"properties": {"Name": {}, "Mentions": {}, "Sponsor": {}}}
+        return {}
+
+    monkeypatch.setattr(sn, "notion_request", fake_request)
+    added = sn.ensure_database_properties("tok", "db-1")
+
+    assert added == ["Ad mentions", "First seen as ad"]
+    patch = [c for c in calls if c[0] == "PATCH"][0]
+    assert set(patch[2]["properties"]) == {"Ad mentions", "First seen as ad"}
+    assert "Sponsor" not in patch[2]["properties"]  # already there, untouched
+
+
+def test_ensure_database_properties_is_idempotent(monkeypatch) -> None:
+    import pipeline.sync_notion as sn
+
+    calls = []
+
+    def fake_request(method, url, token, body=None):
+        calls.append(method)
+        return {"properties": dict.fromkeys(sn.REQUIRED_DATABASE_PROPERTIES, {})}
+
+    monkeypatch.setattr(sn, "notion_request", fake_request)
+    assert sn.ensure_database_properties("tok", "db-1") == []
+    assert "PATCH" not in calls
+
+
+def test_ensure_database_properties_writes_nothing_in_dry_run(monkeypatch) -> None:
+    import pipeline.sync_notion as sn
+
+    calls = []
+
+    def fake_request(method, url, token, body=None):
+        calls.append(method)
+        return {"properties": {}}
+
+    monkeypatch.setattr(sn, "notion_request", fake_request)
+    added = sn.ensure_database_properties("tok", "db-1", dry_run=True)
+    assert added == sorted(sn.REQUIRED_DATABASE_PROPERTIES)
+    assert calls == ["GET"]

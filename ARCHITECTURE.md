@@ -19,7 +19,7 @@ research-run docs       ┘                                    └─► Spotify
 
 - **Music shows** (SOP, TAL): song data scraped from the show's website → matched to Spotify → `songs` rows → one Spotify playlist per show.
 - **Tech/media shows** (AI Daily, Hard Fork; PCHH, Culture Gabfest): Taddy transcripts → LLM entity extraction → `ai_entities` / `ai_mentions` → Notion.
-- **Curated sources** (`medium != "podcast"`: openai-blog, anthropic-blog, saved-articles, agentic-research): no feed, no cadence — items are pulled deliberately via `save_item.py` or the **Blog Pull Queue** (a Notion DB; weekly `blogs.yml` discovers candidates from the mentions DB, enriches with word count + **Links Out** — outbound-link density is the pull signal — and ingests rows Kevin checked). Their entities qualify for Notion at **1 mention** (`fetch_entity_rollup`'s curated qualifier); podcast chatter still needs `min_mentions`. PDFs/long reports skip the DB and save into the Obsidian research folder.
+- **Curated sources** (`medium != "podcast"`: openai-blog, anthropic-blog, saved-articles, agentic-research): no feed, no cadence — items are pulled deliberately via `save_item.py` or the **curated intake** (weekly `blogs.yml` → `run_intake.py`: discover from the OpenAI feed, Anthropic's index pages and podcast citations → deterministic pre-checks → two cheap models judge against `docs/intake-rubric.md` → every verdict logged to the **Blog Intake** Notion DB). *Changed 2026-09-02: this used to queue candidates behind a Notion checkbox, which stalled for eleven straight weeks; the checkbox survives only as the "Pull anyway" override, and `AUTO_INGEST` stays False until the intake eval clears its floor.* Their entities qualify for Notion at **1 mention** (`fetch_entity_rollup`'s curated qualifier); podcast chatter still needs `min_mentions`. PDFs/long reports skip the DB and save into the Obsidian research folder.
 
 Cascading source strategy (cheapest first): website show-notes → free transcripts → Taddy transcript API → Whisper (last resort). Don't pay to transcribe what's already public.
 
@@ -34,7 +34,7 @@ Cascading source strategy (cheapest first): website show-notes → free transcri
 | Switched on Pop | `sop` | music | 699 | 2026-06-02 | Spotify |
 | This American Life | `tal` | music | 889 | 2026-05-10 | Spotify |
 
-**Curated sources (2026-06-11):** `openai-blog` (60), `anthropic-blog` (61), `saved-articles` (62, one-off catch-all), `agentic-research` (63, local Obsidian docs keyed by `obsidian://` URI — vault-relative, never in CI). All feed the shared Tech DB; full blog texts also mirror to the Notion **Blog Posts** DB (`37c0501e…93f5`); candidates queue in the **Blog Pull Queue** DB (`37c0501e…1f53`). Curated shows are exempt from staleness/feed health checks (no cadence to be late against).
+**Curated sources (2026-06-11):** `openai-blog` (60), `anthropic-blog` (61), `saved-articles` (62, one-off catch-all), `agentic-research` (63, local Obsidian docs keyed by `obsidian://` URI — vault-relative, never in CI). All feed the shared Tech DB; full blog texts also mirror to the Notion **Blog Posts** DB (`37c0501e…93f5`); candidates and their verdicts land in the **Blog Intake** DB (`37c0501e…1f53`). Curated shows are exempt from staleness/feed health checks (no cadence to be late against).
 
 **Shared Notion DBs (Option A):** tech (AI Daily + Hard Fork + the curated sources) and media (PCHH + Gabfest) each share one DB — entities are global, deduped across shows, tagged with a "Shows" multi-select. **Heads-up:** a `--full-reset` of the tech group now also wipes/recreates curated-source pages — the blast radius grew with the group. **Gabfest has no transcripts** (Taddy won't transcribe it — iHeart rights); it extracts from Megaphone RSS show-notes via the orchestrator's `COALESCE(transcript_text, description_body)` source path. PCHH + Gabfest show full-archive episode counts; scoped-recent backfill has extracted/synced 52 + 17 so far — full archive (~11h/$7.50) deferred to Kevin.
 
@@ -44,7 +44,7 @@ Cascading source strategy (cheapest first): website show-notes → free transcri
 - `episodes` — per-show episodes (publish_date, url, title; `raw_content` for Taddy shows).
 - `episode_transcripts` — transcript text per episode. Generated `search_vector` (tsvector + GIN) powers FTS; `notion_transcript_page_id` tracks the Notion mirror (idempotent sync).
 - `songs` — music-show song rows (+ Spotify match state).
-- `ai_runs` / `ai_entities` / `ai_mentions` — entity-extraction store. `ai_mentions.run_id → ai_runs` (ON DELETE CASCADE); `ai_entities` deduped by (entity_type, normalized_name, platform); `ai_mentions.entity_id` ON DELETE SET NULL.
+- `ai_runs` / `ai_entities` / `ai_mentions` — entity-extraction store. `ai_mentions.run_id → ai_runs` (ON DELETE CASCADE); `ai_entities` deduped by (entity_type, normalized_name, platform); `ai_mentions.entity_id` ON DELETE SET NULL. `ai_mentions.sponsor_source` (`roster` | `phrase` | `model`; NULL = editorial) records why a mention counts as an ad — see **Ads are data** below.
 
 ## Code map
 
@@ -57,8 +57,8 @@ Cascading source strategy (cheapest first): website show-notes → free transcri
 - `pipeline/scrapers/ai_daily/load_entity_batch.py` — batch → Neon loader; idempotent on (show_id, batch_name) via `delete_existing_run`.
 - `pipeline/sync_notion.py` / `pipeline/sync_playlist.py` — Neon → Notion (entities) / Spotify. Entity qualifier: group `min_mentions` OR any curated-source mention.
 - `pipeline/sync_transcripts_notion.py` — Neon → Notion full-text mirrors, parametrized by `--target`: `transcripts` (tech shows) | `blog-posts` (curated; + URL/Links Out properties). Idempotent/resumable (NULL-marker gated, adopt-don't-duplicate on resume), chunked + rate-limited; runs daily in `entities.yml`.
-- `pipeline/save_item.py` — "save this article": resolve show by domain → scrape/store → extract that episode → sync entities + blog mirror. `--from-queue` ingests checked Pull Queue rows.
-- `pipeline/build_pull_queue.py` — Blog Pull Queue: `--build` discovers candidates from the mentions DB + enriches (Firecrawl); `--ingest` pulls checked rows. Weekly via `blogs.yml`.
+- `pipeline/save_item.py` — "save this article": resolve show by domain → scrape/store → extract that episode → sync entities + blog mirror. Also the ingest primitive the intake's override path calls.
+- `pipeline/run_intake.py` — the curated intake: discover → pre-check → scrape → judge → Notion log → one Slack line. Weekly via `blogs.yml`; `--sources podcast-cited` is daily-able. Its parts live in `pipeline/scrapers/intake/` (`sources`, `mentions`, `links`, `judge`, `store`, `notion_log`).
 - `pipeline/scrapers/blog/import_blog.py` — blog storage primitive: Firecrawl scrape, `canonicalize_url` (the episodes.url dedup key), thin-scrape guard, metadata/URL-path date parsing.
 - `pipeline/scrapers/research/import_research.py` — local-only Agentic Research ingester (obsidian:// keys, infra-file filter).
 - `pipeline/search_transcripts.py` — Postgres FTS over transcripts (websearch_to_tsquery + ts_headline snippets).
@@ -88,6 +88,18 @@ Since shipped: A4 per-entity Notion sync state (migration 003 + `mark_sync_faile
 A **Cloudflare Worker Cron** (`cloudflare-trigger/`, trimm account) calls GitHub `workflow_dispatch` for the workflows — entities daily, music Mon/Wed/Fri, eval Mon, **blogs (pull queue) Mon ~3pm CT**, pulse 1st/15th ~3:15pm CT — so GitHub's own `schedule:` cron (which silently disables after 60 idle days on a public repo) is no longer the trigger. A failed dispatch posts to Slack (the trigger itself is observable). Every run also Slacks on success / failure / staleness. Chosen over Inngest (no rewrite, no new account) per the rebuild plan.
 
 *Live as of 2026-06-11: `GH_PAT` = the reused fine-grained `GITHUB_HG_CLAUDE_TOKEN` (expires 2027-01-20 — dispatch failures alert at the trigger when it does); all `schedule:` blocks removed — the Worker is the only trigger. **Constraint learned the hard way: Workers Free caps a Worker at 5 cron triggers** (a 7-cron deploy failed), so music runs on ONE Mon/Wed/Fri cron and worker.js picks the show by fire day. **Second constraint learned the hard way (2026-07-24): Cloudflare cron day-of-week is 1=Sunday..7=Saturday, NOT standard cron's 0=Sunday — the original 1,3,5 values fired Sun/Tue/Thu for six weeks and TAL never auto-synced. Cloudflare Mon=2/Wed=4/Fri=6.***
+
+## Ads are data (2026-09-02)
+
+Sponsor reads are **kept, tagged, and weight-capped — never deleted** (Kevin, 2026-09-01: *"sometimes the ads are helpful… we shouldn't have them overweight by mentions"*). Extraction used to drop every mention the model flagged as an ad, which meant the database held only the ads the model *missed*, stored as editorial at full weight — 73 of them for Blitzy alone. Now `pipeline/scrapers/ai_daily/sponsors.py` classifies each mention from three sources, in descending order of trust, and the winning one is stored on the row:
+
+1. **`roster`** — the episode's own "Brought to you by:" block, parsed from `episodes.raw_content` (a TEXT column holding Taddy JSON). Publisher-declared, so it is the only signal that is a statement rather than an inference. Parses 558/558 AI Daily blocks across two years of drifting markup; Hard Fork and PCHH have no such block, and all 117 Culture Gabfest descriptions containing the phrase are article titles being discussed, correctly yielding no roster.
+2. **`phrase`** — the mention sits inside a sponsor-formula window in the transcript **and** the entity is named inside that window. Both halves are required: an ad break interrupts the episode, so mere proximity proves adjacency, not advertising.
+3. **`model`** — the extractor's own `is_editorial=false`. Least reliable (2026-08-24 is what it looks like when it misses) but the only signal for a show with neither a roster nor a cue.
+
+Downstream, `fetch_entity_rollup` counts editorial mentions in full and ad mentions at most `MAX_AD_MENTIONS_COUNTED` (5), and qualifies entities on that capped number; Notion gains **Sponsor**, **Ad mentions**, and **First seen as ad**. `data_health.check_sponsor_share` warns above 30% ads for a tech show over 30 days and fails only at 100%.
+
+**Where the two errors trade off, the detector prefers missing an ad to mis-tagging an editorial mention** — a missed ad costs a few points of ranking weight; a mis-tag puts a wrong Sponsor checkbox on a product Kevin cares about. **Accepted gap (2026-09-02):** a company that sponsors an episode *and* is cited editorially in it has that citation counted as an ad (2 of KPMG's 7 mentions; 4 of Gemini's 197). The entity-level Sponsor flag is true either way, both counts are published side by side, and the cap bounds the cost.
 
 ## Quality gradient — the eval harness
 
