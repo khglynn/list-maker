@@ -67,7 +67,6 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           TADDY_USER_ID: ${{ secrets.TADDY_USER_ID }}   # second source (are we behind the feed?)
           TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}     # Blog Pull Queue count (the nudge)
         run: cd pipeline && python pulse_report.py
 
       - name: Notify Slack (failure)

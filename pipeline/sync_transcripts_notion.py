@@ -64,7 +64,7 @@ SYNC_TARGETS: dict[str, dict] = {
         "source_label": None,
         "title": "Blog Posts",
         "description": ("Full text of curated blog posts/articles (OpenAI, Anthropic, one-off saves) — "
-                        "pulled via the Blog Pull Queue; Links Out = outbound-link density, the pull signal."),
+                        "pulled by the curated intake or saved by hand; Links Out = outbound-link density."),
         "icon": "\U0001F4F0",
         "blog_props": True,
     },

@@ -77,7 +77,7 @@ def test_digest_warning_only_stays_green_but_counted() -> None:
     assert "Needs attention" not in digest
 
 
-# ---- curated sources, the grace window, and the pull-queue nudge (2026-09-01) ----
+# ---- curated sources, the grace window, and the intake line (2026-09-02) ----
 
 class _Cfg:
     def __init__(self, medium: str = "podcast", grace: int = 2) -> None:
@@ -99,7 +99,8 @@ def test_curated_source_is_curated_not_unverified() -> None:
 def test_digest_does_not_count_curated_as_unverified() -> None:
     s = _show(slug="openai-blog", latest="2026-06-10", feed_dates=None)
     s["cfg"] = _Cfg("blog")
-    digest = build_digest([_show(), s], TOTALS, [CheckResult("x", "pass", "ok", [])], queue={"candidates": 0, "checked": 0})
+    digest = build_digest([_show(), s], TOTALS, [CheckResult("x", "pass", "ok", [])],
+                          intake={"judged": 0, "would_save_backlog": 0})
     assert "unverified" not in digest
     assert "All systems firing" in digest
     assert "Curated sources" in digest and "OpenAI blog" in digest
@@ -118,12 +119,31 @@ def test_stale_missing_episode_is_still_behind(monkeypatch) -> None:
     assert state == "behind" and "BEHIND 1" in status
 
 
-def test_queue_line_nudges_when_candidates_wait() -> None:
-    digest = build_digest([_show()], TOTALS, [], queue={"candidates": 31, "checked": 2})
-    assert "31 candidate(s) waiting for your checkbox" in digest
-    assert "2 checked" in digest
+def test_intake_line_reports_what_the_judge_did() -> None:
+    # Changed 2026-09-02: this used to nudge Kevin about unchecked boxes. Nothing waits
+    # on a checkbox now, so the pulse reports what the judge DID and what shadow mode
+    # has piled up unhandled.
+    digest = build_digest([_show()], TOTALS, [], intake={
+        "judged": 18, "would_save": 5, "disputed": 2, "would_save_backlog": 9, "held": 1})
+    assert "18 judged" in digest and "5 marked save" in digest
+    assert "2 disputed" in digest and "9 not yet ingested" in digest
 
 
-def test_queue_line_is_honest_when_the_queue_cannot_be_read() -> None:
-    digest = build_digest([_show()], TOTALS, [], queue=None)
+def test_intake_line_keeps_a_stuck_failure_visible() -> None:
+    # The weekly Slack line reports only the run that produced a failure. The pulse
+    # reads a 15-day window, so a row stuck failing stays visible instead of being
+    # mentioned once and then going quiet forever.
+    digest = build_digest([_show()], TOTALS, [], intake={
+        "judged": 4, "would_save": 1, "would_save_backlog": 1, "failed": 3})
+    assert "3 failed" in digest
+
+
+def test_intake_line_is_quiet_but_present_on_an_empty_period() -> None:
+    digest = build_digest([_show()], TOTALS, [], intake={"judged": 0, "would_save_backlog": 0})
+    assert "nothing judged this period" in digest
+
+
+def test_intake_line_is_honest_when_the_table_cannot_be_read() -> None:
+    # A missing table or a Neon hiccup must read as "couldn't check", never as zeroes.
+    digest = build_digest([_show()], TOTALS, [], intake=None)
     assert "couldn't read" in digest
