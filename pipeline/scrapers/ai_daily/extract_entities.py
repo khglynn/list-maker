@@ -714,24 +714,37 @@ def postprocess_mention_types(
     return mention
 
 
-def process_episode_mentions(
+FILTER_STAT_KEYS = ("raw", "sanitize_dropped", "non_editorial_dropped", "non_core_type_dropped", "kept")
+
+
+def process_episode_mentions_with_stats(
     raw: dict[str, Any],
     episode_id: int,
     profile: ExtractionProfile,
     confidence_review_threshold: float = DEFAULT_CONFIDENCE_REVIEW_THRESHOLD,
     include_non_editorial: bool = False,
     focus_core_types: bool = True,
-) -> list[dict[str, Any]]:
-    """Turn a raw LLM response into the mentions that actually get loaded.
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """Turn a raw LLM response into the mentions that actually get loaded — and say
+    what happened to the rest.
 
     This is the single per-episode pipeline — sanitize -> postprocess types -> filter —
     used by BOTH main() and the eval harness, so "what production extracts" has one
     definition that can't drift. The defaults mirror the production CLI defaults
     (editorial-only, core-types-only), which is what the orchestrator runs.
+
+    The stats exist because of 2026-08-23: the model returned ~5,000 tokens of
+    candidates for episode 8429 and these filters removed every one, but nothing
+    recorded that — the batch just looked like "the model found nothing", the loader
+    raised on the empty file, and the only surviving evidence was a token count in an
+    expiring CI log. `raw` vs `kept`, with the per-filter drops, is what makes an empty
+    result explainable instead of mysterious.
     """
+    stats = {key: 0 for key in FILTER_STAT_KEYS}
     mentions_raw = raw.get("mentions", [])
     if not isinstance(mentions_raw, list):
-        return []
+        return [], stats
+    stats["raw"] = len(mentions_raw)
     out: list[dict[str, Any]] = []
     for mention in mentions_raw:
         normalized = sanitize_mention(
@@ -741,6 +754,7 @@ def process_episode_mentions(
             valid_types=profile.types,
         )
         if normalized is None:
+            stats["sanitize_dropped"] += 1
             continue
         normalized = postprocess_mention_types(
             normalized,
@@ -748,15 +762,38 @@ def process_episode_mentions(
             apply_tech_heuristics=profile.apply_tech_heuristics,
         )
         if not include_non_editorial and not normalized["is_editorial"]:
+            stats["non_editorial_dropped"] += 1
             continue
         if (
             focus_core_types
             and normalized["entity_type"] not in profile.core_types
             and normalized["entity_type"] != "other"
         ):
+            stats["non_core_type_dropped"] += 1
             continue
         out.append(normalized)
-    return out
+    stats["kept"] = len(out)
+    return out, stats
+
+
+def process_episode_mentions(
+    raw: dict[str, Any],
+    episode_id: int,
+    profile: ExtractionProfile,
+    confidence_review_threshold: float = DEFAULT_CONFIDENCE_REVIEW_THRESHOLD,
+    include_non_editorial: bool = False,
+    focus_core_types: bool = True,
+) -> list[dict[str, Any]]:
+    """The mentions that actually get loaded (see process_episode_mentions_with_stats)."""
+    mentions, _stats = process_episode_mentions_with_stats(
+        raw,
+        episode_id,
+        profile,
+        confidence_review_threshold=confidence_review_threshold,
+        include_non_editorial=include_non_editorial,
+        focus_core_types=focus_core_types,
+    )
+    return mentions
 
 
 def read_episode_inputs(
@@ -951,6 +988,7 @@ def main() -> None:
     per_episode_results: list[dict[str, Any]] = []
     all_new_type_candidates: list[dict[str, Any]] = []
     all_notes: list[str] = []
+    filter_totals = {key: 0 for key in FILTER_STAT_KEYS}
     total_prompt_tokens = 0
     total_completion_tokens = 0
     total_tokens = 0
@@ -983,7 +1021,7 @@ def main() -> None:
             total_input_cost_usd += usage.estimated_input_cost_usd
             total_output_cost_usd += usage.estimated_output_cost_usd
 
-        sanitized_mentions = process_episode_mentions(
+        sanitized_mentions, filter_stats = process_episode_mentions_with_stats(
             raw,
             episode.episode_id,
             profile,
@@ -991,6 +1029,18 @@ def main() -> None:
             include_non_editorial=args.include_non_editorial,
             focus_core_types=args.focus_core_types,
         )
+        for key in FILTER_STAT_KEYS:
+            filter_totals[key] += filter_stats[key]
+        if filter_stats["raw"] and not filter_stats["kept"]:
+            # Say it where the run summary will show it: the model spoke, the filters
+            # removed everything. Not an error — the loader records it as a declared
+            # empty result so the episode is not re-queued every day.
+            print(
+                f"  episode {episode.episode_id}: {filter_stats['raw']} candidate(s) from the model, "
+                f"0 kept (non-editorial {filter_stats['non_editorial_dropped']}, non-core type "
+                f"{filter_stats['non_core_type_dropped']}, invalid {filter_stats['sanitize_dropped']}) "
+                f"— declared empty"
+            )
 
         new_type_candidates = raw.get("new_type_candidates", [])
         if not isinstance(new_type_candidates, list):
@@ -1026,6 +1076,12 @@ def main() -> None:
             "transcript_path": str(episode.transcript_path),
             "model": args.model,
             "mention_count": len(sanitized_mentions),
+            "raw_mention_count": filter_stats["raw"],
+            "dropped": {
+                "non_editorial": filter_stats["non_editorial_dropped"],
+                "non_core_type": filter_stats["non_core_type_dropped"],
+                "invalid": filter_stats["sanitize_dropped"],
+            },
             "mentions": sanitized_mentions,
             "new_type_candidates": normalized_new_type_candidates,
             "notes": notes,
@@ -1051,6 +1107,10 @@ def main() -> None:
                 "episode_url": episode.episode_url,
                 "transcript_path": str(episode.transcript_path),
                 "mention_count": len(sanitized_mentions),
+                "raw_mention_count": filter_stats["raw"],
+                "dropped_non_editorial": filter_stats["non_editorial_dropped"],
+                "dropped_non_core_type": filter_stats["non_core_type_dropped"],
+                "dropped_invalid": filter_stats["sanitize_dropped"],
                 "review_count": sum(1 for m in sanitized_mentions if m["needs_review"]),
                 "prompt_tokens": usage.prompt_tokens,
                 "completion_tokens": usage.completion_tokens,
@@ -1181,6 +1241,9 @@ def main() -> None:
             },
         "episodes": per_episode_results,
         "summary": summary,
+        # raw vs kept across the batch, with the per-filter drops. The loader reads this
+        # to record an all-filtered batch as a declared empty result.
+        "filter_summary": filter_totals,
         "usage_summary": usage_summary,
         "new_type_candidates": all_new_type_candidates,
         "notes": all_notes,

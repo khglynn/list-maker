@@ -340,3 +340,14 @@ def test_self_heal_is_a_noop_when_nothing_is_damaged(monkeypatch, tmp_path) -> N
     monkeypatch.setattr(rne, "find_transcript_race_batches", lambda *a, **k: [])
 
     assert rne.step_self_heal_transcript_race(get_show("pchh"), dry_run=False) == (True, 0)
+
+
+def test_declared_empty_episodes_are_not_requeued() -> None:
+    """One declared answer is final. Re-asking the model daily is how a sponsor read
+    got stored as editorial content on 2026-08-24 (episode 8429)."""
+    conn = _Conn()
+    find_unextracted_episodes(conn, 3, recent_only=True)
+    sql = conn.cursor_obj.sql
+    assert "completed_empty" in sql
+    assert "r.parameters->'episodes' @> to_jsonb(ep.id)" in sql
+    assert sql.count("%s") == len(conn.cursor_obj.params)

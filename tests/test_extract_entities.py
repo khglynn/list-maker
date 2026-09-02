@@ -227,3 +227,40 @@ def test_process_episode_mentions_handles_bad_input() -> None:
     tech = get_profile("entity_extraction")
     assert process_episode_mentions({}, 1, tech) == []
     assert process_episode_mentions({"mentions": "nope"}, 1, tech) == []
+
+
+# ---- filter stats: an empty result must be explainable (2026-08-23, episode 8429) ----
+
+def test_filter_stats_explain_an_all_filtered_result() -> None:
+    from pipeline.scrapers.ai_daily.extract_entities import process_episode_mentions_with_stats
+
+    tech = get_profile("entity_extraction")
+    raw = {"mentions": [
+        _mention(canonical_name="HyperAgent", mention_text="HyperAgent",
+                 context_snippet="This episode is brought to you by HyperAgent.", is_editorial=False),
+        _mention(canonical_name="Every", mention_text="Every", entity_type="organization",
+                 context_snippet="Dan Shipper of Every wrote the essay."),
+        {"mention_text": "", "canonical_name": "", "context_snippet": ""},  # invalid
+    ]}
+    kept, stats = process_episode_mentions_with_stats(raw, 8429, tech)
+    assert kept == []
+    assert stats == {"raw": 3, "sanitize_dropped": 1, "non_editorial_dropped": 1,
+                     "non_core_type_dropped": 1, "kept": 0}
+
+
+def test_filter_stats_count_what_survives() -> None:
+    from pipeline.scrapers.ai_daily.extract_entities import process_episode_mentions_with_stats
+
+    tech = get_profile("entity_extraction")
+    raw = {"mentions": [_mention(), _mention(canonical_name="Claude", mention_text="Claude", entity_type="model")]}
+    kept, stats = process_episode_mentions_with_stats(raw, 1, tech)
+    assert len(kept) == 2 and stats["raw"] == 2 and stats["kept"] == 2
+    # The plain wrapper returns the same mentions — the eval harness relies on it.
+    assert process_episode_mentions(raw, 1, tech) == kept
+
+
+def test_filter_stats_on_bad_input_are_all_zero() -> None:
+    from pipeline.scrapers.ai_daily.extract_entities import FILTER_STAT_KEYS, process_episode_mentions_with_stats
+
+    kept, stats = process_episode_mentions_with_stats({"mentions": "nope"}, 1, get_profile("entity_extraction"))
+    assert kept == [] and stats == {k: 0 for k in FILTER_STAT_KEYS}
