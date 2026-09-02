@@ -108,8 +108,14 @@ def sync_blog_mirror() -> bool:
     return result.returncode == 0
 
 
-def save_url(url: str, show_slug: str | None, skip_extract: bool = False) -> bool:
-    """Full save flow for one URL. Returns True on success."""
+def save_url(url: str, show_slug: str | None, skip_extract: bool = False, sync: bool = True) -> bool:
+    """Full save flow for one URL. Returns True on success.
+
+    sync=False stores and extracts but leaves the Notion entity sync and the Blog Posts
+    mirror to the caller: the weekly intake ingests dozens of posts in one run, and
+    syncing the whole tech group after each one cost ~40 s a post (measured on the
+    first live run, 2026-09-02) — one sync at the end does the same work once.
+    """
     if is_pdf(url):
         save_pdf(url)
         return True
@@ -137,11 +143,19 @@ def save_url(url: str, show_slug: str | None, skip_extract: bool = False) -> boo
         # is a transcript, not a blurb — there is no show-notes fallback on this path.
         ok = step_entity_extraction(cfg, [EpisodeSource(episode_id, "transcript")], dry_run=False)
 
+    if not sync:
+        return ok
     # Sync even when extraction partially failed — whatever DID load should reach
     # Notion; the False return still fails the run so the gap is visible.
-    ok = step_notion_sync(cfg, dry_run=False) and ok
-    ok = sync_blog_mirror() and ok
-    return ok
+    return sync_curated(cfg) and ok
+
+
+def sync_curated(cfg=None) -> bool:
+    """One Notion pass for everything curated: the tech group's entities (any curated
+    show's config addresses the shared Tech DB) and the Blog Posts full-text mirror."""
+    cfg = cfg or get_show("saved-articles")
+    ok = step_notion_sync(cfg, dry_run=False)
+    return sync_blog_mirror() and ok
 
 
 def main() -> None:

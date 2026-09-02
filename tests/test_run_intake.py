@@ -29,6 +29,9 @@ def _shadow_unless_marked_live(request, monkeypatch):
     if not request.node.get_closest_marker("live"):
         monkeypatch.setattr(R, "AUTO_INGEST", False)
     monkeypatch.setattr(store, "pending", lambda conn, status, limit=None: [])
+    # The end-of-run Notion pass shells out to two sync scripts; a test that wants to
+    # count it replaces this stub.
+    monkeypatch.setattr(R, "sync_ingested", lambda: True)
 
 
 def _candidate(url: str, source: str = "openai-rss", title: str = "T") -> Candidate:
@@ -713,6 +716,45 @@ def test_auto_ingest_catches_up_saves_judged_in_shadow_mode(monkeypatch) -> None
     calls.clear()
     R.run(R.parse_args([]), object(), "tok", "fc", "or")
     assert calls == [], "shadow mode never touches the backlog"
+
+
+def test_notion_is_synced_once_per_run_after_ingesting(monkeypatch) -> None:
+    """Per-post syncing cost ~40 s a post on the first live run (2026-09-02); the run
+    ingests with sync=False and makes one Notion pass at the end — and none when
+    nothing was ingested. A failed pass fails the run: the rows are stored, but
+    Kevin's surface is behind."""
+    syncs: list = []
+    _stub_one_saved_candidate(monkeypatch, [])
+    monkeypatch.setattr(R, "sync_ingested", lambda: syncs.append(1) or True)
+
+    monkeypatch.setattr(R, "AUTO_INGEST", False)
+    assert R.run(R.parse_args([]), object(), "tok", "fc", "or") == 0
+    assert syncs == [], "nothing ingested, nothing to sync"
+
+    monkeypatch.setattr(R, "AUTO_INGEST", True)
+    assert R.run(R.parse_args([]), object(), "tok", "fc", "or") == 0
+    assert syncs == [1], "one pass for the run, not one per post"
+
+    monkeypatch.setattr(R, "sync_ingested", lambda: False)
+    assert R.run(R.parse_args([]), object(), "tok", "fc", "or") == 1
+
+    # --overrides-only ingests too, so it syncs too — once, and only if something landed
+    syncs.clear()
+    monkeypatch.setattr(R, "sync_ingested", lambda: syncs.append(1) or True)
+    monkeypatch.setattr(R, "process_overrides", lambda *a, **k: (2, 0, []))
+    assert R.run(R.parse_args(["--overrides-only"]), object(), "tok", None, None) == 0
+    assert syncs == [1]
+    monkeypatch.setattr(R, "process_overrides", lambda *a, **k: (0, 0, []))
+    assert R.run(R.parse_args(["--overrides-only"]), object(), "tok", None, None) == 0
+    assert syncs == [1]
+
+
+def test_save_for_intake_defers_the_sync(monkeypatch) -> None:
+    import pipeline.save_item as SI
+    seen: dict = {}
+    monkeypatch.setattr(SI, "save_url", lambda url, show, skip_extract=False, sync=True: seen.update(sync=sync) or True)
+    assert R.save_for_intake("https://x/a", None) is True
+    assert seen == {"sync": False}
 
 
 def test_main_closes_the_connection_even_when_the_run_raises(monkeypatch) -> None:
