@@ -15,14 +15,13 @@ reason, and the only human input left is the "Pull anyway" override.
     ./venv/bin/python run_intake.py --overrides-only    # just ingest the rows Kevin ticked
     ./venv/bin/python run_intake.py --ensure-log-schema # reshape the Notion DB into the log
 
-SHADOW MODE (this PR): `AUTO_INGEST = False`. Verdicts are recorded and mirrored to
-Notion, and a `save` lands at status `judged` — "we would have saved this" — but
-nothing is ingested except rows Kevin explicitly ticked. PR 3 flips the constant once
-`evals/intake` clears its floor (recall ≥ 0.9 on save, precision ≥ 0.7) and one shadow
-week reads right. Flipping it changes three things in this file, all already wired:
-a `save` is ingested in the same loop iteration, the weekly line's titles come from
-`saved` rather than `judged`, and its count comes from `counts["saved"]` (actual
-ingests) rather than `counts["would_save"]` (verdicts). Nothing else.
+AUTO-INGEST is on (`AUTO_INGEST = True`, since 2026-09-02): a `save` is ingested in the
+same run through save_item.save_url (extract mentions → Tech DB, full text → Blog Posts)
+and lands at status `saved`; the weekly line's titles and count come from `saved`;
+saves judged earlier and never ingested are caught up, bounded, every run. Setting the
+constant back to False returns to shadow mode — verdicts recorded and mirrored, a
+`save` parked at `judged` ("we would have saved this"), nothing ingested but the rows
+Kevin ticks.
 
 Failure states are visible by construction: a missing table, a missing rubric, or any
 failed candidate exits non-zero (so blogs.yml's failure notify fires), and the Slack
@@ -54,12 +53,14 @@ from pipeline.scrapers.intake import judge, mentions, notion_log, sources, store
 from pipeline.scrapers.intake.sources import Candidate  # noqa: E402
 
 # ── the switch ──────────────────────────────────────────────────────────────
-# Shadow mode. PR 3 sets this True after the eval floor clears (evals/intake:
-# recall ≥ 0.9 on `save`, precision ≥ 0.7) and one week of shadow verdicts reads
-# right to Kevin. While False, a `save` verdict is recorded at status `judged` and
-# the weekly line says "would save". Overrides still ingest either way, because
+# Flipped True 2026-09-02 evening. The eval floor cleared on Kevin's own labels (he
+# reviewed all 75 candidates on the correction page and approved them unchanged:
+# recall 0.96, precision 0.91 under rubric v2), he read the first shadow run's 40
+# would-saves in the Notion log, and chose to go live the same day rather than wait
+# a week. While False (shadow mode), a `save` verdict is recorded at status `judged`
+# and the weekly line says "would save"; overrides still ingest either way, because
 # those are Kevin's own decisions and were never the judge's to make.
-AUTO_INGEST = False
+AUTO_INGEST = True
 
 # One cap, applied where the money is: each judged candidate costs one Firecrawl
 # scrape plus two model calls (~$0.002). Discovery itself is free now — it writes
@@ -74,6 +75,10 @@ LINK_RESOLVE_LIMIT = 40
 # Rows to re-push to Notion per run when the log is behind. Bounded so a long
 # outage drains over several runs instead of arriving as one huge burst.
 MAX_MIRROR_CATCHUP = 100
+# Saves judged earlier but never ingested (the shadow-mode backlog, or a run that died
+# between judging and ingesting) to ingest per run, on top of the day's work. Each is a
+# Firecrawl scrape plus an extraction (~$0.03), so bounded like everything else here.
+MAX_INGEST_CATCHUP = 40
 
 SOURCE_CHOICES = ("all", "feeds", "podcast-cited")
 
@@ -380,7 +385,7 @@ def _mirror(conn, token: str, db_id: str, candidate_id: int,
 
 def weekly_line(counts: dict, would_save: list[str], held: list[str], *,
                 auto_ingest: bool, backlog: int = 0, unknown_overrides: int = 0,
-                sources_label: str = "all") -> str:
+                sources_label: str = "all", ingest_backlog: int = 0) -> str:
     """The one line every run posts — a dry week included.
 
     The titles matter more than the counts: "would save 9" tells Kevin nothing he can
@@ -414,6 +419,8 @@ def weekly_line(counts: dict, would_save: list[str], held: list[str], *,
         parts.append(f"{unknown_overrides} ticked row(s) not in {store.TABLE}")
     if backlog:
         parts.append(f"{backlog} waiting for the next run")
+    if ingest_backlog:
+        parts.append(f"{ingest_backlog} judged save(s) still waiting to ingest")
 
     line = f":inbox_tray: *list-maker intake*{mode} [{sources_label}]: " + " · ".join(parts)
     if would_save:
@@ -658,6 +665,27 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
         if not _mirror(conn, token, notion_log.INTAKE_DB_ID, row["id"], known_pages):
             failures += 1
 
+    # A `judged` row with a `save` verdict is a decision nobody acted on: the shadow
+    # runs left 40 of them, and a run that dies between judging and ingesting leaves
+    # more. Catch them up here, bounded, so flipping the switch is not the only way a
+    # past verdict ever becomes a row in the Tech DB.
+    ingest_backlog = 0
+    if AUTO_INGEST:
+        from pipeline.save_item import save_url  # late import: avoids a module cycle
+
+        waiting = [r for r in store.pending(conn, store.STATUS_JUDGED)
+                   if r.get("verdict") == "save" and r["id"] not in in_work]
+        catchup = waiting[:MAX_INGEST_CATCHUP]
+        ingest_backlog = max(0, len(waiting) - MAX_INGEST_CATCHUP)
+        if catchup:
+            log.info("ingesting %d save(s) judged earlier but never ingested (%d more wait)",
+                     len(catchup), ingest_backlog)
+        for row in catchup:
+            if not ingest_one(conn, row, save_url):
+                failures += 1
+            if not _mirror(conn, token, notion_log.INTAKE_DB_ID, row["id"], known_pages):
+                failures += 1
+
     _, override_failed, unknown = process_overrides(conn, token, notion_log.INTAKE_DB_ID)
     if unknown:
         log.warning("%d ticked row(s) have no %s row: %s", len(unknown), store.TABLE,
@@ -677,7 +705,7 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
                      store.STATUS_SAVED if AUTO_INGEST else store.STATUS_JUDGED),
         store.titles(conn, started, store.STATUS_HELD),
         auto_ingest=AUTO_INGEST, backlog=backlog, unknown_overrides=len(unknown),
-        sources_label=args.sources,
+        sources_label=args.sources, ingest_backlog=ingest_backlog,
     )):
         log.error("the weekly intake line could not be posted to Slack — "
                   "is SLACK_WEBHOOK_URL set and valid?")

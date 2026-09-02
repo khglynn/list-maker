@@ -19,16 +19,30 @@ from pipeline.scrapers.intake import store
 from pipeline.scrapers.intake.sources import Candidate
 
 
+@pytest.fixture(autouse=True)
+def _shadow_unless_marked_live(request, monkeypatch):
+    """Every run() test states its mode. AUTO_INGEST is True in production (2026-09-02),
+    so a test that never mentions the switch would silently take the ingest path;
+    shadow mode is the safe default here, and a test opts into the live path by
+    setting R.AUTO_INGEST itself. The catch-up query is inert unless a test stubs it.
+    The one test that pins the production value carries the `live` marker."""
+    if not request.node.get_closest_marker("live"):
+        monkeypatch.setattr(R, "AUTO_INGEST", False)
+    monkeypatch.setattr(store, "pending", lambda conn, status, limit=None: [])
+
+
 def _candidate(url: str, source: str = "openai-rss", title: str = "T") -> Candidate:
     return Candidate(source=source, title=title, url=url, published_on=date(2026, 9, 1))
 
 
-# ── shadow mode is the point of this PR ─────────────────────────────────────
+# ── the switch ──────────────────────────────────────────────────────────────
 
-def test_shadow_mode_is_off_until_the_eval_floor_clears() -> None:
-    # The one line PR 3 changes. If this ever flips without the eval, the review that
-    # catches it is this assertion.
-    assert R.AUTO_INGEST is False
+@pytest.mark.live
+def test_auto_ingest_is_on_since_kevin_approved_the_labels() -> None:
+    """Flipped 2026-09-02 after the eval floor cleared on Kevin's own labels (recall 0.96,
+    precision 0.91) and he read the first shadow run. The constant is the switch back;
+    this assertion is what makes a silent flip in either direction a reviewed change."""
+    assert R.AUTO_INGEST is True
 
 
 # ── the weekly line ─────────────────────────────────────────────────────────
@@ -674,6 +688,31 @@ def test_main_exits_non_zero_so_the_workflow_notify_fires(monkeypatch) -> None:
 
     monkeypatch.setattr(R, "run", lambda *a, **k: 0)
     R.main([])  # a clean run returns normally, so the step exits 0
+
+
+def test_auto_ingest_catches_up_saves_judged_in_shadow_mode(monkeypatch) -> None:
+    """The shadow runs left rows at `judged` + `save`; with the switch on, a run must
+    ingest them, bounded, not only the rows it judged itself."""
+    calls: list = []
+    _stub_one_saved_candidate(monkeypatch, [])
+    monkeypatch.setattr(R, "ingest_one", lambda *a, **k: calls.append(a[1]["id"]) or True)
+    backlog = [{"id": 101, "url": "https://x/a", "verdict": "save"},
+               {"id": 102, "url": "https://x/b", "verdict": "save"},
+               {"id": 103, "url": "https://x/c", "verdict": "skip"}]  # a skip is never ingested
+    monkeypatch.setattr(R.store, "pending",
+                        lambda conn, status, limit=None: backlog if status == R.store.STATUS_JUDGED else [])
+    monkeypatch.setattr(R, "AUTO_INGEST", True)
+    monkeypatch.setattr(R, "MAX_INGEST_CATCHUP", 1)
+    lines: list = []
+    monkeypatch.setattr(R, "post_slack", lambda text: lines.append(text) or True)
+    assert R.run(R.parse_args([]), object(), "tok", "fc", "or") == 0
+    assert calls == [7, 101], "the day's own save first, then the backlog within the cap"
+    assert "1 judged save(s) still waiting to ingest" in lines[-1]
+
+    monkeypatch.setattr(R, "AUTO_INGEST", False)
+    calls.clear()
+    R.run(R.parse_args([]), object(), "tok", "fc", "or")
+    assert calls == [], "shadow mode never touches the backlog"
 
 
 def test_main_closes_the_connection_even_when_the_run_raises(monkeypatch) -> None:
