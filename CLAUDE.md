@@ -169,7 +169,7 @@ cd ~/DevKev/personal/list-maker && set -a && source .env.local && source pipelin
 ## Relevant Docs & Links
 
 - **Engineering principles:** `docs/principles.md` — distilled from Kevin's four research guides (legibility, automation planes, data provenance, dependency hygiene). Read before substantive pipeline changes; the full-reasoning canonical guides live in his Obsidian vault.
-- **Live plan:** `claude-plans/2026-09-01-ground-it-cleanup-plan.md` (the cleanup pass + the next arc)
+- **Live plan:** `claude-plans/2026-09-02-curated-intake-v2/PLAN.md` (the current arc: judged intake + ads as data); its parent `claude-plans/2026-09-01-ground-it-cleanup-plan.md` holds the cleanup pass, Kevin's decisions, and the phases after this arc
 - **Origins:** `claude-plans/archive/2025/2025-12-12-initial-plan.md` and `…-project-context.md` (the original research chats, summarized)
 - **Original research chats:**
   - `~/Documents/HG Main/0.0 Daily Notes + Projects/2025/Q4/11 Nov/Projects/Notes organizer workflow - agent/AI chats on this topic/Unknown - CSV Playlist Creation Guide_67e70c24.md`
