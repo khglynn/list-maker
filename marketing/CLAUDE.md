@@ -27,7 +27,7 @@ python3 create_mosaic.py --config sop/config.json --tile-size 30  # override set
 ### Step 1: Install Dependencies
 
 ```bash
-cd /Users/KevinHG/DevKev/personal/list-maker/marketing
+cd ~/DevKev/personal/list-maker/marketing
 pip install spotipy python-dotenv Pillow numpy tqdm psycopg2-binary
 ```
 

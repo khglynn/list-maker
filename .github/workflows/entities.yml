@@ -8,7 +8,8 @@ defaults:
 
 on:
   # No schedule: block on purpose — the Cloudflare Worker cron (cloudflare-trigger/)
-  # is the durable trigger (daily 11:00 UTC via workflow_dispatch). GitHub's own
+  # is the durable trigger (daily; the exact time lives in worker.js's dispatchesFor —
+  # don't restate it here, that's how three stale copies happened). GitHub's own
   # cron silently disables on public repos after 60 idle days; the Worker doesn't,
   # and a failed dispatch alerts. Verified live 2026-06-11 (GH_PAT = the reused
   # fine-grained GITHUB_HG_CLAUDE_TOKEN, expires 2027-01-20 — dispatch failures
@@ -60,10 +61,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -165,7 +166,7 @@ jobs:
 
       - name: Create issue on failure (non-dry-run)
         if: failure() && github.event.inputs.dry_run != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const { owner, repo } = context.repo;

@@ -4,7 +4,7 @@
 
 ## The weekly loop (runs itself)
 
-Every Monday 13:00 UTC, `blogs.yml` (triggered by the Cloudflare Worker once GH_PAT is live; interim GitHub schedule until then):
+Every Monday (dispatched by the Cloudflare Worker's daily cron — see `cloudflare-trigger/worker.js`), `blogs.yml`:
 
 1. **Discovers** candidate posts from the mentions DB — URLs the podcasts actually cited (registered blog domains + any `blog_post`-typed mention with a source URL), minus anything already ingested or already queued.
 2. **Enriches** each new candidate via Firecrawl: word count + **Links Out** (outbound-link density — the pull signal: posts citing many resources improve the mentions DB most). Capped at 25 new rows per run; the overflow logs and waits.

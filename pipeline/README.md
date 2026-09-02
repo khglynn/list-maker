@@ -230,7 +230,7 @@ If the pipeline fails with an auth error:
 ## Setup (Local)
 
 ```bash
-cd /Users/KevinHG/DevKev/personal/list-maker/pipeline
+cd ~/DevKev/personal/list-maker/pipeline
 source venv/bin/activate
 ```
 
@@ -248,7 +248,7 @@ In CI, these come from GitHub secrets instead.
 
 For full transcripts (last 25 episodes):
 ```bash
-cd /Users/KevinHG/DevKev/personal/list-maker/pipeline/scrapers/ai_daily
+cd ~/DevKev/personal/list-maker/pipeline/scrapers/ai_daily
 python3 transcripts.py --limit 25
 ```
 
@@ -259,7 +259,7 @@ python3 extract_entities.py --limit 5 --offset 0
 
 Guarded scale workflow (preflight + automatic quality gates):
 ```bash
-cd /Users/KevinHG/DevKev/personal/list-maker
+cd ~/DevKev/personal/list-maker
 pipeline/venv/bin/python pipeline/scrapers/ai_daily/run_guarded_backfill.py \
   --since-date 2025-08-08 \
   --preflight-new 10 \

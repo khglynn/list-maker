@@ -6,10 +6,12 @@ Finds correct URLs for 404 episodes using Firecrawl search,
 scrapes them, and saves to JSON files.
 
 Usage:
-    python tal_fix_404s.py --dry-run           # Show what would be fixed
-    python tal_fix_404s.py --limit 5           # Process first 5 episodes
-    python tal_fix_404s.py --execute           # Process all 404 episodes
+    python fix_404s.py --dry-run           # Show what would be fixed
+    python fix_404s.py --limit 5           # Process first 5 episodes
+    python fix_404s.py --execute           # Process all 404 episodes
 """
+
+from __future__ import annotations
 
 import argparse
 import json
