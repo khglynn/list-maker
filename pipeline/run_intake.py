@@ -68,6 +68,9 @@ DEFAULT_FEED_LOOKBACK_DAYS = 14
 # The link resolver's window: a report cited on Monday should be judged this week.
 PODCAST_CITED_SINCE_DAYS = 14
 LINK_RESOLVE_LIMIT = 40
+# Rows to re-push to Notion per run when the log is behind. Bounded so a long
+# outage drains over several runs instead of arriving as one huge burst.
+MAX_MIRROR_CATCHUP = 100
 
 SOURCE_CHOICES = ("all", "feeds", "podcast-cited")
 
@@ -417,6 +420,8 @@ def print_dry_run(notes: list[str], candidates: list[Candidate], collapsed: int,
     """The plan, printed. This is how the run is verified against production before
     anything writes: real feeds, real Neon reads, no scrapes and no model calls."""
     print("\nINTAKE DRY RUN — no Neon writes, no Notion writes, no model calls, no per-post scrapes")
+    print("  (discovery itself is live: the OpenAI feed is read and Anthropic's two index")
+    print("   pages are scraped once each — two Firecrawl credits, not one per candidate)")
     print(f"  run at {datetime.now(timezone.utc).isoformat(timespec='seconds')}")
     if not table_ok:
         print(f"  ! {store.TABLE} does not exist yet — every candidate reads as new.")
@@ -593,6 +598,18 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
 
     ingested = store.already_ingested_urls(conn, [r["url"] for r in work])
     known_pages = notion_log.existing_page_ids(token, notion_log.INTAKE_DB_ID)
+
+    # Catch the log up first. A row judged last week whose Notion write failed is
+    # never revisited by the judging loop — its verdict is settled — so without this
+    # one Notion outage would keep it off Kevin's surface permanently.
+    in_work = {w["id"] for w in work}
+    stale = [s for s in store.needs_mirroring(conn, limit=MAX_MIRROR_CATCHUP)
+             if s["id"] not in in_work]
+    if stale:
+        log.info("mirroring %d row(s) the log is missing or behind on", len(stale))
+    for row in stale:
+        if not _mirror(conn, token, notion_log.INTAKE_DB_ID, row["id"], known_pages):
+            failures += 1
     for row in work:
         try:
             status = process_candidate(

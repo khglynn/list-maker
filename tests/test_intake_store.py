@@ -133,6 +133,17 @@ def test_pending_and_limit_are_ordered_newest_post_first() -> None:
     assert sql.endswith("LIMIT %s") and params == ("judged", 5)
 
 
+def test_needs_mirroring_finds_rows_the_log_never_got_or_got_stale() -> None:
+    conn = _Conn([[]])
+    store.needs_mirroring(conn, limit=100)
+    sql, params = conn.calls[0]
+    # never mirrored, or mirrored before the row last changed
+    assert "notion_page_id IS NULL OR notion_synced_at IS NULL" in sql
+    assert "notion_synced_at < updated_at" in sql
+    # a row still at `discovered` has nothing to show yet — no verdict, no scrape
+    assert "status <> %s" in sql and params == ("discovered", 100)
+
+
 def test_already_ingested_urls_short_circuits_on_an_empty_list() -> None:
     conn = _Conn()
     assert store.already_ingested_urls(conn, []) == set()

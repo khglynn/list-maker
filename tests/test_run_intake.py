@@ -404,3 +404,54 @@ def test_dry_run_writes_nothing(monkeypatch, capsys) -> None:
     assert "pdf (held): 1" in out
     assert "would scrape + judge: 1" in out
     assert "rubric version v0abc" in out
+
+
+# ── the log catches up on what a Notion outage dropped ──────────────────────
+
+def test_run_mirrors_rows_the_log_is_behind_on_before_judging(monkeypatch) -> None:
+    """A verdict Neon holds but Notion never got must not be stranded forever.
+
+    The judging loop only visits rows that still need a verdict, so a row whose Notion
+    write failed last week is never revisited — without this catch-up, one outage
+    keeps a judged post off Kevin's surface permanently.
+    """
+    monkeypatch.setattr(store, "table_exists", lambda conn: True)
+    monkeypatch.setattr(R.judge, "load_rubric", lambda: ("rubric", "v0abc"))
+    monkeypatch.setattr(R, "discover", lambda *a, **k: ([], []))
+    monkeypatch.setattr(store, "upsert_candidates", lambda conn, c: (0, 0))
+    monkeypatch.setattr(store, "needs_judging", lambda conn, v: [{"id": 7, "url": "https://x/7"}])
+    monkeypatch.setattr(store, "already_ingested_urls", lambda conn, urls: set())
+    monkeypatch.setattr(R.notion_log, "existing_page_ids", lambda token, db: {})
+    monkeypatch.setattr(store, "needs_mirroring",
+                        lambda conn, limit=None: [{"id": 7, "url": "https://x/7"},
+                                                  {"id": 9, "url": "https://x/9"}])
+    monkeypatch.setattr(R, "process_candidate", lambda *a, **k: "judged")
+    monkeypatch.setattr(R, "process_overrides", lambda *a, **k: (0, 0, []))
+    monkeypatch.setattr(store, "weekly_counts", lambda conn, since: _counts())
+    monkeypatch.setattr(store, "titles", lambda conn, since, status, **k: [])
+    mirrored: list[int] = []
+    monkeypatch.setattr(R, "_mirror",
+                        lambda conn, token, db, cid, pages=None: mirrored.append(cid) or True)
+    monkeypatch.setattr(R, "post_slack", lambda text: True)
+
+    assert R.run(R.parse_args([]), object(), "tok", "fc", "or") == 0
+    # 9 is caught up; 7 is in this run's work list and is mirrored there, once
+    assert mirrored == [9, 7]
+
+
+def test_a_failed_mirror_fails_the_run(monkeypatch) -> None:
+    monkeypatch.setattr(store, "table_exists", lambda conn: True)
+    monkeypatch.setattr(R.judge, "load_rubric", lambda: ("rubric", "v0abc"))
+    monkeypatch.setattr(R, "discover", lambda *a, **k: ([], []))
+    monkeypatch.setattr(store, "upsert_candidates", lambda conn, c: (0, 0))
+    monkeypatch.setattr(store, "needs_judging", lambda conn, v: [])
+    monkeypatch.setattr(store, "already_ingested_urls", lambda conn, urls: set())
+    monkeypatch.setattr(R.notion_log, "existing_page_ids", lambda token, db: {})
+    monkeypatch.setattr(store, "needs_mirroring", lambda conn, limit=None: [{"id": 9}])
+    monkeypatch.setattr(R, "_mirror", lambda *a, **k: False)
+    monkeypatch.setattr(R, "process_overrides", lambda *a, **k: (0, 0, []))
+    monkeypatch.setattr(store, "weekly_counts", lambda conn, since: _counts())
+    monkeypatch.setattr(store, "titles", lambda conn, since, status, **k: [])
+    monkeypatch.setattr(R, "post_slack", lambda text: True)
+    # the Slack line still posts — the week is still reported — but the run is red
+    assert R.run(R.parse_args([]), object(), "tok", "fc", "or") == 1

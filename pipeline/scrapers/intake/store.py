@@ -209,6 +209,31 @@ def needs_judging(conn, prompt_version: Optional[str], limit: Optional[int] = No
         return [dict(r) for r in cur.fetchall()]
 
 
+def needs_mirroring(conn, limit=None) -> list[dict]:
+    """Rows the Notion log has never seen, or has seen in an older state.
+
+    Without this a mirror failure is permanent: the judging loop only visits rows
+    that still need a verdict, so a row whose Notion write failed keeps its verdict
+    in Neon and never appears on the surface Kevin reads. The run would report the
+    failure once and then be quiet about it forever. Catching up at the start of each
+    run turns a Notion outage into a delay instead of a hole.
+    """
+    sql = f"""
+        SELECT {SELECT_COLUMNS} FROM {TABLE}
+        WHERE status <> %s
+          AND (notion_page_id IS NULL OR notion_synced_at IS NULL
+               OR notion_synced_at < updated_at)
+        ORDER BY updated_at DESC
+    """
+    params: list = [STATUS_DISCOVERED]
+    if limit is not None:
+        sql += " LIMIT %s"
+        params.append(limit)
+    with conn.cursor() as cur:
+        cur.execute(sql, tuple(params))
+        return [dict(r) for r in cur.fetchall()]
+
+
 def get_by_id(conn, candidate_id: int) -> Optional[dict]:
     """One row, re-read. The Notion mirror uses this rather than the dict it started
     with, so the log shows what the database says and not what this process believes."""
