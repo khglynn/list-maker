@@ -548,6 +548,43 @@ _MIN_SNIPPET_CHARS_FOR_WINDOW = 25
 # the window is only ~320 characters, so a coincidental four-letter hit is rare.
 _MIN_NAME_CHARS_FOR_WINDOW = 4
 
+# The show's own distribution and support channels. Every outro names them in the same
+# breath as the sponsor thank-you ("...go to patreon.com/slash aidailybrief, or you can
+# subscribe on Apple Podcasts"), so they sit inside the window AND are genuinely named
+# there — the naming test cannot tell them from an advertiser, because structurally they
+# look identical. The difference is economic: a show promoting itself is not an
+# advertiser paying the show, and counting it as one puts a Sponsor checkbox on Apple
+# Podcasts.
+#
+# This gates the PHRASE branch only. If one of these ever really buys a read, the
+# publisher's own "Brought to you by:" block says so and the roster branch tags it
+# before this list is ever consulted.
+# Token SEQUENCES, not whole names: the same channel arrives under many spellings
+# ("Patreon AI Daily Brief", "AI Daily Brief Patreon", "patreon.com slash ai-dailybrief"),
+# and the extractor picks a different one each time. Matching a contiguous token run
+# catches every variant without a list that has to be kept in step with the model.
+_HOUSE_PROMO_TOKEN_SEQUENCES = (
+    ("patreon",),
+    ("apple", "podcasts"),
+    ("spotify",),
+    ("youtube",),
+    ("ai", "daily", "brief"),
+    ("aidailybrief",),
+    ("ai", "breakdown"),
+    ("aibreakdown",),
+    ("discord",),
+)
+
+
+def is_house_promo(name: str) -> bool:
+    """Is this name one of the show's OWN channels rather than an advertiser?"""
+    tokens = _tokens(name)
+    for sequence in _HOUSE_PROMO_TOKEN_SEQUENCES:
+        n = len(sequence)
+        if any(tuple(tokens[i : i + n]) == sequence for i in range(len(tokens) - n + 1)):
+            return True
+    return False
+
 
 def named_in_window(
     candidate_names: Sequence[str], normalized_transcript: str, window: tuple[int, int]
@@ -560,6 +597,10 @@ def named_in_window(
     suspend access to Fable 5" ended up tagged as advertising. A real sponsor read says
     the product's name, usually several times, so requiring the name to appear in the
     window separates "in the ad" from "next to the ad" without any model call.
+
+    The show's own channels (is_house_promo) never satisfy this test: they are named
+    in every outro alongside the sponsor thank-you, so they are structurally
+    indistinguishable from an advertiser here and only the roster could tell.
 
     Matching is done on squashed text (lowercase alphanumerics, no spaces) so a
     transcript that renders "Robots and Pencils" for "Robots & Pencils", or splits
@@ -581,7 +622,7 @@ def named_in_window(
         offset += len(token)
     for name in candidate_names:
         squashed = squash_name(name)
-        if len(squashed) < _MIN_NAME_CHARS_FOR_WINDOW:
+        if len(squashed) < _MIN_NAME_CHARS_FOR_WINDOW or is_house_promo(name):
             continue
         idx = squashed_window.find(squashed)
         while idx >= 0:

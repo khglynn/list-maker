@@ -16,6 +16,7 @@ from pipeline.scrapers.ai_daily.sponsors import (
     SPONSOR_CUES,
     SPONSOR_WINDOW_TRAIL_CHARS,
     SponsorWindow,
+    is_house_promo,
     named_in_window,
     Sponsor,
     SponsorVerdict,
@@ -607,3 +608,87 @@ def test_window_carries_the_cue_boundary_and_merging_keeps_the_earliest() -> Non
     assert len(merged) == 1
     # The naming region of a merged window starts after its FIRST cue.
     assert merged[0].cue == "today's sponsor"
+
+
+# --------------------------------------------------------------------------
+# the show promoting itself is not an advertiser (independent review, 2026-09-02)
+# --------------------------------------------------------------------------
+
+# The real outro of AI Daily Brief episode 4544, verbatim from Neon. Every episode ends
+# this way, so this is the recurring shape — not one bad historical row.
+EP_4544_OUTRO = (
+    "Thank you to today's sponsors, KPMG, Blitzy, and Robots and Pencils. "
+    "To get an ad-free version of the show, go to patreon.com/slash aidailybrief, "
+    "or you can subscribe on Apple Podcasts."
+)
+
+
+def _outro_verdict(name):
+    return classify_sponsor(
+        {
+            "canonical_name": name,
+            "mention_text": name,
+            "context_snippet": (
+                "To get an ad-free version of the show, go to patreon.com/slash "
+                "aidailybrief, or you can subscribe on Apple Podcasts."
+            ),
+            "is_editorial": True,
+        },
+        [],
+        sponsor_windows(EP_4544_OUTRO),
+        transcript_text=EP_4544_OUTRO,
+    )
+
+
+def test_the_shows_own_channels_in_the_outro_are_not_sponsors() -> None:
+    """The outro names Patreon and Apple Podcasts in the same breath as the sponsor
+    thank-you, so they are inside the window AND genuinely named there — structurally
+    identical to an advertiser. They are excluded by economics, not by text."""
+    for name in ("Apple Podcasts", "Patreon AI Daily Brief", "AI Daily Brief Patreon",
+                 "patreon.com slash ai-dailybrief", "Spotify", "YouTube"):
+        assert _outro_verdict(name) == SponsorVerdict(False, None, None), name
+
+
+def test_a_real_sponsor_in_that_same_outro_still_tags() -> None:
+    """The exclusion must not blunt the window it lives in."""
+    verdict = classify_sponsor(
+        {
+            "canonical_name": "Robots & Pencils",
+            "mention_text": "Robots and Pencils",
+            "context_snippet": (
+                "Thank you to today's sponsors, KPMG, Blitzy, and Robots and Pencils."
+            ),
+            "is_editorial": True,
+        },
+        [],
+        sponsor_windows(EP_4544_OUTRO),
+        transcript_text=EP_4544_OUTRO,
+    )
+    assert verdict.is_sponsor and verdict.source == "phrase"
+
+
+def test_house_promo_matches_every_spelling_the_extractor_produces() -> None:
+    """The same channel arrives under many names; a whole-name list would miss them."""
+    for name in ("Patreon", "Patreon AI Daily Brief", "AI Daily Brief Patreon",
+                 "patreon.com/slash aidailybrief", "Apple Podcasts", "Spotify",
+                 "YouTube", "The AI Daily Brief", "AI Breakdown", "Discord"):
+        assert is_house_promo(name), name
+    for name in ("Blitzy", "Vanta", "Notion", "Robots & Pencils", "Web3 with A16Z Crypto"):
+        assert not is_house_promo(name), name
+
+
+def test_the_roster_still_wins_over_the_house_promo_exclusion() -> None:
+    """The gate is on the phrase branch only. If a channel ever really buys a read, the
+    publisher's own block says so and the roster tags it first."""
+    verdict = classify_sponsor(
+        {
+            "canonical_name": "Spotify",
+            "mention_text": "Spotify",
+            "context_snippet": "Today's episode is brought to you by Spotify.",
+            "is_editorial": True,
+        },
+        [Sponsor("Spotify", "https://spotify.com/")],
+        sponsor_windows(EP_4544_OUTRO),
+        transcript_text=EP_4544_OUTRO,
+    )
+    assert verdict == SponsorVerdict(True, "roster", "Spotify")
