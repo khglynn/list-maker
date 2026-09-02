@@ -510,7 +510,10 @@ def require_secrets(args: argparse.Namespace) -> tuple[str, Optional[str], Optio
     needed: list[tuple[str, Optional[str]]] = []
     if not args.dry_run:
         needed.append(("NOTION_TOKEN", token))
-    if not args.dry_run and not args.overrides_only:
+    # Only the mode that actually scrapes and judges needs the scrape and judge keys.
+    # blogs.yml runs --ensure-log-schema as its own step with NOTION_TOKEN alone, and
+    # --overrides-only ingests through save_item, which brings its own.
+    if not (args.dry_run or args.overrides_only or args.ensure_log_schema):
         needed += [("FIRECRAWL_API_KEY", firecrawl_key), ("OPENROUTER_API_KEY", openrouter_key)]
     missing = [name for name, value in needed if not value]
     if missing:

@@ -382,6 +382,26 @@ def test_require_secrets_names_every_missing_key_at_once(monkeypatch) -> None:
     assert all(k in message for k in ("NOTION_TOKEN", "FIRECRAWL_API_KEY", "OPENROUTER_API_KEY"))
 
 
+def test_ensure_log_schema_needs_only_the_notion_token(monkeypatch) -> None:
+    """blogs.yml runs the schema step with NOTION_TOKEN and nothing else.
+
+    Caught by reading that step's env against require_secrets, not by a test: the
+    schema pass neither scrapes nor judges, and demanding those keys would have
+    failed the very first real run at the step before any work happened.
+    """
+    monkeypatch.setenv("NOTION_TOKEN", "tok")
+    for key in ("FIRECRAWL_API_KEY", "OPENROUTER_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+    assert R.require_secrets(R.parse_args(["--ensure-log-schema"]))[0] == "tok"
+
+
+def test_overrides_only_needs_only_the_notion_token(monkeypatch) -> None:
+    monkeypatch.setenv("NOTION_TOKEN", "tok")
+    for key in ("FIRECRAWL_API_KEY", "OPENROUTER_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+    assert R.require_secrets(R.parse_args(["--overrides-only"]))[0] == "tok"
+
+
 def test_a_dry_run_needs_no_secrets(monkeypatch) -> None:
     for key in ("NOTION_TOKEN", "FIRECRAWL_API_KEY", "OPENROUTER_API_KEY"):
         monkeypatch.delenv(key, raising=False)

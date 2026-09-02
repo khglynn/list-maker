@@ -9,7 +9,7 @@
 Every Monday (dispatched by the Cloudflare Worker's daily cron — see `cloudflare-trigger/worker.js`), `blogs.yml` runs `pipeline/run_intake.py`:
 
 1. **Discovers** from four sources: OpenAI's RSS feed, Anthropic's `/news` and `/engineering` index pages (scraped once each), report/paper/blog URLs the podcasts cited, and — for citations that arrived without a link — a search that resolves the URL (`scrapers/intake/links.py`). Everything lands in the `intake_candidates` table in Neon, one row per canonical URL, deduped.
-2. **Pre-checks, deterministically.** Already an episode → `duplicate`. A `.pdf` → `held` (reports live as files in the Obsidian research folder). Scrape failed → `dead`. Under 200 words → `thin`. The models never see these; a script decided, and the row says so.
+2. **Pre-checks, deterministically.** Seven structural reasons, cheapest first, and the models never see any of them — a script decided, and the row says which rule did it. Four need no network at all, so they run before a Firecrawl credit is spent: already an episode → `duplicate`; a `.pdf` → `held` (reports live as files in the Obsidian research folder); an OpenAI Academy course → `academy`; a hiring announcement → `people-news`; published over 400 days ago → `stale` (never applied to a podcast citation — a show citing an old report still counts). Two need the scrape: it failed → `dead`; under 200 words → `thin`.
 3. **Judges** what survives: two cheap models (`google/gemini-3.7-flash` and `openai/gpt-5.6-luna`, through OpenRouter) read the post against `docs/intake-rubric.md` and answer `save` or `skip` with a confidence and a one-line reason. Agree → that verdict. Disagree → **save, marked disputed** — the expensive mistake is missing the report Kevin needed, and a disputed save is visible in Notion.
 4. **Logs everything** to the **📥 Blog Intake** Notion DB (the old Blog Pull Queue, repurposed in place — same rows, same URLs): verdict, confidence, reason, which two models, disputed, status.
 5. **Posts one Slack line**, every week, including a week where nothing happened: judged N · would save K (named) · skipped (with reasons) · disputed · held · failed.
@@ -22,7 +22,7 @@ Running it by hand:
 
 ```
 cd pipeline
-./venv/bin/python run_intake.py --dry-run              # the plan: no writes, no model calls, no scrapes
+./venv/bin/python run_intake.py --dry-run              # the plan: no writes, no model calls, no per-post scrapes
 ./venv/bin/python run_intake.py                        # the full weekly pass
 ./venv/bin/python run_intake.py --sources podcast-cited  # just the citations (fine to run daily)
 ./venv/bin/python run_intake.py --overrides-only       # just ingest the rows you ticked
