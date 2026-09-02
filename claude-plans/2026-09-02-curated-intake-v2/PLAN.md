@@ -1,6 +1,6 @@
 # Curated intake v2 + ads as data — arc plan
 
-**Written:** 2026-09-02 (Fable session "list maker with llm judges"). **Status:** designing → building. **Live cursor:** `NOW.md`. **Parent:** `claude-plans/2026-09-01-ground-it-cleanup-plan.md` → "Next arc" (goal, acceptance, and Kevin's decisions 1–2 live there; not restated).
+**Written:** 2026-09-02 (Fable session "list maker with llm judges"). **Status:** shadow mode live on `main` since 2026-09-02 17:02 CT; PR 3 (auto-ingest on) waits on Kevin's labels + one shadow week. **Live cursor:** `NOW.md`. **Parent:** `claude-plans/2026-09-01-ground-it-cleanup-plan.md` → "Next arc" (goal, acceptance, and Kevin's decisions 1–2 live there; not restated).
 
 **Decisions from Kevin, 2026-09-02 (chat):** (1) the eval set is pre-labeled by the session and corrected by Kevin in one pass; (2) the judge models run through OpenRouter — key "Listmaker", $15/week cap, expires 2027-09-02, stored as the repo secret `OPENROUTER_API_KEY` and in `.env.local`; (3) link resolution for podcast-cited reports is in scope; (4) Notion stays the human surface — the Blog Pull Queue DB becomes the **intake log** (every judged candidate with its verdict and reason), nothing waits on a checkbox.
 
@@ -77,6 +77,7 @@ Each: one concern per commit, tests, CI green, Kevin merges. Never Fable in a fa
 | v2 `60f3a098` (2026-09-02) | 67/75 | 0.962 | 0.895 | 12 | remaining misses are the torn band: pricing inside a program post, teen safeguards, rollout mechanism inside a customer story, a grant program with criteria — Kevin's labels decide |
 
 ## Log
+- 2026-09-02 17:05 — **Landed on main** (PR #33) after Kevin's pastes; retag applied (230/45); first CI run: 69 candidates, 40 would-save (11 disputed), 7 skips, 13 thin, 9 deferred, 60 mirrored. The driving case ("How people are using ChatGPT") judged S1/deck at 0.95.
 - 2026-09-02 13:45 — **PR #32 merged into the arc branch** (446 tests): 7 of 14 review findings confirmed and fixed with tests; the retag dry run now finds 229 ad mentions across 45 entities. The arc's shadow-mode scope is complete; what remains before main is Kevin's two pastes and the retag.
 - 2026-09-02 13:20 — **PR #31 merged into the arc branch** (346 tests): six-lens review + adversarial verification found 8 real issues, all fixed with tests — a failed Slack post now fails the run, a crash mid-judge is retried, a pre-check that overturns a verdict clears it in Neon and Notion. PR #32 (ads) under the same review. Prerequisites for arc → main: Kevin pastes sql/009 and sql/010, then runs the retag.
 - 2026-09-02 13:50 — rubric v1 → v2 from the first live read; Kevin's correction page published (artifact 69d95337, db-backed); PR #31 (intake shadow mode, plumbing) open as draft against the arc branch, under review; backfill 54/64.

@@ -1,21 +1,18 @@
 # NOW — list-maker
 
-**Last updated:** 2026-09-02 · **Mode:** live (routine cron-driven operation since 2026-06-07; hardening on top)
+**Last updated:** 2026-09-02 (evening) · **Mode:** live (routine cron-driven operation since 2026-06-07; hardening on top)
 
 ## Right now
-- `main` carries PR #4 (alert noise + failure paths), #11 (hygiene + dependency gate), #23 (an all-filtered extraction is a declared outcome) and the first Dependabot floor bumps. The Cloudflare Worker was redeployed 2026-09-01 (version `92b6a638`): one 20:30 UTC cron; the pulse runs *after* the import on the 1st/15th.
-- Local venv rebuilt on Python 3.12 (matches CI). 224 pytest + 6 node tests green.
-- The layout cleanup landed with this file: `web/` deleted, 2025/June plans archived, ROADMAP/COMPLETED folded into `BACKLOG.md` + DEVLOG, compaction hooks repointed here, five accidental batch dirs untracked.
-- Full diagnosis of the August alerts and the blogs: `DEVLOG.md` 2026-09-01. Kevin's decisions: the plan's "Decisions" section.
+- **The curated-intake arc landed on `main` 2026-09-02 17:02 CT** (PR #33: intake in shadow mode + ads as data, 446 tests). Kevin pasted `sql/009` + `sql/010`; the sponsor retag was applied (230 mentions, 45 entities, no deletes); the first real judged run ran in CI the same evening: 69 candidates, 40 would-save, 7 skips, 13 thin scrapes, 9 waiting for the cap, 60 rows mirrored to the 📥 Blog Intake log. `AUTO_INGEST = False` — nothing is ingested until the eval clears on Kevin's labels and one shadow week reads right (that flip is PR 3).
+- Hotfix PR #30 merged 16:34 CT; today's 15:30 daily run had already failed on that bug and was re-run for the tech shows (extraction fine; the health check stayed red on the PCHH backfill's Notion drift, which tomorrow's run clears). Issue #34 closed with the cause.
+- The Cloudflare Worker is unchanged (`92b6a638`): entities daily, blogs Mondays now run `run_intake.py`.
+- Full story: `DEVLOG.md` 2026-09-02; design and eval reads: `claude-plans/2026-09-02-curated-intake-v2/PLAN.md`.
 
 ## Open items (need Kevin)
-1. **Merge PR #30** (the CSV-columns hotfix) before the 20:30 UTC daily run — still open at 13:45 CT on 09-02.
-2. **Two SQL pastes, in order:** `pipeline/scrapers/ai_daily/sql/009_sponsor_provenance.sql` (one nullable column on `ai_mentions`), then `010_intake_candidates.sql` (the intake table). Both additive and idempotent. Paste-ready commands are in the chat.
-3. **Then the retag:** `retag_sponsor_mentions.py --dry-run` (prints 229 mentions / 45 entities), then `--apply` (no deletes; touches the entities so the next daily sync republishes their Notion pages).
-4. **The labels page** (artifact 69d95337): flip what's wrong, answer seven questions, press Done. Until then the eval runs on the reviewers' provisional labels.
-5. **After 2–3:** the arc branch goes to `main` as one PR (intake in shadow mode + ads as data; 446 tests) — Kevin merges. The first real weekly run then fills the 📥 Blog Intake log with verdicts; auto-ingest stays off until the eval floor clears on Kevin's labels and one shadow week reads right.
-6. **Dependabot #27–#29** still open.
-7. **Backfill (decision 6):** PCHH done (2,073 mentions, Notion synced in ten-minute resumable attempts); Culture Gabfest's 909 episodes are extracting now, several hours, laptop open. The main working tree stays on the pre-merge arc commit until it finishes (the run reads pipeline files from disk); the merged arc is on origin.
+1. **The labels page** (artifact 69d95337): flip what's wrong, answer seven questions, press Done. This is the gate for turning auto-ingest on; until then the eval runs on the reviewers' provisional labels (recall 0.96 / precision 0.91 under rubric v2).
+2. **Read the first shadow verdicts** in 📥 Blog Intake (40 would-saves, 11 of them disputed — the second judge is save-happy on OpenAI's feed, e.g. the teachers rollout post). Tick **Pull anyway** on anything skipped that you want; nothing waits on you.
+3. **Dependabot #27–#29** still open.
+4. **Backfill (decision 6):** PCHH done and mostly mirrored; Culture Gabfest's 909 episodes are still extracting locally (hours). The main working tree stays on the pre-merge commit until it finishes (the run reads pipeline files from disk); `main` is the truth.
 
 ## Next arc (agreed 2026-09-01, in progress since 2026-09-02) — "curated intake v2 + ads as data"
 **PR 1 of 3 (ads as data) is open as a draft against `arc/curated-intake-v2`.**
