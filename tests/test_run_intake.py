@@ -34,9 +34,9 @@ def test_shadow_mode_is_off_until_the_eval_floor_clears() -> None:
 # ── the weekly line ─────────────────────────────────────────────────────────
 
 def _counts(**kw) -> dict:
-    base = {"judged": 0, "would_save": 0, "judge_skipped": 0, "precheck_skipped": 0,
-            "disputed": 0, "held": 0, "failed": 0, "overrides": 0,
-            "precheck_reasons": {}, "would_save_backlog": 0}
+    base = {"judged": 0, "would_save": 0, "saved": 0, "judge_skipped": 0,
+            "precheck_skipped": 0, "disputed": 0, "held": 0, "failed": 0,
+            "overrides": 0, "precheck_reasons": {}, "would_save_backlog": 0}
     base.update(kw)
     return base
 
@@ -60,8 +60,21 @@ def test_weekly_line_says_shadow_mode_and_names_what_it_would_save() -> None:
 
 
 def test_weekly_line_switches_verb_when_auto_ingest_is_on() -> None:
-    line = R.weekly_line(_counts(judged=3, would_save=2), ["X"], [], auto_ingest=True)
+    line = R.weekly_line(_counts(judged=3, would_save=2, saved=2), ["X"], [], auto_ingest=True)
     assert "saved 2" in line and "would save" not in line and "shadow mode" not in line
+
+
+def test_weekly_line_counts_actual_ingests_once_auto_ingest_is_on() -> None:
+    """A save that then failed to ingest must not be claimed as a save.
+
+    `would_save` counts verdicts and `saved` counts ingests; before this they were the
+    same number, so a row that judged save and failed to ingest was reported under
+    both "saved" and "failed" on the same line.
+    """
+    counts = _counts(judged=5, would_save=4, saved=3, failed=1)
+    assert "saved 3" in R.weekly_line(counts, [], [], auto_ingest=True)
+    # in shadow mode nothing is ingested, so the verdict count is the honest one
+    assert "would save 4" in R.weekly_line(counts, [], [], auto_ingest=False)
 
 
 def test_weekly_line_says_why_things_were_skipped() -> None:
@@ -576,3 +589,107 @@ def test_overrides_only_also_fails_when_its_line_does_not_post(monkeypatch) -> N
     monkeypatch.setattr(store, "weekly_counts", lambda conn, since: _counts())
     monkeypatch.setattr(R, "post_slack", lambda text: False)
     assert R.run(R.parse_args(["--overrides-only"]), object(), "tok", "fc", "or") == 1
+
+
+# ── the switch PR 3 flips ───────────────────────────────────────────────────
+
+def _stub_one_saved_candidate(monkeypatch, statuses: list, ingest_ok: bool = True):
+    """One candidate that judges `save`, with every collaborator recorded."""
+    monkeypatch.setattr(store, "table_exists", lambda conn: True)
+    monkeypatch.setattr(R.judge, "load_rubric", lambda: ("rubric", "v0abc"))
+    monkeypatch.setattr(R, "discover", lambda *a, **k: ([], []))
+    monkeypatch.setattr(store, "upsert_candidates", lambda conn, c: (0, 0))
+    monkeypatch.setattr(store, "needs_judging",
+                        lambda conn, v: [{"id": 7, "url": "https://x/7", "source": "openai-rss"}])
+    monkeypatch.setattr(store, "needs_mirroring", lambda conn, limit=None: [])
+    monkeypatch.setattr(store, "already_ingested_urls", lambda conn, urls: set())
+    monkeypatch.setattr(store, "get_by_id", lambda conn, cid: {"id": cid, "url": "https://x/7"})
+    monkeypatch.setattr(R.notion_log, "existing_page_ids", lambda token, db: {})
+    monkeypatch.setattr(R, "process_candidate", lambda *a, **k: store.STATUS_JUDGED)
+    monkeypatch.setattr(R, "ingest_one", lambda *a, **k: ingest_ok)
+    monkeypatch.setattr(R, "_mirror", lambda *a, **k: True)
+    monkeypatch.setattr(R, "process_overrides", lambda *a, **k: (0, 0, []))
+    monkeypatch.setattr(store, "weekly_counts", lambda conn, since: _counts())
+    monkeypatch.setattr(store, "titles",
+                        lambda conn, since, status, **k: statuses.append(status) or [])
+    monkeypatch.setattr(R, "post_slack", lambda text: True)
+
+
+def test_the_titles_query_follows_auto_ingest(monkeypatch) -> None:
+    """Once auto-ingest is on, no row is left at `judged` when the line is built.
+
+    The save is ingested in the same loop iteration, so asking for STATUS_JUDGED
+    would print an empty "Saved:" list on the very week the names matter most. This
+    is the wiring the pure weekly_line() tests can't see.
+    """
+    seen: list = []
+    _stub_one_saved_candidate(monkeypatch, seen)
+    monkeypatch.setattr(R, "AUTO_INGEST", True)
+    R.run(R.parse_args([]), object(), "tok", "fc", "or")
+    assert seen[0] == store.STATUS_SAVED
+
+    seen.clear()
+    monkeypatch.setattr(R, "AUTO_INGEST", False)
+    R.run(R.parse_args([]), object(), "tok", "fc", "or")
+    assert seen[0] == store.STATUS_JUDGED
+
+
+def test_auto_ingest_on_ingests_a_save_and_shadow_mode_does_not(monkeypatch) -> None:
+    calls: list = []
+    _stub_one_saved_candidate(monkeypatch, [])
+    monkeypatch.setattr(R, "ingest_one", lambda *a, **k: calls.append(a[1]["id"]) or True)
+
+    monkeypatch.setattr(R, "AUTO_INGEST", False)
+    R.run(R.parse_args([]), object(), "tok", "fc", "or")
+    assert calls == [], "shadow mode must record the verdict and ingest nothing"
+
+    monkeypatch.setattr(R, "AUTO_INGEST", True)
+    R.run(R.parse_args([]), object(), "tok", "fc", "or")
+    assert calls == [7]
+
+
+def test_a_failed_auto_ingest_fails_the_run(monkeypatch) -> None:
+    # ingest_one swallows the failure by design so one bad row can't end the week —
+    # discarding its bool left the run green and blogs.yml's notify silent.
+    _stub_one_saved_candidate(monkeypatch, [], ingest_ok=False)
+    monkeypatch.setattr(R, "AUTO_INGEST", True)
+    assert R.run(R.parse_args([]), object(), "tok", "fc", "or") == 1
+
+
+# ── main() turns a failure count into the exit code CI reads ────────────────
+
+def test_main_exits_non_zero_so_the_workflow_notify_fires(monkeypatch) -> None:
+    """blogs.yml's "Notify Slack (failure)" step is gated on `if: failure()`.
+
+    That alert exists only because main() translates run()'s count into a SystemExit,
+    which is two branch-free lines nothing else covers.
+    """
+    monkeypatch.setattr(R, "load_environment", lambda: None)
+    monkeypatch.setattr(R, "require_secrets", lambda args: ("tok", "fc", "or"))
+    monkeypatch.setattr(R, "get_db_connection", lambda: _closable())
+    monkeypatch.setattr(R, "run", lambda *a, **k: 3)
+    with pytest.raises(SystemExit) as exc:
+        R.main([])
+    assert "3 candidate(s) failed" in str(exc.value)
+
+    monkeypatch.setattr(R, "run", lambda *a, **k: 0)
+    R.main([])  # a clean run returns normally, so the step exits 0
+
+
+def test_main_closes_the_connection_even_when_the_run_raises(monkeypatch) -> None:
+    conn = _closable()
+    monkeypatch.setattr(R, "load_environment", lambda: None)
+    monkeypatch.setattr(R, "require_secrets", lambda args: ("tok", "fc", "or"))
+    monkeypatch.setattr(R, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(R, "run", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    with pytest.raises(RuntimeError):
+        R.main([])
+    assert conn.closed, "a Neon connection must not leak when the run blows up"
+
+
+class _closable:
+    def __init__(self) -> None:
+        self.closed = False
+
+    def close(self) -> None:
+        self.closed = True

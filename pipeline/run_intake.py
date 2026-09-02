@@ -19,7 +19,10 @@ SHADOW MODE (this PR): `AUTO_INGEST = False`. Verdicts are recorded and mirrored
 Notion, and a `save` lands at status `judged` — "we would have saved this" — but
 nothing is ingested except rows Kevin explicitly ticked. PR 3 flips the constant once
 `evals/intake` clears its floor (recall ≥ 0.9 on save, precision ≥ 0.7) and one shadow
-week reads right. Nothing else in this file changes when it flips.
+week reads right. Flipping it changes three things in this file, all already wired:
+a `save` is ingested in the same loop iteration, the weekly line's titles come from
+`saved` rather than `judged`, and its count comes from `counts["saved"]` (actual
+ingests) rather than `counts["would_save"]` (verdicts). Nothing else.
 
 Failure states are visible by construction: a missing table, a missing rubric, or any
 failed candidate exits non-zero (so blogs.yml's failure notify fires), and the Slack
@@ -387,7 +390,11 @@ def weekly_line(counts: dict, would_save: list[str], held: list[str], *,
     """
     verb = "saved" if auto_ingest else "would save"
     mode = "" if auto_ingest else " _(shadow mode — nothing auto-ingests yet)_"
-    parts = [f"judged {counts.get('judged', 0)}", f"{verb} {counts.get('would_save', 0)}"]
+    # `would_save` counts verdicts; `saved` counts actual ingests. In shadow mode they
+    # differ by definition, and once auto-ingest is on a save that then failed to
+    # ingest would otherwise be counted under BOTH "saved" and "failed".
+    saved = counts.get("saved", 0) if auto_ingest else counts.get("would_save", 0)
+    parts = [f"judged {counts.get('judged', 0)}", f"{verb} {saved}"]
 
     skipped = counts.get("judge_skipped", 0) + counts.get("precheck_skipped", 0)
     reasons = counts.get("precheck_reasons") or {}
@@ -411,7 +418,7 @@ def weekly_line(counts: dict, would_save: list[str], held: list[str], *,
     line = f":inbox_tray: *list-maker intake*{mode} [{sources_label}]: " + " · ".join(parts)
     if would_save:
         shown = would_save[:5]
-        total = counts.get("would_save", len(shown))
+        total = saved or len(shown)
         more = f" (+{total - len(shown)} more)" if total > len(shown) else ""
         line += f"\n*{verb.capitalize()}:* " + " · ".join(shown) + more
     return line + f"\n<{notion_log.INTAKE_URL}|open the intake log>"
@@ -637,7 +644,11 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
             if AUTO_INGEST and status == store.STATUS_JUDGED:
                 from pipeline.save_item import save_url  # late import: avoids a module cycle
 
-                ingest_one(conn, store.get_by_id(conn, row["id"]) or row, save_url)
+                # ingest_one swallows the failure by design (one bad row must not end
+                # the week) and returns the bool. Discarding it would leave a failed
+                # auto-ingest exiting 0, so blogs.yml's notify would never fire.
+                if not ingest_one(conn, store.get_by_id(conn, row["id"]) or row, save_url):
+                    failures += 1
         except SystemExit:
             raise  # an operational refusal (a missing key) stops the run, loudly
         except Exception as exc:  # noqa: BLE001 — isolate one bad post, keep the week
@@ -659,7 +670,11 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
     # blogs.yml's notify fires. Same call the pulse already makes for its heartbeat.
     if not post_slack(weekly_line(
         store.weekly_counts(conn, started),
-        store.titles(conn, started, store.STATUS_JUDGED),
+        # Follows the mode: once AUTO_INGEST is on, a save is ingested in the same
+        # loop iteration and no row is left at `judged` at report time, so querying
+        # that status would print an empty "Saved:" list on the very week it matters.
+        store.titles(conn, started,
+                     store.STATUS_SAVED if AUTO_INGEST else store.STATUS_JUDGED),
         store.titles(conn, started, store.STATUS_HELD),
         auto_ingest=AUTO_INGEST, backlog=backlog, unknown_overrides=len(unknown),
         sources_label=args.sources,
