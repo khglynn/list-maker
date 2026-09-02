@@ -35,6 +35,15 @@ RATE_LIMIT_DELAY = 0.35  # ~3 req/s
 log = get_logger("pipeline.sync_notion")
 FAILURE_ALERT_THRESHOLD = 0.10  # Slack-alert if >10% of a phase's entities fail
 
+# How many sponsor-read mentions an entity may contribute to its ranking weight.
+# Kevin's rule (2026-09-01): ads are kept, tagged and weight-capped, never deleted —
+# "sometimes the ads are helpful… we shouldn't have them overweight by mentions."
+# 5 is chosen so a sponsor still clears the min_mentions=2 bar on ad reads alone (an
+# advertised product IS a real product worth a row) while a year-long campaign stops
+# outranking genuine coverage: Blitzy carries 76 ad mentions and 1 editorial one, and
+# without the cap it would sit above every tool the hosts actually discussed.
+MAX_AD_MENTIONS_COUNTED = 5
+
 
 # ---------------------------------------------------------------------------
 # Notion API helpers
@@ -93,7 +102,19 @@ def build_notion_properties(entity: dict) -> dict:
         # "Items" not "Episodes": the count spans episodes, blog posts, and research
         # docs since the 2026-06-11 curated-sources build (renamed in Notion same day).
         "Items": {"number": int(entity["episode_count"])},
+        # Sponsor is entity-level ("this has appeared in an ad read at least once"),
+        # which stays true even for a company that also gets real coverage — KPMG both
+        # sponsors the show and publishes a study the hosts cite. Ad mentions is the
+        # UNCAPPED count, so a reader can see how much of Mentions was withheld.
+        "Sponsor": {"checkbox": int(entity.get("ad_mention_count") or 0) > 0},
+        "Ad mentions": {"number": int(entity.get("ad_mention_count") or 0)},
     }
+
+    attributes = entity.get("attributes") or {}
+    if isinstance(attributes, dict) and attributes.get("first_seen_as_ad"):
+        props["First seen as ad"] = {
+            "date": {"start": str(attributes["first_seen_as_ad"])}
+        }
 
     if entity.get("first_date"):
         props["First Mentioned"] = {"date": {"start": str(entity["first_date"])}}
@@ -114,6 +135,46 @@ def build_notion_properties(entity: dict) -> dict:
         props["Sources"] = {"multi_select": [{"name": str(n)[:100]} for n in show_names]}
 
     return props
+
+
+# Properties this sync writes that the databases were not hand-built with. Notion
+# rejects a page write naming an unknown property, so they have to exist before the
+# first sync that sets them — and nothing else in this repo has ever created a property
+# (the DBs were made by hand in Notion), which is why this function is new rather than
+# following an existing pattern.
+REQUIRED_DATABASE_PROPERTIES: dict[str, dict] = {
+    "Sponsor": {"checkbox": {}},
+    "Ad mentions": {"number": {"format": "number"}},
+    "First seen as ad": {"date": {}},
+}
+
+
+def ensure_database_properties(
+    token: str, database_id: str, dry_run: bool = False
+) -> list[str]:
+    """Add any REQUIRED_DATABASE_PROPERTIES the database is missing. Returns the names
+    added (or, in dry-run, the names that would be added).
+
+    Additive only: it reads the current schema and PATCHes in just the absent keys, so
+    a hand-added property of the same name is left exactly as Kevin configured it and
+    no existing column is ever retyped or removed. Idempotent — a second run adds
+    nothing. Runs before the sync rather than lazily on first failure, because the
+    alternative is a partial sync that dies halfway with a Notion validation error.
+    """
+    db = notion_request("GET", f"{NOTION_API}/databases/{database_id}", token)
+    existing = set(db.get("properties", {}))
+    missing = {k: v for k, v in REQUIRED_DATABASE_PROPERTIES.items() if k not in existing}
+    if not missing:
+        return []
+    if dry_run:
+        print(f"  [dry-run] Would add Notion propert(ies): {', '.join(sorted(missing))}")
+        return sorted(missing)
+    notion_request(
+        "PATCH", f"{NOTION_API}/databases/{database_id}", token, {"properties": missing}
+    )
+    print(f"  Added Notion propert(ies): {', '.join(sorted(missing))}")
+    log.info("added notion properties to %s: %s", database_id, sorted(missing))
+    return sorted(missing)
 
 
 def create_notion_page(token: str, database_id: str, properties: dict) -> str:
@@ -172,7 +233,20 @@ def fetch_entity_rollup(
     show. A curated pull is deliberate — Kevin chose that post because its citations
     matter — so its resources surface at 1 mention, while podcast chatter still needs
     min_mentions to filter noise. (Without the OR, blog-cited resources would hide;
-    with min_mentions=1 globally, every 1-mention podcast entity would flood the DB.)"""
+    with min_mentions=1 globally, every 1-mention podcast entity would flood the DB.)
+
+    ADS COUNT, BUT NOT WITHOUT LIMIT. `mention_count` is editorial mentions in full plus
+    ad mentions capped at MAX_AD_MENTIONS_COUNTED, and it is that CAPPED number the
+    min_mentions qualifier tests — so a product that only ever appears in sponsor reads
+    still earns a row (it is a real product), while a long-running campaign cannot
+    out-rank things the hosts genuinely discussed. `ad_mention_count` and
+    `editorial_mention_count` are returned uncapped alongside it, so the Notion page can
+    show what was capped instead of hiding it, and one query still explains the number
+    (docs/principles.md: every displayed value traces to its source).
+
+    A mention is an ad exactly when sponsor_source IS NOT NULL — sql/009. Rows loaded
+    before that migration are NULL and therefore editorial, which is the honest reading:
+    they were never classified. retag_sponsor_mentions.py is what fixes the backlog."""
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -184,7 +258,10 @@ def fetch_entity_rollup(
                 e.notion_page_id,
                 e.updated_at,
                 e.notion_synced_at,
+                e.attributes,
                 COALESCE(agg.mention_count, 0) AS mention_count,
+                COALESCE(agg.ad_mention_count, 0) AS ad_mention_count,
+                COALESCE(agg.editorial_mention_count, 0) AS editorial_mention_count,
                 COALESCE(agg.episode_count, 0) AS episode_count,
                 agg.first_date,
                 agg.last_date,
@@ -194,22 +271,37 @@ def fetch_entity_rollup(
             JOIN (
                 SELECT
                     m.entity_id,
-                    COUNT(*) AS mention_count,
+                    COUNT(*) FILTER (WHERE m.sponsor_source IS NULL)
+                        + LEAST(COUNT(*) FILTER (WHERE m.sponsor_source IS NOT NULL), %s)
+                        AS mention_count,
+                    COUNT(*) FILTER (WHERE m.sponsor_source IS NOT NULL) AS ad_mention_count,
+                    COUNT(*) FILTER (WHERE m.sponsor_source IS NULL) AS editorial_mention_count,
                     COUNT(DISTINCT m.episode_id) AS episode_count,
                     MIN(ep.publish_date)::date AS first_date,
                     MAX(ep.publish_date)::date AS last_date,
-                    (ARRAY_AGG(m.context_snippet ORDER BY ep.publish_date DESC NULLS LAST))[1] AS latest_context,
+                    -- Prefer an editorial snippet for the visible Context: showing ad
+                    -- copy as the entity's description is how a sponsor read ends up
+                    -- reading like Kevin's own note about the product.
+                    (ARRAY_AGG(m.context_snippet ORDER BY (m.sponsor_source IS NOT NULL),
+                               ep.publish_date DESC NULLS LAST))[1] AS latest_context,
                     ARRAY_AGG(DISTINCT ep.show_id) AS show_ids
                 FROM ai_mentions m
                 JOIN episodes ep ON ep.id = m.episode_id
                 WHERE ep.show_id = ANY(%s)
                 GROUP BY m.entity_id
-                HAVING COUNT(*) >= %s
+                HAVING COUNT(*) FILTER (WHERE m.sponsor_source IS NULL)
+                       + LEAST(COUNT(*) FILTER (WHERE m.sponsor_source IS NOT NULL), %s) >= %s
                     OR COUNT(*) FILTER (WHERE ep.show_id = ANY(%s)) >= 1
             ) agg ON agg.entity_id = e.id
             ORDER BY agg.mention_count DESC;
             """,
-            (show_ids, min_mentions, curated_show_ids or []),
+            (
+                MAX_AD_MENTIONS_COUNTED,
+                show_ids,
+                MAX_AD_MENTIONS_COUNTED,
+                min_mentions,
+                curated_show_ids or [],
+            ),
         )
         rows = [dict(r) for r in cur.fetchall()]
     for r in rows:
@@ -500,9 +592,19 @@ def main() -> None:
         show_ids = [s.show_id for s in group]
         show_names = {s.show_id: s.name for s in group}
         curated_ids = [s.show_id for s in group if s.medium != "podcast"]
+        # Before any page write, in BOTH modes: a page naming a property the database
+        # lacks is rejected, so the schema has to be right before the first create.
+        ensure_database_properties(token, show.notion_database_id, args.dry_run)
+
         entities = fetch_entity_rollup(conn, show_ids, show_names, args.min_mentions, curated_ids)
         print(f"Notion DB group: {[s.slug for s in group]} (show_ids={show_ids})")
         print(f"Entities qualifying ({args.min_mentions}+ mentions, or any curated mention): {len(entities)}")
+        ad_entities = sum(1 for e in entities if int(e.get("ad_mention_count") or 0) > 0)
+        ad_mentions = sum(int(e.get("ad_mention_count") or 0) for e in entities)
+        print(
+            f"Sponsor reads: {ad_mentions} ad mention(s) across {ad_entities} entity/entities "
+            f"(counted toward ranking at most {MAX_AD_MENTIONS_COUNTED} each)"
+        )
 
         if args.full_reset:
             run_full_reset(token, show.notion_database_id, show_ids, show_names, args.min_mentions, args.dry_run,
