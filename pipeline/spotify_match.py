@@ -16,6 +16,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 import psycopg2
@@ -137,12 +138,18 @@ def get_confidence_category(confidence: float) -> str:
 # =============================================================================
 
 def get_db_connection() -> psycopg2.extensions.connection:
-    """Get Neon database connection."""
-    db_url = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL")
-    if not db_url:
-        raise RuntimeError("DATABASE_URL (or NEON_DATABASE_URL) not set in environment")
+    """Get Neon database connection (delegates to common.get_db_connection)."""
+    # One implementation for the scheduled path — pipeline/common.py carries the connect
+    # timeout, keepalives, and bounded retry. This module's private copy had none, and it
+    # sits on pipeline.yml's Mon/Wed/Fri chain (rewired 2026-09-01 after the 08-31 41-minute
+    # hang). Lazy import so this file still runs as a script from its own directory.
+    # cursor_factory=None keeps psycopg2's tuple rows — this module indexes positionally.
+    pipeline_dir = str(Path(__file__).resolve().parent)
+    if pipeline_dir not in sys.path:
+        sys.path.insert(0, pipeline_dir)
+    from common import get_db_connection as shared_connection
 
-    return psycopg2.connect(db_url)
+    return shared_connection(cursor_factory=None)
 
 
 def fetch_unmatched_songs(

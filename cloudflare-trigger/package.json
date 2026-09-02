@@ -1,0 +1,9 @@
+{
+  "name": "list-maker-cron",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker cron: the durable trigger for list-maker's GitHub workflows. No dependencies on purpose — nothing to audit, nothing to drift.",
+  "scripts": {
+    "test": "node --test worker.test.js"
+  }
+}

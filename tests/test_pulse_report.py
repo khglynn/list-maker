@@ -75,3 +75,55 @@ def test_digest_warning_only_stays_green_but_counted() -> None:
     assert "caught up to every feed" in digest
     assert "1 warning" in digest
     assert "Needs attention" not in digest
+
+
+# ---- curated sources, the grace window, and the pull-queue nudge (2026-09-01) ----
+
+class _Cfg:
+    def __init__(self, medium: str = "podcast", grace: int = 2) -> None:
+        self.medium = medium
+        self.feed_grace_days = grace
+        self.notion_database_id = None
+        self.spotify_playlist_id = None
+
+
+def test_curated_source_is_curated_not_unverified() -> None:
+    # A blog source has no feed. "Unverified" is for feeds we tried to read and couldn't.
+    s = _show(slug="openai-blog", latest="2026-06-10", feed_dates=None)
+    s["cfg"] = _Cfg("blog")
+    status, state = show_status(s)
+    assert state == "curated"
+    assert "unverified" not in status and "2026-06-10" in status
+
+
+def test_digest_does_not_count_curated_as_unverified() -> None:
+    s = _show(slug="openai-blog", latest="2026-06-10", feed_dates=None)
+    s["cfg"] = _Cfg("blog")
+    digest = build_digest([_show(), s], TOTALS, [CheckResult("x", "pass", "ok", [])], queue={"candidates": 0, "checked": 0})
+    assert "unverified" not in digest
+    assert "All systems firing" in digest
+    assert "Curated sources" in digest and "OpenAI blog" in digest
+
+
+def test_fresh_episode_inside_the_grace_window_is_caught_up() -> None:
+    # Published two days ago, imported daily with a 2-day grace: pending, not behind.
+    s = _show(latest="2026-08-29", feed_dates=[date(2026, 8, 31), date(2026, 8, 29)])
+    status, state = show_status(s, today=date(2026, 9, 1))
+    assert state == "ok" and "pending" in status
+
+
+def test_stale_missing_episode_is_still_behind(monkeypatch) -> None:
+    s = _show(latest="2026-08-29", feed_dates=[date(2026, 8, 31), date(2026, 8, 29)])
+    status, state = show_status(s, today=date(2026, 9, 6))
+    assert state == "behind" and "BEHIND 1" in status
+
+
+def test_queue_line_nudges_when_candidates_wait() -> None:
+    digest = build_digest([_show()], TOTALS, [], queue={"candidates": 31, "checked": 2})
+    assert "31 candidate(s) waiting for your checkbox" in digest
+    assert "2 checked" in digest
+
+
+def test_queue_line_is_honest_when_the_queue_cannot_be_read() -> None:
+    digest = build_digest([_show()], TOTALS, [], queue=None)
+    assert "couldn't read" in digest

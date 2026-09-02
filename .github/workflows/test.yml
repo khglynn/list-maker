@@ -62,3 +62,10 @@ jobs:
         # rather than wiring a secret in here: a test that only runs when a credential
         # happens to be present is a test nobody can trust the result of.
         run: pytest -q
+
+      - name: Worker day-logic tests (cloudflare-trigger)
+        # The Worker decides what the single daily cron dispatches. Its day-of-week logic
+        # already cost six weeks of missed Mondays once (Cloudflare cron counts 1=Sunday),
+        # so it gets the same guardrail as the Python: a test on every push. Plain
+        # node:test — no dependencies to install or audit.
+        run: node --test cloudflare-trigger/worker.test.js

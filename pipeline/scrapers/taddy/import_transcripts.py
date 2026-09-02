@@ -58,19 +58,14 @@ def load_environment() -> None:
 
 
 def get_db_connection():
-    try:
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-    except ImportError as exc:
-        raise RuntimeError(
-            "Missing dependency: psycopg2-binary. "
-            "Install deps with `cd pipeline && pip install -r requirements.txt`."
-        ) from exc
+    # One implementation for the scheduled path: common.get_db_connection carries the
+    # connect timeout + bounded retry. This importer's private copy had neither, which
+    # is why the 2026-08-31 Neon blip cost this step 3 × ~7 minutes before giving up.
+    # (Imported lazily: pipeline/ is already on sys.path above, and a module-level
+    # import would change what tests see when they import this file as a package.)
+    from common import get_db_connection as shared_connection
 
-    db_url = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL")
-    if not db_url:
-        raise RuntimeError("DATABASE_URL (or NEON_DATABASE_URL) is required")
-    return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+    return shared_connection()
 
 
 def ensure_schema(conn) -> None:

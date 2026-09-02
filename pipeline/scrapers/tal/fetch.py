@@ -45,11 +45,17 @@ OUTPUT_DIR = Path(__file__).parent / "fetched" / "tal"
 # =============================================================================
 
 def get_db_connection():
-    """Connect to Neon database."""
-    return psycopg2.connect(
-        os.getenv("DATABASE_URL"),
-        cursor_factory=RealDictCursor,
-    )
+    """Connect to Neon database (delegates to common.get_db_connection)."""
+    # One implementation for the scheduled path — pipeline/common.py carries the connect
+    # timeout, keepalives, and bounded retry. This module's private copy had none, and it
+    # sits on pipeline.yml's Mon/Wed/Fri chain (rewired 2026-09-01 after the 08-31 41-minute
+    # hang). Lazy import so this file still runs as a script from its own directory.
+    pipeline_dir = str(Path(__file__).resolve().parents[2])
+    if pipeline_dir not in sys.path:
+        sys.path.insert(0, pipeline_dir)
+    from common import get_db_connection as shared_connection
+
+    return shared_connection()
 
 
 def get_unscraped_episodes(limit: int = None) -> list[dict]:

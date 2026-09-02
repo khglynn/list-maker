@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -66,18 +67,80 @@ def load_environment(repo_root: Path | None = None) -> None:
     load_dotenv(repo_root / "pipeline" / ".env.local")
 
 
-def get_db_connection():
-    """Connect to Neon database with RealDictCursor."""
+# A Neon connection that can't be made should fail in seconds, not minutes. libpq's
+# default is NO connect timeout, and the pooler hostname resolves to six addresses
+# (three IPv6 that GitHub runners can't route, three IPv4). On 2026-08-31 one GitHub
+# runner VM lost its egress path to those three IPv4 addresses for the life of the job
+# (SYN blackhole, no reset) — Neon itself was up: two sibling jobs dispatched the same
+# minute connected to the same pooler and did real work. Every step rediscovered the
+# hole on its own and waited ~135s per address × 3 before giving up: 41 minutes to
+# report one fact. libpq applies connect_timeout PER ADDRESS, so one attempt here is
+# bounded at ~3 × DB_CONNECT_TIMEOUT_SECONDS on a runner (the IPv6 ones fail at once);
+# three attempts with short backoff still ride out a brief blip, and a dead path
+# surfaces as one clear error in a few minutes. db_preflight.py runs first in every
+# workflow with a single attempt so the job stops in about a minute, not per step.
+DB_CONNECT_TIMEOUT_SECONDS = int(os.getenv("DB_CONNECT_TIMEOUT") or "20")
+DB_CONNECT_ATTEMPTS = 3
+DB_CONNECT_BACKOFF_SECONDS = (10, 30)
+# TCP keepalives so a connection held across a long step (an LLM batch, a Notion
+# sync) is noticed as dead in ~1 minute instead of hanging on a silent NAT drop.
+DB_KEEPALIVE_KWARGS = {
+    "keepalives": 1,
+    "keepalives_idle": 30,
+    "keepalives_interval": 10,
+    "keepalives_count": 3,
+}
+
+
+def get_db_connection(attempts: int | None = None, cursor_factory: object = "dict"):
+    """Connect to Neon with a connect timeout, keepalives, and a bounded retry.
+
+    Rows come back as dicts (RealDictCursor) unless `cursor_factory=None`, which keeps
+    psycopg2's default tuples — spotify_match.py indexes rows positionally and passes
+    that. `attempts` overrides DB_CONNECT_ATTEMPTS — the preflight passes 1 so a dead
+    network path fails the job in about a minute rather than after the full retry.
+
+    This is the ONE place the pipeline connects to Neon. Every scheduled-path module
+    delegates here (tests/test_common.py pins that with a grep); the retry and timeout
+    story only holds if no file grows its own psycopg2.connect again.
+    """
     try:
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError as exc:
         raise RuntimeError("Missing dependency: psycopg2-binary") from exc
+    if cursor_factory == "dict":
+        cursor_factory = RealDictCursor
 
     db_url = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL")
     if not db_url:
         raise RuntimeError("DATABASE_URL (or NEON_DATABASE_URL) is required")
-    return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+
+    total = attempts or DB_CONNECT_ATTEMPTS
+    last_exc: Exception | None = None
+    for attempt in range(1, total + 1):
+        try:
+            return psycopg2.connect(
+                db_url,
+                cursor_factory=cursor_factory,
+                connect_timeout=DB_CONNECT_TIMEOUT_SECONDS,
+                **DB_KEEPALIVE_KWARGS,
+            )
+        except psycopg2.OperationalError as exc:
+            last_exc = exc
+            if attempt == total:
+                break
+            wait = DB_CONNECT_BACKOFF_SECONDS[min(attempt, len(DB_CONNECT_BACKOFF_SECONDS)) - 1]
+            first_line = (str(exc).strip().splitlines() or ["?"])[0][:200]
+            get_logger("pipeline.common").warning(
+                "db connect attempt %d/%d failed, retrying in %ds: %s",
+                attempt, total, wait, first_line,
+            )
+            time.sleep(wait)
+    raise RuntimeError(
+        f"could not connect to Neon after {total} attempt(s) "
+        f"({DB_CONNECT_TIMEOUT_SECONDS}s connect timeout per address): {last_exc}"
+    ) from last_exc
 
 
 # THE canonical Spotify scope — the UNION of every script's needs. All three

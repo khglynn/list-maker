@@ -223,3 +223,104 @@ def test_extraction_integrity_no_longer_double_reports_the_race(monkeypatch) -> 
     assert result.status == "pass"
     orphan_sql = next(s for s in seen if "transcript_id IS NOT NULL" in s)
     assert "m.transcript_id IS NULL" not in orphan_sql
+
+
+# ---- feed check grace window (the August-2026 "1 show behind" noise) ----
+
+def _feed_check(monkeypatch, db_latest: dict, feed: dict, today: date, slugs: list[str]):
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(
+        dh, "_rows", lambda *a, **k: [{"slug": s, "db_latest": d} for s, d in db_latest.items()]
+    )
+    monkeypatch.setattr(dh, "feed_recent_dates", lambda cfg, limit=15: feed.get(cfg.slug))
+    monkeypatch.setattr(dh, "_today", lambda: today)
+    return check_import_caught_up(conn=None, slugs=slugs)
+
+
+def test_feed_check_tolerates_a_fresh_episode_inside_the_import_window(monkeypatch) -> None:
+    # Tuesday: SOP published today; its next import is Wednesday. Not a gap.
+    result = _feed_check(
+        monkeypatch,
+        {"sop": date(2026, 8, 25)},
+        {"sop": [date(2026, 9, 1), date(2026, 8, 25)]},
+        today=date(2026, 9, 1),
+        slugs=["sop"],
+    )
+    assert result.status == "pass"
+    assert any(d.startswith("sop: caught up") and "pending" in d for d in result.details)
+
+
+def test_feed_check_fails_once_a_missing_episode_is_older_than_the_grace(monkeypatch) -> None:
+    # Sunday: the Wed AND Fri imports both had their turn and the 09-01 episode is still absent.
+    result = _feed_check(
+        monkeypatch,
+        {"sop": date(2026, 8, 25)},
+        {"sop": [date(2026, 9, 1), date(2026, 8, 25)]},
+        today=date(2026, 9, 6),
+        slugs=["sop"],
+    )
+    assert result.status == "fail"
+    assert any(d.startswith("sop: BEHIND 1") and "import window" in d for d in result.details)
+
+
+def test_feed_grace_is_per_show(monkeypatch) -> None:
+    # The same 3-day-old feed episode is fine for SOP (4-day window) and a real miss
+    # for AI Daily (2-day window, imported every day).
+    feed = [date(2026, 9, 1)]
+    result = _feed_check(
+        monkeypatch,
+        {"sop": date(2026, 8, 25), "ai-daily-brief": date(2026, 8, 29)},
+        {"sop": feed, "ai-daily-brief": feed},
+        today=date(2026, 9, 4),
+        slugs=["sop", "ai-daily-brief"],
+    )
+    assert result.status == "fail"
+    assert any(d.startswith("sop: caught up") for d in result.details)
+    assert any(d.startswith("ai-daily-brief: BEHIND 1") for d in result.details)
+
+
+def test_split_missing_feed_dates_partitions_by_grace() -> None:
+    from pipeline.data_health import split_missing_feed_dates
+
+    today = date(2026, 9, 10)
+    overdue, pending = split_missing_feed_dates(
+        [date(2026, 9, 9), date(2026, 9, 5), date(2026, 9, 1)], date(2026, 9, 1), 2, today=today
+    )
+    assert overdue == [date(2026, 9, 5)]
+    assert pending == [date(2026, 9, 9)]
+    # Nothing in the DB at all: every feed date is missing, still graded by age.
+    assert split_missing_feed_dates([date(2026, 9, 9)], None, 2, today=today) == ([], [date(2026, 9, 9)])
+    assert split_missing_feed_dates([date(2026, 9, 1)], None, 2, today=today) == ([date(2026, 9, 1)], [])
+
+
+def test_transcript_coverage_tolerates_a_transcript_that_is_not_out_yet(monkeypatch) -> None:
+    """Taddy publishes a transcript about a day after the episode. Yesterday's episode
+    without one is 'pending', not a failure — 08-07 and 08-24 reddened the check for
+    exactly that."""
+    import pipeline.data_health as dh
+
+    today = date(2026, 9, 2)
+    coverage_rows = [{
+        "slug": "ai-daily-brief", "episodes": 1074, "transcripts": 1073, "missing_transcripts": 1,
+        "latest_episode": date(2026, 9, 1), "latest_transcript": date(2026, 8, 31),
+    }]
+    missing_rows = [{"slug": "ai-daily-brief", "publish_date": date(2026, 9, 1)}]
+    calls: list[str] = []
+
+    def fake_rows(conn, sql, params=None):
+        calls.append(sql)
+        return missing_rows if "et.id IS NULL AND s.slug = ANY" in sql else coverage_rows
+
+    monkeypatch.setattr(dh, "_rows", fake_rows)
+    monkeypatch.setattr(dh, "_today", lambda: today)
+    result = dh.check_transcript_coverage(conn=None)
+    assert result.status == "pass", result.details
+    assert any("awaiting transcripts inside the 2-day window" in d for d in result.details)
+
+    # The same episode five days later is a real gap.
+    monkeypatch.setattr(dh, "_today", lambda: date(2026, 9, 7))
+    coverage_rows[0]["latest_transcript"] = date(2026, 8, 31)
+    result = dh.check_transcript_coverage(conn=None)
+    assert result.status == "fail"
+    assert any("missing transcripts past the 2-day window" in d for d in result.details)

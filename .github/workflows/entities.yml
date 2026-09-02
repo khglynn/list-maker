@@ -29,6 +29,29 @@ on:
         required: false
         type: boolean
         default: false
+      pulse:
+        description: 'Post the biweekly pulse AFTER this run (the Worker sets this on the 1st + 15th)'
+        required: false
+        type: boolean
+        default: false
+
+# The failure step below files a tracking issue. This repo's GITHUB_TOKEN is read-only by
+# default, so without `issues: write` that step failed on every failure it ever handled
+# ("Resource not accessible by integration", 2026-06 → 2026-08-31): the Slack ping fired,
+# the issue never existed, and a failing notify step looks exactly like the failure it
+# was reporting. Least privilege otherwise.
+# One run of this workflow at a time. A manual re-run or the Worker's HTTP trigger
+# overlapping a scheduled dispatch would run two orchestrators against the same Neon
+# tables (and, for music, the same playlist). The writes are designed idempotent, but
+# that has never been exercised under two concurrent writers — queue instead. Never
+# cancel-in-progress: a run stopped mid-write is worse than one that waits.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
 
 jobs:
   run-entities:
@@ -48,6 +71,16 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r pipeline/requirements.txt
+
+      - name: DB preflight (fail fast if Neon is unreachable from this runner)
+        # One bounded connect attempt before any real work. On 2026-08-31 a runner with
+        # a dead path to the pooler spent 41 minutes rediscovering that in every step;
+        # this ends the job in about a minute and Slacks the diagnostics instead.
+        id: preflight
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: cd pipeline && python db_preflight.py
 
       - name: Run entity pipeline
         # Step-level timeout (< job timeout) so a hang FAILS this step (→ Slack alert)
@@ -77,7 +110,8 @@ jobs:
         # Idempotent (notion_transcript_page_id gate) + adopt-don't-duplicate on resume,
         # so a daily run is safe and a no-new-episodes day is a cheap no-op.
         # This step was the missing link behind the June 2026 Transcripts-DB freeze.
-        if: always()
+        # Gated on the preflight: if the DB was unreachable, don't re-pay the wait here.
+        if: always() && steps.preflight.outcome == 'success'
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
@@ -90,7 +124,7 @@ jobs:
           python sync_transcripts_notion.py --target blog-posts
 
       - name: Data health check (staleness, integrity, feed second-source)
-        if: always()
+        if: always() && steps.preflight.outcome == 'success'
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -99,12 +133,28 @@ jobs:
         run: |
           # No `|| true`: a crash here should fail the step (→ Slack), not vanish.
           # data_health.py posts its own Slack on a failed check (e.g. a stale show).
-          cd pipeline && python data_health.py | tee -a "$GITHUB_STEP_SUMMARY"
+          # --strict: a real failure reddens the run (Slack + the failure issue), the way
+          # pipeline.yml's feed check already does. Safe now that the grace windows have
+          # removed the false-positive volume — a red X here should mean something.
+          cd pipeline && python data_health.py --strict | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the failed batch (dead letter)
+        # A broken extraction batch used to leave nothing but a 500-character stderr tail
+        # in an expiring log. Keep the batch directory so it can be inspected or replayed
+        # without re-running the whole show. eval.yml does the same for its report.
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extraction-batches-${{ github.run_id }}
+          path: codex-notes/ai-daily-entity-extraction/incremental-*
+          if-no-files-found: ignore
+          retention-days: 14
 
       # No per-run success ping — daily shows (AI Daily, PCHH) would spam the channel.
       # The biweekly pulse is the positive report; only failures ping here.
       - name: Notify Slack (failure)
-        if: failure()
+        # Not when the preflight failed — it already posted the diagnostics.
+        if: failure() && steps.preflight.outcome != 'failure'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -118,11 +168,37 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `Entity pipeline failure (${new Date().toISOString().split('T')[0]})`,
-              body: `The scheduled entity pipeline run failed.\n\n**Run:** ${runUrl}`,
-              labels: ['pipeline-failure'],
+            const { owner, repo } = context.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const day = new Date().toISOString().split('T')[0];
+            // One open issue per failure streak PER WORKFLOW: a pipeline that fails every
+            // day adds a comment per day to the same thread instead of opening a new issue
+            // per day — and the second label keeps an unrelated music failure from landing
+            // in the entities thread (or vice versa).
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', labels: 'pipeline-failure,entities', per_page: 1,
             });
+            if (open.length) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: open[0].number,
+                body: `Failed again on ${day}.\n\n**Run:** ${runUrl}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner, repo,
+                title: `Entity pipeline failure (${day})`,
+                body: `The scheduled entity pipeline run failed.\n\n**Run:** ${runUrl}`,
+                labels: ['pipeline-failure', 'entities'],
+              });
+            }
+
+  pulse:
+    # The biweekly heartbeat reads the same tables run-entities just filled. From June to
+    # 2026-09-01 it was its own workflow, dispatched at the same minute, so it usually
+    # queried Neon BEFORE the day's import landed and reported shows "BEHIND" that were
+    # caught up five minutes later. Running it here, after the import, is the fix.
+    # `always()` on purpose: a failed import is exactly when a truthful pulse matters.
+    needs: run-entities
+    if: always() && github.event.inputs.pulse == 'true'
+    uses: ./.github/workflows/pulse.yml
+    secrets: inherit

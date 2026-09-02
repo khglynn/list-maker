@@ -12,7 +12,7 @@ import argparse
 import json
 import sys
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -87,6 +87,31 @@ OPTIONAL_NULL_NOTES = {
     "episodes.audio_url": "Expected on recent Taddy imports; old website-scraped rows may not have it.",
     "episodes.image_url": "Helpful but not source-of-truth; missing art is not a data integrity failure.",
 }
+
+
+DEFAULT_FEED_GRACE_DAYS = 2  # mirrors ShowConfig.feed_grace_days for callers holding no cfg
+
+
+def _today() -> date:
+    return datetime.now(timezone.utc).date()
+
+
+def split_missing_feed_dates(
+    feed: Iterable[date], db_latest: date | None, grace_days: int, today: date | None = None
+) -> tuple[list[date], list[date]]:
+    """Split the feed dates we don't hold yet into (overdue, pending).
+
+    A feed date is MISSING when it is newer than the newest episode we have. It is only
+    OVERDUE — a real gap, worth waking someone — once it is older than the show's grace
+    window (ShowConfig.feed_grace_days). Inside the window it is merely PENDING: the
+    episode is out, but the scheduled import that normally fetches it hasn't had its
+    turn. The daily check and the pulse both use this, so they can't disagree about
+    what "behind" means.
+    """
+    today = today or _today()
+    cutoff = today - timedelta(days=grace_days)
+    missing = [d for d in feed if db_latest is None or d > db_latest]
+    return [d for d in missing if d <= cutoff], [d for d in missing if d > cutoff]
 
 
 def _rows(conn, sql: str, params: Iterable[Any] | None = None) -> list[dict[str, Any]]:
@@ -243,6 +268,27 @@ def check_transcript_coverage(conn) -> CheckResult:
         ORDER BY s.slug;
         """,
     )
+    # Transcript-first shows get their missing episodes by date, so a transcript that is
+    # simply not out yet (Taddy publishes about a day after the episode; p90 = 1 day,
+    # measured 2026-09-01) isn't a failure. Before this, every daily run that saw
+    # yesterday's AI Daily episode before its transcript reported "1 episode(s) missing
+    # transcripts" and "lags by 1 days" as a FAIL (08-07, 08-24, ...).
+    complete_slugs = [s for s, p in TRANSCRIPT_POLICIES.items() if p.get("mode") == "complete"]
+    missing_dates: dict[str, list[date]] = {}
+    for r in _rows(
+        conn,
+        """
+        SELECT s.slug, e.publish_date::date AS publish_date
+        FROM episodes e
+        JOIN shows s ON s.id = e.show_id
+        LEFT JOIN episode_transcripts et ON et.episode_id = e.id
+        WHERE et.id IS NULL AND s.slug = ANY(%s)
+        """,
+        [complete_slugs],
+    ):
+        missing_dates.setdefault(r["slug"], []).append(r["publish_date"])
+    today = _today()
+
     failures: list[str] = []
     warnings: list[str] = []
     details: list[str] = []
@@ -255,6 +301,8 @@ def check_transcript_coverage(conn) -> CheckResult:
         coverage = (transcripts / episodes) if episodes else 1.0
         lag_days = _date_lag_days(row["latest_episode"], row["latest_transcript"])
         policy = TRANSCRIPT_POLICIES.get(slug, {"mode": "latest", "max_latest_lag_days": 30})
+        cfg = SHOWS.get(slug)
+        grace = getattr(cfg, "feed_grace_days", DEFAULT_FEED_GRACE_DAYS)
 
         if policy["mode"] == "none":
             details.append(f"{slug}: show-notes based — no transcripts expected (skipped)")
@@ -280,9 +328,24 @@ def check_transcript_coverage(conn) -> CheckResult:
         bucket = failures if is_strict else warnings
 
         if is_strict and missing:
-            failures.append(f"{slug}: {missing} episode(s) missing transcripts")
+            cutoff = today - timedelta(days=grace)
+            overdue = [d for d in missing_dates.get(slug, []) if d and d < cutoff]
+            pending = missing - len(overdue)
+            if overdue:
+                failures.append(
+                    f"{slug}: {len(overdue)} episode(s) missing transcripts past the "
+                    f"{grace}-day window (oldest {min(overdue)})"
+                    + (f"; {pending} newer still pending" if pending else "")
+                )
+            else:
+                details.append(
+                    f"{slug}: {missing} recent episode(s) awaiting transcripts inside the "
+                    f"{grace}-day window"
+                )
 
-        max_lag = int(policy.get("max_latest_lag_days", 30))
+        # For transcript-first shows the lag tolerance is the same grace window; the
+        # policy's own number still applies where it is larger (music shows: 30).
+        max_lag = max(int(policy.get("max_latest_lag_days", 30)), grace if is_strict else 0)
         if lag_days is None:
             bucket.append(f"{slug}: cannot compare latest episode/transcript dates")
         elif lag_days > max_lag:
@@ -443,6 +506,11 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
     `slugs` narrows the check to specific shows. The music workflow passes the one show
     it just ran, so a single Taddy call proves that run actually discovered something,
     without paying for a feed call per show on every music run.
+
+    A missing episode only counts as BEHIND once it is older than the show's
+    feed_grace_days (see show_config) — newer ones are reported as pending. Without
+    that, this check fired on nearly every August-2026 run for SOP, whose Tuesday
+    episode simply hadn't met its Wednesday import yet.
     """
     wanted = set(slugs) if slugs is not None else None
     rows = _rows(
@@ -473,9 +541,17 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             # WARN so it can't hide as a silent pass, without crying wolf on a flaky run.
             warnings.append(f"{slug}: feed UNVERIFIED — second source unreachable")
             continue
-        behind = sum(1 for d in feed if latest is None or d > latest)
-        if behind:
-            failures.append(f"{slug}: BEHIND {behind} — feed at {feed[0]}, we have {latest}")
+        overdue, pending = split_missing_feed_dates(feed, latest, cfg.feed_grace_days)
+        if overdue:
+            failures.append(
+                f"{slug}: BEHIND {len(overdue)} — feed at {feed[0]}, we have {latest} "
+                f"(oldest missing {min(overdue)}, past the {cfg.feed_grace_days}-day import window)"
+            )
+        elif pending:
+            details.append(
+                f"{slug}: caught up ({latest}) — {len(pending)} newer feed episode(s) pending "
+                f"inside the {cfg.feed_grace_days}-day import window (feed at {feed[0]})"
+            )
         else:
             details.append(f"{slug}: caught up ({latest})")
     if failures:
@@ -502,7 +578,13 @@ def check_ai_daily_extraction(conn) -> CheckResult:
           ) AS transcripted_without_mentions
         FROM episodes ep
         JOIN ai_show s ON s.id = ep.show_id
-        JOIN episode_transcripts et ON et.episode_id = ep.id;
+        JOIN episode_transcripts et ON et.episode_id = ep.id
+        -- A transcript that landed within the last few hours is simply waiting for its
+        -- extraction (the daily run imports, then extracts ~3 minutes later). Any reader
+        -- in that gap — the pulse did on 2026-09-01 — would otherwise report a phantom
+        -- integrity issue. 6h is far past that gap and far short of the 1–2 day real
+        -- holes this check caught on 2026-08-01.
+        WHERE et.created_at < NOW() - INTERVAL '6 hours';
         """,
     )
     missing_mentions = int(row.get("transcripted_without_mentions") or 0)
@@ -544,7 +626,9 @@ def check_ai_daily_extraction(conn) -> CheckResult:
     issue_count = missing_mentions + orphan_transcript_mentions + zero_mention_runs
     details = []
     if missing_mentions:
-        details.append(f"AI Daily transcripted episodes without mentions: {missing_mentions}")
+        details.append(
+            f"AI Daily episodes transcripted >6h ago without mentions: {missing_mentions}"
+        )
     if orphan_transcript_mentions:
         details.append(
             f"AI mentions pointing at a deleted transcript: {orphan_transcript_mentions}"

@@ -26,6 +26,7 @@ import argparse
 import os
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
 from urllib.parse import urlsplit
@@ -39,6 +40,7 @@ from pipeline.sync_notion import NOTION_API, notion_request  # noqa: E402
 
 POD_LISTS_PAGE_ID = "31c0501e-f950-80d1-a3fd-e8fa8d5ce907"
 QUEUE_DB_ID = "37c0501e-f950-8139-b52b-e5d5f7d71f53"  # "Blog Pull Queue" under Pod Lists
+QUEUE_URL = "https://www.notion.so/37c0501ef9508139b52be5d5f7d71f53"
 
 MAX_NEW_CANDIDATES_PER_RUN = 25  # enrichment scrapes cost Firecrawl credits; cap + log the drop
 
@@ -178,6 +180,47 @@ def checked_candidates(token: str, db_id: str) -> list[dict]:
     return out
 
 
+def queue_counts(token: str, db_id: str) -> dict:
+    """Rows still at Status=candidate: how many, how many Kevin has checked, oldest age.
+
+    This is the number nothing reported between 2026-06-14 and 2026-09-01, while 31
+    candidates sat un-triaged — the weekly run only spoke when it had NEW rows or
+    ingested something, so a full-but-untouched queue was indistinguishable from an
+    empty one. Both the weekly line and the biweekly pulse now carry it.
+    """
+    counts = {"candidates": 0, "checked": 0, "oldest_days": 0}
+    oldest: Optional[datetime] = None
+    cursor = None
+    body_filter = {"property": "Status", "select": {"equals": "candidate"}}
+    while True:
+        body: dict = {"page_size": 100, "filter": body_filter}
+        if cursor:
+            body["start_cursor"] = cursor
+        result = notion_request("POST", f"{NOTION_API}/databases/{db_id}/query", token, body)
+        for page in result.get("results", []):
+            counts["candidates"] += 1
+            if page.get("properties", {}).get("Pull", {}).get("checkbox"):
+                counts["checked"] += 1
+            created = _parse_iso(page.get("created_time"))
+            if created and (oldest is None or created < oldest):
+                oldest = created
+        if not result.get("has_more"):
+            break
+        cursor = result.get("next_cursor")
+    if oldest is not None:
+        counts["oldest_days"] = max(0, (datetime.now(timezone.utc) - oldest).days)
+    return counts
+
+
+def _parse_iso(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
 def set_row_status(token: str, page_id: str, status: str) -> None:
     notion_request("PATCH", f"{NOTION_API}/pages/{page_id}", token,
                    {"properties": {"Status": {"select": {"name": status}}}})
@@ -265,6 +308,28 @@ def ingest_checked_rows(save_fn: Callable[[str, Optional[str]], bool],
     return fail_count == 0
 
 
+def weekly_line(new_rows: int, counts: dict) -> str:
+    """The one line the weekly run always posts — a dry week is still a week that ran.
+
+    Until 2026-09-01 the run was silent unless it found NEW candidates or ingested a
+    checked row, so eleven consecutive dry weeks (06-21 → 08-31) produced no signal at
+    all while 31 rows waited. Silence must never be the designed outcome of a job whose
+    only job is to prompt a human.
+    """
+    waiting = counts.get("candidates", 0)
+    checked = counts.get("checked", 0)
+    oldest = counts.get("oldest_days", 0)
+    parts = [f"{new_rows} new candidate(s) this week"]
+    if waiting:
+        age = f", oldest {oldest}d" if oldest else ""
+        parts.append(f"{waiting} awaiting your checkbox{age}")
+    else:
+        parts.append("queue empty")
+    if checked:
+        parts.append(f"{checked} checked → ingesting now")
+    return f":inbox_tray: *list-maker pull queue*: {' · '.join(parts)} · <{QUEUE_URL}|open the queue>"
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Build/ingest the Blog Pull Queue (Notion)")
     p.add_argument("--create-db", action="store_true")
@@ -294,8 +359,7 @@ def main() -> None:
             new_rows = run_build(token, QUEUE_DB_ID, conn, api_key)
         finally:
             conn.close()
-        if new_rows:
-            post_slack(f":mag: *list-maker pull queue*: {new_rows} new candidate(s) await your checkbox")
+        post_slack(weekly_line(new_rows, queue_counts(token, QUEUE_DB_ID)))
 
     if args.ingest:
         from pipeline.save_item import save_url  # late import: avoids a module cycle at load time

@@ -157,3 +157,113 @@ def test_spotify_builders_share_canonical_scope() -> None:
         src = Path(rel).read_text()
         assert "scope=SPOTIFY_SCOPE" in src, f"{rel}: must use the canonical scope"
         assert 'scope="' not in src, f"{rel}: literal scope string found"
+
+
+# ---- Neon connection: connect timeout + bounded retry (the 2026-08-31 41-minute run) ----
+
+def test_get_db_connection_passes_a_timeout_and_retries_transient_failures(monkeypatch) -> None:
+    import psycopg2
+
+    from pipeline import common
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@h/db")
+    calls: list[dict] = []
+
+    def fake_connect(url, **kwargs):
+        calls.append(kwargs)
+        if len(calls) < 3:
+            raise psycopg2.OperationalError("connection to server at h, port 5432 failed: timed out")
+        return "conn"
+
+    sleeps: list[int] = []
+    monkeypatch.setattr(psycopg2, "connect", fake_connect)
+    monkeypatch.setattr(common.time, "sleep", lambda s: sleeps.append(s))
+
+    assert common.get_db_connection() == "conn"
+    assert len(calls) == 3
+    assert all(kw["connect_timeout"] == common.DB_CONNECT_TIMEOUT_SECONDS for kw in calls)
+    assert sleeps == list(common.DB_CONNECT_BACKOFF_SECONDS)
+
+
+def test_get_db_connection_gives_up_with_one_clear_error(monkeypatch) -> None:
+    import psycopg2
+
+    from pipeline import common
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@h/db")
+
+    def always_fail(url, **kwargs):
+        raise psycopg2.OperationalError("Network is unreachable")
+
+    monkeypatch.setattr(psycopg2, "connect", always_fail)
+    monkeypatch.setattr(common.time, "sleep", lambda _s: None)
+
+    with pytest.raises(RuntimeError, match=rf"after {common.DB_CONNECT_ATTEMPTS} attempt"):
+        common.get_db_connection()
+
+
+def test_get_db_connection_requires_a_url(monkeypatch) -> None:
+    from pipeline import common
+
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("NEON_DATABASE_URL", raising=False)
+    with pytest.raises(RuntimeError, match="DATABASE_URL"):
+        common.get_db_connection()
+
+
+def test_get_db_connection_can_keep_tuple_rows(monkeypatch) -> None:
+    """spotify_match.py indexes rows positionally; cursor_factory=None must reach psycopg2."""
+    import psycopg2
+
+    from pipeline import common
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@h/db")
+    seen: dict = {}
+
+    def fake_connect(url, **kwargs):
+        seen.update(kwargs)
+        return "conn"
+
+    monkeypatch.setattr(psycopg2, "connect", fake_connect)
+    assert common.get_db_connection(cursor_factory=None) == "conn"
+    assert seen["cursor_factory"] is None
+    common.get_db_connection()
+    assert seen["cursor_factory"].__name__ == "RealDictCursor"
+
+
+SCHEDULED_PATH_MODULES = (
+    # Everything a scheduled workflow runs that touches Neon. If one of these grows its own
+    # psycopg2.connect again, the timeout/keepalive/retry story silently stops being true
+    # for that step — which is exactly how 2026-08-31 cost 41 minutes.
+    "pipeline/run_new_episodes.py",
+    "pipeline/run_pipeline.py",
+    "pipeline/data_health.py",
+    "pipeline/pulse_report.py",
+    "pipeline/db_preflight.py",
+    "pipeline/sync_notion.py",
+    "pipeline/sync_transcripts_notion.py",
+    "pipeline/sync_playlist.py",
+    "pipeline/spotify_match.py",
+    "pipeline/build_pull_queue.py",
+    "pipeline/save_item.py",
+    "pipeline/scrapers/taddy/import_transcripts.py",
+    "pipeline/scrapers/ai_daily/load_entity_batch.py",
+    "pipeline/scrapers/ai_daily/extract_entities.py",
+    "pipeline/scrapers/ai_daily/normalize_aliases.py",
+    "pipeline/scrapers/sop/scrape.py",
+    "pipeline/scrapers/tal/scrape.py",
+    "pipeline/scrapers/tal/fetch.py",
+    "pipeline/scrapers/gabfest/import_gabfest.py",
+    "pipeline/scrapers/blog/import_blog.py",
+)
+
+
+def test_scheduled_path_modules_do_not_open_their_own_db_connections() -> None:
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    offenders = [
+        rel for rel in SCHEDULED_PATH_MODULES
+        if "psycopg2.connect(" in (root / rel).read_text(encoding="utf-8")
+    ]
+    assert offenders == [], f"route these through common.get_db_connection: {offenders}"
