@@ -48,7 +48,7 @@ permissions:
 jobs:
   intake:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 70
 
     steps:
       - name: Checkout
@@ -85,7 +85,7 @@ jobs:
         run: cd pipeline && python run_intake.py --ensure-log-schema
 
       - name: Discover, judge, log
-        timeout-minutes: 40
+        timeout-minutes: 60
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}

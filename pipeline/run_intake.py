@@ -323,6 +323,23 @@ def ingest_one(conn, row: dict, save_fn: Callable[[str, Optional[str]], bool], *
     return ok
 
 
+def save_for_intake(url: str, show_slug: Optional[str]) -> bool:
+    """save_item.save_url without its per-post Notion sync; the run syncs once at the end
+    (`sync_ingested`). Module-level so tests can replace it, and a late import so the
+    module cycle with save_item stays broken."""
+    from pipeline.save_item import save_url
+
+    return save_url(url, show_slug, sync=False)
+
+
+def sync_ingested() -> bool:
+    """The one Notion pass after ingesting: the tech group's entities and the Blog Posts
+    full-text mirror. Split out so tests can count it."""
+    from pipeline.save_item import sync_curated
+
+    return sync_curated()
+
+
 def process_overrides(conn, token: str, db_id: str,
                       save_fn: Optional[Callable[[str, Optional[str]], bool]] = None,
                       ) -> tuple[int, int, list[str]]:
@@ -334,8 +351,7 @@ def process_overrides(conn, token: str, db_id: str,
     NOT fail the run — an untickable row would then fail every run until Kevin noticed.
     """
     if save_fn is None:
-        from pipeline.save_item import save_url  # late import: avoids a module cycle
-        save_fn = save_url
+        save_fn = save_for_intake  # the caller syncs Notion once, after every ingest
     ticked = notion_log.override_rows(token, db_id)
     if not ticked:
         return 0, 0, []
@@ -572,6 +588,7 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
     """
     started = datetime.now(timezone.utc)
     failures = 0
+    ingested_count = 0
 
     table_ok = store.table_exists(conn)
     if not table_ok and not args.dry_run:
@@ -591,6 +608,8 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
         ok, failed, unknown = process_overrides(conn, token, notion_log.INTAKE_DB_ID)
         log.info("overrides: %d ingested, %d failed, %d not in %s",
                  ok, failed, len(unknown), store.TABLE)
+        if ok and not sync_ingested():
+            failed += 1
         posted = post_slack(weekly_line(store.weekly_counts(conn, started), [], [],
                                         auto_ingest=AUTO_INGEST,
                                         unknown_overrides=len(unknown),
@@ -649,12 +668,12 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
                 rubric_path=judge.RUBRIC_PATH,
             )
             if AUTO_INGEST and status == store.STATUS_JUDGED:
-                from pipeline.save_item import save_url  # late import: avoids a module cycle
-
                 # ingest_one swallows the failure by design (one bad row must not end
                 # the week) and returns the bool. Discarding it would leave a failed
                 # auto-ingest exiting 0, so blogs.yml's notify would never fire.
-                if not ingest_one(conn, store.get_by_id(conn, row["id"]) or row, save_url):
+                if ingest_one(conn, store.get_by_id(conn, row["id"]) or row, save_for_intake):
+                    ingested_count += 1
+                else:
                     failures += 1
         except SystemExit:
             raise  # an operational refusal (a missing key) stops the run, loudly
@@ -671,8 +690,6 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
     # past verdict ever becomes a row in the Tech DB.
     ingest_backlog = 0
     if AUTO_INGEST:
-        from pipeline.save_item import save_url  # late import: avoids a module cycle
-
         waiting = [r for r in store.pending(conn, store.STATUS_JUDGED)
                    if r.get("verdict") == "save" and r["id"] not in in_work]
         catchup = waiting[:MAX_INGEST_CATCHUP]
@@ -681,16 +698,26 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
             log.info("ingesting %d save(s) judged earlier but never ingested (%d more wait)",
                      len(catchup), ingest_backlog)
         for row in catchup:
-            if not ingest_one(conn, row, save_url):
+            if ingest_one(conn, row, save_for_intake):
+                ingested_count += 1
+            else:
                 failures += 1
             if not _mirror(conn, token, notion_log.INTAKE_DB_ID, row["id"], known_pages):
                 failures += 1
 
-    _, override_failed, unknown = process_overrides(conn, token, notion_log.INTAKE_DB_ID)
+    override_ok, override_failed, unknown = process_overrides(conn, token, notion_log.INTAKE_DB_ID)
     if unknown:
         log.warning("%d ticked row(s) have no %s row: %s", len(unknown), store.TABLE,
                     ", ".join(unknown[:5]))
     failures += override_failed
+    ingested_count += override_ok
+
+    # One Notion pass for everything ingested this run (entities → Tech DB, full texts
+    # → Blog Posts). Per-post syncing cost ~40 s a post on the first live run; the
+    # work is the same done once. A failed sync is a failed run — the rows are stored
+    # and extracted, but Kevin's surface is behind, and the next run's sync catches up.
+    if ingested_count and not sync_ingested():
+        failures += 1
 
     # The weekly line IS this job's deliverable — Neon and Notion are where the data
     # lives, but the Slack post is the only thing that reaches Kevin unprompted. A post
