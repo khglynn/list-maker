@@ -1,0 +1,365 @@
+"""The intake orchestrator's decisions, with the network and the database mocked out.
+
+Replaces tests/test_build_pull_queue.py. That file pinned one lesson worth carrying
+over: eleven consecutive weekly runs (2026-06-21 → 08-31) found nothing new, said
+nothing, and left 31 candidates un-triaged. So the weekly line is tested here for the
+same property — it speaks on a dry week — plus the ones the judge added: shadow mode
+must be legible in the message, a skip must say why, and a run that failed anything
+must not exit 0.
+"""
+
+from __future__ import annotations
+
+from datetime import date, timedelta
+
+import pytest
+
+from pipeline import run_intake as R
+from pipeline.scrapers.intake import store
+from pipeline.scrapers.intake.sources import Candidate
+
+
+def _candidate(url: str, source: str = "openai-rss", title: str = "T") -> Candidate:
+    return Candidate(source=source, title=title, url=url, published_on=date(2026, 9, 1))
+
+
+# ── shadow mode is the point of this PR ─────────────────────────────────────
+
+def test_shadow_mode_is_off_until_the_eval_floor_clears() -> None:
+    # The one line PR 3 changes. If this ever flips without the eval, the review that
+    # catches it is this assertion.
+    assert R.AUTO_INGEST is False
+
+
+# ── the weekly line ─────────────────────────────────────────────────────────
+
+def _counts(**kw) -> dict:
+    base = {"judged": 0, "would_save": 0, "judge_skipped": 0, "precheck_skipped": 0,
+            "disputed": 0, "held": 0, "failed": 0, "overrides": 0,
+            "precheck_reasons": {}, "would_save_backlog": 0}
+    base.update(kw)
+    return base
+
+
+def test_weekly_line_speaks_on_a_dry_week() -> None:
+    line = R.weekly_line(_counts(), [], [], auto_ingest=False)
+    assert "judged 0" in line and "would save 0" in line and "skipped 0" in line
+    assert R.notion_log.INTAKE_URL in line
+
+
+def test_weekly_line_says_shadow_mode_and_names_what_it_would_save() -> None:
+    line = R.weekly_line(
+        _counts(judged=12, would_save=6, judge_skipped=6),
+        ["How people are using ChatGPT", "Claude Fable 5.1", "A", "B", "C", "D"],
+        [], auto_ingest=False,
+    )
+    assert "shadow mode — nothing auto-ingests yet" in line
+    assert "would save 6" in line
+    assert "How people are using ChatGPT" in line
+    assert "(+1 more)" in line  # five names shown, the count says there are six
+
+
+def test_weekly_line_switches_verb_when_auto_ingest_is_on() -> None:
+    line = R.weekly_line(_counts(judged=3, would_save=2), ["X"], [], auto_ingest=True)
+    assert "saved 2" in line and "would save" not in line and "shadow mode" not in line
+
+
+def test_weekly_line_says_why_things_were_skipped() -> None:
+    line = R.weekly_line(
+        _counts(judged=4, judge_skipped=2, precheck_skipped=29,
+                precheck_reasons={"thin": 18, "duplicate": 9, "dead": 2}),
+        [], [], auto_ingest=False)
+    # a count with no cause is a number nobody can act on
+    assert "skipped 31 (18 thin, 9 duplicate, 2 dead)" in line
+
+
+def test_weekly_line_names_held_pdfs_and_flags_disputes_and_backlog() -> None:
+    line = R.weekly_line(_counts(judged=5, disputed=2, held=2),
+                         [], ["ai-index-2026.pdf", "gpt5-system-card.pdf"],
+                         auto_ingest=False, backlog=14)
+    assert "2 disputed" in line
+    assert "held 2 (ai-index-2026.pdf, gpt5-system-card.pdf)" in line
+    assert "14 waiting for the next run" in line
+
+
+def test_weekly_line_surfaces_a_ticked_row_with_no_neon_row() -> None:
+    line = R.weekly_line(_counts(), [], [], auto_ingest=False, unknown_overrides=2)
+    assert f"2 ticked row(s) not in {store.TABLE}" in line
+
+
+# ── discovery ───────────────────────────────────────────────────────────────
+
+class _Conn:
+    def __init__(self, latest=None) -> None:
+        self.latest = latest
+
+    def cursor(self):
+        raise AssertionError("these tests never reach SQL")
+
+
+def test_feed_since_catches_up_from_the_newest_post_we_hold(monkeypatch) -> None:
+    monkeypatch.setattr(store, "last_seen_published", lambda conn, src: date(2026, 8, 1))
+    # A skipped run must not leave a hole: ask from the last post, not the last run.
+    assert R.feed_since(_Conn(), "openai-rss", True, 14) == date(2026, 7, 31)
+
+
+def test_feed_since_falls_back_to_the_lookback_on_an_empty_table(monkeypatch) -> None:
+    monkeypatch.setattr(store, "last_seen_published", lambda conn, src: None)
+    assert R.feed_since(_Conn(), "openai-rss", False, 14) == date.today() - timedelta(days=14)
+
+
+def test_discover_reports_a_failed_source_instead_of_swallowing_it(monkeypatch) -> None:
+    def boom(*a, **k):
+        raise RuntimeError("openai.com timed out")
+
+    monkeypatch.setattr(R.sources, "fetch_openai_rss", boom)
+    monkeypatch.setattr(R.sources, "fetch_anthropic_index",
+                        lambda slug, key, since: [_candidate(f"https://x/{slug}", slug)])
+    monkeypatch.setattr(store, "last_seen_published", lambda conn, src: None)
+    found, notes = R.discover(_Conn(), groups="feeds", table_ok=False, firecrawl_key="k",
+                              lookback_days=14, resolve_links=False, dry_run=False)
+    # "0 from OpenAI" must never be mistaken for "OpenAI published nothing"
+    assert any("openai-rss: FAILED" in n for n in notes)
+    assert len(found) == 2  # the other two sources still ran
+
+
+def test_discover_honours_the_sources_selector(monkeypatch) -> None:
+    monkeypatch.setattr(R.mentions, "discover_cited_candidates",
+                        lambda conn: [_candidate("https://x/cited", "podcast-cited")])
+    monkeypatch.setattr(R.sources, "fetch_openai_rss",
+                        lambda since: pytest.fail("feeds must not run for --sources podcast-cited"))
+    found, notes = R.discover(_Conn(), groups="podcast-cited", table_ok=True,
+                              firecrawl_key="k", lookback_days=14,
+                              resolve_links=False, dry_run=False)
+    assert [c.source for c in found] == ["podcast-cited"]
+    assert any("skipped (pass --resolve-links)" in n for n in notes)
+
+
+def test_discover_accepts_caller_supplied_candidates(monkeypatch) -> None:
+    monkeypatch.setattr(R.mentions, "discover_cited_candidates", lambda conn: [])
+    found, notes = R.discover(_Conn(), groups="podcast-cited", table_ok=True,
+                              firecrawl_key=None, lookback_days=14, resolve_links=False,
+                              dry_run=False, extra_candidates=[_candidate("https://x/e")])
+    assert [c.url for c in found] == ["https://x/e"]
+    assert any("extra_candidates" in n for n in notes)
+
+
+def test_dedupe_collapses_the_same_post_seen_by_two_sources() -> None:
+    kept, collapsed = R.dedupe([
+        _candidate("https://openai.com/index/a/", "openai-rss"),
+        _candidate("http://www.openai.com/index/a?utm_source=x", "podcast-cited"),
+        _candidate("", "podcast-cited"),  # an unresolved citation is not a candidate
+    ])
+    assert collapsed == 1
+    assert [c.url for c in kept] == ["https://openai.com/index/a"]
+    assert kept[0].source == "openai-rss"  # first source wins; the second is kept in provenance
+
+
+# ── one candidate through the machine ───────────────────────────────────────
+
+class _Recorder:
+    """Stands in for the store: records the calls instead of writing to Neon."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple] = []
+
+    def __call__(self, name):
+        def record(*args, **kwargs):
+            self.calls.append((name, args[1:], kwargs))
+            return kwargs.get("_return")
+        return record
+
+    def names(self) -> list[str]:
+        return [c[0] for c in self.calls]
+
+
+def _patch_store(monkeypatch, rec: _Recorder, **overrides):
+    for name in ("record_precheck", "record_scrape", "mark_saved", "mark_failed"):
+        monkeypatch.setattr(store, name, rec(name))
+    monkeypatch.setattr(store, "record_decision",
+                        overrides.get("record_decision",
+                                      lambda conn, i, d, status=None: "judged"))
+
+
+def test_a_duplicate_never_reaches_firecrawl_or_a_model(monkeypatch) -> None:
+    rec = _Recorder()
+    _patch_store(monkeypatch, rec)
+    monkeypatch.setattr(R, "scrape_measurements",
+                        lambda *a, **k: pytest.fail("a duplicate must not be scraped"))
+    status = R.process_candidate(
+        object(), {"id": 1, "url": "https://x/a", "source": "openai-rss"},
+        already_ingested=True, firecrawl_key="k", openrouter_key="o",
+        rubric_path=R.judge.RUBRIC_PATH)
+    assert status == "skipped" and rec.names() == ["record_precheck"]
+    assert rec.calls[0][1][1].skip_reason == "duplicate"
+
+
+def test_a_pdf_is_held_before_the_scrape(monkeypatch) -> None:
+    rec = _Recorder()
+    _patch_store(monkeypatch, rec)
+    monkeypatch.setattr(R, "scrape_measurements",
+                        lambda *a, **k: pytest.fail("a PDF must not be scraped"))
+    status = R.process_candidate(
+        object(), {"id": 1, "url": "https://x/report.pdf", "source": "podcast-cited"},
+        already_ingested=False, firecrawl_key="k", openrouter_key="o",
+        rubric_path=R.judge.RUBRIC_PATH)
+    assert status == "held"
+
+
+def test_a_thin_scrape_is_recorded_then_skipped_without_a_model(monkeypatch) -> None:
+    rec = _Recorder()
+    _patch_store(monkeypatch, rec)
+    monkeypatch.setattr(R, "scrape_measurements", lambda url, key: (
+        {"text": "x " * 20, "words": 20, "links_out": 0, "text_sha256": "sha",
+         "title": "Stub", "published_on": None}, None))
+    monkeypatch.setattr(R.judge, "judge_candidate",
+                        lambda **k: pytest.fail("a 20-word stub is not worth a model call"))
+    status = R.process_candidate(
+        object(), {"id": 1, "url": "https://x/a", "source": "openai-rss"},
+        already_ingested=False, firecrawl_key="k", openrouter_key="o",
+        rubric_path=R.judge.RUBRIC_PATH)
+    # the measurement is still stored: "we looked, and it was thin" beats no row at all
+    assert rec.names() == ["record_scrape", "record_precheck"]
+    assert status == "skipped"
+
+
+def test_a_dead_link_is_skipped_with_the_error_kept(monkeypatch) -> None:
+    rec = _Recorder()
+    _patch_store(monkeypatch, rec)
+    monkeypatch.setattr(R, "scrape_measurements", lambda url, key: ({}, "404 Not Found"))
+    status = R.process_candidate(
+        object(), {"id": 1, "url": "https://x/a", "source": "openai-rss"},
+        already_ingested=False, firecrawl_key="k", openrouter_key="o",
+        rubric_path=R.judge.RUBRIC_PATH)
+    assert status == "skipped"
+    assert rec.names() == ["record_precheck"]  # nothing measured, so nothing recorded
+    assert rec.calls[0][2]["detail"] == "404 Not Found"
+
+
+def test_a_real_post_is_judged_with_what_the_scrape_measured(monkeypatch) -> None:
+    seen: dict = {}
+    _patch_store(monkeypatch, _Recorder())
+    monkeypatch.setattr(R, "scrape_measurements", lambda url, key: (
+        {"text": "words " * 900, "words": 900, "links_out": 14, "text_sha256": "sha",
+         "title": "How people are using ChatGPT", "published_on": date(2026, 9, 1)}, None))
+    monkeypatch.setattr(R.judge, "judge_candidate", lambda **k: seen.update(k) or "D")
+    monkeypatch.setattr(store, "record_decision", lambda conn, i, d, status=None: "judged")
+    status = R.process_candidate(
+        object(), {"id": 1, "url": "https://x/a", "source": "openai-rss",
+                   "discovered_via": {"shows": ["The AI Daily Brief"], "cited_in_episodes": 2}},
+        already_ingested=False, firecrawl_key="k", openrouter_key="o",
+        rubric_path=R.judge.RUBRIC_PATH)
+    assert status == "judged"
+    assert seen["words"] == 900 and seen["links_out"] == 14
+    assert seen["title"] == "How people are using ChatGPT"
+    # how it was found is part of what the rubric judges, not just decoration
+    assert "The AI Daily Brief" in seen["found_via"]
+
+
+# ── the override door ───────────────────────────────────────────────────────
+
+def test_ingest_one_catches_system_exit_so_one_bad_row_cannot_end_the_run(monkeypatch) -> None:
+    rec = _Recorder()
+    _patch_store(monkeypatch, rec)
+
+    def refuses(url, show):
+        raise SystemExit("Research folder not found — PDF saves are local-only")
+
+    assert R.ingest_one(object(), {"id": 1, "url": "https://x/r.pdf"}, refuses,
+                        override_by="kevin") is False
+    assert rec.names() == ["mark_failed"]
+    assert "local-only" in rec.calls[0][1][1]
+    assert rec.calls[0][2]["override_by"] == "kevin"
+
+
+def test_process_overrides_ingests_ticked_rows_and_records_who_asked(monkeypatch) -> None:
+    monkeypatch.setattr(R.notion_log, "override_rows", lambda token, db: [
+        {"page_id": "p1", "url": "https://openai.com/index/a/"},
+        {"page_id": "p2", "url": "https://x/not-a-candidate"},
+    ])
+    monkeypatch.setattr(store, "get_by_urls", lambda conn, urls: {
+        "https://openai.com/index/a": {"id": 5, "url": "https://openai.com/index/a"}})
+    rec = _Recorder()
+    _patch_store(monkeypatch, rec)
+    monkeypatch.setattr(store, "episode_id_for_url", lambda *a: 42, raising=False)
+    monkeypatch.setattr(R, "episode_id_for_url", lambda conn, url: 42)
+    mirrored: list = []
+    monkeypatch.setattr(R, "_mirror", lambda *a, **k: mirrored.append(a[-1]) or True)
+
+    ok, failed, unknown = R.process_overrides(object(), "tok", "db", lambda url, show: True)
+    assert (ok, failed) == (1, 0)
+    # a URL with no Neon row is REPORTED, not ingested: a save with nowhere to record
+    # its provenance is a value nothing can trace later
+    assert unknown == ["https://x/not-a-candidate"]
+    assert rec.calls[0] == ("mark_saved", (5, 42), {"override_by": "kevin"})
+    # the ticked rows carry their own page ids — without passing them as the adoption
+    # map, a legacy row with no stored id would get a SECOND Notion page
+    assert mirrored and isinstance(mirrored[-1], dict)
+
+
+def test_process_overrides_is_silent_when_nothing_is_ticked(monkeypatch) -> None:
+    monkeypatch.setattr(R.notion_log, "override_rows", lambda token, db: [])
+    assert R.process_overrides(object(), "tok", "db", lambda u, s: True) == (0, 0, [])
+
+
+# ── the run's contract with CI ──────────────────────────────────────────────
+
+def test_a_missing_table_stops_a_real_run_with_the_paste_instruction(monkeypatch) -> None:
+    monkeypatch.setattr(store, "table_exists", lambda conn: False)
+    args = R.parse_args([])
+    with pytest.raises(SystemExit) as exc:
+        R.run(args, object(), "tok", "fc", "or")
+    assert store.MIGRATION_PATH in str(exc.value)
+
+
+def test_a_missing_table_only_warns_in_a_dry_run(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(store, "table_exists", lambda conn: False)
+    monkeypatch.setattr(store, "already_ingested_urls", lambda conn, urls: set())
+    monkeypatch.setattr(R, "discover", lambda *a, **k: ([_candidate("https://x/a")], ["note"]))
+    assert R.run(R.parse_args(["--dry-run"]), object(), "", None, None) == 0
+    out = capsys.readouterr().out
+    # the dry run is the only way to see the plan BEFORE Kevin runs the DDL, so it has
+    # to work without the table — loudly, never silently
+    assert "does not exist yet" in out and store.MIGRATION_PATH in out
+
+
+def test_a_missing_rubric_stops_a_real_run(monkeypatch) -> None:
+    monkeypatch.setattr(store, "table_exists", lambda conn: True)
+    monkeypatch.setattr(R.judge, "load_rubric", lambda: (_ for _ in ()).throw(FileNotFoundError()))
+    with pytest.raises(SystemExit) as exc:
+        R.run(R.parse_args([]), object(), "tok", "fc", "or")
+    assert "rubric is missing" in str(exc.value)
+
+
+def test_require_secrets_names_every_missing_key_at_once(monkeypatch) -> None:
+    for key in ("NOTION_TOKEN", "FIRECRAWL_API_KEY", "OPENROUTER_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+    with pytest.raises(SystemExit) as exc:
+        R.require_secrets(R.parse_args([]))
+    message = str(exc.value)
+    # all three at once: finding them one failed run at a time is three wasted weeks
+    assert all(k in message for k in ("NOTION_TOKEN", "FIRECRAWL_API_KEY", "OPENROUTER_API_KEY"))
+
+
+def test_a_dry_run_needs_no_secrets(monkeypatch) -> None:
+    for key in ("NOTION_TOKEN", "FIRECRAWL_API_KEY", "OPENROUTER_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+    assert R.require_secrets(R.parse_args(["--dry-run"])) == ("", None, None)
+
+
+def test_dry_run_writes_nothing(monkeypatch, capsys) -> None:
+    for name in ("upsert_candidates", "record_decision", "record_scrape", "record_precheck"):
+        monkeypatch.setattr(store, name, lambda *a, **k: pytest.fail(f"{name} wrote in a dry run"))
+    monkeypatch.setattr(store, "table_exists", lambda conn: True)
+    monkeypatch.setattr(store, "get_by_urls", lambda conn, urls: {})
+    monkeypatch.setattr(store, "already_ingested_urls", lambda conn, urls: set())
+    monkeypatch.setattr(R.judge, "load_rubric", lambda: ("rubric", "v0abc"))
+    monkeypatch.setattr(R, "discover", lambda *a, **k: (
+        [_candidate("https://x/a"), _candidate("https://x/r.pdf")], ["openai-rss: 2 since …"]))
+    monkeypatch.setattr(R, "post_slack", lambda text: pytest.fail("a dry run must not Slack"))
+
+    assert R.run(R.parse_args(["--dry-run"]), object(), "", None, None) == 0
+    out = capsys.readouterr().out
+    assert "pdf (held for the Obsidian research folder): 1" in out
+    assert "would scrape + judge: 1" in out
+    assert "rubric version v0abc" in out
