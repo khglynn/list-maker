@@ -147,9 +147,9 @@ SHOWS: dict[str, ShowConfig] = {
         extraction_type="media_extraction",
     ),
     # ── Curated sources (medium != "podcast") ───────────────────────────────
-    # Ingested item-by-item via save_item.py / the Blog Pull Queue — NOT by the
-    # scheduled orchestrator. Pull signal: outbound-link density (posts citing many
-    # resources improve the mentions DB most). Their entities surface in Notion at
+    # Ingested item-by-item via save_item.py or the weekly curated intake
+    # (run_intake.py) — NOT by the scheduled episode orchestrator. Their entities
+    # surface in Notion at
     # 1 mention via fetch_entity_rollup's curated-show qualifier — notion_min_mentions
     # here only gates podcast noise, so the default 2 is correct.
     "openai-blog": ShowConfig(

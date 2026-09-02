@@ -19,12 +19,15 @@ unposted heartbeat would defeat "no pulse = trigger down".
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+# …and the repo root, so `pipeline.*` imports resolve too. The intake package uses
+# absolute `pipeline.` imports; CI runs this script from inside pipeline/, where the
+# root would otherwise not be importable.
+sys.path.insert(1, str(Path(__file__).resolve().parent.parent))
 
 from common import get_db_connection, load_environment, post_slack
 from data_health import (
@@ -39,7 +42,7 @@ from feed_check import feed_recent_dates
 from show_config import SHOWS
 
 HUB_URL = "https://www.notion.so/31c0501ef95080d1a3fde8fa8d5ce907"  # Pod Lists hub
-QUEUE_URL = "https://www.notion.so/37c0501ef9508139b52be5d5f7d71f53"  # Blog Pull Queue
+INTAKE_URL = "https://www.notion.so/37c0501ef9508139b52be5d5f7d71f53"  # the Blog Intake log
 RECENT_WINDOW_DAYS = 15  # ~the pulse cadence; "recent episodes we've processed"
 
 SHOW_SHORT = {
@@ -143,29 +146,37 @@ def show_status(s: dict, today: date | None = None) -> tuple[str, str]:
     return f"✅ caught up ({db_latest})", "ok"
 
 
-def pull_queue_counts() -> dict | None:
-    """Candidate / checked counts from the Blog Pull Queue, or None if it can't be read.
+def intake_counts(window_days: int = RECENT_WINDOW_DAYS) -> dict | None:
+    """What the curated intake did this period, or None if it can't be read.
 
-    The queue is the one place the blog sources wait on a human, and nothing else
-    nudges: between 2026-06-14 and 2026-09-01 it held 31 unchecked candidates and no
-    report said so. The pulse is the natural place — it is already the note that says
-    where things stand. A Notion hiccup must not sink the heartbeat, so this never
-    raises; the digest says "couldn't read it" instead of pretending.
+    Changed 2026-09-02, when the checkbox queue became the judged intake: this used to
+    count rows waiting on Kevin's checkbox, and nothing waits on a checkbox any more.
+    What is worth surfacing now is what the judge DID — and, while shadow mode is on,
+    how many posts it marked `save` that nobody has ingested.
+
+    Reads Neon, not Notion, and on its own short-lived connection: the caller's is a
+    REPEATABLE READ snapshot it has already closed, and a query that errors inside a
+    transaction would poison every read after it. A hiccup must not sink the
+    heartbeat, so this never raises — the digest says "couldn't read it" instead.
     """
-    token = os.getenv("NOTION_TOKEN")
-    if not token:
-        return None
     try:
-        from build_pull_queue import QUEUE_DB_ID, queue_counts  # the queue's own I/O module
+        from pipeline.scrapers.intake import store  # the intake's own I/O module
 
-        return queue_counts(token, QUEUE_DB_ID)
+        conn = get_db_connection()
+        try:
+            if not store.table_exists(conn):
+                return None  # the DDL hasn't been pasted yet; say so rather than show zeroes
+            since = datetime.now(timezone.utc) - timedelta(days=window_days)
+            return store.weekly_counts(conn, since)
+        finally:
+            conn.close()
     except Exception as exc:  # noqa: BLE001 — see docstring
-        print(f"WARNING: could not read the Blog Pull Queue: {exc}", file=sys.stderr)
+        print(f"WARNING: could not read the intake table: {exc}", file=sys.stderr)
         return None
 
 
 def build_digest(
-    shows: list[dict], totals: dict, checks: list, queue: dict | None = None,
+    shows: list[dict], totals: dict, checks: list, intake: dict | None = None,
     today: date | None = None,
 ) -> str:
     today = today or _today()
@@ -212,19 +223,22 @@ def build_digest(
         f"*Library:* {totals['entities']:,} entities · {totals['mentions']:,} mentions · "
         f"{totals['notion_transcripts']:,} transcripts in Notion"
     )
-    if queue is None:
-        lines.append("📥 *Blog Pull Queue:* couldn't read it this time (NOTION_TOKEN missing or Notion error)")
-    elif queue["candidates"] == 0:
-        lines.append(f"📥 *Blog Pull Queue:* empty — nothing waiting on you · <{QUEUE_URL}|queue>")
+    if intake is None:
+        lines.append("📥 *Intake:* couldn't read it this time "
+                     "(Neon error, or intake_candidates hasn't been created yet)")
+    elif not intake.get("judged") and not intake.get("would_save_backlog"):
+        lines.append(f"📥 *Intake:* nothing judged this period · <{INTAKE_URL}|intake log>")
     else:
-        checked = (
-            f" ({queue['checked']} checked, ingesting Monday)" if queue["checked"] else ""
-        )
-        oldest = f", oldest {queue['oldest_days']}d" if queue.get("oldest_days") else ""
-        lines.append(
-            f"📥 *Blog Pull Queue:* {queue['candidates']} candidate(s) waiting for your "
-            f"checkbox{checked}{oldest} · <{QUEUE_URL}|open the queue>"
-        )
+        bits = [f"{intake.get('judged', 0)} judged",
+                f"{intake.get('would_save', 0)} marked save"]
+        if intake.get("disputed"):
+            bits.append(f"{intake['disputed']} disputed")
+        if intake.get("would_save_backlog"):
+            # True in shadow mode and after it: `judged` means "a save with no episode".
+            bits.append(f"{intake['would_save_backlog']} not yet ingested")
+        if intake.get("held"):
+            bits.append(f"{intake['held']} held (PDFs)")
+        lines.append(f"📥 *Intake:* {' · '.join(bits)} · <{INTAKE_URL}|intake log>")
 
     if fails:
         lines.append("")
@@ -256,9 +270,9 @@ def main() -> None:
         checks = run_checks(conn)
     finally:
         conn.close()
-    queue = pull_queue_counts()
+    intake = intake_counts()
 
-    digest = build_digest(shows, totals, checks, queue)
+    digest = build_digest(shows, totals, checks, intake)
     print(digest)
     if not args.dry_run:
         # The pulse IS the heartbeat — a "success" that didn't actually post would make a

@@ -9,7 +9,7 @@ what that day dispatches via GitHub `workflow_dispatch` (pinned by `worker.test.
 | every day         | `entities.yml`              | AI Daily, Hard Fork, PCHH, Culture Gabfest → Notion |
 | Mon               | `pipeline.yml` show_id=2    | This American Life (music → Spotify)               |
 | Wed, Fri          | `pipeline.yml` show_id=1    | Switched on Pop (music → Spotify)                  |
-| Mon               | `eval.yml`, `blogs.yml`     | extraction eval; Blog Pull Queue build + ingest    |
+| Mon               | `eval.yml`, `blogs.yml`     | extraction eval; curated intake (discover + judge)    |
 | 1st + 15th        | `entities.yml` `pulse=true` | the biweekly Slack pulse, run AFTER that day's import |
 
 **Why it exists:** GitHub auto-disables `schedule:` crons in public repos after 60

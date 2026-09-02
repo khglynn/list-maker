@@ -5,12 +5,15 @@ The user-facing entry point for curated saves ("save this blog post please"):
 
     ./venv/bin/python save_item.py --url https://www.anthropic.com/news/claude-fable-5
     ./venv/bin/python save_item.py --url https://... --show openai-blog   # override resolution
-    ./venv/bin/python save_item.py --from-queue                            # ingest checked queue rows
 
 Show resolution: a registered blog show whose domain matches the URL, else the
 saved-articles catch-all. PDFs/long reports skip the DB (Kevin's rule: those live
 as files in the Obsidian research folder) — set RESEARCH_DOCS_DIR to override the
-default vault path; in CI the queue build marks PDFs so this path never runs there.
+default vault path; in CI the intake holds PDFs so this path never runs there.
+
+This is the ingest PRIMITIVE. The weekly curated intake (run_intake.py) calls
+save_url directly for the rows Kevin ticked "Pull anyway"; the old --from-queue
+flag retired with the checkbox queue on 2026-09-02.
 
 Composes existing steps rather than reimplementing: import_blog.ingest_url for
 storage, run_new_episodes.step_entity_extraction for mentions (skipped when the
@@ -146,8 +149,6 @@ def main() -> None:
     p.add_argument("--url", action="append", default=[], help="Article URL (repeatable)")
     p.add_argument("--show", default="", help="Force a show slug (default: resolve by domain)")
     p.add_argument("--podcast", default="", help="(deferred) one-off podcast episode saves")
-    p.add_argument("--from-queue", action="store_true",
-                   help="Ingest all checked-but-unpulled rows from the Blog Pull Queue")
     p.add_argument("--skip-extract", action="store_true", help="Store full text only")
     args = p.parse_args()
 
@@ -160,12 +161,9 @@ def main() -> None:
             "run the normal pipeline; otherwise this is the 'taddy episode lookup' backlog item."
         )
 
-    if args.from_queue:
-        from pipeline.build_pull_queue import ingest_checked_rows  # late import — needs NOTION_TOKEN
-        raise SystemExit(0 if ingest_checked_rows(save_url) else 1)
-
     if not args.url:
-        raise SystemExit("Provide --url (repeatable) or --from-queue")
+        raise SystemExit("Provide --url (repeatable). To ingest the rows you ticked "
+                         "\"Pull anyway\" in the intake log: run_intake.py --overrides-only")
 
     failed = 0
     for url in args.url:
