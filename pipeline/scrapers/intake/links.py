@@ -91,9 +91,10 @@ def build_query(mention: dict) -> str:
     return f'"{name}"'
 
 
-def score(mention: dict, url: str, title: str) -> tuple[float, float]:
-    """(score, title_ratio). title_ratio = share of the name's content tokens found in
-    the result's title or URL; score adds a primary-source bonus and a secondary penalty."""
+def score(mention: dict, url: str, title: str) -> tuple[float, float, bool]:
+    """(score, title_ratio, primary). title_ratio = share of the name's content tokens
+    found in the result's title or URL; primary = the hit earned a primary-source bonus
+    (the org's own domain, or a paper host); score adds that bonus and a secondary penalty."""
     name_tokens = content_tokens(mention["canonical_name"]) or set(tokens(mention["canonical_name"]))
     hit_tokens = set(tokens(title)) | set(tokens(url))
     ratio = len(name_tokens & hit_tokens) / max(1, len(name_tokens))
@@ -103,30 +104,40 @@ def score(mention: dict, url: str, title: str) -> tuple[float, float]:
     # The org's own site is the primary source: ramp.com for "Ramp AI Index". Equality
     # on the host's first label, not a substring — "white" inside whitecube.ai is not the
     # White House (a real miss from the 2026-09-02 probe).
+    primary = False
     if host.split(".")[0] in orgs:
         s += 0.3
+        primary = True
     if mention.get("mention_type") == "paper" and any(host.endswith(h) for h in PRIMARY_HOST_HINTS):
         s += 0.2
+        primary = True
     for sec, penalty in SECONDARY_DOMAINS.items():
         if host == sec or host.endswith("." + sec):
             if not (mention.get("mention_type") == "social_post" and sec in ("x.com", "twitter.com")):
                 s -= penalty
             break
-    return max(0.0, min(1.0, round(s, 3))), round(ratio, 3)
+    return max(0.0, min(1.0, round(s, 3))), round(ratio, 3), primary
 
 
 def resolve_one(mention: dict, results: list[dict], query: str) -> Resolution:
     scored = []
-    for r in results:
+    for rank, r in enumerate(results):
         url = (r.get("url") or "").strip()
         if not url:
             continue
-        s, ratio = score(mention, url, r.get("title") or "")
-        scored.append({"url": url, "title": (r.get("title") or "")[:200], "score": s, "title_ratio": ratio})
+        s, ratio, primary = score(mention, url, r.get("title") or "")
+        scored.append({"url": url, "title": (r.get("title") or "")[:200], "score": s,
+                       "title_ratio": ratio, "primary": primary, "rank": rank})
     scored.sort(key=lambda x: -x["score"])  # stable: search rank breaks ties
     generic = len(content_tokens(mention["canonical_name"])) < 2
     best = scored[0] if scored else None
-    if best and not generic and best["score"] >= AUTO_RESOLVE_SCORE and best["title_ratio"] >= AUTO_RESOLVE_TITLE_RATIO:
+    # A full-title match alone is trusted only when the search engine ranked it first:
+    # for an exact-title query the primary source comes first (darioamodei.com for
+    # "Machines of Loving Grace"); a full-title match ranked third is commentary
+    # (happyrock.cloud's "deep dive" on the White House framework). A primary-source
+    # bonus (the org's own domain, arxiv) is trusted at any rank.
+    trusted = bool(best) and (best["primary"] or best["rank"] == 0)
+    if best and not generic and trusted and best["score"] >= AUTO_RESOLVE_SCORE and best["title_ratio"] >= AUTO_RESOLVE_TITLE_RATIO:
         return Resolution(mention["mention_id"], best["url"], best["score"], scored, query)
     return Resolution(mention["mention_id"], None, best["score"] if best else 0.0, scored, query)
 

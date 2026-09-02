@@ -46,7 +46,11 @@ def test_generic_names_are_never_guessed() -> None:
 def test_secondary_coverage_does_not_resolve_when_no_primary_exists() -> None:
     p = _probe("White House AI safety testing framework")
     r = L.resolve_one(p["mention"], p["results"], "q")
-    assert r.url is None and all(c["score"] < L.AUTO_RESOLVE_SCORE for c in r.candidates)
+    # happyrock.cloud's "deep dive" matches the full title but ranks third with no
+    # primary-source bonus — commentary, not the framework; it stays a candidate.
+    assert r.url is None
+    assert not any(c["primary"] for c in r.candidates)
+    assert any(c["url"].startswith("https://happyrock.cloud/") and c["title_ratio"] == 1.0 for c in r.candidates)
 
 
 def test_query_adds_the_org_only_for_generic_names() -> None:
@@ -59,9 +63,9 @@ def test_query_adds_the_org_only_for_generic_names() -> None:
 
 def test_social_penalty_is_lifted_for_social_posts() -> None:
     m = {"mention_id": 1, "mention_type": "social_post", "canonical_name": "Andrew Ng AI Engineering Skills Map", "context_snippet": ""}
-    s_social, _ = L.score(m, "https://x.com/AndrewYNg/article/1", "AI Engineering Skills Map")
+    s_social, _, _ = L.score(m, "https://x.com/AndrewYNg/article/1", "AI Engineering Skills Map")
     m2 = {**m, "mention_type": "blog_post"}
-    s_blog, _ = L.score(m2, "https://x.com/AndrewYNg/article/1", "AI Engineering Skills Map")
+    s_blog, _, _ = L.score(m2, "https://x.com/AndrewYNg/article/1", "AI Engineering Skills Map")
     assert s_social > s_blog
 
 
