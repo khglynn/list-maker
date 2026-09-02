@@ -9,9 +9,10 @@
 - Full diagnosis of the August alerts and the blogs: `DEVLOG.md` 2026-09-01. Kevin's decisions: the plan's "Decisions" section.
 
 ## Open items (need Kevin)
-1. **Two SQL pastes** (decision 10, DDL is Kevin-run by design): `pipeline/scrapers/ai_daily/sql/007_drop_duplicate_episodes_url_index.sql`, then `008_songs_unique_per_episode.sql` (deletes the 3 space-padded duplicate song rows first).
-2. **Decision 6:** PCHH + Culture Gabfest full-archive backfill — run once (~11h, ~$7.50) or write it off.
-3. **Dependabot PRs still open:** #6–#10 (all `web/` — close themselves now that `web/` is gone), plus any floor bumps that were stale when merged one by one (#14, #19–#22 at last check).
+1. **Merge PR #30** (hotfix: PR #23 left the episode-summary CSV columns out of step with the row, so every extraction batch failed after the model call) — before the 20:30 UTC daily run on 2026-09-02, or that run fails the same way. The working tree stays on `fix/episode-summary-csv-fieldnames` while the backfill below runs.
+2. **Dependabot PRs still open:** #27–#29 (floor bumps for python-dotenv, requests, spotipy in `pipeline/`).
+3. **Decision 6 is running:** the PCHH + Culture Gabfest full-archive extraction, relaunched 2026-09-02 09:33 CT on the fix branch (`backfill-media.log` at the repo root; the 09-01 attempt failed 64/64 batches on the bug above, log kept as `backfill-media-failed-2026-09-01.log`). ~5h; it syncs Notion at the end.
+4. ~~Two SQL pastes~~ — 007 and 008 ran (verified 2026-09-02: `episodes_url_key` gone, the 3 duplicate songs gone, `songs_episode_title_artist_unique` present).
 
 ## Next arc (agreed 2026-09-01, in progress since 2026-09-02) — "curated intake v2 + ads as data"
 Automated blog/article intake judged by an inexpensive classifier instead of a Notion checkbox; sponsor reads kept, tagged, and weight-capped. **Arc plan (design, schema, PR split): `claude-plans/2026-09-02-curated-intake-v2/PLAN.md`.** Spec, acceptance, and the kickoff paste: `claude-plans/2026-09-01-ground-it-cleanup-plan.md` → "Next arc". After it: plan Phases 4 (feed check by identity, run watchdog via `fleet-watchdog`, transactional load) and 5 (Spotify-path tests).
