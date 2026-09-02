@@ -9,12 +9,13 @@
 - Full diagnosis of the August alerts and the blogs: `DEVLOG.md` 2026-09-01. Kevin's decisions: the plan's "Decisions" section.
 
 ## Open items (need Kevin)
-1. **Merge PR #30** (hotfix: PR #23 left the episode-summary CSV columns out of step with the row, so every extraction batch failed after the model call) — before the 20:30 UTC daily run on 2026-09-02, or that run fails the same way. The working tree stays on `fix/episode-summary-csv-fieldnames` while the backfill below runs.
-2. **Dependabot PRs still open:** #27–#29 (floor bumps for python-dotenv, requests, spotipy in `pipeline/`).
-3. **Decision 6 is running:** the PCHH + Culture Gabfest full-archive extraction, relaunched 2026-09-02 09:33 CT on the fix branch (`backfill-media.log` at the repo root; the 09-01 attempt failed 64/64 batches on the bug above, log kept as `backfill-media-failed-2026-09-01.log`). ~5h; it syncs Notion at the end.
-4. ~~Two SQL pastes~~ — 007 and 008 ran (verified 2026-09-02: `episodes_url_key` gone, the 3 duplicate songs gone, `songs_episode_title_artist_unique` present).
-5. **SQL paste 009 — required before merging the ads-as-data PR.** `pipeline/scrapers/ai_daily/sql/009_sponsor_provenance.sql` adds `ai_mentions.sponsor_source` (additive, idempotent, no rewrite of existing rows). The loader writes that column unconditionally, so an un-migrated database fails the next extraction load. DDL is your paste; agents don't run it.
-6. **Then the sponsor retag**, once 009 is in: `cd pipeline && ./venv/bin/python scrapers/ai_daily/retag_sponsor_mentions.py --dry-run` to re-read the list, then `--apply`. It reclassifies 229 already-stored mentions across 45 entities as sponsor reads (73 Blitzy, 18 Web3 with A16Z Crypto, 12 each Superintelligent and Vanta…). It only ever sets `is_editorial=false` + `sponsor_source`; it never deletes a row. The dry-run report lands in `pipeline/_cache/retag-sponsors-<date>.json`. `--apply` also bumps `updated_at` on every affected entity, so the next 20:30 UTC sync republishes those Notion pages with the capped Mentions count and the new columns — nothing else would trigger it, since a retag touches no episode.
+1. **Merge PR #30** (the CSV-columns hotfix) before the 20:30 UTC daily run — still open at 13:45 CT on 09-02.
+2. **Two SQL pastes, in order:** `pipeline/scrapers/ai_daily/sql/009_sponsor_provenance.sql` (one nullable column on `ai_mentions`), then `010_intake_candidates.sql` (the intake table). Both additive and idempotent. Paste-ready commands are in the chat.
+3. **Then the retag:** `retag_sponsor_mentions.py --dry-run` (prints 229 mentions / 45 entities), then `--apply` (no deletes; touches the entities so the next daily sync republishes their Notion pages).
+4. **The labels page** (artifact 69d95337): flip what's wrong, answer seven questions, press Done. Until then the eval runs on the reviewers' provisional labels.
+5. **After 2–3:** the arc branch goes to `main` as one PR (intake in shadow mode + ads as data; 446 tests) — Kevin merges. The first real weekly run then fills the 📥 Blog Intake log with verdicts; auto-ingest stays off until the eval floor clears on Kevin's labels and one shadow week reads right.
+6. **Dependabot #27–#29** still open.
+7. **Backfill (decision 6):** PCHH done (2,073 mentions, Notion synced in ten-minute resumable attempts); Culture Gabfest's 909 episodes are extracting now, several hours, laptop open. The main working tree stays on the pre-merge arc commit until it finishes (the run reads pipeline files from disk); the merged arc is on origin.
 
 ## Next arc (agreed 2026-09-01, in progress since 2026-09-02) — "curated intake v2 + ads as data"
 **PR 1 of 3 (ads as data) is open as a draft against `arc/curated-intake-v2`.**
