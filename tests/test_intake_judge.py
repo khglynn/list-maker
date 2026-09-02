@@ -18,8 +18,9 @@ def test_precheck_orders_duplicate_pdf_dead_thin() -> None:
 
 
 def test_parse_verdict_tolerates_fences_and_clamps_confidence() -> None:
-    v = J.parse_verdict('```json\n{"verdict": "Save", "confidence": 1.4, "reason": "usage numbers"}\n```', "m")
-    assert (v.verdict, v.confidence, v.reason, v.model) == ("save", 1.0, "usage numbers", "m")
+    v = J.parse_verdict('```json\n{"verdict": "Save", "confidence": 1.4, "reason": "usage numbers", "rule": "S1", "job": "Deck"}\n```', "m")
+    assert (v.verdict, v.confidence, v.reason, v.model, v.rule, v.job) == ("save", 1.0, "usage numbers", "m", "S1", "deck")
+    assert J.parse_verdict('{"verdict":"skip","confidence":0.9,"reason":"k1","job":null}', "m").job is None
     with pytest.raises(ValueError):
         J.parse_verdict('{"verdict": "maybe", "confidence": 0.5}', "m")
     with pytest.raises(ValueError):
@@ -31,9 +32,11 @@ def test_decide_agrees_averages_and_disagreement_saves_disputed() -> None:
     b = J.Verdict("skip", 0.7, "no data", "luna")
     d = J.decide(a, b, "v1")
     assert (d.verdict, d.confidence, d.disputed, d.reason) == ("skip", 0.8, False, "customer story")
-    c = J.Verdict("save", 0.6, "first-party usage figures", "luna")
+    assert d.rule is None and d.job is None
+    c = J.Verdict("save", 0.6, "first-party usage figures", "luna", rule="S1", job="deck")
     d2 = J.decide(a, c, "v1")
     assert d2.verdict == "save" and d2.disputed and d2.reason == "first-party usage figures" and d2.confidence == 0.6
+    assert (d2.rule, d2.job) == ("S1", "deck")  # the save side's provenance rides with the disputed save
     solo = J.decide(a, None, "v1")
     assert solo.verdict == "skip" and not solo.disputed and solo.confidence == 0.9
 
@@ -44,6 +47,7 @@ def test_build_messages_truncates_and_names_the_fields() -> None:
     assert msgs[0] == {"role": "system", "content": "RUBRIC"}
     user = msgs[1]["content"]
     assert "TITLE: T" in user and "CATEGORY: Research" in user and "TEXT (first part):" in user
+    assert "FLAGS: HAS_PERCENT: no HAS_SAMPLE: no" in user and "FOUND_VIA: feed" in user
     assert user.count("x") == J.MAX_TEXT_CHARS and '"verdict": "save" | "skip"' in user
 
 
@@ -75,3 +79,15 @@ def test_judge_once_falls_through_to_the_next_model(monkeypatch) -> None:
 
     v = J.judge_once([{"role": "user", "content": "x"}], ("bad/model", "good/model"), "k", client=FakeClient())
     assert v.model == "good/model" and calls == ["bad/model", "good/model"]
+
+
+def test_flags_are_whole_document_facts() -> None:
+    from pipeline.scrapers.intake.flags import compute_flags
+    text = ("Getting started with ChatGPT. Contact sales today.\n\n" + "filler " * 3000 +
+            "In a randomized experiment with more than 1,000 students, 43% improved. "
+            "Pricing is $0.20 per million input tokens.\n| a | b |\n|---|---|\n| 1 | 2 |\n"
+            "A retailer in the apparel industry deployed it.")
+    f = compute_flags(text)
+    assert f == {"HAS_PERCENT": True, "HAS_SAMPLE": True, "HAS_PRICE": True, "HAS_TABLE": True,
+                 "CUSTOMER_STORY": True, "PEER_INDUSTRY": True}
+    assert compute_flags("Introducing our new office in Brazil.") == {k: False for k in f}

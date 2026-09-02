@@ -94,24 +94,37 @@ def fetch_openai_rss(since: Optional[date] = None, timeout: float = 30.0) -> lis
 # or "Sep 1, 2026Announcements"), a bold title, and a blurb — the exact mix depends
 # on whether the entry is the hero, a featured card, or a list row. We merge every
 # bracket that points at the same URL, so the shape differences stop mattering.
-_LINK_RE = re.compile(r"\[(?P<text>[^\]]*?)\]\((?P<url>https://www\.anthropic\.com/[^)\s]+)\)", re.S)
+# The link text may wrap ONE markdown image (every /engineering card does:
+# `[![alt](img)\\ **Title** \\ Apr 23, 2026](url)`), so the class allows a nested
+# `![…](…)` before stopping at the closing bracket. Found 2026-09-02 by the plumbing
+# agent's dry run: the plain `[^\]]*?` class parsed 1 of 24 engineering posts.
+_LINK_RE = re.compile(
+    r"\[(?P<text>(?:!\[[^\]]*\]\([^)]*\)|[^\[\]])*?)\]"
+    r"\((?P<url>https://www\.anthropic\.com/[^)\s]+)\)", re.S)
 _DATE_RE = re.compile(r"(?P<cat>[A-Z][A-Za-z ]*?)?(?P<date>[A-Z][a-z]{2} \d{1,2}, \d{4})(?P<cat2>[A-Z][A-Za-z ]*)?")
 _BOLD_RE = re.compile(r"\*\*(?P<title>[^*]+?)\*\*")
+_IMG_RE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
 _NOISE_PATHS = ("/press-kit", "/news$", "/engineering$", "/careers", "/company", "/legal", "/rss", "/customers$")
 
 
 def parse_anthropic_index(markdown: str, source: str = "anthropic-news",
                           since: Optional[date] = None) -> list[Candidate]:
     """Entries on an Anthropic index page (hero + featured cards + the list), newest
-    first. Undated entries are dropped: on these pages every post row carries a date,
-    so a dateless link is navigation, not a post."""
+    first. An entry with a date is a post. An undated entry is kept only when it is a
+    hero (a bold title, "Featured"): /engineering's featured post carries no date on
+    the index, and dropping it lost the newest post. Anything else undated is
+    navigation. Undated posts sort last and pass any `since` filter (a visible gap,
+    not a silent drop — the same rule as the RSS parser)."""
     merged: dict[str, dict] = {}
     for m in _LINK_RE.finditer(markdown):
         url = m["url"].rstrip("/")
         if any(re.search(p, url) for p in _NOISE_PATHS):
             continue
-        text = m["text"].replace("\\\\", "\n").replace("\\", "")
-        entry = merged.setdefault(url, {"title": "", "date": None, "category": [], "blurb": ""})
+        text = _IMG_RE.sub("", m["text"]).replace("\\\\", "\n").replace("\\", "")
+        entry = merged.setdefault(url, {"title": "", "date": None, "category": [], "blurb": "", "hero": False})
+        if "Featured" in text:
+            entry["hero"] = True
+            text = text.replace("Featured", "", 1)
         bold = _BOLD_RE.search(text)
         if bold:
             entry["title"] = entry["title"] or bold["title"].strip()
@@ -129,17 +142,23 @@ def parse_anthropic_index(markdown: str, source: str = "anthropic-news",
                 entry["blurb"] = entry["blurb"] or " ".join(lines[1:])[:500]
             elif not bold and lines and entry["title"] and lines[0] != entry["title"]:
                 entry["blurb"] = entry["blurb"] or " ".join(lines)[:500]
-        elif not bold and text.strip() and not entry["title"]:
+        elif bold:
+            # An undated bracket with a bold title: the hero card — the lines after
+            # the title are its blurb.
+            rest = [ln.strip(" *") for ln in text.splitlines() if ln.strip(" *") and ln.strip(" *") != bold["title"].strip()]
+            if rest and not entry["blurb"]:
+                entry["blurb"] = " ".join(rest)[:500]
+        elif text.strip() and not entry["title"]:
             entry["title"] = text.strip()
     out = [
         Candidate(source=source, title=e["title"], url=url, published_on=e["date"],
                   category=e["category"], blurb=e["blurb"],
-                  discovered_via={"index": ANTHROPIC_INDEXES.get(source, source)})
-        for url, e in merged.items() if e["date"] and e["title"]
+                  discovered_via={"index": ANTHROPIC_INDEXES.get(source, source), **({"hero": True} if e["hero"] else {})})
+        for url, e in merged.items() if e["title"] and (e["date"] or e["hero"])
     ]
     if since is not None:
-        out = [c for c in out if c.published_on >= since]
-    out.sort(key=lambda c: c.published_on, reverse=True)
+        out = [c for c in out if c.published_on is None or c.published_on >= since]
+    out.sort(key=lambda c: c.published_on or date.min, reverse=True)
     return out
 
 

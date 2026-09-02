@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS intake_candidates (
   verdict         TEXT CHECK (verdict IN ('save', 'skip')),
   confidence      NUMERIC(4,3) CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1)),
   reason          TEXT,
+  rule            TEXT,                             -- the rubric rule that fired (S1…K9, R-*, X-*)
+  job             TEXT,                             -- the later use a save serves (deck | build | policy | playbook | landscape | findable)
   judge_model     TEXT,
   checker_model   TEXT,
   checker_verdict TEXT CHECK (checker_verdict IN ('save', 'skip')),
