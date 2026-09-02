@@ -93,10 +93,18 @@ silently comparing apples to oranges.
 ## Faithfulness
 
 The runner re-extracts through the **exact production path** —
-`openai_extract → process_episode_mentions` (the single shared sanitize→postprocess→filter
+`openai_extract → process_episode_mentions` (the single shared sanitize→postprocess→classify→filter
 function that `main()` also uses) → `collapse_to_entities` (production's `normalize_name`).
 So "did the run find entity X" means exactly what it means downstream; the eval can't
-drift from production.
+drift from production. That includes sponsor detection: the runner passes the episode's
+parsed roster and its truncated transcript, the same two inputs the orchestrator passes.
+
+**The frozen baseline predates ads-as-data (2026-09-02).** Extraction used to DROP
+sponsor mentions and now keeps them tagged, so entity yield against a baseline built
+before that change reads high by however many ads each episode carried. The
+`yield_ratio_max` band should absorb it, but re-freeze the baseline
+(`build_baseline.py`) once the sponsor retag has run, so the band is measuring model
+drift again rather than a known one-time step.
 
 ## Same-model reference numbers (gpt-4.1-mini, 2026-06-07)
 

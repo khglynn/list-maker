@@ -47,6 +47,7 @@ from evals.extraction.metrics import (  # noqa: E402
     type_counts,
 )
 from pipeline.common import get_db_connection, load_environment, post_slack  # noqa: E402
+from pipeline.scrapers.ai_daily.sponsors import roster_from_raw_content  # noqa: E402
 from pipeline.scrapers.ai_daily.extract_entities import (  # noqa: E402
     DEFAULT_MODEL,
     EpisodeInput,
@@ -104,6 +105,7 @@ def pull_transcript(conn, episode_id: int) -> dict | None:
         cur.execute(
             """
             SELECT ep.id, ep.title, ep.publish_date, s.slug AS show_slug,
+                   ep.raw_content,
                    COALESCE(et.transcript_text, ep.description_body) AS transcript_text
             FROM episodes ep
             JOIN shows s ON s.id = ep.show_id
@@ -128,7 +130,18 @@ def reextract(api_key: str, model: str, row: dict, max_chars: int) -> tuple[dict
     )
     profile = get_profile("entity_extraction")
     raw, _usage = openai_extract(api_key, model, episode, transcript, profile)
-    mentions = process_episode_mentions(raw, row["id"], profile)
+    # Sponsor detection is part of the production path as of 2026-09-02 (ads are kept
+    # and tagged, not dropped), so the eval feeds it the same two inputs the orchestrator
+    # does — the episode's declared roster and the truncated transcript. Without them
+    # this function would quietly stop being "the EXACT production path" it claims to be,
+    # and the yield it measures would be a number production never produces.
+    mentions = process_episode_mentions(
+        raw,
+        row["id"],
+        profile,
+        roster=roster_from_raw_content(row.get("raw_content")),
+        transcript_text=transcript,
+    )
     return collapse_to_entities(mentions), confidence_report(mentions)
 
 
