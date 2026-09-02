@@ -89,3 +89,6 @@ codex-notes/ai-daily-entity-extraction/batch-*/
 # Playwright MCP scratch (browser session logs)
 .playwright-mcp/
 codex-notes/ai-daily-entity-extraction/spotcheck-*/
+
+# Local backfill run logs (nohup output); the failed 2026-09-01 run is kept for the record
+/backfill-*.log*
