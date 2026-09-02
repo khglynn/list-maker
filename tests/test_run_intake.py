@@ -395,11 +395,51 @@ def test_ensure_log_schema_needs_only_the_notion_token(monkeypatch) -> None:
     assert R.require_secrets(R.parse_args(["--ensure-log-schema"]))[0] == "tok"
 
 
-def test_overrides_only_needs_only_the_notion_token(monkeypatch) -> None:
+def test_overrides_only_needs_no_scrape_or_judge_keys(monkeypatch) -> None:
     monkeypatch.setenv("NOTION_TOKEN", "tok")
+    monkeypatch.setenv("SLACK_WEBHOOK_URL", "https://hooks.example/x")
     for key in ("FIRECRAWL_API_KEY", "OPENROUTER_API_KEY"):
         monkeypatch.delenv(key, raising=False)
     assert R.require_secrets(R.parse_args(["--overrides-only"]))[0] == "tok"
+
+
+def _headless(monkeypatch, headless: bool = True) -> None:
+    monkeypatch.setattr(R.sys.stdin, "isatty", lambda: not headless, raising=False)
+
+
+def test_an_unattended_run_that_posts_requires_a_webhook(monkeypatch) -> None:
+    """An unset webhook must fail up front in CI, not after the whole week is judged.
+
+    common.post_slack logs and returns False when SLACK_WEBHOOK_URL is missing — by
+    design, "alerting must not break a pipeline run" — so nothing downstream would
+    notice. --ensure-log-schema posts nothing and stays exempt, which is what
+    blogs.yml's schema step (NOTION_TOKEN only) relies on.
+    """
+    monkeypatch.setenv("NOTION_TOKEN", "tok")
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "fc")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or")
+    monkeypatch.delenv("SLACK_WEBHOOK_URL", raising=False)
+    _headless(monkeypatch)
+    with pytest.raises(SystemExit) as exc:
+        R.require_secrets(R.parse_args([]))
+    assert "SLACK_WEBHOOK_URL" in str(exc.value)
+    with pytest.raises(SystemExit):
+        R.require_secrets(R.parse_args(["--overrides-only"]))
+    # the schema pass posts nothing, so it still runs on NOTION_TOKEN alone
+    assert R.require_secrets(R.parse_args(["--ensure-log-schema"]))[0] == "tok"
+
+
+def test_a_terminal_run_does_not_demand_a_webhook(monkeypatch) -> None:
+    """Kevin has no SLACK_WEBHOOK_URL in ~/.env or .env.local (checked 2026-09-02), and
+    the runbook documents three hand-run commands. Refusing to start would break all
+    three to guard a post whose failure the run already catches on the way out — the
+    same headless/interactive split common.ensure_spotify_token makes."""
+    monkeypatch.setenv("NOTION_TOKEN", "tok")
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "fc")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or")
+    monkeypatch.delenv("SLACK_WEBHOOK_URL", raising=False)
+    _headless(monkeypatch, headless=False)
+    assert R.require_secrets(R.parse_args([]))[0] == "tok"
 
 
 def test_a_dry_run_needs_no_secrets(monkeypatch) -> None:
@@ -493,3 +533,46 @@ def test_mirror_records_the_sync_even_when_the_page_already_existed(monkeypatch)
                         lambda conn, cid, pid: recorded.append((cid, pid)))
     assert R._mirror(object(), "tok", "db", 5) is True
     assert recorded == [(5, "p1")]
+
+
+# ── the weekly line is the deliverable, so a failed post is a failed run ────
+
+def _stub_a_quiet_run(monkeypatch, posted: bool):
+    """A run with no work to do, so only the Slack post can change the outcome."""
+    monkeypatch.setattr(store, "table_exists", lambda conn: True)
+    monkeypatch.setattr(R.judge, "load_rubric", lambda: ("rubric", "v0abc"))
+    monkeypatch.setattr(R, "discover", lambda *a, **k: ([], []))
+    monkeypatch.setattr(store, "upsert_candidates", lambda conn, c: (0, 0))
+    monkeypatch.setattr(store, "needs_judging", lambda conn, v: [])
+    monkeypatch.setattr(store, "needs_mirroring", lambda conn, limit=None: [])
+    monkeypatch.setattr(store, "already_ingested_urls", lambda conn, urls: set())
+    monkeypatch.setattr(R.notion_log, "existing_page_ids", lambda token, db: {})
+    monkeypatch.setattr(R, "process_overrides", lambda *a, **k: (0, 0, []))
+    monkeypatch.setattr(store, "weekly_counts", lambda conn, since: _counts())
+    monkeypatch.setattr(store, "titles", lambda conn, since, status, **k: [])
+    monkeypatch.setattr(R, "post_slack", lambda text: posted)
+
+
+def test_a_weekly_line_that_did_not_post_fails_the_run(monkeypatch) -> None:
+    """Slack is the only thing that reaches Kevin unprompted.
+
+    A revoked webhook or a Slack outage used to leave the run green with nobody told —
+    the exact silence this whole PR exists to kill, and the same hazard pulse_report.py
+    already guards against with a comment naming it.
+    """
+    _stub_a_quiet_run(monkeypatch, posted=False)
+    assert R.run(R.parse_args([]), object(), "tok", "fc", "or") == 1
+
+
+def test_a_posted_weekly_line_leaves_a_quiet_run_green(monkeypatch) -> None:
+    _stub_a_quiet_run(monkeypatch, posted=True)
+    assert R.run(R.parse_args([]), object(), "tok", "fc", "or") == 0
+
+
+def test_overrides_only_also_fails_when_its_line_does_not_post(monkeypatch) -> None:
+    monkeypatch.setattr(store, "table_exists", lambda conn: True)
+    monkeypatch.setattr(R.judge, "load_rubric", lambda: ("rubric", "v0abc"))
+    monkeypatch.setattr(R, "process_overrides", lambda *a, **k: (0, 0, []))
+    monkeypatch.setattr(store, "weekly_counts", lambda conn, since: _counts())
+    monkeypatch.setattr(R, "post_slack", lambda text: False)
+    assert R.run(R.parse_args(["--overrides-only"]), object(), "tok", "fc", "or") == 1

@@ -513,6 +513,16 @@ def require_secrets(args: argparse.Namespace) -> tuple[str, Optional[str], Optio
     needed: list[tuple[str, Optional[str]]] = []
     if not args.dry_run:
         needed.append(("NOTION_TOKEN", token))
+    # Every mode that POSTS needs a webhook, and an unset one is a silent no-op on the
+    # happy path (common.post_slack logs and returns False by design) — so an
+    # unattended run would judge the whole week before anything noticed nobody was
+    # told. Demanded up front only when headless, mirroring common.ensure_spotify_token:
+    # CI is where the Slack line IS the deliverable, while a terminal run is a human
+    # watching the output who does not need a webhook to read it. Either way the
+    # post-run return check below still fails the run if the post doesn't land.
+    # --ensure-log-schema posts nothing, so it is exempt along with --dry-run.
+    if not (args.dry_run or args.ensure_log_schema) and not sys.stdin.isatty():
+        needed.append(("SLACK_WEBHOOK_URL", os.getenv("SLACK_WEBHOOK_URL")))
     # Only the mode that actually scrapes and judges needs the scrape and judge keys.
     # blogs.yml runs --ensure-log-schema as its own step with NOTION_TOKEN alone, and
     # --overrides-only ingests through save_item, which brings its own.
@@ -567,10 +577,11 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
         ok, failed, unknown = process_overrides(conn, token, notion_log.INTAKE_DB_ID)
         log.info("overrides: %d ingested, %d failed, %d not in %s",
                  ok, failed, len(unknown), store.TABLE)
-        post_slack(weekly_line(store.weekly_counts(conn, started), [], [],
-                               auto_ingest=AUTO_INGEST, unknown_overrides=len(unknown),
-                               sources_label="overrides only"))
-        return failed
+        posted = post_slack(weekly_line(store.weekly_counts(conn, started), [], [],
+                                        auto_ingest=AUTO_INGEST,
+                                        unknown_overrides=len(unknown),
+                                        sources_label="overrides only"))
+        return failed + (0 if posted else 1)
 
     resolve_links = (not args.dry_run) if args.resolve_links is None else args.resolve_links
     found, notes = discover(
@@ -642,13 +653,20 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
                     ", ".join(unknown[:5]))
     failures += override_failed
 
-    post_slack(weekly_line(
+    # The weekly line IS this job's deliverable — Neon and Notion are where the data
+    # lives, but the Slack post is the only thing that reaches Kevin unprompted. A post
+    # that didn't land is a week he never heard about, so it fails the run and
+    # blogs.yml's notify fires. Same call the pulse already makes for its heartbeat.
+    if not post_slack(weekly_line(
         store.weekly_counts(conn, started),
         store.titles(conn, started, store.STATUS_JUDGED),
         store.titles(conn, started, store.STATUS_HELD),
         auto_ingest=AUTO_INGEST, backlog=backlog, unknown_overrides=len(unknown),
         sources_label=args.sources,
-    ))
+    )):
+        log.error("the weekly intake line could not be posted to Slack — "
+                  "is SLACK_WEBHOOK_URL set and valid?")
+        failures += 1
     return failures
 
 
