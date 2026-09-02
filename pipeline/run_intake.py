@@ -214,6 +214,22 @@ def scrape_measurements(url: str, firecrawl_key: str) -> tuple[dict, Optional[st
     }, None
 
 
+def free_precheck(row: dict, *, already_ingested: bool) -> judge.Precheck:
+    """Every pre-check that needs no network, on what discovery already knows.
+
+    Shared by the run and by --dry-run so the preview cannot claim a different set of
+    skips than the run will make. Feed candidates arrive with a title, a category and
+    a date, so `academy`, `people-news` and `stale` can fire here — before a Firecrawl
+    credit is spent. Podcast-cited candidates arrive with none of those and fall
+    through to the post-scrape pass.
+    """
+    return judge.precheck(
+        row["url"], already_ingested=already_ingested, words=None, scrape_error=None,
+        title=(row.get("title") or ""), category=list(row.get("category") or []),
+        published_on=row.get("published_on"), source=row.get("source") or "",
+    )
+
+
 def process_candidate(conn, row: dict, *, already_ingested: bool, firecrawl_key: str,
                       openrouter_key: str, rubric_path: Path) -> str:
     """Pre-check → scrape → judge → record. Returns the status the row ended at.
@@ -222,8 +238,7 @@ def process_candidate(conn, row: dict, *, already_ingested: bool, firecrawl_key:
     an episode, a PDF) run before Firecrawl, and the scrape runs before the models, so
     a duplicate costs one set lookup and a dead link costs one scrape.
     """
-    pre = judge.precheck(row["url"], already_ingested=already_ingested,
-                         words=None, scrape_error=None)
+    pre = free_precheck(row, already_ingested=already_ingested)
     if pre.skip_reason:
         store.record_precheck(conn, row["id"], pre)
         return pre.status
@@ -236,8 +251,16 @@ def process_candidate(conn, row: dict, *, already_ingested: bool, firecrawl_key:
             published_on=measured["published_on"],
         )
 
-    pre = judge.precheck(row["url"], already_ingested=False,
-                         words=measured.get("words"), scrape_error=scrape_error)
+    # Again with what the scrape learned: a podcast-cited row arrives with no title
+    # and no date, so its people-news and category skips can only fire on this pass.
+    pre = judge.precheck(
+        row["url"], already_ingested=False,
+        words=measured.get("words"), scrape_error=scrape_error,
+        title=(measured.get("title") or row.get("title") or ""),
+        category=list(row.get("category") or []),
+        published_on=measured.get("published_on") or row.get("published_on"),
+        source=row["source"],
+    )
     if pre.skip_reason:
         store.record_precheck(conn, row["id"], pre, detail=scrape_error)
         return pre.status
@@ -410,24 +433,33 @@ def print_dry_run(notes: list[str], candidates: list[Candidate], collapsed: int,
           f"({collapsed} collapsed as the same post seen twice)")
     print(f"  already rows in {store.TABLE}: {len(known)}")
 
-    pdf_urls = {c.url for c in candidates
-                if judge.precheck(c.url, already_ingested=False, words=None,
-                                  scrape_error=None).skip_reason == "pdf"}
-    dupe_urls = {c.url for c in candidates} & already
+    # The same free_precheck the run uses, so the preview cannot claim a different
+    # set of skips than the run will make.
+    skipped: dict[str, list[Candidate]] = {}
+    to_judge: list[Candidate] = []
+    for cand in candidates:
+        pre = free_precheck({"url": cand.url, "title": cand.title, "category": cand.category,
+                             "published_on": cand.published_on, "source": cand.source},
+                            already_ingested=cand.url in already)
+        if pre.skip_reason:
+            skipped.setdefault(f"{pre.skip_reason} ({pre.status})", []).append(cand)
+        else:
+            to_judge.append(cand)
+
     print("\n  pre-checks that need no scrape")
-    print(f"    duplicate (already an episode): {len(dupe_urls)}")
-    for url in sorted(dupe_urls)[:5]:
-        print(f"      - {url}")
-    print(f"    pdf (held for the Obsidian research folder): {len(pdf_urls)}")
-    for url in sorted(pdf_urls)[:5]:
-        print(f"      - {url}")
+    if not skipped:
+        print("    none fired — every candidate goes to the scrape")
+    for reason in sorted(skipped):
+        group = skipped[reason]
+        print(f"    {reason}: {len(group)}")
+        for cand in group[:5]:
+            print(f"      - {(cand.title or cand.url)[:76]}")
 
     # Same order the real run judges in (store.needs_judging): newest post first, and
     # candidates with no date — podcast citations — last. Ordering the preview any
     # other way would show a different sixty than the cap will actually take.
-    to_judge = sorted(
-        (c for c in candidates if c.url not in dupe_urls and c.url not in pdf_urls),
-        key=lambda c: (c.published_on is not None, c.published_on or date.min), reverse=True)
+    to_judge.sort(key=lambda c: (c.published_on is not None, c.published_on or date.min),
+                  reverse=True)
     over = max(0, len(to_judge) - cap)
     print(f"\n  would scrape + judge: {min(len(to_judge), cap)}"
           + (f" ({over} wait for the next run)" if over else ""))
@@ -435,7 +467,7 @@ def print_dry_run(notes: list[str], candidates: list[Candidate], collapsed: int,
         print(f"    - [{cand.source}] {(cand.title or cand.url)[:78]}")
     if len(to_judge) > 10:
         print(f"    … {len(to_judge) - 10} more")
-    print("\n  thin and dead can only be known after the scrape, so they are not counted here.\n")
+    print("\n  thin and dead can only be known after the scrape, and a podcast-cited row\n  has no title or date until then, so its skips cannot be previewed either.\n")
 
 
 # ── the run ─────────────────────────────────────────────────────────────────

@@ -194,6 +194,26 @@ def test_a_duplicate_never_reaches_firecrawl_or_a_model(monkeypatch) -> None:
     assert rec.calls[0][1][1].skip_reason == "duplicate"
 
 
+def test_free_precheck_skips_academy_people_news_and_stale_before_firecrawl() -> None:
+    # These three need only what discovery already knows, so they must fire on the
+    # free pass — a Firecrawl credit spent to learn a post is an OpenAI Academy course
+    # is a credit spent to learn nothing.
+    def row(**kw):
+        base = {"url": "https://openai.com/index/a", "title": "T", "category": [],
+                "published_on": date(2026, 9, 1), "source": "openai-rss"}
+        base.update(kw)
+        return base
+
+    assert R.free_precheck(row(category=["OpenAI Academy"]),
+                           already_ingested=False).skip_reason == "academy"
+    assert R.free_precheck(row(published_on=date(2020, 1, 1)),
+                           already_ingested=False).skip_reason == "stale"
+    # a podcast-cited row has no title or date yet, so nothing fires until the scrape
+    assert R.free_precheck({"url": "https://x/a", "title": "", "category": [],
+                            "published_on": None, "source": "podcast-cited"},
+                           already_ingested=False).skip_reason is None
+
+
 def test_a_pdf_is_held_before_the_scrape(monkeypatch) -> None:
     rec = _Recorder()
     _patch_store(monkeypatch, rec)
@@ -204,6 +224,27 @@ def test_a_pdf_is_held_before_the_scrape(monkeypatch) -> None:
         already_ingested=False, firecrawl_key="k", openrouter_key="o",
         rubric_path=R.judge.RUBRIC_PATH)
     assert status == "held"
+
+
+def test_the_post_scrape_pass_catches_what_discovery_could_not_know(monkeypatch) -> None:
+    # A podcast-cited row has no title until the scrape, so its people-news skip can
+    # only fire on the second pass. The scrape is still recorded: "we looked" is a
+    # fact worth keeping even when the answer is no.
+    rec = _Recorder()
+    _patch_store(monkeypatch, rec)
+    monkeypatch.setattr(R, "scrape_measurements", lambda url, key: (
+        {"text": "words " * 900, "words": 900, "links_out": 3, "text_sha256": "sha",
+         "title": "Sam Altman steps down as chairman", "published_on": date(2026, 9, 1)}, None))
+    monkeypatch.setattr(R.judge, "judge_candidate",
+                        lambda **k: pytest.fail("people news is not worth a model call"))
+    status = R.process_candidate(
+        object(), {"id": 1, "url": "https://x/a", "source": "podcast-cited",
+                   "title": "", "category": [], "published_on": None},
+        already_ingested=False, firecrawl_key="k", openrouter_key="o",
+        rubric_path=R.judge.RUBRIC_PATH)
+    assert status == "skipped"
+    assert rec.names() == ["record_scrape", "record_precheck"]
+    assert rec.calls[1][1][1].skip_reason == "people-news"
 
 
 def test_a_thin_scrape_is_recorded_then_skipped_without_a_model(monkeypatch) -> None:
@@ -360,6 +401,6 @@ def test_dry_run_writes_nothing(monkeypatch, capsys) -> None:
 
     assert R.run(R.parse_args(["--dry-run"]), object(), "", None, None) == 0
     out = capsys.readouterr().out
-    assert "pdf (held for the Obsidian research folder): 1" in out
+    assert "pdf (held): 1" in out
     assert "would scrape + judge: 1" in out
     assert "rubric version v0abc" in out
