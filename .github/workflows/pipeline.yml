@@ -35,6 +35,15 @@ on:
 # `issues: write` so "Create issue on failure" can actually create one — GITHUB_TOKEN is
 # read-only by default here, and that step had silently failed on every failure since
 # June 2026 (see entities.yml for the story). Least privilege otherwise.
+# One run of this workflow at a time. A manual re-run or the Worker's HTTP trigger
+# overlapping a scheduled dispatch would run two orchestrators against the same Neon
+# tables (and, for music, the same playlist). The writes are designed idempotent, but
+# that has never been exercised under two concurrent writers — queue instead. Never
+# cancel-in-progress: a run stopped mid-write is worse than one that waits.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   issues: write
@@ -77,9 +86,14 @@ jobs:
         run: cd pipeline && python db_preflight.py
 
       - name: Reconstruct Spotify cache
+        # Through env, not ${{ }} inside the script: interpolating a secret into shell
+        # text is GitHub's documented injection anti-pattern, and it breaks the day the
+        # cache JSON contains a single quote. Every other secret in this file uses env.
+        env:
+          SPOTIFY_CACHE_JSON: ${{ secrets.SPOTIFY_CACHE_JSON }}
         run: |
           mkdir -p .spotify_cache
-          echo '${{ secrets.SPOTIFY_CACHE_JSON }}' > .spotify_cache/.cache
+          printf '%s' "$SPOTIFY_CACHE_JSON" > .spotify_cache/.cache
 
       - name: Run pipeline
         id: pipeline
@@ -211,9 +225,10 @@ jobs:
             const { owner, repo } = context.repo;
             const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
             const day = new Date().toISOString().split('T')[0];
-            // One open issue per failure streak (see entities.yml): comment, don't multiply.
+            // One open issue per failure streak per workflow (see entities.yml): the
+            // 'music' label keeps this thread separate from the entities one.
             const { data: open } = await github.rest.issues.listForRepo({
-              owner, repo, state: 'open', labels: 'pipeline-failure', per_page: 1,
+              owner, repo, state: 'open', labels: 'pipeline-failure,music', per_page: 1,
             });
             if (open.length) {
               await github.rest.issues.createComment({
@@ -225,6 +240,6 @@ jobs:
                 owner, repo,
                 title: `Pipeline failure: ${showName} (${day})`,
                 body: `The scheduled pipeline run for **${showName}** failed.\n\n**Run:** ${runUrl}\n**Triggered:** ${context.eventName}\n\nCheck the workflow logs for details.`,
-                labels: ['pipeline-failure'],
+                labels: ['pipeline-failure', 'music'],
               });
             }

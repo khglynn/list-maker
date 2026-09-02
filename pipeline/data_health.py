@@ -268,6 +268,27 @@ def check_transcript_coverage(conn) -> CheckResult:
         ORDER BY s.slug;
         """,
     )
+    # Transcript-first shows get their missing episodes by date, so a transcript that is
+    # simply not out yet (Taddy publishes about a day after the episode; p90 = 1 day,
+    # measured 2026-09-01) isn't a failure. Before this, every daily run that saw
+    # yesterday's AI Daily episode before its transcript reported "1 episode(s) missing
+    # transcripts" and "lags by 1 days" as a FAIL (08-07, 08-24, ...).
+    complete_slugs = [s for s, p in TRANSCRIPT_POLICIES.items() if p.get("mode") == "complete"]
+    missing_dates: dict[str, list[date]] = {}
+    for r in _rows(
+        conn,
+        """
+        SELECT s.slug, e.publish_date::date AS publish_date
+        FROM episodes e
+        JOIN shows s ON s.id = e.show_id
+        LEFT JOIN episode_transcripts et ON et.episode_id = e.id
+        WHERE et.id IS NULL AND s.slug = ANY(%s)
+        """,
+        [complete_slugs],
+    ):
+        missing_dates.setdefault(r["slug"], []).append(r["publish_date"])
+    today = _today()
+
     failures: list[str] = []
     warnings: list[str] = []
     details: list[str] = []
@@ -280,6 +301,8 @@ def check_transcript_coverage(conn) -> CheckResult:
         coverage = (transcripts / episodes) if episodes else 1.0
         lag_days = _date_lag_days(row["latest_episode"], row["latest_transcript"])
         policy = TRANSCRIPT_POLICIES.get(slug, {"mode": "latest", "max_latest_lag_days": 30})
+        cfg = SHOWS.get(slug)
+        grace = getattr(cfg, "feed_grace_days", DEFAULT_FEED_GRACE_DAYS)
 
         if policy["mode"] == "none":
             details.append(f"{slug}: show-notes based — no transcripts expected (skipped)")
@@ -305,9 +328,24 @@ def check_transcript_coverage(conn) -> CheckResult:
         bucket = failures if is_strict else warnings
 
         if is_strict and missing:
-            failures.append(f"{slug}: {missing} episode(s) missing transcripts")
+            cutoff = today - timedelta(days=grace)
+            overdue = [d for d in missing_dates.get(slug, []) if d and d < cutoff]
+            pending = missing - len(overdue)
+            if overdue:
+                failures.append(
+                    f"{slug}: {len(overdue)} episode(s) missing transcripts past the "
+                    f"{grace}-day window (oldest {min(overdue)})"
+                    + (f"; {pending} newer still pending" if pending else "")
+                )
+            else:
+                details.append(
+                    f"{slug}: {missing} recent episode(s) awaiting transcripts inside the "
+                    f"{grace}-day window"
+                )
 
-        max_lag = int(policy.get("max_latest_lag_days", 30))
+        # For transcript-first shows the lag tolerance is the same grace window; the
+        # policy's own number still applies where it is larger (music shows: 30).
+        max_lag = max(int(policy.get("max_latest_lag_days", 30)), grace if is_strict else 0)
         if lag_days is None:
             bucket.append(f"{slug}: cannot compare latest episode/transcript dates")
         elif lag_days > max_lag:

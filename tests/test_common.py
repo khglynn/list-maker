@@ -209,3 +209,61 @@ def test_get_db_connection_requires_a_url(monkeypatch) -> None:
     monkeypatch.delenv("NEON_DATABASE_URL", raising=False)
     with pytest.raises(RuntimeError, match="DATABASE_URL"):
         common.get_db_connection()
+
+
+def test_get_db_connection_can_keep_tuple_rows(monkeypatch) -> None:
+    """spotify_match.py indexes rows positionally; cursor_factory=None must reach psycopg2."""
+    import psycopg2
+
+    from pipeline import common
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@h/db")
+    seen: dict = {}
+
+    def fake_connect(url, **kwargs):
+        seen.update(kwargs)
+        return "conn"
+
+    monkeypatch.setattr(psycopg2, "connect", fake_connect)
+    assert common.get_db_connection(cursor_factory=None) == "conn"
+    assert seen["cursor_factory"] is None
+    common.get_db_connection()
+    assert seen["cursor_factory"].__name__ == "RealDictCursor"
+
+
+SCHEDULED_PATH_MODULES = (
+    # Everything a scheduled workflow runs that touches Neon. If one of these grows its own
+    # psycopg2.connect again, the timeout/keepalive/retry story silently stops being true
+    # for that step — which is exactly how 2026-08-31 cost 41 minutes.
+    "pipeline/run_new_episodes.py",
+    "pipeline/run_pipeline.py",
+    "pipeline/data_health.py",
+    "pipeline/pulse_report.py",
+    "pipeline/db_preflight.py",
+    "pipeline/sync_notion.py",
+    "pipeline/sync_transcripts_notion.py",
+    "pipeline/sync_playlist.py",
+    "pipeline/spotify_match.py",
+    "pipeline/build_pull_queue.py",
+    "pipeline/save_item.py",
+    "pipeline/scrapers/taddy/import_transcripts.py",
+    "pipeline/scrapers/ai_daily/load_entity_batch.py",
+    "pipeline/scrapers/ai_daily/extract_entities.py",
+    "pipeline/scrapers/ai_daily/normalize_aliases.py",
+    "pipeline/scrapers/sop/scrape.py",
+    "pipeline/scrapers/tal/scrape.py",
+    "pipeline/scrapers/tal/fetch.py",
+    "pipeline/scrapers/gabfest/import_gabfest.py",
+    "pipeline/scrapers/blog/import_blog.py",
+)
+
+
+def test_scheduled_path_modules_do_not_open_their_own_db_connections() -> None:
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    offenders = [
+        rel for rel in SCHEDULED_PATH_MODULES
+        if "psycopg2.connect(" in (root / rel).read_text(encoding="utf-8")
+    ]
+    assert offenders == [], f"route these through common.get_db_connection: {offenders}"

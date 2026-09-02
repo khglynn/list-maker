@@ -21,6 +21,15 @@ on:
   workflow_dispatch:
   workflow_call:
 
+# One run of this workflow at a time. A manual re-run or the Worker's HTTP trigger
+# overlapping a scheduled dispatch would run two orchestrators against the same Neon
+# tables (and, for music, the same playlist). The writes are designed idempotent, but
+# that has never been exercised under two concurrent writers — queue instead. Never
+# cancel-in-progress: a run stopped mid-write is worse than one that waits.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 

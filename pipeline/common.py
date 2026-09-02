@@ -92,17 +92,25 @@ DB_KEEPALIVE_KWARGS = {
 }
 
 
-def get_db_connection(attempts: int | None = None):
-    """Connect to Neon with RealDictCursor, a connect timeout, and a bounded retry.
+def get_db_connection(attempts: int | None = None, cursor_factory: object = "dict"):
+    """Connect to Neon with a connect timeout, keepalives, and a bounded retry.
 
-    `attempts` overrides DB_CONNECT_ATTEMPTS — the preflight passes 1 so a dead
+    Rows come back as dicts (RealDictCursor) unless `cursor_factory=None`, which keeps
+    psycopg2's default tuples — spotify_match.py indexes rows positionally and passes
+    that. `attempts` overrides DB_CONNECT_ATTEMPTS — the preflight passes 1 so a dead
     network path fails the job in about a minute rather than after the full retry.
+
+    This is the ONE place the pipeline connects to Neon. Every scheduled-path module
+    delegates here (tests/test_common.py pins that with a grep); the retry and timeout
+    story only holds if no file grows its own psycopg2.connect again.
     """
     try:
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError as exc:
         raise RuntimeError("Missing dependency: psycopg2-binary") from exc
+    if cursor_factory == "dict":
+        cursor_factory = RealDictCursor
 
     db_url = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL")
     if not db_url:
@@ -114,7 +122,7 @@ def get_db_connection(attempts: int | None = None):
         try:
             return psycopg2.connect(
                 db_url,
-                cursor_factory=RealDictCursor,
+                cursor_factory=cursor_factory,
                 connect_timeout=DB_CONNECT_TIMEOUT_SECONDS,
                 **DB_KEEPALIVE_KWARGS,
             )

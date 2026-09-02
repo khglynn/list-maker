@@ -292,3 +292,35 @@ def test_split_missing_feed_dates_partitions_by_grace() -> None:
     # Nothing in the DB at all: every feed date is missing, still graded by age.
     assert split_missing_feed_dates([date(2026, 9, 9)], None, 2, today=today) == ([], [date(2026, 9, 9)])
     assert split_missing_feed_dates([date(2026, 9, 1)], None, 2, today=today) == ([date(2026, 9, 1)], [])
+
+
+def test_transcript_coverage_tolerates_a_transcript_that_is_not_out_yet(monkeypatch) -> None:
+    """Taddy publishes a transcript about a day after the episode. Yesterday's episode
+    without one is 'pending', not a failure — 08-07 and 08-24 reddened the check for
+    exactly that."""
+    import pipeline.data_health as dh
+
+    today = date(2026, 9, 2)
+    coverage_rows = [{
+        "slug": "ai-daily-brief", "episodes": 1074, "transcripts": 1073, "missing_transcripts": 1,
+        "latest_episode": date(2026, 9, 1), "latest_transcript": date(2026, 8, 31),
+    }]
+    missing_rows = [{"slug": "ai-daily-brief", "publish_date": date(2026, 9, 1)}]
+    calls: list[str] = []
+
+    def fake_rows(conn, sql, params=None):
+        calls.append(sql)
+        return missing_rows if "et.id IS NULL AND s.slug = ANY" in sql else coverage_rows
+
+    monkeypatch.setattr(dh, "_rows", fake_rows)
+    monkeypatch.setattr(dh, "_today", lambda: today)
+    result = dh.check_transcript_coverage(conn=None)
+    assert result.status == "pass", result.details
+    assert any("awaiting transcripts inside the 2-day window" in d for d in result.details)
+
+    # The same episode five days later is a real gap.
+    monkeypatch.setattr(dh, "_today", lambda: date(2026, 9, 7))
+    coverage_rows[0]["latest_transcript"] = date(2026, 8, 31)
+    result = dh.check_transcript_coverage(conn=None)
+    assert result.status == "fail"
+    assert any("missing transcripts past the 2-day window" in d for d in result.details)

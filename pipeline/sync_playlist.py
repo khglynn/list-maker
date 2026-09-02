@@ -15,6 +15,7 @@ import argparse
 import os
 import sys
 import time
+from pathlib import Path
 from typing import List, Set
 
 import psycopg2
@@ -141,11 +142,17 @@ def add_tracks_to_playlist(sp: spotipy.Spotify, playlist_id: str, track_ids: Lis
 # =============================================================================
 
 def get_db_connection():
-    """Connect to Neon database."""
-    return psycopg2.connect(
-        os.getenv("DATABASE_URL"),
-        cursor_factory=RealDictCursor,
-    )
+    """Connect to Neon database (delegates to common.get_db_connection)."""
+    # One implementation for the scheduled path — pipeline/common.py carries the connect
+    # timeout, keepalives, and bounded retry. This module's private copy had none, and it
+    # sits on pipeline.yml's Mon/Wed/Fri chain (rewired 2026-09-01 after the 08-31 41-minute
+    # hang). Lazy import so this file still runs as a script from its own directory.
+    pipeline_dir = str(Path(__file__).resolve().parent)
+    if pipeline_dir not in sys.path:
+        sys.path.insert(0, pipeline_dir)
+    from common import get_db_connection as shared_connection
+
+    return shared_connection()
 
 
 def get_matched_track_ids(show_id: int) -> List[str]:

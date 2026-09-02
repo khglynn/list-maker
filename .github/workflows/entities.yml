@@ -40,6 +40,15 @@ on:
 # ("Resource not accessible by integration", 2026-06 → 2026-08-31): the Slack ping fired,
 # the issue never existed, and a failing notify step looks exactly like the failure it
 # was reporting. Least privilege otherwise.
+# One run of this workflow at a time. A manual re-run or the Worker's HTTP trigger
+# overlapping a scheduled dispatch would run two orchestrators against the same Neon
+# tables (and, for music, the same playlist). The writes are designed idempotent, but
+# that has never been exercised under two concurrent writers — queue instead. Never
+# cancel-in-progress: a run stopped mid-write is worse than one that waits.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   issues: write
@@ -124,7 +133,22 @@ jobs:
         run: |
           # No `|| true`: a crash here should fail the step (→ Slack), not vanish.
           # data_health.py posts its own Slack on a failed check (e.g. a stale show).
-          cd pipeline && python data_health.py | tee -a "$GITHUB_STEP_SUMMARY"
+          # --strict: a real failure reddens the run (Slack + the failure issue), the way
+          # pipeline.yml's feed check already does. Safe now that the grace windows have
+          # removed the false-positive volume — a red X here should mean something.
+          cd pipeline && python data_health.py --strict | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the failed batch (dead letter)
+        # A broken extraction batch used to leave nothing but a 500-character stderr tail
+        # in an expiring log. Keep the batch directory so it can be inspected or replayed
+        # without re-running the whole show. eval.yml does the same for its report.
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extraction-batches-${{ github.run_id }}
+          path: codex-notes/ai-daily-entity-extraction/incremental-*
+          if-no-files-found: ignore
+          retention-days: 14
 
       # No per-run success ping — daily shows (AI Daily, PCHH) would spam the channel.
       # The biweekly pulse is the positive report; only failures ping here.
@@ -147,10 +171,12 @@ jobs:
             const { owner, repo } = context.repo;
             const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
             const day = new Date().toISOString().split('T')[0];
-            // One open issue per failure streak: a pipeline that fails every day adds a
-            // comment per day to the same thread instead of opening a new issue per day.
+            // One open issue per failure streak PER WORKFLOW: a pipeline that fails every
+            // day adds a comment per day to the same thread instead of opening a new issue
+            // per day — and the second label keeps an unrelated music failure from landing
+            // in the entities thread (or vice versa).
             const { data: open } = await github.rest.issues.listForRepo({
-              owner, repo, state: 'open', labels: 'pipeline-failure', per_page: 1,
+              owner, repo, state: 'open', labels: 'pipeline-failure,entities', per_page: 1,
             });
             if (open.length) {
               await github.rest.issues.createComment({
@@ -162,7 +188,7 @@ jobs:
                 owner, repo,
                 title: `Entity pipeline failure (${day})`,
                 body: `The scheduled entity pipeline run failed.\n\n**Run:** ${runUrl}`,
-                labels: ['pipeline-failure'],
+                labels: ['pipeline-failure', 'entities'],
               });
             }
 
