@@ -2,16 +2,35 @@
 
 *Written 2026-06-11. How items that aren't podcast episodes get into list-maker.*
 
-## The weekly loop (runs itself)
+## The weekly loop (runs itself, and decides for itself)
 
-Every Monday (dispatched by the Cloudflare Worker's daily cron — see `cloudflare-trigger/worker.js`), `blogs.yml`:
+*Rewritten 2026-09-02, when the checkbox queue became the judged intake.*
 
-1. **Discovers** candidate posts from the mentions DB — URLs the podcasts actually cited (registered blog domains + any `blog_post`-typed mention with a source URL), minus anything already ingested or already queued.
-2. **Enriches** each new candidate via Firecrawl: word count + **Links Out** (outbound-link density — the pull signal: posts citing many resources improve the mentions DB most). Capped at 25 new rows per run; the overflow logs and waits.
-3. **Upserts** them as rows in the **Blog Pull Queue** Notion DB.
-4. **Ingests** every row Kevin has checked (`Pull` ☑ + `Status=candidate`) via `save_item`, then marks it `pulled` (or `failed`). PDFs are marked `pdf-report` and never auto-ingested.
+Every Monday (dispatched by the Cloudflare Worker's daily cron — see `cloudflare-trigger/worker.js`), `blogs.yml` runs `pipeline/run_intake.py`:
 
-**Kevin's only job:** open the Blog Pull Queue in Notion whenever, sort by Links Out, check the boxes worth pulling. The checks are also ground truth — once enough marks exist to validate a threshold rule, auto-pull can graduate from them. Don't automate the choice before then.
+1. **Discovers** from four sources: OpenAI's RSS feed, Anthropic's `/news` and `/engineering` index pages (scraped once each), URLs the podcasts pointed at, and — for citations that arrived without a link — a search that resolves the URL (`scrapers/intake/links.py`). Everything lands in the `intake_candidates` table in Neon, one row per canonical URL, deduped.
+
+   A podcast URL is filed by what the mention *is*, not by how it was found. A cited **document** (report, paper, survey, blog post) is `podcast-cited` and is exempt from the staleness skip — an old report a show just cited is still worth reading. Any other URL a mention carried (a product page a host name-dropped, e.g. `openai.com/dall-e-2`) is `podcast-linked`, and staleness applies. *Split 2026-09-02, after nine of twelve first-run misses turned out to be archival product pages.*
+2. **Pre-checks, deterministically.** Seven structural reasons, cheapest first, and the models never see any of them — a script decided, and the row says which rule did it. Five need no network at all, so they run before a Firecrawl credit is spent: already an episode → `duplicate`; a `.pdf` → `held` (reports live as files in the Obsidian research folder); an OpenAI Academy course → `academy`; a hiring announcement → `people-news`; published over 400 days ago → `stale` (never applied to a podcast citation — a show citing an old report still counts). Two need the scrape: it failed → `dead`; under 200 words → `thin`.
+3. **Judges** what survives: two cheap models (`google/gemini-3.7-flash` and `openai/gpt-5.6-luna`, through OpenRouter) read the post against `docs/intake-rubric.md` and answer `save` or `skip` with a confidence and a one-line reason. Agree → that verdict. Disagree → **save, marked disputed** — the expensive mistake is missing the report Kevin needed, and a disputed save is visible in Notion.
+4. **Logs everything** to the **📥 Blog Intake** Notion DB (the old Blog Pull Queue, repurposed in place — same rows, same URLs): verdict, confidence, reason, which two models, disputed, status.
+5. **Posts one Slack line**, every week, including a week where nothing happened: judged N · would save K (named) · skipped (with reasons) · disputed · held · failed.
+
+**Shadow mode is on** (`AUTO_INGEST = False` in `run_intake.py`). Verdicts are recorded but nothing is ingested automatically — a `save` sits at status `judged`, meaning "we would have saved this". PR 3 flips it once the eval in `evals/intake/` clears recall ≥ 0.9 on `save` and precision ≥ 0.7, and one shadow week reads right.
+
+**Kevin's only job — and it is optional:** nothing waits on him. If the judge skipped something he wants, tick **Pull anyway** on that row; the next run ingests it and records `override_by = kevin`. Ticking nothing is a valid week.
+
+Running it by hand:
+
+```
+cd pipeline
+./venv/bin/python run_intake.py --dry-run              # the plan: no writes, no model calls, no per-post scrapes
+./venv/bin/python run_intake.py                        # the full weekly pass
+./venv/bin/python run_intake.py --sources podcast-cited  # just the citations (fine to run daily)
+./venv/bin/python run_intake.py --overrides-only       # just ingest the rows you ticked
+```
+
+*(What this replaced: `build_pull_queue.py` discovered candidates and waited for a checkbox. Between 2026-06-21 and 08-31, eleven consecutive runs found nothing new, said nothing, and left 31 candidates un-triaged — including "How people are using ChatGPT", the post the whole idea existed to catch. The lesson isn't "a better nudge"; it's that a pipeline whose last step is a human's attention will stall at that step.)*
 
 ## One-off saves (any article, any time)
 
@@ -66,13 +85,14 @@ column on the Transcripts DB marks which episodes carry highlights.
 |---|---|---|
 | Entities/mentions (all curated sources) | Tech Tools & Mentions (`982dafa0…`) | Curated mentions qualify at 1; Shows multi-select shows the source |
 | Blog/article full texts | Blog Posts (`37c0501e…93f5`) | URL + Links Out properties; chunked full text |
-| Pull candidates | Blog Pull Queue (`37c0501e…1f53`) | Kevin's checkbox = the pull decision |
+| Judged candidates | Blog Intake (`37c0501e…1f53`) | Every candidate + verdict + reason; "Pull anyway" is the override |
 | Research-run full texts | — (stay in Obsidian) | Only their mentions sync |
 | PDFs/reports | — (Obsidian research folder) | Files, linked from Obsidian |
 
 ## Known-deferred (documented, not silent)
 
 - Edited-post re-extraction: a refreshed text never re-extracts (the orchestrator skips episodes that already have mentions). Fix when it bites: content-hash gate.
-- Auto-pull threshold: waits for enough checkbox ground truth.
+- Auto-ingest: shadow mode until `evals/intake` clears recall ≥ 0.9 / precision ≥ 0.7 (PR 3 flips `AUTO_INGEST`).
+- The Notion DB's legacy Status options (`candidate`, `pulled`, `pdf-report`) are kept until no row still uses one — removing a select option blanks it on every row that carries it.
 - Cross-URL duplicate posts (same content, two paths — e.g. the DALL·E 3 pair) aren't merged; check one, skip the other.
 - a16z + paid substacks: out of scope (paywalled).

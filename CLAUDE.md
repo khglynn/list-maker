@@ -79,9 +79,11 @@ list-maker/
 │   ├── pulse_report.py      # Biweekly Slack digest (runs after the import on the 1st/15th)
 │   ├── feed_check.py        # The independent second source: what each show's real feed says is latest
 │   ├── sync_notion.py / sync_transcripts_notion.py / sync_playlist.py / spotify_match.py
-│   ├── save_item.py / save_episode.py / build_pull_queue.py / highlight_clips.py / search_transcripts.py
+│   ├── run_intake.py         # Weekly curated intake: discover → pre-check → judge → Notion log (shadow mode)
+│   ├── save_item.py / save_episode.py / highlight_clips.py / search_transcripts.py
 │   ├── scrapers/            # sop/, tal/ (music) · taddy/ (transcript import) · ai_daily/ (LLM extraction + sql/ migrations)
 │   │                        # blog/, gabfest/, research/ (curated + RSS sources)
+│   │                        # intake/ (sources · mentions · links · judge · store · notion_log)
 │   └── _cache/              # Cached episode data (gitignored)
 ├── tests/                   # pytest (hermetic — no DB, no network); CI runs it on every PR and push
 ├── evals/extraction/        # The extraction eval harness (frozen set + aggregate gates)
@@ -106,7 +108,7 @@ The pipeline runs automatically. The **durable trigger** is the Cloudflare Worke
 
 **Manual trigger:** Actions tab → the workflow → Run workflow (or the Worker's `/?token=…` endpoint).
 
-**Secrets:** `SPOTIFY_CLIENT_ID/SECRET/REDIRECT_URI/CACHE_JSON`, `NEON_DATABASE_URL`, `FIRECRAWL_API_KEY`, `SLACK_WEBHOOK_URL`, `OPENAI_API_KEY`, `NOTION_TOKEN`, `TADDY_USER_ID/API_KEY`. Cloudflare Worker secret: `GH_PAT` (+ optional `SLACK_WEBHOOK_URL`, `TRIGGER_TOKEN`).
+**Secrets:** `SPOTIFY_CLIENT_ID/SECRET/REDIRECT_URI/CACHE_JSON`, `NEON_DATABASE_URL`, `FIRECRAWL_API_KEY`, `SLACK_WEBHOOK_URL`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY` (the two intake judge models), `NOTION_TOKEN`, `TADDY_USER_ID/API_KEY`. Cloudflare Worker secret: `GH_PAT` (+ optional `SLACK_WEBHOOK_URL`, `TRIGGER_TOKEN`).
 
 **If Spotify auth fails:** Re-auth locally (`python spotify_match.py --show-id 1 --limit 1`), then update `SPOTIFY_CACHE_JSON` secret with new `.spotify_cache/.cache` contents.
 
@@ -162,7 +164,7 @@ cd ~/DevKev/personal/list-maker && set -a && source .env.local && source pipelin
 | 🍿 Media Recommendations | `3780501e…94657` | PCHH + Gabfest media entities |
 | 📝 Tech Show Transcripts | `3780501e…62c9d` | Podcast full texts + Saved Episodes one-offs; **Clips** column = Kevin's highlights |
 | 📰 Blog Posts | `37c0501e…93f5` | Curated article full texts (URL + Links Out) |
-| 📥 Blog Pull Queue | `37c0501e…1f53` | Candidates; Kevin checks Pull → weekly blogs.yml ingests |
+| 📥 Blog Intake | `37c0501e…1f53` | Every judged candidate + verdict/reason; **Pull anyway** ☑ is the override door |
 
 ## Relevant Docs & Links
 

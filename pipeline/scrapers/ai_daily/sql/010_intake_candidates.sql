@@ -11,7 +11,11 @@
 CREATE TABLE IF NOT EXISTS intake_candidates (
   id              SERIAL PRIMARY KEY,
   url             TEXT NOT NULL UNIQUE,            -- canonical (import_blog.canonicalize_url)
-  source          TEXT NOT NULL,                   -- openai-rss | anthropic-news | anthropic-engineering | podcast-cited | manual
+  source          TEXT NOT NULL,                   -- openai-rss | anthropic-news | anthropic-engineering | podcast-cited | podcast-linked | manual
+                                                   -- podcast-cited = a DOCUMENT a show cited (report/paper/survey/blog_post): exempt
+                                                   --   from the staleness pre-check, because an old report is still worth reading.
+                                                   -- podcast-linked = any other URL a mention carried (a product page a host
+                                                   --   name-dropped): staleness applies. Split 2026-09-02.
   title           TEXT,
   published_on    DATE,
   category        JSONB NOT NULL DEFAULT '[]'::jsonb,
