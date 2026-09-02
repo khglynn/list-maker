@@ -12,7 +12,7 @@
 1. ~~The labels page~~ — done 2026-09-02 evening: Kevin approved all 75 labels unchanged and kept every rubric default. The eval floor is cleared on his labels (recall 0.96 / precision 0.91). **The remaining gate for auto-ingest is one clean shadow week:** read Monday 09-07's Blog Intake verdicts; if they read right, PR 3 flips `AUTO_INGEST` in `run_intake.py`.
 2. **Read the first shadow verdicts** in 📥 Blog Intake (40 would-saves, 11 of them disputed — the second judge is save-happy on OpenAI's feed, e.g. the teachers rollout post). Tick **Pull anyway** on anything skipped that you want; nothing waits on you.
 3. **Dependabot #27–#29** still open.
-4. **Backfill (decision 6):** PCHH done and mostly mirrored; Culture Gabfest's 909 episodes are still extracting locally (hours). The main working tree stays on the pre-merge commit until it finishes (the run reads pipeline files from disk); `main` is the truth.
+4. ~~Backfill (decision 6)~~ — **complete 2026-09-02 17:38 CT:** PCHH 2,073 mentions + Culture Gabfest 3,660, every media entity mirrored to Notion (the ten-minute sync steps timed out and resumed until done; the limit is parked in `BACKLOG.md`). Working tree back on `main`, worktrees and merged branches removed.
 
 ## Next arc (agreed 2026-09-01, in progress since 2026-09-02) — "curated intake v2 + ads as data"
 **PR 1 of 3 (ads as data) is open as a draft against `arc/curated-intake-v2`.**
