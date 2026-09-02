@@ -16,7 +16,7 @@ Every Monday (dispatched by the Cloudflare Worker's daily cron — see `cloudfla
 4. **Logs everything** to the **📥 Blog Intake** Notion DB (the old Blog Pull Queue, repurposed in place — same rows, same URLs): verdict, confidence, reason, which two models, disputed, status.
 5. **Posts one Slack line**, every week, including a week where nothing happened: judged N · would save K (named) · skipped (with reasons) · disputed · held · failed.
 
-**Shadow mode is on** (`AUTO_INGEST = False` in `run_intake.py`). Verdicts are recorded but nothing is ingested automatically — a `save` sits at status `judged`, meaning "we would have saved this". PR 3 flips it once the eval in `evals/intake/` clears recall ≥ 0.9 on `save` and precision ≥ 0.7, and one shadow week reads right.
+**Auto-ingest is on** (`AUTO_INGEST = True` in `run_intake.py`, since 2026-09-02 evening: the eval cleared its floor on Kevin's own labels — recall 0.96, precision 0.91 — and he read the first shadow run's 40 would-saves and chose to go live). A `save` is ingested in the same run (mentions → Tech DB, full text → Blog Posts) and lands at status `saved`; saves judged earlier and never ingested are caught up, at most 40 per run. Setting the constant back to `False` returns to shadow mode: verdicts still recorded and mirrored, nothing ingested but the rows Kevin ticks.
 
 **Kevin's only job — and it is optional:** nothing waits on him. If the judge skipped something he wants, tick **Pull anyway** on that row; the next run ingests it and records `override_by = kevin`. Ticking nothing is a valid week.
 
@@ -31,6 +31,25 @@ cd pipeline
 ```
 
 *(What this replaced: `build_pull_queue.py` discovered candidates and waited for a checkbox. Between 2026-06-21 and 08-31, eleven consecutive runs found nothing new, said nothing, and left 31 candidates un-triaged — including "How people are using ChatGPT", the post the whole idea existed to catch. The lesson isn't "a better nudge"; it's that a pipeline whose last step is a human's attention will stall at that step.)*
+
+## Reading the intake log (📥 Blog Intake)
+
+One row per candidate URL; the same row lives in Neon's `intake_candidates`, which is the source of truth (agents, the eval and re-runs read it — every value there traces to a model, a rubric version and a timestamp in one query). Notion is the copy for a person.
+
+| Column | What it means |
+|---|---|
+| Verdict | `save` / `skip` — the two judges' answer against `docs/intake-rubric.md`. Blank = the models never saw it (a pre-check decided; see Precheck). |
+| Confidence | The judge's own calibrated confidence, per the rubric's bands: 0.90–0.95 one rule fired cleanly; 0.75–0.85 a save rule and a skip rule both matched and the ordering decided; 0.55–0.70 the residue or a tie broken toward save. When the two judges agree it is their average; when they disagree it is the save side's. |
+| Rule | Which rubric rule fired (S1–S13 save shapes, K1–K10 skip forms, R-* residue, X-* mismatch/empty). |
+| Job | For a save, the later use it serves: deck · build · policy · playbook · landscape · findable. |
+| Reason | The judge's one line, specific to the document. |
+| Disputed | The two judges disagreed; the recall-first rule saved it. Worth a glance. |
+| Pull anyway | The override: tick it on a skipped row and the next run ingests it (`override_by = kevin`). |
+| Source | Where it came from: `openai-rss`, `anthropic-news`, `anthropic-engineering`, `podcast-cited` (a document a show cited), `podcast-linked` (a page a host name-dropped). Older rows carry the June-era domain values. |
+| Status | `discovered` (waiting for a run) · `judged` (verdict recorded, not ingested) · `saved` · `skipped` · `held` (a PDF, local-only) · `failed`. |
+| Precheck | Why a script skipped it before any model: `duplicate`, `thin` (< 200 words scraped), `dead`, `stale`, `academy`, `people-news`, `pdf`. |
+| Published · Words · Judge · Found Via | Publish date; scraped word count; the two model ids; how it was found (the feed, the show, or "link resolved at <score>"). |
+| Why · Last Cited · Links Out | June-era columns from the checkbox queue, kept on the 45 old rows, hidden in the default view, never written again. |
 
 ## One-off saves (any article, any time)
 

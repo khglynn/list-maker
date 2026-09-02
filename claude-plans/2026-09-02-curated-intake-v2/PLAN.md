@@ -1,6 +1,6 @@
 # Curated intake v2 + ads as data — arc plan
 
-**Written:** 2026-09-02 (Fable session "list maker with llm judges"). **Status:** shadow mode live on `main` since 2026-09-02 17:02 CT; PR 3 (auto-ingest on) waits on Kevin's labels + one shadow week. **Live cursor:** `NOW.md`. **Parent:** `claude-plans/2026-09-01-ground-it-cleanup-plan.md` → "Next arc" (goal, acceptance, and Kevin's decisions 1–2 live there; not restated).
+**Written:** 2026-09-02 (Fable session "list maker with llm judges"). **Status:** LIVE with auto-ingest on since 2026-09-02 evening (Kevin approved the labels and the first shadow run the same day; the shadow week was waived). What remains is watching the weekly line and the parent plan's Phases 4–5. **Live cursor:** `NOW.md`. **Parent:** `claude-plans/2026-09-01-ground-it-cleanup-plan.md` → "Next arc" (goal, acceptance, and Kevin's decisions 1–2 live there; not restated).
 
 **Decisions from Kevin, 2026-09-02 (chat):** (1) the eval set is pre-labeled by the session and corrected by Kevin in one pass; (2) the judge models run through OpenRouter — key "Listmaker", $15/week cap, expires 2027-09-02, stored as the repo secret `OPENROUTER_API_KEY` and in `.env.local`; (3) link resolution for podcast-cited reports is in scope; (4) Notion stays the human surface — the Blog Pull Queue DB becomes the **intake log** (every judged candidate with its verdict and reason), nothing waits on a checkbox.
 
