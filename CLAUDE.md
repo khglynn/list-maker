@@ -108,7 +108,7 @@ The pipeline runs automatically. The **durable trigger** is the Cloudflare Worke
 
 **Manual trigger:** Actions tab → the workflow → Run workflow (or the Worker's `/?token=…` endpoint).
 
-**Secrets:** `SPOTIFY_CLIENT_ID/SECRET/REDIRECT_URI/CACHE_JSON`, `NEON_DATABASE_URL`, `FIRECRAWL_API_KEY`, `SLACK_WEBHOOK_URL`, `OPENAI_API_KEY`, `NOTION_TOKEN`, `TADDY_USER_ID/API_KEY`. Cloudflare Worker secret: `GH_PAT` (+ optional `SLACK_WEBHOOK_URL`, `TRIGGER_TOKEN`).
+**Secrets:** `SPOTIFY_CLIENT_ID/SECRET/REDIRECT_URI/CACHE_JSON`, `NEON_DATABASE_URL`, `FIRECRAWL_API_KEY`, `SLACK_WEBHOOK_URL`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY` (the two intake judge models), `NOTION_TOKEN`, `TADDY_USER_ID/API_KEY`. Cloudflare Worker secret: `GH_PAT` (+ optional `SLACK_WEBHOOK_URL`, `TRIGGER_TOKEN`).
 
 **If Spotify auth fails:** Re-auth locally (`python spotify_match.py --show-id 1 --limit 1`), then update `SPOTIFY_CACHE_JSON` secret with new `.spotify_cache/.cache` contents.
 

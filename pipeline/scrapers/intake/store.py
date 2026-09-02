@@ -27,7 +27,11 @@ resolved here and nowhere else):
     skipped     the judge said skip, OR a pre-check did (`precheck` says which)
     held        needs a human-only step. `pdf` is the only reason today, so
                 `record_precheck` is the only writer and there is no `mark_held`
-    saved       ingested; episode_id + ingested_at set
+    saved       ingested; ingested_at set, and episode_id set EXCEPT for a local
+                PDF (precheck='pdf'), which saves as a file in the Obsidian
+                research folder and has no episodes row at all. A consumer
+                joining on episode_id should filter `precheck IS DISTINCT FROM
+                'pdf'` rather than assume the column is non-NULL
     failed      ingest attempted and failed; failed_reason says why
 """
 
@@ -379,6 +383,13 @@ def record_decision(conn, candidate_id: int, decision: Decision, *,
 
 def mark_saved(conn, candidate_id: int, episode_id: Optional[int], *,
                override_by: Optional[str] = None) -> None:
+    """Ingested. `episode_id` is Optional deliberately, not defensively.
+
+    A PDF override is the one save with nothing to point at: save_item downloads it
+    into the Obsidian research folder and never writes an episodes row (Kevin's rule —
+    reports live as files). The row still reconstructs from one SELECT, because
+    precheck='pdf' survives this write and says why episode_id is NULL.
+    """
     with conn.cursor() as cur:
         cur.execute(
             f"""UPDATE {TABLE}
