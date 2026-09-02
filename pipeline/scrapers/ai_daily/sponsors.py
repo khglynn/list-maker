@@ -53,7 +53,7 @@ import json
 import re
 import unicodedata
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional, Sequence
+from typing import Any, Iterable, NamedTuple, Optional, Sequence
 
 
 @dataclass(frozen=True)
@@ -76,6 +76,22 @@ class SponsorVerdict:
     is_sponsor: bool
     source: Optional[str] = None  # 'roster' | 'phrase' | 'model' | None
     matched: Optional[str] = None
+
+
+class SponsorWindow(NamedTuple):
+    """One stretch of transcript that reads as sponsor copy.
+
+    `start`/`end` bound the whole window (start includes the lead, so a snippet that
+    opens a few words before the cue still lands inside it). `name_from` is the offset
+    just past the cue — the advertised product is named AFTER the host hands over, so
+    that is the region the naming test searches, not the whole window. Keeping the two
+    separate is what lets the lead stay generous while the naming test stays strict.
+    """
+
+    start: int
+    end: int
+    name_from: int
+    cue: str
 
 
 SPONSOR_SOURCES = ("roster", "phrase", "model")
@@ -451,35 +467,73 @@ def sponsor_windows(
     cues: Sequence[str] = SPONSOR_CUES,
     lead: int = SPONSOR_WINDOW_LEAD_CHARS,
     trail: int = SPONSOR_WINDOW_TRAIL_CHARS,
-) -> list[tuple[int, int]]:
-    """Character spans of the transcript that read as sponsor copy, merged and sorted.
+) -> list[SponsorWindow]:
+    """Stretches of the transcript that read as sponsor copy, merged and sorted.
 
     Offsets index into normalize_text_for_matching(transcript_text), NOT the raw string —
     the raw string's line breaks are exactly what stops a stored context_snippet from
     being found in it. Callers locate snippets in the same normalized text.
+
+    A cue inside a quoted span is skipped. That is the transcript-side twin of
+    _header_ends_block: Culture Gabfest panellists discuss articles BY TITLE, and
+    "The Second Trump Presidency, Brought to You by YouTubers" is a headline being read
+    aloud, not a host handing over to an advertiser. Only double quotes count — an
+    apostrophe is a single quote, and "today's" appears in half the cues.
     """
     normalized = normalize_text_for_matching(transcript_text)
     if not normalized:
         return []
-    spans: list[tuple[int, int]] = []
+    quoted = _quoted_spans(normalized)
+    windows: list[SponsorWindow] = []
     for cue in cues:
         start = 0
         while True:
             idx = normalized.find(cue, start)
             if idx < 0:
                 break
-            spans.append((max(0, idx - lead), min(len(normalized), idx + len(cue) + trail)))
             start = idx + len(cue)
-    return _merge_spans(spans)
+            if any(qs <= idx < qe for qs, qe in quoted):
+                continue
+            cue_end = idx + len(cue)
+            windows.append(
+                SponsorWindow(
+                    start=max(0, idx - lead),
+                    end=min(len(normalized), cue_end + trail),
+                    name_from=cue_end,
+                    cue=cue,
+                )
+            )
+    return _merge_windows(windows)
 
 
-def _merge_spans(spans: Iterable[tuple[int, int]]) -> list[tuple[int, int]]:
-    merged: list[tuple[int, int]] = []
-    for start, end in sorted(spans):
-        if merged and start <= merged[-1][1]:
-            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+# Double-quote characters only. A single quote is an apostrophe far more often than a
+# quotation mark, and "today's sponsor" would be unmatchable if apostrophes opened spans.
+_DOUBLE_QUOTES = "\u0022\u201c\u201d\u201e\u00ab\u00bb"
+
+
+def _quoted_spans(normalized: str) -> list[tuple[int, int]]:
+    """Spans between paired double quotes, so a cue quoted from a headline can be
+    skipped. An unclosed quote yields no span — better to under-skip than to swallow
+    the rest of an episode."""
+    positions = [i for i, ch in enumerate(normalized) if ch in _DOUBLE_QUOTES]
+    return [(positions[i], positions[i + 1]) for i in range(0, len(positions) - 1, 2)]
+
+
+def _merge_windows(windows: Iterable[SponsorWindow]) -> list[SponsorWindow]:
+    """Merge overlapping windows, keeping the EARLIEST cue boundary of the group — the
+    naming region of a merged window starts after its first cue."""
+    merged: list[SponsorWindow] = []
+    for window in sorted(windows):
+        if merged and window.start <= merged[-1].end:
+            previous = merged[-1]
+            merged[-1] = SponsorWindow(
+                start=previous.start,
+                end=max(previous.end, window.end),
+                name_from=min(previous.name_from, window.name_from),
+                cue=previous.cue,
+            )
         else:
-            merged.append((start, end))
+            merged.append(window)
     return merged
 
 
@@ -559,11 +613,11 @@ def locate_snippet(normalized_transcript: str, snippet: Optional[str]) -> Option
 
 
 def _containing_window(
-    position: int, windows: Sequence[tuple[int, int]]
-) -> Optional[tuple[int, int]]:
+    position: int, windows: Sequence[SponsorWindow]
+) -> Optional[SponsorWindow]:
     """The sponsor window this position falls in, or None."""
     for window in windows:
-        if window[0] <= position < window[1]:
+        if window.start <= position < window.end:
             return window
     return None
 
@@ -575,7 +629,7 @@ def _containing_window(
 def classify_sponsor(
     mention: dict[str, Any],
     roster: Sequence[Sponsor],
-    windows: Sequence[tuple[int, int]],
+    windows: Sequence[SponsorWindow],
     transcript_text: Optional[str] = None,
     normalized_transcript: Optional[str] = None,
 ) -> SponsorVerdict:
@@ -624,41 +678,19 @@ def classify_sponsor(
     long_enough = len(normalize_text_for_matching(snippet)) >= _MIN_SNIPPET_CHARS_FOR_WINDOW
     if position is not None and long_enough:
         window = _containing_window(position, windows)
+        # Named AFTER the cue, not merely inside the window. The advertised product is
+        # introduced once the host hands over; a name that appears only in the lead is
+        # the PREVIOUS sentence's subject, which is how ordinary news either side of an
+        # ad break was being tagged.
         if window is not None and named_in_window(
-            candidate_names, normalized_transcript, window
+            candidate_names, normalized_transcript, (window.name_from, window.end)
         ):
-            return SponsorVerdict(
-                True, "phrase", _cue_for_position(normalized_transcript, position)
-            )
+            return SponsorVerdict(True, "phrase", window.cue)
 
     if mention.get("is_editorial") is False:
         return SponsorVerdict(True, "model", None)
 
     return SponsorVerdict(False, None, None)
-
-
-def _cue_for_position(normalized_transcript: str, position: int) -> Optional[str]:
-    """The cue phrase nearest a matched snippet — what goes in `matched`, so a phrase
-    verdict names its own reason instead of just asserting one.
-
-    Searches in BOTH directions. A backwards-only search returned None for the most
-    common shape there is: the snippet opens the sentence that contains the cue
-    ("Today's episode is brought to you by HyperAgent…"), putting the cue a few
-    characters AFTER the snippet's start even though the window plainly fired on it.
-    """
-    best: Optional[str] = None
-    best_distance = None
-    for cue in SPONSOR_CUES:
-        start = 0
-        while True:
-            idx = normalized_transcript.find(cue, start)
-            if idx < 0:
-                break
-            distance = abs(idx - position)
-            if best_distance is None or distance < best_distance:
-                best, best_distance = cue, distance
-            start = idx + len(cue)
-    return best
 
 
 def apply_sponsor_verdict(mention: dict[str, Any], verdict: SponsorVerdict) -> dict[str, Any]:

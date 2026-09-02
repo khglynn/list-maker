@@ -15,6 +15,7 @@ import pytest
 from pipeline.scrapers.ai_daily.sponsors import (
     SPONSOR_CUES,
     SPONSOR_WINDOW_TRAIL_CHARS,
+    SponsorWindow,
     named_in_window,
     Sponsor,
     SponsorVerdict,
@@ -248,17 +249,17 @@ def test_windows_cover_the_cue_and_the_read_that_follows() -> None:
     windows = sponsor_windows(TRANSCRIPT)
     assert windows
     cue_at = normalized.find("brought to you by")
-    assert any(start <= cue_at < end for start, end in windows)
+    assert any(w.start <= cue_at < w.end for w in windows)
     # The ad copy after the cue is inside the window; the editorial run before it is not.
-    assert any(start <= normalized.find("hyperagent.com") < end for start, end in windows)
-    assert not any(start <= 0 < end for start, end in windows)
+    assert any(w.start <= normalized.find("hyperagent.com") < w.end for w in windows)
+    assert not any(w.start <= 0 < w.end for w in windows)
 
 
 def test_windows_are_merged_and_sorted() -> None:
     windows = sponsor_windows(TRANSCRIPT)
     assert windows == sorted(windows)
-    for (_, end), (next_start, _) in zip(windows, windows[1:]):
-        assert end < next_start  # overlapping spans were merged, not repeated
+    for previous, following in zip(windows, windows[1:]):
+        assert previous.end < following.start  # overlapping spans merged, not repeated
 
 
 def test_windows_offsets_index_the_normalized_text() -> None:
@@ -267,8 +268,8 @@ def test_windows_offsets_index_the_normalized_text() -> None:
     raw text fails on every multi-line quote."""
     raw = "Intro.\n\n  Today's sponsor   is\nVanta.  " + ("filler. " * 50)
     normalized = normalize_text_for_matching(raw)
-    (start, end), = sponsor_windows(raw)
-    assert "today's sponsor is vanta." in normalized[start:end]
+    (window,) = sponsor_windows(raw)
+    assert "today's sponsor is vanta." in normalized[window.start:window.end]
 
 
 def test_no_windows_without_a_cue() -> None:
@@ -444,7 +445,7 @@ def test_being_inside_a_window_is_not_enough_without_the_name() -> None:
     normalized = normalize_text_for_matching(transcript)
     snippet = "Rumors swirled that OpenAI's latest model, codenamed Astro, was being prepared."
     # It really is inside the window — the name is the only thing keeping it editorial.
-    assert any(s <= locate_snippet(normalized, snippet) < e for s, e in windows)
+    assert any(w.start <= locate_snippet(normalized, snippet) < w.end for w in windows)
     verdict = classify_sponsor(
         {
             # The extractor canonicalized the spoken "Astro" to the product "Astra",
@@ -523,3 +524,86 @@ def test_named_in_window_will_not_match_mid_word() -> None:
     assert not named_in_window(["Vanta"], normalized, window)
     # …while the spelling tolerance the other tests pin is untouched.
     assert named_in_window(["Superintelligent"], normalized, window)
+
+
+# --------------------------------------------------------------------------
+# the naming test is anchored to the cue (independent review, 2026-09-02)
+# --------------------------------------------------------------------------
+
+def test_a_name_only_in_the_lead_is_the_previous_sentence_not_the_ad() -> None:
+    """The lead exists so a snippet opening a few words before the cue still lands in
+    the window. It must not let the PREVIOUS sentence's subject satisfy the naming test —
+    that is how Slack and Telegram were pulled in from the copy before an ad break.
+    """
+    transcript = (
+        "The team shipped a Telegram integration this week and it works well. "
+        "Today's sponsor is Vanta, which gets you audit-ready fast."
+    )
+    windows = sponsor_windows(transcript)
+    verdict = classify_sponsor(
+        {
+            "canonical_name": "Telegram",
+            "mention_text": "Telegram",
+            "context_snippet": "The team shipped a Telegram integration this week and it works well.",
+            "is_editorial": True,
+        },
+        [], windows, transcript_text=transcript,
+    )
+    assert verdict == SponsorVerdict(False, None, None)
+
+
+def test_a_bill_sponsored_by_a_senator_is_not_an_advertisement() -> None:
+    """"sponsored by" has a non-advertising sense. Anchoring the naming test to the cue
+    is what separates them: the bill's name precedes the phrase, the sponsor's follows."""
+    transcript = (
+        "The Bipartisan Framework for US AI Act was sponsored by Richard Blumenthal "
+        "and Josh Hawley, and it lays out a licensing regime."
+    )
+    verdict = classify_sponsor(
+        {
+            "canonical_name": "Bipartisan Framework for US AI Act",
+            "mention_text": "Bipartisan Framework for US AI Act",
+            "context_snippet": (
+                "The Bipartisan Framework for US AI Act was sponsored by Richard "
+                "Blumenthal and Josh Hawley, and it lays out a licensing regime."
+            ),
+            "is_editorial": True,
+        },
+        [], sponsor_windows(transcript), transcript_text=transcript,
+    )
+    assert verdict == SponsorVerdict(False, None, None)
+
+
+def test_a_cue_inside_a_quoted_headline_opens_no_window() -> None:
+    """Culture Gabfest's panellists discuss articles BY TITLE. This is the real ep-3737
+    text; "Brought to You by YouTubers" is a headline being read aloud, not a handoff to
+    an advertiser. The transcript-side twin of the roster's _header_ends_block guard.
+    """
+    text = (
+        "The trio dissected a deftly reported package from Bloomberg, \u201cThe Second "
+        "Trump Presidency, Brought to You by YouTubers.\u201d Also, we are looking for a "
+        "new Production Assistant."
+    )
+    assert sponsor_windows(text) == []
+
+
+def test_an_apostrophe_does_not_open_a_quoted_span() -> None:
+    """Only double quotes count. Half the cues contain "today's" — treating an
+    apostrophe as a quote delimiter would make them unmatchable."""
+    text = "Today's sponsor is Vanta, and it's the platform that's built for teams."
+    assert sponsor_windows(text)
+
+
+def test_window_carries_the_cue_boundary_and_merging_keeps_the_earliest() -> None:
+    windows = sponsor_windows(TRANSCRIPT)
+    for w in windows:
+        assert isinstance(w, SponsorWindow)
+        assert w.start <= w.name_from <= w.end
+        assert w.cue in SPONSOR_CUES
+
+    merged = sponsor_windows(
+        "Today's sponsor is Vanta. It is brought to you by Vanta as well."
+    )
+    assert len(merged) == 1
+    # The naming region of a merged window starts after its FIRST cue.
+    assert merged[0].cue == "today's sponsor"
