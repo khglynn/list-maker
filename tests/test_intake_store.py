@@ -121,8 +121,24 @@ def test_needs_judging_re_judges_a_new_rubric_but_not_pre_check_outcomes() -> No
     assert "status = %s OR (status = ANY(%s)" in sql
     assert "precheck IS NULL" in sql       # a dead link stays dead when the rubric changes
     assert "prompt_version IS DISTINCT FROM %s" in sql
-    assert params == ("discovered", ["judged", "skipped"], "abc123def456")
+    assert params == ("discovered", ["judged", "skipped"], "abc123def456", "failed")
     assert "saved" not in params[1] and "held" not in params[1]
+
+
+def test_needs_judging_reopens_a_crash_but_not_a_failed_ingest() -> None:
+    """A transient OpenRouter blip must not be permanent data loss.
+
+    `mark_failed` sets status='failed' both when judging crashed (no verdict) and when
+    a row that HAS a verdict failed to ingest. Only the first gets another go — asking
+    the models the same question every week about the second would never stop.
+    """
+    conn = _Conn([[]])
+    store.needs_judging(conn, "v2")
+    sql, params = conn.calls[0]
+    assert "OR (status = %s AND verdict IS NULL AND precheck IS NULL)" in sql
+    assert params == ("discovered", ["judged", "skipped"], "v2", "failed")
+    # still not by way of REJUDGEABLE_STATUSES, which would re-judge ingest failures
+    assert "failed" not in params[1]
 
 
 def test_pending_and_limit_are_ordered_newest_post_first() -> None:

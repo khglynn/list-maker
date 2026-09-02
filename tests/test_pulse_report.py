@@ -129,6 +129,15 @@ def test_intake_line_reports_what_the_judge_did() -> None:
     assert "2 disputed" in digest and "9 not yet ingested" in digest
 
 
+def test_intake_line_keeps_a_stuck_failure_visible() -> None:
+    # The weekly Slack line reports only the run that produced a failure. The pulse
+    # reads a 15-day window, so a row stuck failing stays visible instead of being
+    # mentioned once and then going quiet forever.
+    digest = build_digest([_show()], TOTALS, [], intake={
+        "judged": 4, "would_save": 1, "would_save_backlog": 1, "failed": 3})
+    assert "3 failed" in digest
+
+
 def test_intake_line_is_quiet_but_present_on_an_empty_period() -> None:
     digest = build_digest([_show()], TOTALS, [], intake={"judged": 0, "would_save_backlog": 0})
     assert "nothing judged this period" in digest

@@ -54,7 +54,9 @@ STATUS_FAILED = "failed"
 # Statuses a rubric change may re-open. `saved` is done, `held` and any pre-check
 # outcome are structural facts about the URL (already ingested, dead, a PDF) that a
 # new rubric cannot change — re-judging those would burn Firecrawl credits and
-# model calls every week to reach the same answer.
+# model calls every week to reach the same answer. `failed` is not here either, but
+# for a different reason: it is re-opened by its own narrow branch in needs_judging,
+# only when the crash happened BEFORE a verdict existed.
 REJUDGEABLE_STATUSES = (STATUS_JUDGED, STATUS_SKIPPED)
 
 MISSING_TABLE_HINT = (
@@ -187,20 +189,34 @@ def pending(conn, status: str, limit: Optional[int] = None) -> list[dict]:
 def needs_judging(conn, prompt_version: Optional[str], limit: Optional[int] = None) -> list[dict]:
     """Rows with no verdict under the CURRENT rubric version.
 
-    Two groups: anything still `discovered`, and anything a MODEL judged under a
+    Three groups: anything still `discovered`; anything a MODEL judged under a
     different rubric version (a rubric edit is a new `prompt_version`, and re-judging
-    under it is the point of versioning it). Rows a pre-check decided are excluded —
-    `precheck IS NULL` — because "already ingested" and "dead link" don't change when
-    the rubric does.
+    under it is the point of versioning it); and anything that CRASHED before it got a
+    verdict.
+
+    Rows a pre-check decided are excluded — `precheck IS NULL` — because "already
+    ingested" and "dead link" don't change when the rubric does.
+
+    The crash branch is narrow on purpose. `failed` is overloaded: `mark_failed` sets
+    it both when judging blew up (no verdict — an OpenRouter blip, a timeout, and
+    judge.judge_once raises rather than retrying) and when a row that HAS a verdict
+    failed to ingest. Only the first deserves another go; re-judging the second would
+    ask the models the same question every week forever. `verdict IS NULL` is what
+    separates them. Without this branch a transient API blip was permanent data loss:
+    the row left the work list for good, and the only recovery was Kevin ticking "Pull
+    anyway", which force-ingests it without ever getting the verdict that is the whole
+    point of the intake.
     """
     sql = f"""
         SELECT {SELECT_COLUMNS} FROM {TABLE}
         WHERE status = %s
            OR (status = ANY(%s) AND precheck IS NULL
                AND prompt_version IS DISTINCT FROM %s)
+           OR (status = %s AND verdict IS NULL AND precheck IS NULL)
         ORDER BY published_on DESC NULLS LAST, discovered_at DESC
     """
-    params: list = [STATUS_DISCOVERED, list(REJUDGEABLE_STATUSES), prompt_version]
+    params: list = [STATUS_DISCOVERED, list(REJUDGEABLE_STATUSES), prompt_version,
+                    STATUS_FAILED]
     if limit is not None:
         sql += " LIMIT %s"
         params.append(limit)

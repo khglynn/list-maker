@@ -238,6 +238,11 @@ def build_digest(
             bits.append(f"{intake['would_save_backlog']} not yet ingested")
         if intake.get("held"):
             bits.append(f"{intake['held']} held (PDFs)")
+        if intake.get("failed"):
+            # The weekly line only reports the run that produced a failure; the pulse
+            # reads a 15-day window, so a row stuck failing stays visible instead of
+            # being mentioned once and then going quiet.
+            bits.append(f"{intake['failed']} failed")
         lines.append(f"📥 *Intake:* {' · '.join(bits)} · <{INTAKE_URL}|intake log>")
 
     if fails:
