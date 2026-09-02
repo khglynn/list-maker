@@ -3,7 +3,8 @@
 
 WHY. Until 2026-09-02 extraction DROPPED every mention the model flagged as an ad, so
 the ads that reached the database are exactly the ones the model MISSED — all sitting at
-is_editorial = true, counted at full weight. Blitzy carries 76 of them. New extractions
+is_editorial = true, counted at full weight — 229 across 45 entities that the detector
+can prove (retag_sponsor_mentions.py --dry-run, 2026-09-02), 73 of Blitzy's 77 mentions among them. New extractions
 tag ads as they arrive; this script is the one-time pass over the backlog, and the only
 way to run the same detector over history that runs over new episodes.
 
@@ -245,7 +246,7 @@ def plan_changes(mentions: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], 
 
 def summarize_by_entity(changes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Group the change list by entity — the unit Kevin reviews in. A per-mention list
-    of 900 rows is unreadable; "Blitzy, 76 mentions, all roster" is a decision."""
+    of 229 rows is unreadable; "Blitzy, 73 mentions, all roster" is a decision."""
     grouped: dict[tuple[Any, str], dict[str, Any]] = {}
     for change in changes:
         key = (change["entity_id"], change["canonical_name"])

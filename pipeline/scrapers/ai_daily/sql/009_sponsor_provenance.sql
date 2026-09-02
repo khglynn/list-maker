@@ -1,8 +1,10 @@
 -- 009: record HOW we know a mention is a sponsor read, not just that it is.
 --
 -- Until now extraction DROPPED every mention the model flagged as an ad, so the only
--- ads in this table are the ones the model missed — 891 of them, all sitting at
--- is_editorial = true (measured 2026-09-02). Kevin's rule (2026-09-01) is that ads are
+-- ads in this table are the ones the model missed, all sitting at is_editorial = true.
+-- The deterministic detector can prove 229 of them across 45 entities (retag_sponsor_mentions.py --dry-run, 2026-09-02);
+-- that is what the detector TAGS, not an unknowable ground-truth count of every ad ever
+-- read on the show. Kevin's rule (2026-09-01) is that ads are
 -- kept, tagged, and weight-capped, never deleted, so extraction now keeps them and the
 -- loader has to say where the verdict came from. Provenance is a first-class column
 -- here (docs/principles.md): 'roster' = the publisher's own "Brought to you by:" block
@@ -12,7 +14,8 @@
 -- NULL means editorial — the absence of evidence, not a fourth category, and the reason
 -- there is no DEFAULT and no CHECK forbidding NULL. Prefer NULL to a fake value.
 --
--- Additive and idempotent: no rewrite of the 16,285 existing rows, which stay NULL
+-- Additive and idempotent: no rewrite of the ~17.4k existing rows (2026-09-02; the
+-- table grows daily, so a changed count is not a broken contract), which stay NULL
 -- (editorial) until retag_sponsor_mentions.py reclassifies them. Safe to re-run.
 -- PREREQUISITE: run this before merging the ads-as-data PR — the loader writes the
 -- column unconditionally, so an un-migrated database fails the next extraction load.

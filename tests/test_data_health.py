@@ -357,8 +357,8 @@ def _sponsor_rows(monkeypatch, rows):
 
 
 def test_sponsor_share_passes_at_observed_levels(monkeypatch) -> None:
-    """Measured over all 16,285 stored mentions on 2026-09-02: AI Daily 5.6%,
-    PCHH 7.5%, Hard Fork 3.8%. Normal must stay quiet."""
+    """Measured 2026-09-02 over the 30-day window this check scans, with the retag
+    applied: AI Daily 5.8% (21/360), Hard Fork 0%, PCHH 0%. Normal must stay quiet."""
     from pipeline.data_health import check_sponsor_share
 
     _sponsor_rows(monkeypatch, [

@@ -878,8 +878,8 @@ def process_episode_mentions_with_stats(
 
     ADS ARE TAGGED, NOT DROPPED (Kevin, 2026-09-01). This function used to discard every
     mention with is_editorial=false, which is why the database contains only the ads the
-    model MISSED: 891 untagged sponsor reads counted at full weight, including 76 for
-    Blitzy. Each surviving mention now gets a sponsor verdict from the deterministic
+    model MISSED, counted at full weight — 229 of them that the detector can prove
+    (retag_sponsor_mentions.py --dry-run, 2026-09-02), 73 of Blitzy's 77 mentions among them. Each surviving mention now gets a sponsor verdict from the deterministic
     detector (roster → phrase → model, see sponsors.classify_sponsor) that OVERRIDES the
     model's own flag in both directions, and carries `sponsor_source` so the row says
     where the verdict came from. The rollup caps ad weight; nothing is deleted.

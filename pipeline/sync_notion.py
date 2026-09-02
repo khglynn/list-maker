@@ -40,8 +40,8 @@ FAILURE_ALERT_THRESHOLD = 0.10  # Slack-alert if >10% of a phase's entities fail
 # "sometimes the ads are helpful… we shouldn't have them overweight by mentions."
 # 5 is chosen so a sponsor still clears the min_mentions=2 bar on ad reads alone (an
 # advertised product IS a real product worth a row) while a year-long campaign stops
-# outranking genuine coverage: Blitzy carries 76 ad mentions and 1 editorial one, and
-# without the cap it would sit above every tool the hosts actually discussed.
+# outranking genuine coverage: 73 of Blitzy's 77 mentions are ad reads (retag_sponsor_mentions.py --dry-run, 2026-09-02),
+# and without the cap it would sit above every tool the hosts actually discussed.
 MAX_AD_MENTIONS_COUNTED = 5
 
 

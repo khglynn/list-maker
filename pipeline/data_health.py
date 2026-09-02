@@ -760,10 +760,11 @@ def check_ai_mention_fields(conn) -> CheckResult:
 
 
 # Share of a show's recent mentions that may be sponsor reads before it looks wrong.
-# Measured 2026-09-02 over all 16,285 stored mentions: AI Daily 5.6%, PCHH 7.5%, Hard
-# Fork 3.8%. 30% is ~4x the observed ceiling, so it fires on a real regime change (a
-# roster parse that starts matching prose, a cue phrase that starts matching editorial
-# speech) and not on a week with more ads than usual.
+# Measured 2026-09-02 over the 30-day window this check actually scans, with the retag
+# applied: AI Daily 5.8% (21/360), Hard Fork 0% (0/33), PCHH 0% (0/121). 30% is ~5x the
+# observed ceiling, so it fires on a real regime change (a roster parse that starts
+# matching prose, a cue phrase that starts matching editorial speech) and not on a week
+# with more ads than usual.
 SPONSOR_SHARE_WARN_THRESHOLD = 0.30
 SPONSOR_SHARE_WINDOW_DAYS = 30
 # Below this many mentions the ratio is noise — three mentions, two of them ads, is 67%

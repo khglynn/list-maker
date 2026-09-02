@@ -230,8 +230,8 @@ def test_fetch_entity_rollup_curated_qualifier() -> None:
 def test_ad_mentions_are_capped_in_the_rollup_sql() -> None:
     """Editorial counts in full; ads count at most MAX_AD_MENTIONS_COUNTED.
 
-    Blitzy carries 76 ad mentions and 1 editorial one. Uncapped it outranks every tool
-    the hosts actually discussed, which is exactly what Kevin asked to stop.
+    73 of Blitzy's 77 mentions are ad reads (retag_sponsor_mentions.py --dry-run, 2026-09-02). Uncapped it outranks
+    every tool the hosts actually discussed, which is exactly what Kevin asked to stop.
     """
     from pipeline.sync_notion import MAX_AD_MENTIONS_COUNTED, fetch_entity_rollup
 
