@@ -144,7 +144,7 @@ jobs:
         # in an expiring log. Keep the batch directory so it can be inspected or replayed
         # without re-running the whole show. eval.yml does the same for its report.
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: extraction-batches-${{ github.run_id }}
           path: codex-notes/ai-daily-entity-extraction/incremental-*
