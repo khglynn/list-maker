@@ -16,7 +16,7 @@
 #   - scrapers/ai_daily/ (AI Daily entity extraction)
 
 spotipy>=2.23.0           # Spotify API client
-psycopg2-binary>=2.9.0    # PostgreSQL driver (Neon)
+psycopg2-binary>=2.9.12    # PostgreSQL driver (Neon)
 python-dotenv>=1.0.0      # Load .env files
 thefuzz>=0.22.0           # Fuzzy string matching
 python-Levenshtein>=0.23.0  # 10x faster fuzzy matching
