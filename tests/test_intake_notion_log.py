@@ -51,8 +51,8 @@ def _fake_notion(monkeypatch, responses):
 def test_schema_plan_adds_what_is_missing_and_removes_nothing() -> None:
     body, changes = N.plan_schema_changes(LIVE_SCHEMA)
     props = body["properties"]
-    for added in ("Published", "Verdict", "Confidence", "Reason", "Judge",
-                  "Disputed", "Precheck"):
+    for added in ("Published", "Verdict", "Confidence", "Reason", "Rule", "Job",
+                  "Judge", "Disputed", "Precheck"):
         assert added in props, f"{added} should be added"
     # Everything the database already had is left out of the patch entirely — the
     # only way to be sure a type or an option Kevin set by hand is not clobbered.
@@ -110,6 +110,7 @@ def _row(**kw) -> dict:
         "title": "How people are using ChatGPT", "source": "openai-rss",
         "published_on": "2026-09-01", "words": 3200, "links_out": 14,
         "verdict": "save", "confidence": 0.82, "reason": "first-party usage figures",
+        "rule": "S1", "job": "deck",
         "judge_model": "google/gemini-3.7-flash", "checker_model": "openai/gpt-5.6-luna",
         "disputed": True, "status": "judged", "precheck": None, "failed_reason": None,
         "discovered_via": {"feed": "https://openai.com/news/rss.xml"},
@@ -128,13 +129,17 @@ def test_build_properties_carries_the_verdict_and_both_models() -> None:
     assert props["Judge"]["rich_text"][0]["text"]["content"] == \
         "google/gemini-3.7-flash | openai/gpt-5.6-luna"
     assert props["Reason"]["rich_text"][0]["text"]["content"] == "first-party usage figures"
+    # which rule fired and what the save is FOR — groupable in a way a reason isn't
+    assert props["Rule"]["select"]["name"] == "S1"
+    assert props["Job"]["select"]["name"] == "deck"
 
 
 def test_build_properties_leaves_unknown_cells_empty_rather_than_zero() -> None:
     props = N.build_properties(_row(words=None, links_out=None, verdict=None,
                                     confidence=None, reason=None, judge_model=None,
-                                    title="", status="discovered"))
-    for absent in ("Words", "Links Out", "Verdict", "Confidence", "Reason", "Judge"):
+                                    rule=None, job=None, title="", status="discovered"))
+    for absent in ("Words", "Links Out", "Verdict", "Confidence", "Reason", "Judge",
+                   "Rule", "Job"):
         assert absent not in props
     assert props["Name"]["title"][0]["text"]["content"].startswith("https://")  # url as the label
     assert props["Status"]["select"]["name"] == "discovered"

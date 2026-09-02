@@ -59,6 +59,11 @@ REQUIRED_PROPERTIES: dict[str, dict] = {
     ]}},
     "Confidence": {"number": {"format": "percent"}},
     "Reason": {"rich_text": {}},
+    # Which rubric rule fired, and (for a save) the later use it serves. A select on
+    # both because they are closed vocabularies — Kevin can group the log by "what
+    # kind of yes was this", which a free-text reason can never be grouped by.
+    "Rule": {"select": {}},
+    "Job": {"select": {}},
     "Judge": {"rich_text": {}},        # "judge model | checker model"
     "Disputed": {"checkbox": {}},
     "Precheck": {"rich_text": {}},     # duplicate | thin (117 words) | pdf | dead — a script decided
@@ -185,6 +190,10 @@ def build_properties(row: dict) -> dict:
         props["Confidence"] = {"number": float(row["confidence"])}
     if row.get("reason"):
         props["Reason"] = {"rich_text": [{"text": {"content": str(row["reason"])[:1900]}}]}
+    if row.get("rule"):
+        props["Rule"] = {"select": {"name": str(row["rule"])[:100]}}
+    if row.get("job"):
+        props["Job"] = {"select": {"name": str(row["job"])[:100]}}
     if row.get("judge_model"):
         judge = row["judge_model"]
         if row.get("checker_model"):

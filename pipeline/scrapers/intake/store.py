@@ -72,7 +72,8 @@ MISSING_TABLE_HINT = (
 SELECT_COLUMNS = (
     "id, url, source, title, published_on, category, discovered_at, discovered_via, "
     "words, links_out, text_sha256, scraped_at, "
-    "verdict, confidence, reason, judge_model, checker_model, checker_verdict, "
+    "verdict, confidence, reason, rule, job, "
+    "judge_model, checker_model, checker_verdict, "
     "disputed, prompt_version, judged_at, "
     "status, precheck, episode_id, ingested_at, failed_reason, override_by, "
     "notion_page_id, notion_synced_at"
@@ -289,6 +290,11 @@ def record_decision(conn, candidate_id: int, decision: Decision, *,
                     status: Optional[str] = None) -> str:
     """Store the full verdict — both models, the rubric version, when, why.
 
+    `rule` and `job` are the rubric's own provenance: WHICH rule fired (S1…K9, R-*,
+    X-*) and, for a save, the later use it serves. Stored beside the reason because a
+    one-line reason ages into prose, while a rule id stays checkable against the
+    rubric version that produced it.
+
     Default status follows the verdict: `skip` → skipped, `save` → judged ("a verdict
     exists, nothing was ingested"). run_intake passes an explicit status once
     auto-ingest is on and a save becomes `saved`/`failed`.
@@ -298,13 +304,14 @@ def record_decision(conn, candidate_id: int, decision: Decision, *,
     with conn.cursor() as cur:
         cur.execute(
             f"""UPDATE {TABLE} SET
-                    verdict = %s, confidence = %s, reason = %s,
+                    verdict = %s, confidence = %s, reason = %s, rule = %s, job = %s,
                     judge_model = %s, checker_model = %s, checker_verdict = %s,
                     disputed = %s, prompt_version = %s, judged_at = now(),
                     status = %s, precheck = NULL, failed_reason = NULL,
                     updated_at = now()
                 WHERE id = %s""",
             (decision.verdict, decision.confidence, decision.reason,
+             decision.rule, decision.job,
              decision.judge.model, checker.model if checker else None,
              checker.verdict if checker else None,
              decision.disputed, decision.prompt_version, status, candidate_id),

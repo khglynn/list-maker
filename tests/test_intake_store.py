@@ -178,9 +178,11 @@ def test_record_precheck_holds_a_pdf_rather_than_skipping_it() -> None:
 
 
 def _decision(verdict="save", disputed=False) -> Decision:
-    judge = Verdict(verdict, 0.82, "first-party usage figures", "google/gemini-3.7-flash")
-    checker = Verdict(verdict, 0.7, "same", "openai/gpt-5.6-luna")
-    return Decision(verdict, 0.76, judge.reason, judge, checker, disputed, "v0abc")
+    judge = Verdict(verdict, 0.82, "first-party usage figures", "google/gemini-3.7-flash",
+                    rule="S1", job="deck")
+    checker = Verdict(verdict, 0.7, "same", "openai/gpt-5.6-luna", rule="S1", job="deck")
+    return Decision(verdict, 0.76, judge.reason, judge, checker, disputed, "v0abc",
+                    rule="S1", job="deck")
 
 
 def test_record_decision_stores_both_models_and_the_rubric_version() -> None:
@@ -188,7 +190,9 @@ def test_record_decision_stores_both_models_and_the_rubric_version() -> None:
     status = store.record_decision(conn, 9, _decision(disputed=True))
     sql, params = conn.calls[0]
     assert status == "judged"  # shadow mode: a save with nothing ingested
-    assert params == ("save", 0.76, "first-party usage figures",
+    # rule and job ride with the verdict: a one-line reason ages into prose, a rule
+    # id stays checkable against the rubric version that produced it
+    assert params == ("save", 0.76, "first-party usage figures", "S1", "deck",
                       "google/gemini-3.7-flash", "openai/gpt-5.6-luna", "save",
                       True, "v0abc", "judged", 9)
     assert "judged_at = now()" in sql
@@ -206,7 +210,9 @@ def test_record_decision_survives_a_single_model_run() -> None:
     judge = Verdict("save", 0.9, "why", "google/gemini-3.7-flash")
     conn = _Conn()
     store.record_decision(conn, 1, Decision("save", 0.9, "why", judge, None, False, "v1"))
-    assert conn.calls[0][1][4:6] == (None, None)  # no checker model, no checker verdict
+    params = conn.calls[0][1]
+    assert params[3:5] == (None, None)   # a verdict with no rule stays NULL, not ""
+    assert params[6:8] == (None, None)   # no checker model, no checker verdict
 
 
 def test_mark_saved_and_failed_record_provenance() -> None:
