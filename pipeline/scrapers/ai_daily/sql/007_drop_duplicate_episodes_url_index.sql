@@ -2,7 +2,12 @@
 --
 -- pg_indexes showed episodes_url_key AND episodes_url_unique, both unique btree on
 -- (url) — leftover from a past migration, doubling index maintenance on every episode
--- write for nothing. Every ON CONFLICT (url) clause matches by column, not index name,
--- so dropping either is safe. Kevin's per-op OK 2026-09-01 (decision 10); DDL is run by
--- Kevin (the Neon MCP guard and the auto-mode classifier both block DROP on purpose).
-DROP INDEX IF EXISTS episodes_url_key;
+-- write for nothing. episodes_url_key is the index BEHIND a table constraint of the
+-- same name (created by UNIQUE (url) in the original schema), so it cannot be dropped
+-- as an index — Postgres says "constraint episodes_url_key requires it". Dropping the
+-- constraint drops its index. episodes_url_unique stays and keeps url unique, which is
+-- all ON CONFLICT (url) needs (it matches by column, not by name).
+-- Kevin's per-op OK 2026-09-01 (decision 10); DDL is run by Kevin (the Neon MCP guard
+-- and the auto-mode classifier both block DROP on purpose). First attempt as
+-- DROP INDEX failed with DependentObjectsStillExist — hence this form.
+ALTER TABLE episodes DROP CONSTRAINT IF EXISTS episodes_url_key;
