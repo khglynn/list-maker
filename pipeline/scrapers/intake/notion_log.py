@@ -14,7 +14,9 @@ Three rules, because this database holds a year of Kevin's own marks:
   renames `Pull` → `Pull anyway`, and rewrites the title and description prose that
   now describe a checkbox workflow that no longer exists. It never deletes a
   property, an option, or a row — the legacy `candidate`/`pulled`/`pdf-report`
-  statuses stay until no row uses them.
+  statuses stay until no row uses them, and the retired `Why` column keeps whatever
+  the old queue wrote on the 45 historical rows. Retired means never written again,
+  not removed: `Reason` (the judge's one-line answer) is its successor.
 * `upsert_row` **adopts** an existing page before creating one. The 45 rows predate
   `intake_candidates`, so their Neon rows carry no `notion_page_id`; matching on URL
   first is what keeps the repurposing from doubling the database.
@@ -73,8 +75,14 @@ REQUIRED_PROPERTIES: dict[str, dict] = {
     OVERRIDE_PROP: {"checkbox": {}},
     "Found Via": {"rich_text": {}},
     "Last Cited": {"date": {}},
-    "Why": {"rich_text": {}},
 }
+# Deliberately NOT here: "Why". The old queue filled it with a mention's context
+# snippet; nothing in the judged intake writes it, and `Reason` — the judge's own
+# one-line answer — is what replaced it. Declaring it would create a permanently
+# empty column on a fresh database while claiming the log needs it. It stays on the
+# 45 legacy rows (ensure_schema removes nothing) frozen at whatever the old pipeline
+# last wrote; retired in place, 2026-09-02.
+RETIRED_PROPERTIES = ("Why",)
 
 # Status options the new lifecycle needs. Merged into whatever the database already
 # has; the legacy candidate/pulled/pdf-report options are never removed (removing an

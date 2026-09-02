@@ -254,3 +254,18 @@ def test_an_unjudged_row_still_omits_the_judge_cells_entirely() -> None:
                                     status="discovered"))
     for absent in ("Verdict", "Confidence", "Reason", "Rule", "Job", "Judge"):
         assert absent not in props
+
+
+def test_why_is_retired_not_recreated() -> None:
+    """The old queue filled "Why" from a mention's context snippet; nothing writes it now.
+
+    Declaring it required would create a permanently empty column on a fresh database
+    while claiming the log needs it. On the live database it already exists, so the
+    45 historical rows keep their snippets — retired in place, not removed.
+    """
+    assert "Why" not in N.REQUIRED_PROPERTIES
+    assert "Why" in N.RETIRED_PROPERTIES
+    assert "Why" not in N.build_properties(_row())  # no writer, on any row
+    # and ensure_schema still never removes it from a database that has it
+    body, _ = N.plan_schema_changes(LIVE_SCHEMA)
+    assert "Why" not in body.get("properties", {})
