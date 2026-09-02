@@ -28,6 +28,8 @@ from typing import Optional
 
 import httpx
 
+from pipeline.scrapers.intake.flags import compute_flags, render_flags
+
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 # Ordered fallback lists — first available wins; the exact id used is stored on the row.
 JUDGE_MODELS = ("google/gemini-3.7-flash", "google/gemini-3.5-flash")
@@ -45,6 +47,8 @@ class Verdict:
     reason: str
     model: str
     raw: str = ""
+    rule: Optional[str] = None   # which rubric rule fired (S1…K9, R-*, X-*); provenance for the row
+    job: Optional[str] = None    # the later use a save serves (deck | build | policy | playbook | landscape | findable)
 
 
 @dataclass
@@ -56,6 +60,8 @@ class Decision:
     checker: Optional[Verdict]
     disputed: bool
     prompt_version: str
+    rule: Optional[str] = None
+    job: Optional[str] = None
 
 
 @dataclass
@@ -94,13 +100,16 @@ def build_messages(rubric: str, *, title: str, source: str, published_on: str, c
                    words: Optional[int], links_out: Optional[int], found_via: str, text: str) -> list[dict]:
     body = text[:MAX_TEXT_CHARS]
     truncated = len(text) > MAX_TEXT_CHARS
+    flags = compute_flags(text)  # over the WHOLE text — the model only sees the excerpt
     user = (
         f"TITLE: {title}\nSOURCE: {source}\nPUBLISHED: {published_on or 'unknown'}\n"
         f"CATEGORY: {', '.join(category) or 'none'}\nWORDS: {words if words is not None else 'unknown'}"
-        f"\nLINKS OUT: {links_out if links_out is not None else 'unknown'}\nFOUND VIA: {found_via}\n\n"
+        f"\nLINKS_OUT: {links_out if links_out is not None else 'unknown'}\nFOUND_VIA: {found_via}\n"
+        f"FLAGS: {render_flags(flags)}\n\n"
         f"TEXT{' (first part)' if truncated else ''}:\n{body}\n\n"
         'Answer with ONE JSON object and nothing else: {"verdict": "save" | "skip", '
-        '"confidence": <0..1>, "reason": "<one line, specific to this post>"}'
+        '"confidence": <0.55..0.95>, "rule": "<rule id>", "job": "<job or null>", '
+        '"reason": "<one line, at most 20 words, specific to this document>"}'
     )
     return [{"role": "system", "content": rubric}, {"role": "user", "content": user}]
 
@@ -117,7 +126,9 @@ def parse_verdict(raw: str, model: str) -> Verdict:
     confidence = float(data.get("confidence", 0))
     confidence = min(1.0, max(0.0, confidence))
     reason = str(data.get("reason", "")).strip()[:500]
-    return Verdict(verdict, confidence, reason, model, raw)
+    rule = (str(data["rule"]).strip()[:16] or None) if data.get("rule") else None
+    job = (str(data["job"]).strip().lower()[:16] or None) if data.get("job") else None
+    return Verdict(verdict, confidence, reason, model, raw, rule=rule, job=job)
 
 
 def judge_once(messages: list[dict], models: tuple[str, ...], api_key: str,
@@ -135,7 +146,7 @@ def judge_once(messages: list[dict], models: tuple[str, ...], api_key: str,
                              "HTTP-Referer": "https://github.com/khglynn/list-maker",
                              "X-Title": "list-maker intake judge"},
                     json={"model": model, "messages": messages, "temperature": 0,
-                          "response_format": {"type": "json_object"}, "max_tokens": 300},
+                          "response_format": {"type": "json_object"}, "max_tokens": 400},
                 )
                 resp.raise_for_status()
                 content = resp.json()["choices"][0]["message"]["content"]
@@ -154,11 +165,13 @@ def judge_once(messages: list[dict], models: tuple[str, ...], api_key: str,
 def decide(judge: Verdict, checker: Optional[Verdict], prompt_version: str) -> Decision:
     if checker is None or checker.verdict == judge.verdict:
         conf = judge.confidence if checker is None else (judge.confidence + checker.confidence) / 2
-        return Decision(judge.verdict, round(conf, 3), judge.reason, judge, checker, False, prompt_version)
+        return Decision(judge.verdict, round(conf, 3), judge.reason, judge, checker, False, prompt_version,
+                        rule=judge.rule, job=judge.job)
     # Disagreement → save, disputed. The reason shown is the SAVE side's, so the
     # Notion row explains why it came in; the skip side's reason rides in the log.
     saver = judge if judge.verdict == "save" else checker
-    return Decision("save", round(saver.confidence, 3), saver.reason, judge, checker, True, prompt_version)
+    return Decision("save", round(saver.confidence, 3), saver.reason, judge, checker, True, prompt_version,
+                    rule=saver.rule, job=saver.job)
 
 
 def judge_candidate(*, title: str, source: str, published_on: str, category: list[str],
