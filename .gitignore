@@ -73,7 +73,10 @@ __pycache__/
 # Session logs
 pipeline/match_progress.log
 
-# Batch extraction artifacts (large, regenerable)
+# Batch extraction artifacts (large, regenerable). One directory stays tracked on
+# purpose — batch-01-focused-mini — because pipeline/scrapers/ai_daily/README.md uses
+# it as the worked example; five siblings committed before this block existed were
+# untracked 2026-09-01.
 codex-notes/ai-daily-entity-extraction/_full_runs/
 codex-notes/ai-daily-entity-extraction/_guarded_runs/
 codex-notes/ai-daily-entity-extraction/fullrun-*/
@@ -85,3 +88,4 @@ codex-notes/ai-daily-entity-extraction/batch-*/
 
 # Playwright MCP scratch (browser session logs)
 .playwright-mcp/
+codex-notes/ai-daily-entity-extraction/spotcheck-*/

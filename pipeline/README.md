@@ -29,9 +29,6 @@ pipeline/
 │   │   ├── parse.py           # Parse episode pages
 │   │   ├── fill_songs.py      # Fill in song data
 │   │   ├── repair_metadata.py # Dry-run-first official metadata repair
-│   │   ├── process_batch.py   # Batch processing
-│   │   ├── fix_404s.py        # Fix broken URLs
-│   │   ├── scrape_missing.py  # Scrape missing episodes
 │   │   ├── scoring_match.py   # Match scoring tracks
 │   │   └── download_episode_art.py
 │   │
@@ -43,8 +40,7 @@ pipeline/
 │   │   ├── normalize_aliases.py  # Merge duplicate entities
 │   │   ├── discover_links.py     # Find URLs for entities (Firecrawl)
 │   │   ├── report_summary.py     # Quality summary report
-│   │   ├── run_guarded_backfill.py    # Quality-gated batch runner
-│   │   └── run_mentions_until_done.py # Parallel orchestrator
+│   │   └── run_guarded_backfill.py    # Quality-gated batch runner
 │   │
 │   └── taddy/             # Taddy API transcript importer
 │       └── import_transcripts.py  # Multi-show transcript import

@@ -6,9 +6,7 @@
 # ecosystem per week; majors arrive alone and get a human's eyes (never blind-merge a
 # major — see the dependency-security guide in hg-ground-it).
 #
-# web/ (npm) is deliberately NOT listed: the Next.js scaffold is undeployed and its
-# fate is a decision in claude-plans/2026-09-01-ground-it-cleanup-plan.md. Add an npm
-# entry the day it is kept on purpose; delete this comment the day it is removed.
+# No npm ecosystem: the unused Next.js scaffold (web/) was deleted 2026-09-01.
 version: 2
 updates:
   - package-ecosystem: pip

@@ -5,7 +5,7 @@ SOP (Switched On Pop) Episode Scraper - Python version.
 Discovers new episodes from switchedonpop.com/episodes, scrapes each page,
 parses "Songs Discussed" sections, and inserts to Neon database.
 
-Port of web/src/lib/scraper/sop.ts for use in the automated pipeline.
+The SOP website scraper for the automated pipeline (originally ported from a TypeScript prototype, retired 2026-09-01).
 
 Usage:
     python scrape.py --dry-run           # Preview what would be scraped

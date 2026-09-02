@@ -1,16 +1,11 @@
 # list-maker - Agent Instructions
 
 *Inherits from ~/DevKev/CLAUDE.md*
-*Last updated: 2026-06-06*
+*Last updated: 2026-09-01*
 
-## ⚑ Active work + resuming after compaction
+## ⚑ Resuming (especially after a compaction)
 
-A **durable, self-healing rebuild** of this pipeline is underway (all 6 shows auto-processing → Spotify/Notion; self-healing; Slack-notifying; tested). If you're resuming — **especially after a compaction** — read these first, in order, before touching anything:
-1. `claude-plans/2026-06-06-durable-pipeline-resume.md` — way-of-working + failure-modes + grounding (load-bearing; don't skim).
-2. `NOW.md` — live state + the exact next step.
-3. `claude-plans/2026-06-06-durable-pipeline-rebuild.md` — the full plan (acceptance criteria, workstreams A–E).
-
-Post-compaction sessions drift toward doing the minimum — that's the #1 failure mode here. The global CLAUDE.md "Default to deep, durable work" + the resume doc are the antidote.
+Read `NOW.md` first — its top block is the live state and the exact next step — then whatever plan it points at. The June-2026 "durable rebuild" this section used to route you to finished on 2026-06-07 (its docs live in `claude-plans/archive/2026/`); since then the repo runs on a daily cron with hardening PRs on top. Post-compaction sessions drift toward doing the minimum — still the #1 failure mode here; the global CLAUDE.md's "Default to deep, durable work" is the antidote.
 
 ## About This Project
 
@@ -47,8 +42,6 @@ Kevin prefers a "help me mode" by default:
 ## Tech Stack
 
 - **Database:** Neon (Postgres) - source of truth
-- **Framework:** Next.js (TypeScript)
-- **Hosting:** Vercel
 - **APIs:** Spotify (via MCP), Notion, Firecrawl (web scraping)
 - **Transcripts:** Taddy API (multi-show transcript import)
 - **Extraction:** OpenAI gpt-4.1-mini (AI Daily entity extraction from transcripts)
@@ -76,71 +69,34 @@ We have a custom Spotify MCP built for this exact use case!
 
 ```
 list-maker/
-├── pipeline/                # Extraction and matching (Python)
-│   ├── common.py            # Shared DB connection + env + Slack + logging
-│   ├── show_config.py       # Centralized ShowConfig for all shows
-│   ├── run_new_episodes.py  # Orchestrator: import → extract → sync (entity/media shows)
-│   ├── run_pipeline.py      # Orchestrator: scrape → match → sync (SOP/TAL)
-│   ├── sync_notion.py       # Neon → Notion sync (entities; create/update/archive)
-│   ├── sync_transcripts_notion.py  # Neon → Notion "Transcripts" DB (tech; idempotent)
-│   ├── search_transcripts.py       # Postgres FTS over transcripts (websearch + snippets)
-│   ├── sync_playlist.py     # Neon → Spotify playlist sync
-│   ├── spotify_match.py     # Match songs to Spotify
-│   ├── data_health.py       # Staleness + integrity checks (Slacks on failure)
-│   ├── scrapers/            # Show-specific scrapers
-│   │   ├── sop/             # Switched On Pop (website scraper)
-│   │   ├── tal/             # This American Life (website scraper)
-│   │   ├── ai_daily/        # AI Daily Brief (extraction; sql/ migrations live here)
-│   │   └── taddy/           # Taddy API transcript importer (multi-show)
-│   └── _cache/              # Cached episode data + transcripts (gitignored)
-│
-├── evals/                   # Extraction eval harness (the honest gradient)
-│   └── extraction/          # metrics.py + run_eval.py + build_baseline.py + fixtures/
-│
-├── cloudflare-trigger/      # Durable control plane (Worker cron → workflow_dispatch)
-│
-├── .github/workflows/       # GitHub Actions (triggered by the Cloudflare Worker)
-│   ├── pipeline.yml         # Music (SOP/TAL → Spotify)
-│   ├── entities.yml         # Tech + media (AI Daily, Hard Fork, PCHH, Gabfest → Notion)
-│   └── eval.yml             # Weekly gated extraction eval
-│
-├── saved-transcripts/        # Saved episode transcripts + summaries
-│
-├── codex-notes/             # AI Daily extraction batch artifacts
-│
-├── marketing/               # Playlist artwork (mosaic generator)
-│   ├── sop/                 # SOP tiles, targets, outputs
-│   └── tal/                 # TAL tiles, targets, outputs
-│
-├── web/                     # Next.js app (future automation UI)
-│   └── src/                 # Run npm commands from inside web/
-│
-└── claude-plans/            # Session plans and prompts
+├── pipeline/                # The pipeline (Python). Run scripts from inside pipeline/ with ./venv/bin/python
+│   ├── common.py            # DB connection (the ONE place: timeout + keepalives + retry), env, Slack, logging
+│   ├── show_config.py       # Single source of truth for every show/source (grace windows, importers, destinations)
+│   ├── run_new_episodes.py  # Orchestrator: import → self-heal → extract → normalize → Notion sync (entity/media shows)
+│   ├── run_pipeline.py      # Orchestrator: scrape → match → sync (SOP/TAL → Spotify)
+│   ├── db_preflight.py      # First step of every workflow: fail in ~1 min if Neon is unreachable
+│   ├── data_health.py       # Health checks (staleness, integrity, feed second-source); --strict in CI
+│   ├── pulse_report.py      # Biweekly Slack digest (runs after the import on the 1st/15th)
+│   ├── feed_check.py        # The independent second source: what each show's real feed says is latest
+│   ├── sync_notion.py / sync_transcripts_notion.py / sync_playlist.py / spotify_match.py
+│   ├── save_item.py / save_episode.py / build_pull_queue.py / highlight_clips.py / search_transcripts.py
+│   ├── scrapers/            # sop/, tal/ (music) · taddy/ (transcript import) · ai_daily/ (LLM extraction + sql/ migrations)
+│   │                        # blog/, gabfest/, research/ (curated + RSS sources)
+│   └── _cache/              # Cached episode data (gitignored)
+├── tests/                   # pytest (hermetic — no DB, no network); CI runs it on every PR and push
+├── evals/extraction/        # The extraction eval harness (frozen set + aggregate gates)
+├── cloudflare-trigger/      # The Worker cron that starts everything (worker.js + worker.test.js)
+├── .github/workflows/       # entities / pipeline / eval / blogs / pulse / test — all workflow_dispatch from the Worker
+├── docs/                    # principles.md (the engineering rules) · curation-runbook.md
+├── codex-notes/             # Historical AI Daily design notes + one kept example batch; CI also writes extraction
+│                            # output here (codex-notes/ai-daily-entity-extraction/incremental-*, gitignored)
+├── marketing/               # Playlist artwork (mosaic generator; its own CLAUDE.md)
+└── claude-plans/            # Live plans at the top; archive/YYYY/ for finished ones (+ early ideation, guides, prompts)
 ```
 
-**Note:** All `npm` commands must be run from inside `web/` (e.g., `cd web && npm run dev`).
+## What's live (no counts here — run `pipeline/data_health.py` or open the Notion hub for numbers)
 
-## Current Status (2026-06-07 — all 6 shows live)
-
-**2026-06-11 update — beyond podcasts:** Four curated sources added (`openai-blog`, `anthropic-blog`, `saved-articles`, `agentic-research` — shows 60–63, shared Tech DB). Items are pulled deliberately, never crawled: `pipeline/save_item.py --url <article>` saves one; the **Blog Pull Queue** Notion DB collects candidates weekly (`blogs.yml`, Mon) ranked by Links Out — Kevin checks boxes, the next run ingests. Full blog texts mirror to the **Blog Posts** Notion DB; research docs stay canonical in Obsidian (mentions only). The Transcripts-DB staleness gap is fixed (sync now daily in `entities.yml` + a `notion_sync_freshness` health check). See `docs/curation-runbook.md` + `docs/principles.md`.
-
-**2026-06-07 update:** All 6 shows auto-process end-to-end. Pipeline hardened (Workstream A). **Option A shared Notion DBs:** entities are global (deduped across shows, tagged with a "Shows" multi-select), so AI Daily + Hard Fork share one **Tech DB** (`982dafa0…`) and PCHH + Culture Gabfest share one **Media DB** (`3780501e…94657`). A media extraction profile was added (one extractor, two profiles — tech vs media). Counts below verified 2026-06-07.
-
-| Show | Type | Episodes | Items | Destination / status |
-|------|------|----------|-------|----------------------|
-| SOP | Music | — | 4,864 songs, 4,244 matched (87%) | Spotify playlist (auth fixed; revives on next pipeline.yml run) |
-| TAL | Music | — | 1,087 songs, 875 matched (80%) | Spotify playlist |
-| AI Daily | Tech | 997 | 5,563 entities, 11,065 mentions | shared Tech DB; caught up to 2026-06-06 |
-| Hard Fork | Tech | 198 | 1,267 entities, 2,057 mentions | shared Tech DB |
-| PCHH | Media | 52* | 365 media entities | shared Media DB |
-| Culture Gabfest | Media | 17* | 122 media entities | shared Media DB (extracts from show-notes — no transcripts) |
-
-*PCHH/Gabfest = scoped-recent backfill so far; the full archive (357 + 871 eps) is a ~11h/$7.50 run deferred to Kevin's call.
-
-**Infrastructure (2026-06-07 session 2):**
-- **Durable control plane** — a Cloudflare Worker (`cloudflare-trigger/`, trimm account, `list-maker-cron.kevinhg.workers.dev`) drives ALL schedules via `workflow_dispatch`: entities daily, music Mon/Wed/Fri, eval Mon. This kills the GitHub public-repo 60-day cron silent-disable. A failed trigger Slacks. (Pending Kevin: the `GH_PAT` Worker secret, then the `schedule:` blocks come off both workflows.)
-- **Extraction eval harness** (`evals/extraction/`) — re-extracts a frozen set + gates on stable signals (yield, type-distribution, gold recall, confidence contract) so a model/prompt change can't silently regress. Run `run_eval.py` before/after a model swap; weekly CI via `eval.yml`. **Note:** same-model extraction has ~40% set churn at temp 0, so the gate uses aggregates, not per-episode set identity (see `evals/README.md`).
-- **Transcripts searchable BOTH** — Neon FTS (`search_transcripts.py`, generated tsvector + GIN on `episode_transcripts`) for power search, AND a Notion "Transcripts" DB (`sync_transcripts_notion.py`, idempotent) of the 1,196 tech-show transcripts so Kevin can query them via Notion AI.
+Ten sources, three destinations. **Podcasts** (Taddy transcripts unless noted): AI Daily Brief + Hard Fork → the shared **Tech DB**; Pop Culture Happy Hour + Culture Gabfest (Megaphone show-notes; the show ended 2026-07-01) → the shared **Media DB**; Switched On Pop + This American Life (website song lists) → one **Spotify playlist** each. **Curated sources** (no feed, no cadence): openai-blog, anthropic-blog, saved-articles, agentic-research → Tech DB, full texts mirrored to the Blog Posts DB; saved-episodes → the Transcripts DB. Entities are global across shows, deduped, tagged with a "Shows" multi-select (Option A, 2026-06-07). Design and data flow: `ARCHITECTURE.md`. History: `DEVLOG.md`.
 
 ## Automation
 
@@ -211,8 +167,8 @@ cd ~/DevKev/personal/list-maker && set -a && source .env.local && source pipelin
 ## Relevant Docs & Links
 
 - **Engineering principles:** `docs/principles.md` — distilled from Kevin's four research guides (legibility, automation planes, data provenance, dependency hygiene). Read before substantive pipeline changes; the full-reasoning canonical guides live in his Obsidian vault.
-- **Plan file:** `claude-plans/2025-12-12-initial-plan.md`
-- **Context doc:** `claude-plans/2025-12-12-project-context.md` (summary of original research chats)
+- **Live plan:** `claude-plans/2026-09-01-ground-it-cleanup-plan.md` (the cleanup pass + the next arc)
+- **Origins:** `claude-plans/archive/2025/2025-12-12-initial-plan.md` and `…-project-context.md` (the original research chats, summarized)
 - **Original research chats:**
   - `~/Documents/HG Main/0.0 Daily Notes + Projects/2025/Q4/11 Nov/Projects/Notes organizer workflow - agent/AI chats on this topic/Unknown - CSV Playlist Creation Guide_67e70c24.md`
   - `~/Documents/HG Main/0.0 Daily Notes + Projects/2025/Q4/11 Nov/Projects/Notes organizer workflow - agent/AI chats on this topic/Unknown - Workflow and transcript strategy_68eaedfe.md`

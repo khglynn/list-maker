@@ -1,164 +1,25 @@
 # NOW — list-maker
 
-**Last updated:** 2026-09-01 · **Mode:** live
+**Last updated:** 2026-09-01 · **Mode:** live (routine cron-driven operation since 2026-06-07; hardening on top)
 
-> **▶ 2026-09-01 — alert noise diagnosed and fixed (PR #4, open, CI green); ground-it cleanup pass planned.**
-> Read `DEVLOG.md` (2026-09-01) for what the August alerts actually were. Short version: 9 of 9
-> "behind" alarms were false (no grace window vs. the Mon/Wed/Fri music imports), the pulse had no
-> ordering dependency on the import, curated sources rendered as "unverified", the failure-issue step
-> never had permission, and 08-31 was one runner's dead network path (not Neon) amplified by a missing
-> connect timeout. **Blogs:** nothing broke — 31 Pull Queue candidates have waited since 06-14 and
-> discovery found zero new ones in eleven weeks; nothing said so. All fixed in PR #4 except the
-> extraction-filter / sponsor-read design (next PR).
->
-> **Open PRs (all CI green):** #4 alert noise + failure paths · #5 declared-empty extraction (stacked on #4)
-> · #11 hygiene + dependency gate (from main) · #6–#10 Dependabot bumps for `web/` — hold those until
-> `web/`'s fate is decided (plan, decision 3).
->
-> **Next step (exact):** Kevin answers the numbered decisions in
-> `claude-plans/2026-09-01-ground-it-cleanup-plan.md` → merges #4 (then retargets #5 to main and merges
-> it) and #11 → deploys the Worker (`cd cloudflare-trigger && npx wrangler whoami` must say trimm, then
-> `npx wrangler deploy`) → a fresh session runs Phase 1 of the plan with its kickoff paste.
-> Everything below this line is history from the June–August build; Phase 1 folds it into DEVLOG.
+## Right now
+- `main` carries PR #4 (alert noise + failure paths), #11 (hygiene + dependency gate), #23 (an all-filtered extraction is a declared outcome) and the first Dependabot floor bumps. The Cloudflare Worker was redeployed 2026-09-01 (version `92b6a638`): one 20:30 UTC cron; the pulse runs *after* the import on the 1st/15th.
+- Local venv rebuilt on Python 3.12 (matches CI). 224 pytest + 6 node tests green.
+- The layout cleanup landed with this file: `web/` deleted, 2025/June plans archived, ROADMAP/COMPLETED folded into `BACKLOG.md` + DEVLOG, compaction hooks repointed here, five accidental batch dirs untracked.
+- Full diagnosis of the August alerts and the blogs: `DEVLOG.md` 2026-09-01. Kevin's decisions: the plan's "Decisions" section.
 
----
+## Open items (need Kevin)
+1. **Two SQL pastes** (decision 10, DDL is Kevin-run by design): `pipeline/scrapers/ai_daily/sql/007_drop_duplicate_episodes_url_index.sql`, then `008_songs_unique_per_episode.sql` (deletes the 3 space-padded duplicate song rows first).
+2. **Decision 6:** PCHH + Culture Gabfest full-archive backfill — run once (~11h, ~$7.50) or write it off.
+3. **Dependabot PRs still open:** #6–#10 (all `web/` — close themselves now that `web/` is gone), plus any floor bumps that were stale when merged one by one (#14, #19–#22 at last check).
 
+## Next arc (agreed 2026-09-01) — "curated intake v2 + ads as data"
+Automated blog/article intake judged by an inexpensive classifier instead of a Notion checkbox; sponsor reads kept, tagged, and weight-capped. Spec, acceptance, and the kickoff paste: `claude-plans/2026-09-01-ground-it-cleanup-plan.md` → "Next arc". After it: plan Phases 4 (feed check by identity, run watchdog via `fleet-watchdog`, transactional load) and 5 (Spotify-path tests).
 
-> **✅ 2026-08-02 — the transcript race is now self-healing, and the two damaged episodes are repaired.**
-> PR #1 prevented the race going forward; this closes it. **Data:** episodes 5133 (hard-fork) and
-> 7261 (ai-daily-brief) re-extracted from their real transcripts (runs 291/292) — 5133's mentions went
-> from "Find 'Hard Fork' on YouTube and TikTok" to Figma-in-context / Claude Design / Sora / Substack;
-> 7261's three newsletter-promo mentions became GPT-5.6 / OpenAI Codex / Claude Code / OpenClaw /
-> Copilot Super app / MAI models / the Zuckerberg WSJ op-ed. Episode 7262 shared that batch and was
-> healthy — it was preserved through the same reload, which is *why* the heal re-extracts by whole
-> original batch (`delete_existing_run` keys on `(show_id, batch_name)`). Notion synced (1 create,
-> 16 updates). **0 damaged episodes remain fleet-wide.**
-> **Code (PR #2, branch `fix/transcript-race-self-healing`):** a recovery loop re-extracts up to 3
-> such episodes per run, loud in the run summary; provenance is recorded when the text is READ rather
-> than looked up at load time (a transcript landing mid-batch used to fabricate a transcript_id that
-> would have made the recovery permanently blind); `require_transcript` no longer blocks forever —
-> after 7 days the notes are extracted anyway, announced; and `prepare_extraction_inputs` now
-> overwrites a stale cached source file instead of trusting it (that alone would have made the heal a
-> silent no-op). `check_transcript_race_selfheal` warns while the queue drains, fails past 3 days.
-> Tests 165 → 185. Full narrative: DEVLOG 2026-08-02; mechanism: `pipeline/README.md`.
-> **Pre-existing, not addressed:** `import_caught_up_to_feed` shows ai-daily-brief 1 episode behind
-> (feed 08-02, we have 07-31) — the daily import lag, clears on the next scheduled run.
+## Accepted gaps (dated)
+- 2026-09-01: the feed check compares dates, not episode identities — a re-dated episode can inflate a BEHIND count and a mid-series hole is invisible. Phase 4.
+- 2026-09-01: nothing alarms when a run never starts (08-06 was cancelled, 08-16 never fired). Phase 4 watchdog.
+- 2026-09-01: the Blog Pull Queue's 31 June rows are stale by design until intake v2 retires the checkbox model.
 
-> **⚠️ 2026-07-24 — two silent failures fixed (found by an eachie-side error sweep):**
-> (1) **Cloudflare cron day-of-week is 1=Sunday..7=Saturday** — the 06-11 crons assumed
-> standard 0=Sunday, so every weekday cron fired ONE DAY EARLY (Sun/Tue/Thu) for six
-> weeks and **TAL never auto-synced once** (worker.js's Monday check never matched a
-> real fire day). Fixed: Mon=2/Wed=4/Fri=6 in wrangler.toml + worker.js; blogs moved to
-> Mon 20:00 UTC and pulse to 20:15 UTC 1st/15th (Kevin's ~3pm-CT report window).
-> (2) **Missing `shell: bash` meant no pipefail** — `python run_pipeline.py | tee ...`
-> reported tee's exit 0, so every scheduled run since 06-11 read "success" while
-> actually dying on `RuntimeError: Spotify token missing/expired` — and the
-> failure-Slack step never fired. Fixed: workflow-level `defaults: run: shell: bash`
-> across all five workflows; dead `schedule:`-event branches deleted.
-> **✅ ALL RESOLVED same day (2026-07-24 late morning):** Worker redeployed with the
-> corrected crons (version `3ccd1176`, all 5 schedules verified in deploy output). The
-> Spotify token turned out fine LOCALLY (silent refresh) — only the GitHub secret copy
-> was stale; refreshed cache pushed to `SPOTIFY_CACHE_JSON` (source of truth:
-> `~/DevKev/personal/spotify-bulk-actions-mcp/.spotify_cache/.cache` — shared with the
-> spotify-bulk-actions project) and a live dispatched run (30107449205) synced **226
-> tracks to SOP — the first real successful sync since 06-11**, six-week backlog
-> flushed in one run, pipefail visibly active. Monday brings TAL's first-ever
-> auto-sync.
-
-> **▶ LATEST (2026-06-11 late session): clips + one-offs SHIPPED.** `highlight_clips.py` (20 in-DB Castro clips → audio highlights w/ transcript anchor links, 100% anchored) + `save_episode.py` (Saved Episodes show 64: 31 one-off episodes — 19 full Taddy transcripts, 9 clip excerpts, 3 show-notes; Taddy search needs `searchId` + nested `uuid`, terms ≤8 words; Notion selects reject commas). Final rebuild pass was IN FLIGHT at session end (stale adopted pages healed: archived 19, manifest pruned, re-run launched) — **verify: all 31 show-64 episodes paged + highlights anchored, no dupes** (`pipeline/_cache/podcast-clips/manifest.json`). 2 junk show-64 rows (garbage castro titles, pre-fix) need find+delete (Kevin OK). UX renames live: Tech/Media DBs say Sources/Items/URL. Notes spelunk queued 8 articles (incl. free a16z piece). Spotify: union scope shipped; Kevin's one browser consent + secret re-push + backlog flush remain.
-
-> **✅ SHIPPED (2026-06-10/11 eve session): blog sources + curation queue build** — all 5 phases done, 6 commits (`67fedfa`…`99ff453`), pytest 143/143, 2 Codex gates clean (5 findings fixed). Spec archive: `claude-plans/2026-06-10-blog-sources-and-curation.md`; runbook: `docs/curation-runbook.md`; narrative: DEVLOG 2026-06-10/11 entry. Live artifacts: Blog Pull Queue Notion DB (25 candidates queued, ranked by Links Out), Blog Posts DB (3 posts: MIT TR jobs, Fable 5 release, OpenAI benefit-everyone — extracted + synced), curated shows 60–63, weekly blogs.yml, Notion-staleness fix (transcripts sync daily + notion_sync_freshness check; root cause: the sync was a one-time backfill never scheduled). Apple Notes mining handed to the preso session (`pipeline/_cache/apple-notes/notes_export.jsonl`).
-> **✅ GH_PAT RESOLVED (2026-06-11, no new PAT):** reused the existing fine-grained `GITHUB_HG_CLAUDE_TOKEN` from `~/.env` (expires **2027-01-20**; a dispatch failure Slacks when it does). Set as the Worker's `GH_PAT` + a fresh `TRIGGER_TOKEN` (saved in `.env.local` as `LIST_MAKER_TRIGGER_TOKEN`). **Verified end-to-end twice:** raw API dispatch (dry-run) + the live Worker's fetch endpoint both landed real runs in Actions. `schedule:` blocks REMOVED from entities.yml + pipeline.yml — the Worker is now their only trigger; pulse.yml + eval.yml now actually fire too.
-> **✅ WORKER FULLY DEPLOYED (2026-06-11):** Kevin's first deploy failed on the schedules API — **Workers Free caps a Worker at 5 cron triggers** and the map had 7. Consolidated music to ONE `0 10 * * 1,3,5` cron (worker.js picks Mon→TAL / Wed,Fri→SOP by `event.scheduledTime` UTC day) → exactly 5; redeploy clean (version `60d783bc`), new-version dispatch verified (pipeline.yml run landed). ALL `schedule:` blocks now removed (entities, pipeline, blogs) — the Worker is the single trigger for everything.
-> **PENDING KEVIN (1):** **research full-corpus GO** — `import_research.py` + `--shows agentic-research --backfill`: ~440 filtered docs ≈ ~7k mentions / 1–3k new Tech-DB entities, ~$2–4, hours-long background (validation: 5 docs → 83 sane mentions). Note: corpus includes Tecovas work-research docs — entity names are public tools, but consider a folder include/exclude pass first. *(Spotify re-auth for the music workstream still open, unchanged below.)*
-> **▶ POST-COMPACTION / FRESH SESSION — read `claude-plans/2026-06-07-resume-music-pipeline-and-observability.md` FIRST** (the current handoff: ways-of-working, the 4 research guides, what shipped, the NEXT workstream = the MUSIC-PIPELINE debug, + open items). The prior resume `2026-06-07-resume-cloudflare-evals-transcripts.md` is ✅ executed. Don't do the minimum — root in the WHYs.
-> **⚠️ Live (2026-06-07 eve):** Second source caught the **music pipeline is months-behind** (SOP scrapes 0 songs / 0 added; TAL finds 0 episodes) — pre-existing, surfaced by the new observability. That's the next workstream. **🔑 GH PAT still pending** → pulse.yml + eval.yml (Worker-only) DON'T run until it's set. Sentry `list-maker` project created (org khg-y1); notifications wiring captured in the resume doc for next session. Per-run success Slack pings removed (errors only).
->
-> **3-workstream status (2026-06-07 session 2):**
-> 1. **Cloudflare control plane — DEPLOYED ✅** `list-maker-cron.kevinhg.workers.dev` (trimm, account_id `759a850a…`, 5 crons). Worker now drives BOTH workflows (entities daily + music Mon/Wed/Fri) AND the weekly eval (Mon 12:00) — single durable control plane, kills the 60-day-disable everywhere. Added trigger-failure Slack alert (optional `SLACK_WEBHOOK_URL` Worker secret) since a silent dead trigger was the new single-point-of-failure. **PENDING KEVIN:** create a fine-grained GH PAT (khglynn/list-maker, Actions: read+write) → `env -u CLOUDFLARE_API_TOKEN wrangler secret put GH_PAT` (+ optionally `SLACK_WEBHOOK_URL`). THEN I: set a TRIGGER_TOKEN, hit the Worker URL to verify a real dispatch lands in Actions, and **remove the `schedule:` blocks from entities.yml + pipeline.yml** (one commit). Until then the GitHub schedules stay = zero gap. Steps: `cloudflare-trigger/README.md`. Commits `5088082`, `cbbc4d0`.
-> 2. **Extraction eval harness — DONE ✅ (committed `52e3ffb`)** `evals/extraction/` (metrics.py + 24 tests, build_baseline.py, run_eval.py, fixtures, README) + `.github/workflows/eval.yml` (dispatch-only; Worker drives weekly). **KEY FINDING:** same-model re-extraction at temp 0 reproduces only ~60% of the entity set, and the churn is NOT low-confidence — so per-episode set identity is too noisy to gate. Gate = stable aggregates (yield ratio, type-distribution shift, gold recall, confidence contract); Jaccard/core_recall are diagnostics. Green same-model, catches real regressions. Codex clean 5/5; triple-check caught + fixed a shared-psycopg2-conn-across-threads bug. Same-model refs: yield ~0.92–1.05, type-shift ~0.05, gold recall 0.83/type-acc 1.0.
-> 3. **Tech-show transcripts searchable BOTH — DONE ✅ (committed); full backfill running.**
->    - **(a) Neon FTS ✅** `bbba4fa` — generated tsvector + GIN on `episode_transcripts` (sql/005, auto-maintained) + `search_transcripts.py` (websearch_to_tsquery, --show, ts_headline snippets, CTE so headline only touches top results). Verified: "ChatGPT" → 841 eps.
->    - **(b) Notion "Transcripts" DB ✅** `9220b52` — `sync_transcripts_notion.py` (idempotent/resumable, <=100 blocks/req, <=1900 char chunks, rollback-isolated). Created DB `3780501e-f950-81c9-a3e3-eca7f1162c9d` under Pod Lists. Codex Critical (create/commit not atomic → dup-on-resume) FIXED via `fetch_existing_notion_pages` adopt-don't-duplicate — **verified by simulating a crash: 1 page, no dup**. Migration 006 = tracking columns. **Full backfill DONE ✅ — synced 1193, 0 failed; verified AI Daily 997/997 + Hard Fork 199/199 = 1,196/1,196 in Notion.** (TODO: add a Pod-Lists hub pointer to the Transcripts DB + search tool.)
->
-> **Observability (2026-06-07 session 2) — error reporting + pulse:** Answered Kevin's "how are we doing error reporting." Push failure-alerts already wired (workflow-fail→Slack+issue, data_health→Slack, eval→Slack, transcript-sync→Slack, Worker trigger-fail→Slack once its secret's set). **Built a biweekly Slack PULSE** (`pulse_report.py` + `pulse.yml` + Worker 1st/15th cron) — positive heartbeat + per-show freshness + counts + actionable failures; absence = trigger down. **Fixed alert-quality false positives** (`data_health.py`): Gabfest (show-notes, no transcripts by design) was failing 2 checks EVERY daily run → added a "none" transcript policy + episode-has-transcript guard on the NULL-link check + music-show transcript lag is now WARN not FAIL. data_health now fails only on actionable issues; pulse reads green when healthy. Committed `301ea0b`. **NEXT for the dead-trigger blind spot: Sentry Cron Monitor** (Kevin already has Sentry) — Worker checks in each run, Sentry alerts on a missed check-in (his call to set up).
->
-> Earlier overnight-build context retained below. DONE since overnight: durability hardening (timeouts fail loud, partial failures alert, staleness Slacks, Gabfest daily import), Hard Fork DB archived, hub page = ops manual.
-> **Overnight progress (2026-06-07):** Tech-DB re-sync ✅ DONE + VERIFIED — full-reset created **1275/1275, 0 failed**; ChatGPT confirmed in the shared "Tech Tools & Mentions" DB (982dafa0) with Shows=[AI Daily, Hard Fork] → **Option A WORKS**. (1st attempt died on a Notion ReadTimeout → fixed `notion_request` to retry Timeout [`ce2948a`] → re-run `byl8yqfsk` clean.) `clear_notion_ids_for_group` scoped [`81a7b2c`]. **Media build IN PROGRESS:** extract profile [`168a9fd`] + media-capable pipeline [`fb942e4`] committed — orchestrator routing, loader media types, ai_entities+ai_mentions CHECK widened (sql/004), PCHH→media_extraction, and a show-notes COALESCE source path so Gabfest's 871 `description_body` eps extract (no transcripts) and PCHH's 357 transcripts do too. Codex caught **4 real blockers** (ai_mentions.mention_type CHECK would've crashed the first load; PCHH extraction_type=None; Gabfest no-transcript inner-JOIN→0 eps; untracked migration) — all fixed + re-verified PASS. **Media build ✅ COMPLETE + VALIDATED:** validation (6 eps) → 42 sane media entities (movies/books/albums/tv/theater/podcasts, conf 0.70-0.98, segment-aware; Gabfest's from show-notes ✓). Shared **"Media Recommendations" DB** `3780501ef95081a783ebf8a32fa94657` created + wired (pchh+gabfest, +Shows); 42 synced, correct Types, shared entity "Obsession" tagged BOTH shows [`3c462ef`]; media notion_min_mentions=1 [`0ab86be`]. **Catch-up + backfill ✅ DONE + E-VERIFIED — all 6 shows flow end-to-end:** AI Daily caught up (997 eps, latest 2026-06-06); Hard Fork 198 eps/1267 ents; PCHH 52 eps→365 media ents (all synced); Gabfest 17 eps→122 (all synced); SOP 4244/4864 matched; TAL 875/1087 matched. Docs updated to reality (CLAUDE.md + ARCHITECTURE.md). **OVERNIGHT BUILD COMPLETE** — remaining items are all Kevin's call. **Kevin-items:** full media archive (357 PCHH + 871 Gabfest ≈ 11h/$7.50) is a cost fork — scoped-recent running now, surface the full option; Cloudflare Worker deploy; ep-3049 delete; archive the now-orphaned OLD Hard Fork DB `3780501ef9508154998ff4cbe82afedf` (≠ the new Media DB above).
-
-## Active: durable, self-healing rebuild (plan approved 2026-06-06)
-Goal — all 6 shows auto-processing on a durable schedule → music (SOP, TAL) to Spotify; tech (AI Daily, Hardfork) + media (PCHH, Culture Gabfest) to Notion; self-healing; Slack-notifying; tested; best-practices.
-- Full spec: `claude-plans/2026-06-06-durable-pipeline-rebuild.md`
-- Way-of-working + grounding (read after any compaction): `claude-plans/2026-06-06-durable-pipeline-resume.md`
-- **Push-hold LIFTED (2026-06-06):** no Vercel link in repo → pushing to `khglynn/list-maker` main is safe. Push each commit going forward (no more local-only).
-- **Compaction method VALIDATED (2026-06-06):** a real auto-compaction fired mid-A7; the `SessionStart:compact` hook re-grounded the new instance (resume doc + NOW.md) with **zero lost state** — WIP intact, pytest green. The survival kit works. *(Closeout TODO: document in DEVLOG + save the methodology.)*
-- **ENV NOTE:** a "learning" output style is active (it wants Claude to ask Kevin to write code) — conflicts with the autonomous-away loop; continued autonomously per instruction-priority. Kevin: `/output-style default` if unintended.
-
-## Next step (exact)
-**Workstream A — hardening** (scheduler-agnostic durability core):
-- **A1 ✅ DONE** — single-source show registry: importer derives `SHOWS`/`RAW_CONTENT_SHOW_SLUGS` from `show_config.py` (added `fallback_website_url` + `store_raw_content`); `cfg.series_uuid`→`cfg.taddy_uuid`; drift-guard test tightened. pytest 24/24; Codex SAFE; parity verified.
-- **A2 ✅ DONE** — idempotent batch load via `delete_existing_run(show_id, batch_name)` before `insert_run` (re-load replaces; self-heals partials). Scoped psycopg2 DELETE (not the MCP, so unaffected by the destructive-op guard). pytest 25/25; Codex SAFE. *Deferred: full single-transaction atomicity — low value vs blast-radius, and the orchestrator is already episode-idempotent via `find_unextracted_episodes`.*
-- **A3 ✅ DONE** — `RECENT_EPISODE_WINDOW_DAYS` const + `make_interval(days => %s)` (no hardcoded literal) + `--backfill` flag threaded through `process_show`/`main` (→ `recent_only=False` + Taddy cap 500). pytest 28/28; Codex SAFE.
-- **A4 ✅ APPROVED (2026-06-07) — do it:** per-entity Notion sync state — `ALTER TABLE ai_entities ADD COLUMN IF NOT EXISTS notion_sync_status / notion_sync_error / notion_sync_attempt_at` via a **psycopg2 migration** (NOT the MCP — guard-blocked) + record status in `sync_notion.py` + alert if >10% of a run's entities fail. Kevin OK'd the columns.
-- **A5 ✅ DONE** — `get_logger()` foundation in `common.py` (idempotent, `LOG_LEVEL` env, refreshed after env-load) + orchestrator per-show/per-run timing (structured, timestamped). pytest 31/31; Codex SAFE. *A5b (incremental, deferred): convert the per-step `print()`s in import/extract/sync/load to `log` calls — a 5-file sweep, low-risk but churny; do when convenient.*
-- **A6 ✅ DONE** — `run_script` retries transient subprocess failures (`MAX_STEP_RETRIES=2`, exponential backoff 5s/10s) — safe because steps are idempotent (A2 + upserts); catches `TimeoutExpired` (retryable); logs retries/recovery/final-failure via `log`. pytest 34/34; Codex SAFE (timeout gap fixed). *A6b (deferred): cross-show aggregated failed-steps summary (per-failure `log.error` already gives greppable observability).*
-- **A7 ✅ DONE** — `check_episode_freshness` in `data_health.py`: per-show `STALENESS_MAX_DAYS` (ai-daily 3, pchh 7, hard-fork/gabfest 10, sop 14, tal 21; default 14), flags shows past their freshness threshold; registered in `run_checks`. Closes the silent-staleness hole (AI Daily's 17d drift). pytest 36/36; Codex SAFE. *Slack-send of the report is downstream (workflow + `SLACK_WEBHOOK_URL`) — deferred to B.*
-- **A8 ✅ DONE** — extraction-contract tests (`test_extract_entities.py`: `sanitize_mention`/`sanitize_fact`/`parse_json_object` — confidence∈[0,1], required core fields, unknown-type→other+review, low-conf→review) + DRY'd the duplicated entity_type validation into `normalize_entity_type` (used in `insert_mention` + `main`) with its own test. pytest 45/45; Codex SAFE. *(No OpenAI-mock golden-master needed — the post-LLM sanitizers ARE the testable contract seam.)*
-- **A9 ✅ DONE** — `ARCHITECTURE.md` (data flow, schema, code map, hardening table, scheduler plan) + DEVLOG entry + CLAUDE.md status pointer. pytest 45/45.
-
-### ✅ WORKSTREAM A COMPLETE (2026-06-06)
-A1–A9 done. Pipeline is idempotent, self-healing, structured-logged, staleness-aware, tested (45), single-sourced, documented — and survived a live compaction.
-
-## 🚀 RUN TO COMPLETION (2026-06-07) — loop widened, Kevin away
-**Access resolved:** GH secrets set (OPENAI/NOTION/TADDY/SLACK ✅); Slack webhook wired + tested (posts to #list-maker ✅); wrangler logged into trimm ✅; A4 columns approved ✅; Gabfest path solved (Megaphone RSS show-notes carry the endorsements → scrape, NO transcription).
-
-**Sequence (loop drives, gate every step):**
-1. **A4 ✅ DONE (2026-06-07)** — migration `003` applied (3 `notion_sync_*` columns) + `sync_notion.py` records synced/failed status (`mark_sync_failed`, best-effort/never-raises) + reusable `post_slack` in `common.py` + >10%-per-phase Slack alert. pytest 51/51; Codex SAFE.
-2. **C — Hard Fork — IN PROGRESS (importer bug found 2026-06-07):**
-   - ✅ Registered: Neon `shows` row id=48 + `show_config.py` "hard-fork" entry (committed `789619a`).
-   - ⚠️ **Taddy import BUG:** only 3/199 episodes landed. ROOT CAUSE — Taddy returns a **generic `websiteUrl`** (`https://www.nytimes.com/column/hard-fork`) for most Hard Fork episodes; `import_transcripts.py` dedups on `url` (`find_existing_episode_id` ~L398-408, **global**, + `episodes.url` UNIQUE / `ON CONFLICT (url)`), so all generic-url episodes collapse onto ONE row → 196 "skipped_existing". The 3 that landed had unique per-episode URLs (2022 eps).
-   - **✅ FIX DONE (committed `d18e5d0`):** `episode_url_key` prefers the unique Taddy `uuid` (both upsert + find_existing). Dry-run verified existing shows skip 980/980 (ai-daily) + 532/532 (sop) — **zero re-imports**; only genuinely-new eps import (also surfaced a catch-up backlog: 17 new ai-daily + 3 sop). pytest 54/54; Codex SAFE. Re-imported Hard Fork → **199 episodes + 199 transcripts** (2022→2026-06-05). *(SURFACE this core-importer change in the final summary — minor tradeoff: new eps' `url` is now the synthetic taddy-uuid dedup key, not a human page.)*
-   - ⚠️ **CLEANUP for Kevin (destructive, 1 episode):** ep 3049 ("Legs Are Coming") carries episode "Hot I.P.O Summer"'s transcript (mismatch from the ORIGINAL buggy import; it has the generic url). Fix = DELETE ep 3049 + its transcript (psycopg2) + re-import that one. Destructive → **Kevin's per-op OK** (not done unattended). Minor (1/199).
-   - **✅ VALIDATION extraction passed (13 recent eps):** 139 mentions / 123 entities, confidence 0.70–0.95 (avg 0.88), 0 null names, 0 out-of-range — real entities (OpenBSD, Claude, ChatGPT, Gemini 3.5 Flash, Polymarket, FFmpeg, Claude Code…). AI-Daily tech profile fits Hard Fork.
-   - **⏳ FULL backfill RUNNING (bg, healthy — verified progressing ~48s/ep: 6 runs / 291 mentions as of 09:06 UTC, new run every ~4 min).** On completion → verify count (→ all 199 eps) → sync to Notion.
-   - **✅ (a) Hard Fork Notion DB CREATED + wired (committed `e1f03f6`):** cloned the AI Daily 8-prop schema → DB `3780501ef9508154998ff4cbe82afedf` (NO integration-share needed); `notion_database_id` set in show_config + drift test updated.
-   - **✅ (b) B trigger CODE DONE (committed `e4bd551`):** `entities.yml` (daily schedule + workflow_dispatch, env-var inputs [injection-hardened], data_health step, Slack + issue-on-failure) + `cloudflare-trigger/` Worker (cron `scheduled()` + token-guarded `fetch()` → GitHub workflow_dispatch) + `run_new_episodes.py` `sys.executable` CI fix. Codex SAFE; pytest 54/54. **DEPLOY = Kevin** (trimm account_id + a fine-grained GH PAT as the `GH_PAT` Worker secret; steps in `cloudflare-trigger/README.md`).
-   - **NEXT (non-extraction, while backfill churns): (c) D media PROFILE code** — the media-extraction prompt + media entity types (code only, no extraction run; the media DB migration + backfills wait for the Hard Fork backfill).
-   - **DEFER until the Hard Fork backfill finishes (sequential — avoid concurrent OpenAI):** sync Hard Fork → Notion; AI Daily catch-up; PCHH/media backfills.
-   - Then: create Hard Fork Notion DB (clone AI Daily 982dafa0... via NOTION_TOKEN integration) + set `notion_database_id` in show_config + update `test_only_configured_notion_shows`. Catch AI Daily up (19d stale).
-3. **D — media (investigated 2026-06-07; build in progress):**
-   - **⚠️ BACKFILL-BLOCKING CONSTRAINT:** the Hard Fork backfill **subprocess-spawns `extract_entities.py` + `load_entity_batch.py` per batch** — editing those mid-backfill risks the next batch. So the MEDIA-EXTRACTION PROFILE (in extract_entities.py: add `MEDIA_TYPES` + a media system prompt [endorsement/creators[]/platform/caveats/release_year] + media facts, selected by `extraction_type`; existing `LOCKED_TYPES`@42, `CORE_TYPES`@58, prompt@~230-295, mention JSON shape@258-292) + the `load_entity_batch` VALID-types + the entity_type CHECK migration ALL WAIT until the backfill finishes.
-   - **SAFE NOW (new files): the Gabfest RSS importer.** Reality-checked: `feeds.megaphone.fm/slatesculturegabfest` = 200 but it's the broad Slate Culture feed (3008 items, MIXED shows incl. "ICYMI") → FILTER to titles starting `Culture Gabfest`. Show-notes = PROSE episode summaries (Backrooms/A24, OnlyFantasy podcast, "Let's Talk About Love" book) — NOT clean "Endorsements:" lists → needs MEDIA LLM extraction (not regex), THINNER than a transcript (~a few cultural items/ep). *(Finding for Kevin: Gabfest-via-RSS-show-notes is a real but LIMITED feed.)* Build = register Gabfest (Neon row + config: `taddy_uuid=None`, `extraction_type='media_extraction'`, `store_raw_content=True`) + a custom importer (filter → upsert episodes + raw_content show-notes) + test.
-   - PCHH media profile + media Notion DB + media backfills (PCHH transcripts ready ✅): AFTER the backfill + the media profile. Tiny validation batch + projected-cost note before any big media backfill.
-4. **B — trigger:** write `entities.yml` (daily) + the Cloudflare Worker (trimm) code + the `sys.executable` CI fix. **DEPLOY = Kevin** (`wrangler deploy` w/ trimm + a fine-grained GH PAT as a CF secret).
-5. **E — verify:** all shows end-to-end; the SOP/TAL `added_to_playlist` anomaly.
-
-**Still needs Kevin (loop stops + PushNotifies):** the Cloudflare worker DEPLOY (trimm account_id + GH PAT); possibly sharing the Notion integration with new DBs. Everything else is solo.
-
-Per-task rhythm: investigate (verify reality) → implement (TDD/DB-test where logic or data changes) → run the net AND read it → doc-sweep → secret-scan the staged diff → commit (scope-prefixed, `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`) → bank NOW/DEVLOG → **Codex + triple-check at the boundary.**
-
-## Just set up (2026-06-06)
-- Plan approved + archived; resume/grounding doc written; global CLAUDE.md gained "Default to deep, durable work"; ralph-loop uninstalled (`/loop` = native paradigm); Codex stop-time review gate enabled for this repo.
-- Compaction-survival: project CLAUDE.md pointer + PreCompact + SessionStart-compact hooks LIVE in `.claude/settings.json` (committed `10219ff`); destructive-DB-op PreToolUse guard live too. **Validated 2026-06-06** by a real compaction (see Active section).
-
-## Pre-flight Taddy gate findings (2026-06-06) — affects WS-C / WS-D
-- **Hardfork = "Hard Fork"** (NYT, two words). Taddy uuid `ff1d51d4-4fc9-4161-b23b-f0079f6dd5a0`, 199 eps, **TRANSCRIBING** → ✅ Taddy method works. Register under the exact name "Hard Fork" + this uuid.
-- **Culture Gabfest** (uuid `7732402c-ed24-4b3c-b344-3570eedd8020`) **NOT_TRANSCRIBING** on Taddy (iHeart-distributed; Taddy lacks the rights — not audience size). **SOLVED 2026-06-07:** the endorsements/recs are published in the episode show-notes (Megaphone feed `feeds.megaphone.fm/slatesculturegabfest`) → scrape the RSS descriptions, **no transcription needed**. D-task: build the RSS endorsement scraper; verify main-episode descriptions list the endorsements completely (one bonus ep confirmed; confirm across main eps).
-- **Standing practice:** pre-flight verify every new show on Taddy (exists? transcribing?) BEFORE building — catches exactly this. (Save as reusable once proven.)
-
-## Carry-over (pre-rebuild — fold into the workstreams, don't lose)
-- AI Daily ~17 days stale (newest ep 2026-05-18; last run 2026-05-20) → fixed by the daily trigger (WS-B) + a catch-up run.
-- **SOP/TAL Spotify — ROOT-CAUSED 2026-06-07 (E):** the music pipeline (`run_pipeline.py`) TIMES OUT (30-min cap → GH run "cancelled") on every scheduled run with real work; the quick "successes" (23-27s) are no-new-episode exits. Cause CONFIRMED in code: `get_spotify_client` (`sync_playlist.py:67`) builds `SpotifyOAuth` with NO `open_browser=False`/non-interactive guard → when the `SPOTIFY_CACHE_JSON` secret token is stale, spotipy enters the interactive flow + blocks on `input()` (no stdin in CI) → 30-min hang → cancelled BEFORE the playlist sync. So **SOP/TAL playlists have NOT updated since the token went stale** (cancelled runs visible back to ≥2026-05-20). The `added_to_playlist` (35/0) column is a separate STALE/unmaintained red herring (sync dedups vs the LIVE playlist, not that column). FIX: **(b) ✅ DONE (committed `975df48`):** `common.ensure_spotify_token` validates/refreshes the token upfront + raises a clear error ONLY when headless (`not sys.stdin.isatty()` — so local re-auth in a real terminal still works); `open_browser=False` + the guard wired into ALL 3 `get_spotify_client` (sync_playlist/spotify_match/scoring_match) + `from __future__ import annotations` fixed a pre-existing py3.9 `dict | None` break in scoring_match. 6 tests; Codex SAFE (caught a refresh-returns-None gap, fixed). **(a) ⏳ PENDING KEVIN:** re-auth — creds are NOT in local `.env.local`; he's grabbing CLIENT_ID/SECRET from the Spotify Developer Dashboard (confirm `http://127.0.0.1:8080/callback` is a registered Redirect URI), then runs `spotify_match.py --show-id 1 --limit 1` in his terminal; after that, set the `SPOTIFY_CACHE_JSON` secret from `~/DevKev/personal/spotify-bulk-actions-mcp/.spotify_cache/.cache`. Matched tracks waiting in Neon: SOP 3,542, TAL 778.
-- TAL historical transcripts: official Taddy source only exposes the current rolling feed (archive not transcribing).
-
-## ✅ RESOLVED 2026-06-07 → Option A (shared Tech DB)
-Kevin chose A. Implemented + committed `7025b62`: sync_notion is group-aware (shows sharing a `notion_database_id` → one DB, one page/entity, global-within-group counts, a "Shows" multi-select tag); hard-fork's `notion_database_id` → AI Daily's DB `982dafa0…` (renamed "Tech Tools & Mentions" + Shows property added); 69 tests; Codex SAFE. **Re-sync RUNNING** (full-reset task `bvg6gw6xr`, ~15min: archive 1072 old pages [recoverable in Notion trash] + create 1275 with global counts + Shows). On completion → verify ChatGPT/OpenAI/Claude appear once, tagged with both shows.
-**FOLLOW-UPS:** (1) Kevin archives the now-orphaned separate Hard Fork DB `3780501ef…` (~234 pages). (2) **Before any media DB:** scope `clear_all_notion_ids` to the group's show_ids (a tech full-reset's global clear would otherwise wipe media notion_page_ids). (3) MEDIA = same Option A pattern: ONE shared "Media Recommendations" DB for pchh + culture-gabfest.
-
-### original decision context ⚠️ global entities vs per-show Notion DBs
-**Found while verifying the Hard Fork → Notion sync (198/199 eps, 1267 entities, sync said "created 115 + updated 119, 0 failed").** `ai_entities` are GLOBAL (no show_id; deduped by canonical_name across shows; linked to shows only via mentions→runs). ChatGPT/OpenAI/Claude are ONE entity each, mentioned in BOTH AI Daily (show 3) AND Hard Fork (show 48), with a SINGLE `notion_page_id`. So `sync_notion --show hard-fork` saw shared entities already had a page (their AI Daily page) → UPDATED the AI Daily page with Hard Fork data instead of creating a Hard Fork page. **Verified:** ChatGPT + OpenAI `notion_page_id` → parent_db = AI_DAILY (982dafa0…), NOT the Hard Fork DB (3780501ef…).
-**Impact:** (1) Hard Fork Notion DB is MISSING the ~119 shared entities (incl. the biggest: ChatGPT/OpenAI/Claude) — it only got the 115 Hard-Fork-only ones. (2) Those ~119 AI Daily pages were overwritten with Hard Fork numbers (the **AI Daily catch-up re-sync self-heals this** — re-syncing AI Daily restores AI-Daily data to its own pages).
-**Fork (Kevin's call — it's his Notion workspace; same decision applies to the media DB since PCHH+Gabfest share media entities):**
-- **Option A (recommended): ONE shared "Tech Tools & Mentions" DB** for AI Daily + Hard Fork (+ future tech shows) with a "Shows" multi-select property. Matches the global-entity model: one page per entity, shows which shows mention it. Drop the separate Hard Fork DB.
-- **Option B: keep separate per-show DBs** + add per-(entity, database) page tracking (schema change: replace the single `notion_page_id` with a per-DB mapping). Keeps separation; duplicates shared entities across DBs with per-show counts.
-**HOLD until decided:** Hard Fork DB completion, the media Notion DB creation, any further multi-show Notion sync. SAFE meanwhile: AI Daily catch-up (re-syncs AI Daily correctly), the media EXTRACTION profile code (Notion-independent).
+## Pointers
+Plan `claude-plans/2026-09-01-ground-it-cleanup-plan.md` · history `DEVLOG.md` · parking lot `BACKLOG.md` · design `ARCHITECTURE.md` · rules `docs/principles.md` · trigger `cloudflare-trigger/worker.js`

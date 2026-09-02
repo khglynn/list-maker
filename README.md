@@ -30,9 +30,8 @@ pipeline/              # Extraction and matching (Python)
   scrapers/ai_daily/   # AI Daily transcript entity extraction
   scrapers/taddy/      # Taddy API transcript importer
 marketing/             # Playlist cover art (mosaic generator)
-web/                   # Next.js app (future automation UI)
-claude-plans/          # Session plans and prompts
-codex-notes/           # AI Daily extraction batch artifacts
+claude-plans/          # Live plans + archive/YYYY/
+codex-notes/           # Historical AI Daily design notes (+ CI extraction output, gitignored)
 ```
 
 ## Running the Pipeline
