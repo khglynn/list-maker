@@ -1,15 +1,15 @@
 # NOW — list-maker
 
-**Last updated:** 2026-09-02 (evening) · **Mode:** live (routine cron-driven operation since 2026-06-07; hardening on top)
+**Last updated:** 2026-09-03 · **Mode:** live (routine cron-driven operation since 2026-06-07; hardening on top)
 
 ## Right now
-- **The curated-intake arc landed on `main` 2026-09-02 17:02 CT** (PR #33: intake in shadow mode + ads as data, 446 tests). Kevin pasted `sql/009` + `sql/010`; the sponsor retag was applied (230 mentions, 45 entities, no deletes); the first real judged run ran in CI the same evening: 69 candidates, 40 would-save, 7 skips, 13 thin scrapes, 9 waiting for the cap, 60 rows mirrored to the 📥 Blog Intake log. `AUTO_INGEST` flipped to True the same evening (Kevin approved all 75 eval labels unchanged, read the 40 would-saves, and chose to go live): saves are ingested in the run, and the 40 shadow-mode saves are caught up on the first live run.
+- **The curated intake is live and has ingested its first batch.** Arc on `main` 2026-09-02 (PR #33); Kevin approved all 75 eval labels unchanged the same evening, so auto-ingest was flipped on (PR #38) and the per-post Notion sync batched into one pass per run (PR #39). The first live run (09-02, 18:17–18:45 CT) saved **49 posts** — 38 OpenAI, 8 Anthropic, 3 other — all 49 mirrored to Blog Posts, **481 mentions across 389 entities** into the Tech DB, 30 skipped, 0 failed. The sponsor retag was applied (230 mentions / 45 entities). Next scheduled intake: Monday 2026-09-07, 15:30 CT.
 - Hotfix PR #30 merged 16:34 CT; today's 15:30 daily run had already failed on that bug and was re-run for the tech shows (extraction fine; the health check stayed red on the PCHH backfill's Notion drift, which tomorrow's run clears). Issue #34 closed with the cause.
 - The Cloudflare Worker is unchanged (`92b6a638`): entities daily, blogs Mondays now run `run_intake.py`.
 - Full story: `DEVLOG.md` 2026-09-02; design and eval reads: `claude-plans/2026-09-02-curated-intake-v2/PLAN.md`.
 
 ## Open items (need Kevin)
-1. ~~The labels page~~ / ~~the shadow week~~ — both done 2026-09-02 evening: labels approved unchanged, the eval floor cleared on them, and auto-ingest is live. Watch the next Monday Slack line say "saved N" and check a couple of the new Tech DB / Blog Posts rows.
+1. **Glance at the Tech DB and Blog Posts** for last night's 49 saves (the "Would save (latest)" view in 📥 Blog Intake lists them). Anything wrong is a rubric note for v3; anything missing is a "Pull anyway" tick.
 2. **Read the first shadow verdicts** in 📥 Blog Intake (40 would-saves, 11 of them disputed — the second judge is save-happy on OpenAI's feed, e.g. the teachers rollout post). Tick **Pull anyway** on anything skipped that you want; nothing waits on you.
 3. **Dependabot #27–#29** still open.
 4. ~~Backfill (decision 6)~~ — **complete 2026-09-02 17:38 CT:** PCHH 2,073 mentions + Culture Gabfest 3,660, every media entity mirrored to Notion (the ten-minute sync steps timed out and resumed until done; the limit is parked in `BACKLOG.md`). Working tree back on `main`, worktrees and merged branches removed.
