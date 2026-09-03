@@ -20,6 +20,8 @@ Chronological session journal. Most recent at top. Never delete entries.
 
 **Parked:** the repo's tests mock the cursor, so nothing catches a statement Postgres rejects (`BACKLOG.md`).
 
+**Evening addendum (09-02, 16:30–18:45 CT):** Kevin merged nothing by hand — he said "you can merge", pasted `sql/009` + `sql/010`, said "apply" to the retag (230 mentions / 45 entities), and approved all 75 eval labels unchanged on the correction page. So PR #33 (the arc) went to main at 17:02, and instead of a shadow week he asked to go live now: PR #38 flipped `AUTO_INGEST` and added a bounded catch-up of saves judged in shadow mode; the first live run showed ~100 s per post (a full Notion sync after each), so PR #39 batched that into one pass per run. Result: 49 posts saved into the Tech DB (481 mentions, 389 entities) and Blog Posts, 30 skipped, 0 failed. The driving case is in the database because the judge put it there.
+
 **Waiting on Kevin:** the labels page; PR #30; then `sql/009` + `sql/010` and the retag `--apply` before the arc PR to main.
 
 ## 2026-09-01 (evening) — merged, deployed, decided
