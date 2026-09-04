@@ -333,10 +333,15 @@ def test_a_genuinely_different_show_lands_below_the_floor(caller: str, taddy: st
 
 
 def test_one_word_is_never_enough_to_match_by_containment() -> None:
-    """A garbled colon split puts junk in the show slot — Neon holds a saved episode
-    whose show name came out as 'Fela Kuti: Fear No Man'. So containment needs at
-    least two words: 'Bonus' must not swallow 'The Bonus Show' the way 'Pop Culture
-    Happy Hour' legitimately matches '… Plus'. Dropping the guard fails here."""
+    """Containment needs at least two words: 'Bonus' must not swallow 'The Bonus Show'
+    the way 'Pop Culture Happy Hour' legitimately matches '… Plus'. A one-word show
+    name is a real risk because a bad scrape can leave a single common word in the
+    show slot. Dropping the guard fails here.
+
+    This used to cite 'Fela Kuti: Fear No Man' as the garbled-split example. Review
+    checked, and it is a REAL Taddy series — the row is a live instance of the
+    wrong-show defect instead (its stored transcript is a sermon from 'Word of Life
+    Church Podcast'), so it belongs to the gate's evidence, not the guard's."""
     assert show_match_ratio("Bonus", "The Bonus Show") < TADDY_SHOW_MIN_RATIO
     assert show_match_ratio("Pivot", "The Pivot Podcast") < TADDY_SHOW_MIN_RATIO
     # …while an exact one-word name still matches itself on the ratio, no guard needed

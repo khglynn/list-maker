@@ -129,10 +129,14 @@ def show_match_ratio(want_show: str, series_name: str) -> float:
     the Taddy side, because doing so turns 'Pivot' vs 'The Pivot Podcast' — two real
     and different shows — from 0.455 into 0.714 and lands it above the floor.
 
-    The >=2-word guard on containment stops a single common word matching everything.
-    A garbled colon split really does put junk in the show slot — we hold a row whose
-    show name came out as 'Fela Kuti: Fear No Man' — and 'Bonus' must not match
-    'The Bonus Show' (0.526, rejected) the way 'Pivot' matches 'Pivot' (1.0).
+    The >=2-word guard on containment stops a single common word matching everything:
+    'Bonus' must not match 'The Bonus Show' (0.526, rejected) the way 'Pivot' matches
+    'Pivot' (1.0). Castro publisher tags carry colons of their own — one live row's
+    show name is 'Fela Kuti: Fear No Man', which review found is a REAL Taddy series
+    and not the garbled colon split this docstring used to call it. That row's stored
+    transcript is currently a 'To Hell And Back' sermon from 'Word of Life Church
+    Podcast' (0.167): a second live instance of the defect this floor exists to stop,
+    which the gate fixes on the next run.
 
     WHY THE FLOOR IS 0.60. Scored this way, the same 2026-09-04 sweep separates
     cleanly: every correct pair lands at 1.000 except 'Vergecast' vs 'The Vergecast'
