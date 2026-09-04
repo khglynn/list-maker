@@ -49,4 +49,4 @@ crons = [
 # staleness fleet-watchdog alarms on.
 [[kv_namespaces]]
 binding = "DISPATCH_LOG"
-id = "PASTE_DISPATCH_LOG_NAMESPACE_ID_HERE"
+id = "25cd703724ea440888f716e485cb6049"
