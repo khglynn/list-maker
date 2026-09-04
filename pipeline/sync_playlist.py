@@ -332,8 +332,11 @@ def main():
     try:
         sync_show(show_id=args.show_id, dry_run=args.dry_run)
     except ValueError as e:
+        # The only ValueError raised in this file is sync_show's unknown --show-id,
+        # which the next attempt reproduces exactly: exit 2 = deterministic, so the
+        # orchestrator does not retry it (run_new_episodes.DETERMINISTIC_EXIT_CODE).
         print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(2)
 
 
 if __name__ == "__main__":

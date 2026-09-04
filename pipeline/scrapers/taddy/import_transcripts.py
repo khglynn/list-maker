@@ -562,15 +562,24 @@ def parse_args() -> argparse.Namespace:
 
 
 def run(args: argparse.Namespace) -> None:
+    # Both refusals below exit 2 = deterministic: the orchestrator must not retry them
+    # (see run_new_episodes.DETERMINISTIC_EXIT_CODE). Inline exits rather than a
+    # type-based handler because this file also raises RuntimeError for Taddy GraphQL
+    # errors and exhausted retries, which ARE transient and must stay retryable.
     user_id = (os.getenv("TADDY_USER_ID") or "").strip()
     api_key = (os.getenv("TADDY_API_KEY") or "").strip()
     if not user_id or not api_key:
-        raise RuntimeError("TADDY_USER_ID and TADDY_API_KEY are required")
+        print("TADDY_USER_ID and TADDY_API_KEY are required", file=sys.stderr)
+        sys.exit(2)
 
     requested = [s.strip() for s in args.shows.split(",") if s.strip()]
     unknown = [s for s in requested if s not in SHOWS]
     if unknown:
-        raise RuntimeError(f"Unknown show slugs: {unknown}. Known: {sorted(SHOWS.keys())}")
+        print(
+            f"Unknown show slugs: {unknown}. Known: {sorted(SHOWS.keys())}",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     conn = get_db_connection()
     try:

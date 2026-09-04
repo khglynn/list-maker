@@ -1,5 +1,7 @@
 from datetime import date, datetime, timedelta
 
+import pytest
+
 from pipeline.sync_notion import (
     alert_on_failure_rate,
     build_notion_properties,
@@ -367,3 +369,40 @@ def test_ensure_database_properties_writes_nothing_in_dry_run(monkeypatch) -> No
     added = sn.ensure_database_properties("tok", "db-1", dry_run=True)
     assert added == sorted(sn.REQUIRED_DATABASE_PROPERTIES)
     assert calls == ["GET"]
+
+
+# --- deterministic refusals (exit 2) ---
+# Both are config, checked before the first Notion call. run_new_episodes.run_script
+# reads exit 2 as "will fail identically next time" and stops instead of retrying.
+
+
+def test_show_without_a_notion_database_exits_deterministically(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from pipeline import sync_notion as sn
+
+    monkeypatch.setattr("sys.argv", ["sync_notion.py", "--show", "some-show"])
+    monkeypatch.setattr(
+        sn, "get_show", lambda slug: SimpleNamespace(notion_database_id=None)
+    )
+    with pytest.raises(SystemExit) as exc:
+        sn.main()
+    assert exc.value.code == 2
+
+
+def test_missing_notion_token_exits_deterministically(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from pipeline import sync_notion as sn
+
+    monkeypatch.setattr("sys.argv", ["sync_notion.py", "--show", "some-show"])
+    monkeypatch.setattr(
+        sn, "get_show", lambda slug: SimpleNamespace(notion_database_id="db-1")
+    )
+    # Set rather than deleted: load_environment() runs first and load_dotenv does not
+    # override a variable that is already present, so an empty value holds on a
+    # machine that has a real .env.local.
+    monkeypatch.setenv("NOTION_TOKEN", "")
+    with pytest.raises(SystemExit) as exc:
+        sn.main()
+    assert exc.value.code == 2

@@ -28,19 +28,25 @@ def _held(*episodes: tuple[str, str, date]) -> HeldEpisodes:
     return held
 
 
-def _patch_notion_freshness(monkeypatch, *, transcript_rows, stale_entities, failed_entities):
-    """The check makes one _rows call (transcript backlog) and two _one calls
-    (stale entity count, failed entity count) — dispatch _one on SQL content."""
+def _patch_notion_freshness(
+    monkeypatch, *, transcript_rows, stale_entity_rows, failed_entities
+):
+    """The check makes TWO _rows calls (transcript backlog, stale entity pages) and one
+    _one call (failed entity count) — dispatch both on SQL content.
+
+    The stale-entity query became row-returning in 4f so the FAIL can name the entities
+    rather than only count them; a blanket `_rows` stub would hand the transcript rows
+    to both queries and quietly test the wrong thing.
+    """
     import pipeline.data_health as dh
 
-    monkeypatch.setattr(dh, "_rows", lambda *a, **k: transcript_rows)
+    def fake_rows(conn, sql, params=None):
+        return stale_entity_rows if "FROM ai_entities" in sql else transcript_rows
 
-    def fake_one(conn, sql, params=None):
-        if "notion_sync_status" in sql:
-            return {"count": failed_entities}
-        return {"count": stale_entities}
-
-    monkeypatch.setattr(dh, "_one", fake_one)
+    monkeypatch.setattr(dh, "_rows", fake_rows)
+    monkeypatch.setattr(
+        dh, "_one", lambda conn, sql, params=None: {"count": failed_entities}
+    )
 
 
 def test_date_lag_days_handles_missing_dates() -> None:
@@ -157,7 +163,7 @@ def test_notion_sync_freshness_fails_on_transcript_backlog(monkeypatch) -> None:
     _patch_notion_freshness(
         monkeypatch,
         transcript_rows=[{"slug": "ai-daily-brief", "unsynced": 3, "oldest": date(2026, 6, 7)}],
-        stale_entities=0,
+        stale_entity_rows=[],
         failed_entities=0,
     )
     result = check_notion_sync_freshness(conn=None)
@@ -167,16 +173,42 @@ def test_notion_sync_freshness_fails_on_transcript_backlog(monkeypatch) -> None:
 
 def test_notion_sync_freshness_fails_on_stale_entity_pages(monkeypatch) -> None:
     _patch_notion_freshness(
-        monkeypatch, transcript_rows=[], stale_entities=5, failed_entities=0
+        monkeypatch,
+        transcript_rows=[],
+        stale_entity_rows=[
+            {"id": i, "canonical_name": f"Tool {i}"} for i in range(1, 6)
+        ],
+        failed_entities=0,
     )
     result = check_notion_sync_freshness(conn=None)
     assert result.status == "fail"
     assert any("5 entity page(s)" in d for d in result.details)
+    # 4f: the alert names them, so a person can open those pages without first
+    # writing the query themselves.
+    assert any("Tool 1 (1)" in d for d in result.details)
+
+
+def test_stale_entity_failure_caps_the_names_it_lists(monkeypatch) -> None:
+    """A systemic sync break must post a bounded line, not 400 entity names."""
+    _patch_notion_freshness(
+        monkeypatch,
+        transcript_rows=[],
+        stale_entity_rows=[
+            {"id": i, "canonical_name": f"Tool {i}"} for i in range(1, 26)
+        ],
+        failed_entities=0,
+    )
+    detail = next(
+        d for d in check_notion_sync_freshness(conn=None).details if "entity page(s)" in d
+    )
+    assert "25 entity page(s)" in detail  # the count stays exact
+    assert "+15 more" in detail           # only the naming is capped, at 10
+    assert "Tool 11 (11)" not in detail
 
 
 def test_notion_sync_freshness_warns_on_lingering_failed(monkeypatch) -> None:
     _patch_notion_freshness(
-        monkeypatch, transcript_rows=[], stale_entities=0, failed_entities=2
+        monkeypatch, transcript_rows=[], stale_entity_rows=[], failed_entities=2
     )
     result = check_notion_sync_freshness(conn=None)
     assert result.status == "warn"
@@ -184,7 +216,7 @@ def test_notion_sync_freshness_warns_on_lingering_failed(monkeypatch) -> None:
 
 def test_notion_sync_freshness_passes_when_clean(monkeypatch) -> None:
     _patch_notion_freshness(
-        monkeypatch, transcript_rows=[], stale_entities=0, failed_entities=0
+        monkeypatch, transcript_rows=[], stale_entity_rows=[], failed_entities=0
     )
     assert check_notion_sync_freshness(conn=None).status == "pass"
 
@@ -230,22 +262,53 @@ def test_selfheal_check_fails_when_the_queue_stops_draining(monkeypatch) -> None
     assert any("hard-fork ep 5133" in d for d in result.details)
 
 
+def _extraction_check(
+    monkeypatch,
+    *,
+    missing_rows=None,
+    orphan_rows=None,
+    zero_mention_rows=None,
+    declared_empty: int = 0,
+):
+    """Drive check_ai_daily_extraction with all four of its queries stubbed.
+
+    Three became _rows in 4f (so each count can name the rows behind it) and the
+    informational declared-empty tally is still a _one. Both seams are dispatched by
+    SQL content on purpose: a blanket stub would hand one query's rows to another and
+    the test would keep passing while measuring nothing.
+
+    Returns (result, calls) where calls is [(flattened_sql, params), ...].
+    """
+    import pipeline.data_health as dh
+
+    calls: list[tuple[str, object]] = []
+
+    def fake_rows(conn, sql, params=None):
+        flat = " ".join(sql.split())
+        calls.append((flat, params))
+        if "HAVING COUNT(m.id) = 0" in flat:
+            return zero_mention_rows or []
+        if "m.transcript_id IS NOT NULL" in flat:
+            return orphan_rows or []
+        return missing_rows or []
+
+    def fake_one(conn, sql, params=None):
+        flat = " ".join(sql.split())
+        calls.append((flat, params))
+        return {"count": declared_empty}
+
+    monkeypatch.setattr(dh, "_rows", fake_rows)
+    monkeypatch.setattr(dh, "_one", fake_one)
+    return dh.check_ai_daily_extraction(conn=None), calls
+
+
 def test_extraction_integrity_no_longer_double_reports_the_race(monkeypatch) -> None:
     """The race has one owner (check_transcript_race_selfheal). This check keeps only
     the orphan case: transcript_id pointing at a transcript that no longer exists."""
-    import pipeline.data_health as dh
-
-    seen: list[str] = []
-
-    def fake_one(conn, sql, params=None):
-        seen.append(" ".join(sql.split()))
-        return {"transcripted_without_mentions": 0, "count": 0}
-
-    monkeypatch.setattr(dh, "_one", fake_one)
-    result = dh.check_ai_daily_extraction(conn=None)
+    result, calls = _extraction_check(monkeypatch)
 
     assert result.status == "pass"
-    orphan_sql = next(s for s in seen if "transcript_id IS NOT NULL" in s)
+    orphan_sql = next(s for s, _ in calls if "m.transcript_id IS NOT NULL" in s)
     assert "m.transcript_id IS NULL" not in orphan_sql
 
 
@@ -520,24 +583,181 @@ def test_transcript_coverage_tolerates_a_transcript_that_is_not_out_yet(monkeypa
 def test_extraction_integrity_ignores_declared_empty_episodes(monkeypatch) -> None:
     """An episode the extractor ran on and kept nothing for is an answer, not a gap —
     otherwise the first legitimately-empty episode pins this check red forever."""
-    import pipeline.data_health as dh
-
-    seen: list[str] = []
-
-    def fake_one(conn, sql, params=None):
-        flat = " ".join(sql.split())
-        seen.append(flat)
-        if "completed_empty' AND r.created_at" in flat:
-            return {"count": 2}
-        return {"transcripted_without_mentions": 0, "count": 0}
-
-    monkeypatch.setattr(dh, "_one", fake_one)
-    result = dh.check_ai_daily_extraction(conn=None)
+    result, calls = _extraction_check(monkeypatch, declared_empty=2)
 
     assert result.status == "pass"  # declared empties are informational
-    missing_sql = next(s for s in seen if "transcripted_without_mentions" in s)
+    missing_sql = next(s for s, _ in calls if "JOIN episode_transcripts" in s)
     assert "completed_empty" in missing_sql and "6 hours" in missing_sql
     assert any("declared empty" in d and "2" in d for d in result.details)
+
+
+# --- zero-mention runs: scoped and windowed (4a, 2026-09-03) -----------------------
+
+
+def test_extraction_integrity_flags_recent_zero_mention_runs(monkeypatch) -> None:
+    """A completed run that loaded nothing is a real fault — it must still fail once
+    the query is scoped and windowed, or 4a would have traded a false positive for a
+    blind spot."""
+    result, _ = _extraction_check(
+        monkeypatch,
+        zero_mention_rows=[{"id": 91, "batch_name": "incremental-7300-to-7304"}],
+    )
+
+    assert result.status == "fail"
+    assert any("zero mentions" in d for d in result.details)
+
+
+def test_zero_mention_runs_is_scoped_to_a_show_and_a_window(monkeypatch) -> None:
+    """Unscoped and unwindowed, one anomaly from any show — or a legacy NULL-show_id
+    row — pinned a check named for AI Daily permanently red.
+
+    The shape is asserted through the PARAMS, not by grepping the SQL for the literals:
+    the whole point of 4a is that both values are constants a reader can change in one
+    line, so the test has to prove those constants reach the database.
+    """
+    from pipeline.data_health import (
+        ZERO_MENTION_RUN_SHOWS,
+        ZERO_MENTION_RUN_WINDOW_DAYS,
+    )
+
+    _, calls = _extraction_check(monkeypatch)
+    sql, params = next(c for c in calls if "HAVING COUNT(m.id) = 0" in c[0])
+
+    assert "JOIN shows s ON s.id = r.show_id" in sql
+    assert "s.slug = ANY(%s)" in sql
+    assert "r.created_at >= NOW() - make_interval(days => %s)" in sql
+    assert params == [list(ZERO_MENTION_RUN_SHOWS), ZERO_MENTION_RUN_WINDOW_DAYS]
+    assert ZERO_MENTION_RUN_SHOWS == ("ai-daily-brief",)  # Kevin's call, 2026-09-03
+
+
+# --- every FAIL names rows, not just counts (4f, 2026-09-03) -----------------------
+
+
+def test_extraction_integrity_failures_name_the_rows(monkeypatch) -> None:
+    """Phase 4's acceptance line: every FAIL in the health run is actionable. These
+    details go to Slack, where a bare count leaves nobody anywhere to look."""
+    result, _ = _extraction_check(
+        monkeypatch,
+        missing_rows=[{"id": 7301, "publish_date": date(2026, 9, 1)}],
+        orphan_rows=[{"id": 4242, "episode_id": 7261, "transcript_id": 99}],
+        zero_mention_rows=[{"id": 91, "batch_name": "incremental-7300-to-7304"}],
+    )
+
+    assert result.status == "fail"
+    joined = " | ".join(result.details)
+    assert "ep 7301 (2026-09-01)" in joined
+    assert "mention 4242 (ep 7261)" in joined
+    assert "run 91 (incremental-7300-to-7304)" in joined
+    assert "3 AI extraction integrity issue(s)" in result.summary
+
+
+def test_extraction_integrity_caps_the_names_but_not_the_count(monkeypatch) -> None:
+    """A systemic break — a schema edit, an importer that stopped writing mentions —
+    must not dump hundreds of ids into a Slack message."""
+    result, _ = _extraction_check(
+        monkeypatch,
+        missing_rows=[{"id": i, "publish_date": date(2026, 9, 1)} for i in range(200)],
+    )
+
+    detail = next(d for d in result.details if "without mentions" in d)
+    assert "without mentions: 200" in detail  # the count is exact
+    assert "+190 more" in detail              # the naming stops at 10
+    assert "ep 11 " not in detail
+
+
+def test_mention_field_failures_name_the_mentions(monkeypatch) -> None:
+    """`bad_confidence=3` gives nobody a way to find those three mentions."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [
+        {
+            "id": 811, "missing_mention_text": False, "missing_canonical_name": True,
+            "missing_context": False, "bad_confidence": False, "bad_mention_count": False,
+        },
+        {
+            "id": 822, "missing_mention_text": False, "missing_canonical_name": False,
+            "missing_context": False, "bad_confidence": True, "bad_mention_count": False,
+        },
+    ])
+
+    result = dh.check_ai_mention_fields(conn=None)
+
+    assert result.status == "fail"
+    assert any("missing_canonical_name=1 — 811" in d for d in result.details)
+    assert any("bad_confidence=1 — 822" in d for d in result.details)
+
+
+def test_a_mention_with_two_problems_still_counts_twice(monkeypatch) -> None:
+    """Unchanged from the aggregate version this replaced: issue_count sums per
+    category, so one row with two faults contributes two issues. Pinned because
+    switching from five COUNT(*) FILTERs to per-row flags could have quietly
+    changed it."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [
+        {
+            "id": 900, "missing_mention_text": True, "missing_canonical_name": True,
+            "missing_context": False, "bad_confidence": False, "bad_mention_count": False,
+        },
+    ])
+
+    assert "2 AI mention field issue(s)" in dh.check_ai_mention_fields(conn=None).summary
+
+
+def test_a_null_confidence_is_not_a_mention_field_fault(monkeypatch) -> None:
+    """The extractor writes NULL when the model gives no confidence (this branch's
+    first commit). Only a PRESENT value outside [0,1] is a fault — otherwise honest
+    NULLs would redden the daily run."""
+    import pipeline.data_health as dh
+
+    captured: list[str] = []
+
+    def fake_rows(conn, sql, params=None):
+        captured.append(" ".join(sql.split()))
+        return []
+
+    monkeypatch.setattr(dh, "_rows", fake_rows)
+    result = dh.check_ai_mention_fields(conn=None)
+
+    assert result.status == "pass"
+    assert "confidence IS NOT NULL AND (confidence < 0 OR confidence > 1)" in captured[0]
+
+
+# --- the null map is reported, not alerted on (4b, 2026-09-03) ---------------------
+
+
+def test_optional_null_map_is_not_in_the_alerting_list() -> None:
+    """It hardcodes status='pass', so it can never reach the fail/warn reduction that
+    drives the Slack alert or the pulse digest — it was only costing a per-show
+    COUNT(*) over the whole episodes table on every daily and biweekly run."""
+    import inspect
+
+    from pipeline import data_health
+
+    assert "check_optional_null_map" not in inspect.getsource(data_health.run_checks)
+
+
+def test_optional_null_map_still_reaches_the_cli_report() -> None:
+    """Dropped from run_checks but NOT from the human-readable output — the per-show
+    null map is exactly what a person reads the CLI report for."""
+    import inspect
+
+    from pipeline import data_health
+
+    assert "results.append(check_optional_null_map(conn))" in inspect.getsource(
+        data_health.main
+    )
+
+
+def test_optional_null_map_can_only_ever_pass(monkeypatch) -> None:
+    """The premise of both tests above. If this check ever grows a real verdict, it
+    belongs back in run_checks and these tests should fail to say so."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [
+        {"slug": "sop", "episodes": 10, "audio_url_nulls": 10},
+    ])
+    assert dh.check_optional_null_map(conn=None).status == "pass"
 
 
 # --- sponsor share (ads as data, 2026-09-02) ---------------------------------------
