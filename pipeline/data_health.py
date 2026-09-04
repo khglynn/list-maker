@@ -898,11 +898,14 @@ def check_ai_run_completeness(conn) -> CheckResult:
         """
         WITH run_counts AS (
           SELECT r.id AS run_id, s.slug, r.batch_name,
-                 -- Cast only what is actually a number. A bare ::int on a malformed
-                 -- value raises, which would take down the whole data_health process
-                 -- over one bad row; NULL here keeps the row visible (IS DISTINCT FROM
-                 -- below flags it) and contains the damage to one detail line.
+                 -- Cast only what is actually a whole number. A bare ::int on a
+                 -- malformed value raises, which would take down the whole data_health
+                 -- process over one bad row; NULL here keeps the row visible (IS
+                 -- DISTINCT FROM below flags it) and contains the damage to one detail
+                 -- line. The regex is not redundant with jsonb_typeof: 20.5 is a JSON
+                 -- 'number' and ::int still raises on it.
                  CASE WHEN jsonb_typeof(r.parameters->'expected_mentions') = 'number'
+                       AND r.parameters->>'expected_mentions' ~ '^[0-9]+$'
                       THEN (r.parameters->>'expected_mentions')::int END
                    AS expected_mentions,
                  COUNT(m.id) AS actual_mentions
@@ -975,15 +978,29 @@ def check_ai_run_stuck_loading(conn) -> CheckResult:
         FROM ai_runs r
         JOIN shows s ON s.id = r.show_id
         WHERE r.status = 'loading'
-          -- Still undone: not one episode this batch declared has any mention yet. An
-          -- empty or absent episode list makes this true, which is the safe direction —
-          -- a run row we cannot interpret gets looked at rather than hidden.
+          -- Still undone: not ONE episode this batch declared has any mention yet.
+          -- All-undone rather than any-undone, deliberately: a batch that mixes loaded
+          -- and unloaded episodes is unreachable through either orchestrator path
+          -- (find_unextracted_episodes returns only mention-less episodes, and the
+          -- self-heal path's delete clears the whole batch), and any-undone would need
+          -- an extra clause to keep the empty-list case flagged.
+          --
+          -- Both guards below exist so one malformed run row cannot abort the entire
+          -- health run: jsonb_array_elements_text raises on a scalar, so a present-but-
+          -- null 'episodes' would take down every remaining check, and COALESCE does
+          -- NOT catch that (-> returns jsonb null, not SQL NULL). A non-array or a
+          -- non-integer element is therefore read as "nothing loaded yet", which flags
+          -- the row for a human rather than hiding it or crashing.
           AND NOT EXISTS (
               SELECT 1
               FROM jsonb_array_elements_text(
-                       COALESCE(r.parameters->'episodes', '[]'::jsonb)
+                       CASE WHEN jsonb_typeof(r.parameters->'episodes') = 'array'
+                            THEN r.parameters->'episodes'
+                            ELSE '[]'::jsonb END
                    ) AS declared(episode_id)
-              JOIN ai_mentions m ON m.episode_id = declared.episode_id::int
+              JOIN ai_mentions m
+                ON m.episode_id = CASE WHEN declared.episode_id ~ '^[0-9]+$'
+                                       THEN declared.episode_id::int END
           )
         ORDER BY r.started_at;
         """,

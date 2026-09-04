@@ -793,6 +793,8 @@ def test_run_completeness_only_casts_what_is_a_number() -> None:
 
     source = inspect.getsource(dh.check_ai_run_completeness)
     assert "jsonb_typeof(r.parameters->'expected_mentions') = 'number'" in source
+    # Not redundant: 20.5 is a JSON 'number' and ::int still raises on it.
+    assert "r.parameters->>'expected_mentions' ~ '^[0-9]+$'" in source
 
 
 def test_run_stuck_loading_passes_when_nothing_is_loading(monkeypatch) -> None:
@@ -862,7 +864,26 @@ def test_run_stuck_loading_ignores_a_batch_whose_work_is_already_done() -> None:
     source = inspect.getsource(dh.check_ai_run_stuck_loading)
     assert "NOT EXISTS" in source
     assert "jsonb_array_elements_text" in source
-    assert "JOIN ai_mentions m ON m.episode_id = declared.episode_id::int" in source
+    assert "JOIN ai_mentions m" in source
+
+
+def test_run_stuck_loading_cannot_be_aborted_by_one_malformed_run_row() -> None:
+    """Both guards are load-bearing and neither is obvious, so pin them.
+
+    jsonb_array_elements_text raises "cannot extract elements from a scalar" on a
+    present-but-null 'episodes' key, and COALESCE does NOT catch that — `->` returns
+    jsonb null, not SQL NULL (verified against Neon, 2026-09-03). _rows has no
+    try/except, so one such row would abort every remaining check in the run, not just
+    this one. Same for a non-integer element reaching ::int.
+    """
+    import inspect
+
+    import pipeline.data_health as dh
+
+    source = inspect.getsource(dh.check_ai_run_stuck_loading)
+    assert "jsonb_typeof(r.parameters->'episodes') = 'array'" in source
+    assert "COALESCE(r.parameters->'episodes'" not in source
+    assert "declared.episode_id ~ '^[0-9]+$'" in source
 
 
 def test_run_stuck_loading_fail_summary_agrees_with_its_detail_list(monkeypatch) -> None:
