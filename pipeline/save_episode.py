@@ -54,6 +54,10 @@ from pipeline.show_config import get_show  # noqa: E402
 SAVED_SLUG = "saved-episodes"
 DEFAULT_LINKS_FILE = CACHE_DIR.parent / "apple-notes" / "podcast-links.txt"
 TADDY_TITLE_MIN_RATIO = 0.80
+# Taddy hard-REJECTS a search term of more than 8 space-separated words rather than
+# truncating it, so this is a limit of theirs we must respect, not a tuning knob of
+# ours. Probed against the live API 2026-09-04 — the evidence is in taddy_search_term.
+TADDY_SEARCH_TERM_MAX_WORDS = 8
 MIN_FULL_TRANSCRIPT_CHARS = 1000  # below this a "transcript" is a stub, not an upgrade
 
 log = get_logger("pipeline.save_episode")
@@ -61,8 +65,59 @@ log = get_logger("pipeline.save_episode")
 
 # ── Taddy episode lookup (the one-off path the registry never needed) ───────
 
+def taddy_search_term(episode_title: str) -> str:
+    """An episode title reduced to a term Taddy will actually accept.
+
+    Taddy caps `search(term:)` at 8 space-separated words and answers BAD_USER_INPUT
+    above that — it rejects the WHOLE query rather than truncating, so an over-long
+    term returns nothing at all. Probed against the live API on 2026-09-04:
+
+        8 words                            -> 3 hits
+        9 words                            -> BAD_USER_INPUT
+        8 words separated by DOUBLE spaces -> BAD_USER_INPUT  (empty tokens count)
+        one 300-character word             -> 3 hits          (no character limit)
+        8 words totalling 167 characters   -> 1 hit           (no character limit)
+
+    Two consequences worth spelling out, because both are counter-intuitive:
+
+    The whitespace collapse is load-bearing, not tidying. Taddy splits on a literal
+    space and counts the empty strings, and the quote-stripping below (needed so a
+    title cannot break out of the GraphQL string literal) turns `The "Real" Story`
+    into `The  Real  Story` — which Taddy counts as FIVE words. Our own escaping was
+    pushing titles toward the limit.
+
+    And the old 120-character cut is gone. Taddy enforces no character limit, so it
+    protected nothing, while being able to slice a word in half and blunt the search.
+    The word cap subsumes it.
+
+    Truncation keeps the FIRST 8 words: episode titles lead with the distinctive part
+    and trail into subtitles and guest lists. The match itself is unaffected — every
+    ratio in taddy_find_episode is computed against the FULL title, never this term,
+    which only decides what Taddy is asked to retrieve.
+    """
+    words = episode_title.replace('"', " ").split()
+    return " ".join(words[:TADDY_SEARCH_TERM_MAX_WORDS])
+
+
+def taddy_input_was_rejected(exc: Exception) -> bool:
+    """Did Taddy refuse the request we SENT, rather than fail on its own side?
+
+    The distinction matters because the two degrade identically to (None, None), so
+    without it a bug of ours is indistinguishable from a vendor outage in the log —
+    which is exactly how 12 of 31 saved episodes went unnoticed with no transcript.
+
+    Two shapes: a GraphQL `BAD_USER_INPUT` (which arrives as HTTP 200 with an `errors`
+    payload) and a 4xx status. 429 is deliberately excluded — import_transcripts lists
+    it in RETRYABLE_STATUS_CODES because it is a transient, not a malformed request.
+    """
+    if "BAD_USER_INPUT" in str(exc):
+        return True
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    return status is not None and 400 <= status < 500 and status != 429
+
+
 def taddy_find_episode(episode_title: str, show_name: str, user_id: str, api_key: str) -> Optional[dict]:
-    term = episode_title.replace('"', " ").strip()[:120]
+    term = taddy_search_term(episode_title)
     # searchId is REQUIRED in the selection set — Taddy 400s without it.
     query = f"""
     query {{
@@ -96,13 +151,30 @@ def taddy_transcript_text(episode_uuid: str, user_id: str, api_key: str) -> Opti
 def try_taddy_full(title: str, show: str, user_id: str, api_key: str) -> tuple[Optional[dict], Optional[str]]:
     """Best-effort Taddy upgrade. Any Taddy failure degrades to (None, None) — the
     honest fallbacks (clip text / show notes) exist precisely for that, so a Taddy
-    hiccup must never kill the item."""
+    hiccup must never kill the item.
+
+    The degrade is unchanged; what it says about itself is not. A request Taddy
+    refused because of what WE sent now logs as our bug, with the term and its word
+    count, because it is silently permanent — retrying an over-long term never helps
+    — whereas an outage fixes itself. Same return either way, so nothing downstream
+    has to care."""
     try:
         hit = taddy_find_episode(title, show, user_id, api_key)
         full = taddy_transcript_text(hit["uuid"], user_id, api_key) if hit else None
         return hit, full
     except Exception as exc:  # noqa: BLE001
-        log.warning("taddy lookup failed for %r (%s) — falling back: %s", title[:50], show, exc)
+        if taddy_input_was_rejected(exc):
+            # Ours to fix, not Taddy's — and the honest degrade below hides it
+            # completely, which is how every saved episode with a title over 8 words
+            # quietly never got a transcript (found 2026-09-04, Phase 5 PR 9).
+            term = taddy_search_term(title)
+            log.warning(
+                "taddy REJECTED our search for %r (%s) — our bug, not an outage: "
+                "term=%r (%d words): %s",
+                title[:50], show, term, len(term.split()), exc,
+            )
+        else:
+            log.warning("taddy lookup failed for %r (%s) — falling back: %s", title[:50], show, exc)
         return None, None
 
 

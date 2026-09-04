@@ -28,12 +28,15 @@ from pipeline import save_episode
 from pipeline.save_episode import (
     MIN_FULL_TRANSCRIPT_CHARS,
     SAVED_SLUG,
+    TADDY_SEARCH_TERM_MAX_WORDS,
     TADDY_TITLE_MIN_RATIO,
     page_id_for,
     parse_og,
     scrape_link_meta,
     sync_saved_pages,
     taddy_find_episode,
+    taddy_input_was_rejected,
+    taddy_search_term,
     taddy_transcript_text,
     try_taddy_full,
     upsert_oneoff,
@@ -200,10 +203,16 @@ def test_a_perfect_title_from_the_wrong_show_is_still_selected(monkeypatch) -> N
     assert hit["uuid"] == "wrong-show"
 
 
-def test_the_search_term_is_quote_free_and_capped(monkeypatch) -> None:
+def test_the_search_term_is_quote_free_and_capped_by_words(monkeypatch) -> None:
     """Two Taddy contracts in one: `searchId` must be in the selection set (Taddy
-    400s without it), and a double quote in the title would break out of the
-    GraphQL string literal, so quotes become spaces before interpolation."""
+    400s without it), and a double quote in the title would break out of the GraphQL
+    string literal, so quotes become spaces before interpolation.
+
+    Rewritten for PR 9. This used to assert `len(term) == 120`, pinning a character
+    cut that Taddy does not ask for and that could slice a word in half. The real
+    limit is 8 WORDS, so that assertion is now the word count, and the term is
+    allowed past 120 characters (215 here).
+    """
     sent: list = []
     monkeypatch.setattr(save_episode, "taddy_query", _fake_search([], sent))
 
@@ -212,8 +221,11 @@ def test_the_search_term_is_quote_free_and_capped(monkeypatch) -> None:
     query = sent[0][0]
     assert "searchId" in query
     term = re.search(r'term:"([^"]*)"', query).group(1)
-    assert term.startswith("The  Real  Story")
-    assert len(term) == 120
+    assert '"' not in term
+    # single-spaced, not the "The  Real  Story" this used to produce — see below
+    assert term.startswith("The Real Story")
+    assert len(term.split()) == 4
+    assert len(term) > 120
 
 
 # ── taddy_transcript_text: the stub gate ─────────────────────────────────────
