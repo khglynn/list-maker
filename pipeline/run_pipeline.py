@@ -75,8 +75,10 @@ SHOWS = {
 # in a log nobody reads. That is the same shape as the eight-month TAL outage this arc
 # exists to close — "found no work" and "could not do the work" reported identically.
 #
-# Any step can set it. The scrape does today (Firecrawl failures); a sync step reporting
-# partially-added playlist tracks would set the same key and need no change here.
+# Any step can set it. Two do: the scrape (Firecrawl failures) and, since 2026-09-04,
+# the playlist sync (one per dropped batch, one for a truncated playlist read —
+# sync_playlist.STEP_FAILURE_KEY, which spells this same string because importing it
+# from here would be circular).
 STEP_FAILURE_KEY = "failures"
 
 
@@ -295,9 +297,10 @@ def run_pipeline(
             print(f"\n--- Step 3: Sync Spotify playlist ---")
             sync_result = run_sync(show_id, dry_run, cache_path)
             summary["steps"]["sync"] = sync_result
-            # Wired now, unused now: sync reports no `failures` key today. A sibling PR
-            # that makes add_tracks_to_playlist' dropped batches visible only has to set
-            # it — no change needed here, which is the point of one shared key.
+            # Live since 2026-09-04: sync_show reports one `failures` per dropped batch
+            # and one for a truncated playlist read, so a run that adds 150 of 250
+            # tracks exits non-zero instead of printing "Done!" and reporting success.
+            # Nothing had to change here to pick that up — the point of one shared key.
             record_step_failures(summary, "sync", sync_result)
         except Exception as e:
             summary["steps"]["sync"] = {"error": str(e)}

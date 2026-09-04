@@ -58,6 +58,34 @@ TADDY_TITLE_MIN_RATIO = 0.80
 # truncating it, so this is a limit of theirs we must respect, not a tuning knob of
 # ours. Probed against the live API 2026-09-04 — the evidence is in taddy_search_term.
 TADDY_SEARCH_TERM_MAX_WORDS = 8
+# A perfect title from the WRONG show is not a match (Kevin's call, 2026-09-04). The
+# show name is a GATE as well as a term in the blend: a candidate scoring below this
+# floor is never selected, however good its title. Sized against real data — the
+# measurements, and why 0.60 rather than something tighter, are in show_match_ratio.
+TADDY_SHOW_MIN_RATIO = 0.60
+# Words a CALLER's show name trails when it names a paid or ad-free feed rather than
+# a different show ("Amicus Plus", "The Vergecast: Ad-Free Edition"). Stripped from the
+# caller side only — see show_match_ratio for why the Taddy side is trimmed differently.
+FEED_VARIANT_WORDS = frozenset({"plus", "ad", "free", "adfree", "edition", "premium"})
+# Feeds that carry another show's episodes under a name no string metric can relate
+# to it — a members-only or companion feed. OBSERVED, NOT DERIVED: each entry is here
+# because a real saved episode proved the pair, and the map grows only that way. It is
+# consulted before the ratio so a known companion scores 1.0 without loosening the
+# floor for everything else. Keys and values are compared after _show_words.
+#   "incognito mode" -> "search engine": row saved 2026-09-04 from a members-only
+#   feed; the episode title matched Taddy exactly, the names score 0.222 (Kevin's
+#   call, 2026-09-04 — keep the recovery without moving the floor).
+COMPANION_SHOWS = {"incognito mode": "search engine"}
+# Spotify and Apple episode pages put the show INSIDE og:title, with a fixed site
+# suffix: "<episode> - <show> | Podcast on Spotify". Parsing it is what gives the
+# show gate anything to bite on for a non-castro link — see scrape_link_meta.
+LINK_TITLE_PATTERNS = (
+    # `ep` is GREEDY so the LAST " - " is the split: episode titles contain " - "
+    # far more often than show names do ("Edison, Tesla - and the Electric Chair -
+    # Business History" must not yield the episode "Edison, Tesla").
+    re.compile(r"^(?P<ep>.+) - (?P<show>.+?) \| Podcast on Spotify$"),
+    re.compile(r"^(?P<ep>.+) - (?P<show>.+?) - Apple Podcasts$"),
+)
 MIN_FULL_TRANSCRIPT_CHARS = 1000  # below this a "transcript" is a stub, not an upgrade
 
 log = get_logger("pipeline.save_episode")
@@ -114,6 +142,117 @@ def taddy_input_was_rejected(exc: Exception) -> bool:
         return True
     status = getattr(getattr(exc, "response", None), "status_code", None)
     return status is not None and 400 <= status < 500 and status != 429
+def _show_words(name: str) -> list[str]:
+    r"""A show name as comparable words: case-folded, punctuation dropped.
+
+    `\W` with re.UNICODE rather than `[^a-z0-9]`, because an ASCII-only class deletes
+    every character of a name written in another script — so a CJK, Cyrillic or Arabic
+    show name normalised to the empty list and show_match_ratio hard-rejected it at
+    0.0 AGAINST ITS OWN EXACT SELF. Nothing in Neon speaks a non-Latin script today
+    (all 22 distinct saved-episode show names are Latin), so this is a latent broken
+    invariant rather than a live defect — but f(x, x) == 0.0 is the kind of thing that
+    surfaces as an inexplicable missing transcript years later. casefold() over
+    lower() for the same reason: it folds ß and Turkish dotted-I correctly.
+
+    Junk still scores 0.0 — punctuation is `\W`, so '!!! ???' has no words — which is
+    the distinction that matters: "no comparable words" must mean junk in the show
+    slot, not another alphabet.
+    """
+    return re.sub(r"[\W_]+", " ", (name or "").casefold(), flags=re.UNICODE).split()
+
+
+def show_match_ratio(want_show: str, series_name: str) -> float:
+    """How much a Taddy series name looks like the show the caller asked for, 0..1.
+
+    Deliberately NOT a plain difflib ratio, because the two names differ
+    SYSTEMATICALLY: Taddy carries a show's full marketing name, while the caller
+    carries whatever a Castro publisher tag or a castro.fm og:title happened to say.
+    Measured 2026-09-04 against live Neon and the live Taddy search, over every
+    distinct show name `saved-episodes` has ever stored:
+
+        'The AI Daily Brief'             vs 'The AI Daily Brief: Artificial
+                                             Intelligence News and Analysis'  raw 0.456
+        'The Vergecast: Ad-Free Edition' vs 'The Vergecast'                    raw 0.605
+        'Pop Culture Happy Hour Plus'    vs 'Pop Culture Happy Hour'           raw 0.898
+        'The Indicator from Planet Money Plus'
+                                         vs 'The Indicator from Planet Money'  raw 0.925
+        'Amicus Plus'                    vs 'Amicus With Dahlia Lithwick |
+                                             Law, justice, and the courts'     raw 0.308
+
+    Every one of those is the same show and correct today (the first two are live
+    rows). So a floor on the RAW ratio could not sit above 0.45 without destroying
+    real upgrades — far too low to reject anything. What they all share is that one
+    name's words are a contiguous run of the other's, which is what a subtitle, a
+    network suffix, a "Plus"/"Ad-Free" feed variant and a trailing "Podcast" all look
+    like. That case scores 1.0 here, which leaves the raw ratio responsible only for
+    ordinary spelling variation ('Vergecast' vs 'The Vergecast' = 0.818).
+
+    Amicus is the pair that forced the two normalisations above it, and it was in this
+    docstring as evidence of a DIFFERENT show until review caught it (2026-09-04): it
+    is Kevin's row 4806, it is the same show, and at 0.308 the floor could never have
+    upgraded it. Neither name is a run of the other, because each side is decorated in
+    its own way — the caller trails a feed word ('Plus'), and Taddy leads with
+    '<Show> With <Host> | <tagline>'. Stripping a trailing feed word from the CALLER
+    and cutting the TADDY side at ' | ' and at ' with ' leaves 'Amicus' against
+    'Amicus', which is 1.0. 'Pivot' vs 'Pivot with Kara Swisher and Scott Galloway'
+    comes along for free, 0.213 -> 1.0.
+
+    The asymmetry is deliberate, not an oversight. A trailing 'Podcast' is NOT cut off
+    the Taddy side, because doing so turns 'Pivot' vs 'The Pivot Podcast' — two real
+    and different shows — from 0.455 into 0.714 and lands it above the floor.
+
+    The >=2-word guard on containment stops a single common word matching everything:
+    'Bonus' must not match 'The Bonus Show' (0.526, rejected) the way 'Pivot' matches
+    'Pivot' (1.0). Castro publisher tags carry colons of their own — one live row's
+    show name is 'Fela Kuti: Fear No Man', which review found is a REAL Taddy series
+    and not the garbled colon split this docstring used to call it. That row's stored
+    transcript is currently a 'To Hell And Back' sermon from 'Word of Life Church
+    Podcast' (0.167): a second live instance of the defect this floor exists to stop,
+    which the gate fixes on the next run.
+
+    WHY THE FLOOR IS 0.60. Scored this way, the same 2026-09-04 sweep separates
+    cleanly: every correct pair lands at 1.000 except 'Vergecast' vs 'The Vergecast'
+    at 0.818, while the wrong pairs land at 0.267 ('Science Vs' vs 'Pivot'), 0.286
+    ('Science Vs' vs 'This American Life'), 0.455 ('Pivot' vs 'The Pivot Podcast')
+    and 0.481 — the last being a LIVE
+    defect this floor fixes, where a Pop Culture Happy Hour episode matched 'Neubauer
+    Artists Happy Hour Show' on a 1.000 title. 0.60 sits in the empty band between
+    0.481 and 0.818, with room on both sides rather than shaved to either.
+
+    One thing no metric can reach at all: a companion or members-only feed carrying
+    another show's episodes under an unrelated name. 'Incognito Mode' vs 'Search
+    Engine' is 0.222 on a PERFECT title, and no threshold that admits it would still
+    reject a stranger. That is what COMPANION_SHOWS is for — an observed list, checked
+    before the ratio, that grows only when a real saved episode proves a pair. A table
+    of facts is honest where a loosened threshold would be a guess.
+
+    Two things it knowingly does NOT separate, so nobody reads more into it later:
+    'The AI Daily Brief' vs 'The AI in Media Daily Brief' scores 0.800, and 'Decoder
+    Ring' vs 'Decoder Ring Theatre' scores 1.000 — the latter being the identical
+    string shape to 'Pop Culture Happy Hour' vs '… Plus', which is correct, so no
+    metric can split them. That is tolerable because this is a GATE, not the ranking:
+    the 0.7/0.3 blend still orders everything that survives, and whenever the true
+    show is among Taddy's eight candidates it scores 1.0 and out-ranks a 0.800
+    impostor. The floor's job is the gross mismatch, which is what the live data
+    actually shows happening; raising it to 0.85 to catch that impostor would also
+    reject 'Vergecast' vs 'The Vergecast' at 0.818 and buy nothing.
+    """
+    want = _show_words(want_show)
+    while len(want) > 1 and want[-1] in FEED_VARIANT_WORDS:
+        want.pop()  # 'Amicus Plus' -> 'Amicus'; never down to nothing
+    companion = COMPANION_SHOWS.get(" ".join(want))
+    if companion and companion == " ".join(_show_words(series_name)):
+        return 1.0
+    # Taddy carries the host and the tagline; the show name is what precedes them.
+    series_head = re.split(r"(?i)\bwith\b", re.split(r"\s*\|\s*", series_name or "")[0])[0]
+    series = _show_words(series_head)
+    if not want or not series:
+        return 0.0
+    short, long_ = sorted((want, series), key=len)
+    if len(short) >= 2 and any(long_[i:i + len(short)] == short
+                               for i in range(len(long_) - len(short) + 1)):
+        return 1.0
+    return difflib.SequenceMatcher(None, " ".join(want), " ".join(series)).ratio()
 
 
 def taddy_find_episode(episode_title: str, show_name: str, user_id: str, api_key: str) -> Optional[dict]:
@@ -130,14 +269,24 @@ def taddy_find_episode(episode_title: str, show_name: str, user_id: str, api_key
     data = taddy_query(query, user_id=user_id, api_key=api_key)
     episodes = (data.get("search") or {}).get("podcastEpisodes") or []
     want_title = episode_title.lower()
-    want_show = (show_name or "").lower()
+    want_show = (show_name or "").strip()
     best, best_score = None, 0.0
     for ep in episodes:
         title_ratio = difflib.SequenceMatcher(None, want_title, (ep.get("name") or "").lower()).ratio()
-        series = ((ep.get("podcastSeries") or {}).get("name") or "").lower()
-        show_ratio = difflib.SequenceMatcher(None, want_show, series).ratio() if want_show else 0.5
-        score = title_ratio * 0.7 + show_ratio * 0.3
-        if title_ratio >= TADDY_TITLE_MIN_RATIO and score > best_score:
+        if title_ratio < TADDY_TITLE_MIN_RATIO:
+            continue
+        if not want_show:
+            # No show name to check against, so the show neither gates NOR scores.
+            # Said out loud, because the 0.5 this replaced was a decision hiding as a
+            # number: a constant applied to every candidate cannot change their order,
+            # and under a floor it would have silently passed every one of them.
+            score = title_ratio
+        else:
+            show_ratio = show_match_ratio(want_show, (ep.get("podcastSeries") or {}).get("name") or "")
+            if show_ratio < TADDY_SHOW_MIN_RATIO:
+                continue  # right title, wrong show — not a match at any title ratio
+            score = title_ratio * 0.7 + show_ratio * 0.3
+        if score > best_score:
             best, best_score = ep, score
     return best
 
@@ -153,11 +302,19 @@ def try_taddy_full(title: str, show: str, user_id: str, api_key: str) -> tuple[O
     honest fallbacks (clip text / show notes) exist precisely for that, so a Taddy
     hiccup must never kill the item.
 
-    The degrade is unchanged; what it says about itself is not. A request Taddy
-    refused because of what WE sent now logs as our bug, with the term and its word
-    count, because it is silently permanent — retrying an over-long term never helps
-    — whereas an outage fixes itself. Same return either way, so nothing downstream
-    has to care."""
+    It also refuses to run at all without a show name. taddy_find_episode does not gate
+    on a show it was not given, so calling it there would be exactly the ungated
+    title-only match this module now exists to refuse — a page labelled show_notes is a
+    visible gap, the wrong show's transcript is a silent lie. The rule lives here
+    rather than at each call site so there is one place to read it and one to break.
+
+    And the degrade itself is unchanged; what it says about itself is not. A request
+    Taddy refused because of what WE sent logs as our bug, with the term and its word
+    count, because it is silently permanent — retrying an over-long term never helps —
+    whereas an outage fixes itself. Same return either way."""
+    if not (show or "").strip():
+        log.info("no show name for %r — skipping the ungated Taddy upgrade", title[:50])
+        return None, None
     try:
         hit = taddy_find_episode(title, show, user_id, api_key)
         full = taddy_transcript_text(hit["uuid"], user_id, api_key) if hit else None
@@ -221,6 +378,16 @@ def scrape_link_meta(url: str) -> dict:
             last_show, last_title = (s.strip() for s in title.rsplit(":", 1))
             return {"title": first_title, "show": first_show, "notes": notes,
                     "alt": {"title": last_title, "show": last_show}}
+    # Spotify/Apple carry the show in the title, so the show gate was inert on every
+    # non-castro link — scrape_link_meta returned show="" and an empty show means "do
+    # not gate", which is exactly the ungated title-only match this module now refuses.
+    # Parsing it also strips a marketing suffix that was being STORED as the episode
+    # title, sinking title_ratio and (before PR 9) blowing Taddy's 8-word term cap.
+    for pattern in LINK_TITLE_PATTERNS:
+        m = pattern.match(title)
+        if m:
+            title, show = m.group("ep").strip(), m.group("show").strip()
+            break
     return {"title": title, "show": show, "notes": notes}
 
 
@@ -377,6 +544,9 @@ def main() -> None:  # noqa: PLR0915 — an orchestrator reads better linear tha
                         done += 1
                         log.info("already in DB under %s: %r", in_db_slug, meta["title"][:50])
                         continue
+                # A link with no show name is skipped inside try_taddy_full — one rule,
+                # one place. It costs nothing measurable: no non-castro row has ever
+                # produced a Taddy upgrade (verified 2026-09-04 — all show_notes).
                 hit, full = try_taddy_full(meta["title"], meta["show"], taddy_user, taddy_key)
                 if not hit and meta.get("alt"):
                     # Ambiguous colon split: retry with the other candidate, and
