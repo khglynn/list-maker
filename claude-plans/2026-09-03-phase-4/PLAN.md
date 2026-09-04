@@ -1,6 +1,6 @@
 # Phase 4 build plan — health checks and data you can trust on a bad Tuesday
 
-**Written:** 2026-09-03 evening, by a five-reader Sonnet map + Opus synthesis against the live code (readers: feed-identity, run-watchdog, transactional-load, honest-data, acceptance-tests — their full notes are in this folder). **Parent:** `claude-plans/2026-09-01-ground-it-cleanup-plan.md` → Phase 4. **Integration branch:** `arc/phase-4`; sub-PRs target it; one PR to main at the end. **Status:** building (PR 1 + PR 2 in parallel worktrees; PR 3 → PR 4 after PR 2, they share `data_health.py`).
+**Written:** 2026-09-03 evening, by a five-reader Sonnet map + Opus synthesis against the live code (readers: feed-identity, run-watchdog, transactional-load, honest-data, acceptance-tests — their full notes are in this folder). **Parent:** `claude-plans/2026-09-01-ground-it-cleanup-plan.md` → Phase 4. **Integration branch:** `arc/phase-4`; sub-PRs target it; one PR to main at the end. **Status:** PR 1 (Worker run verification, #41) and PR 2 (feed check by identity, #42) merged into `arc/phase-4` on 2026-09-03 evening after five-lens reviews (5 + 3 findings fixed; Worker tests 6 → 40, Python 449 → 476). PR 3 (transactional load) building; PR 4 (honest-data fixes + the pulse's date compare) after it. Kevin's part unchanged: the `DISPATCH_LOG` KV namespace id, then deploys.
 
 # Phase 4 — the build plan
 
