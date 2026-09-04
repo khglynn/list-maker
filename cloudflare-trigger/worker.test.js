@@ -426,6 +426,44 @@ test("a GitHub failure keeps the record and says the CHECK failed, not the pipel
   assert.equal(JSON.parse(kv.store.get("meta:last_verify")).results[0].verdict, "unverified");
 });
 
+test("the runs lookup asks GitHub for the window, not for everything", async () => {
+  // Not a micro-optimisation: a cron invocation on Workers Free has 10ms of CPU,
+  // shared with the dispatch fan-out. Unfiltered, per_page=30 is 395KB of JSON to
+  // parse (measured against the live API); filtered it is a handful of runs.
+  const kv = fakeKv(yesterdayRecord());
+  const impl = fakeFetch(okRoutes([run("2026-09-02T20:30:37Z")]));
+  await withFetch(impl, () =>
+    runScheduled({ GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv })
+  );
+  const lookup = impl.calls.find((c) => c.url.includes("/runs?"));
+  // the day BEFORE the dispatch, so a just-after-midnight dispatch keeps its window
+  assert.match(lookup.url, /created=%3E%3D2026-09-01/);
+  assert.match(lookup.url, /event=workflow_dispatch/);
+});
+
+test("a pile-up of records is judged a batch at a time, never all at once", async () => {
+  // 12 stale receipts (someone leaning on the manual trigger). Judging all of them
+  // would spend 12 GitHub calls plus 12 Slack posts against a 50-subrequest ceiling
+  // the day's dispatches also draw on.
+  const seeded = {};
+  for (let i = 0; i < 12; i++) {
+    const iso = `2026-09-02T${String(i).padStart(2, "0")}:00:00Z`;
+    seeded[dispatchKey("entities.yml", iso)] = JSON.stringify({
+      workflow: "entities.yml",
+      dispatchedAt: iso,
+      inputs: {},
+    });
+  }
+  const kv = fakeKv(seeded);
+  const impl = fakeFetch(okRoutes([run("2026-09-02T09:30:00Z")]));
+  await withFetch(impl, () =>
+    runScheduled({ GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv })
+  );
+  assert.equal(impl.calls.filter((c) => c.url.includes("/runs?")).length, 8);
+  const left = [...kv.store.keys()].filter((k) => k.startsWith("dispatch:entities.yml:2026-09-02"));
+  assert.equal(left.length, 4, "the rest keep until the next fire rather than being dropped");
+});
+
 // --- the invariant: checking never breaks starting ---------------------------
 
 test("a verify pass that crashes outright still lets the day's dispatches fire", async () => {

@@ -69,6 +69,15 @@ const VERIFY_AFTER_MS = 20 * 60 * 60 * 1000;
 // ancient history on the day it recovers.
 const DISPATCH_TTL_SECONDS = 3 * 24 * 3600;
 
+// At most this many records judged per fire. A normal day leaves 4; this is double
+// that. The cap exists because a Workers Free invocation gets 50 subrequests and
+// 10 ms of CPU, SHARED with the dispatch fan-out that runs alongside it — so an
+// unbounded verify loop (someone hammering the manual trigger, say) could starve
+// the dispatching it exists to watch, which would be a spectacular own goal.
+// Records over the cap are not lost: they keep until the next fire, bounded by the
+// TTL above.
+const VERIFY_MAX_PER_PASS = 8;
+
 // What the daily fire dispatches, decided by the fire timestamp. Exported shape
 // kept simple on purpose: given a Date, return [{workflow, inputs}].
 export function dispatchesFor(when) {
@@ -246,14 +255,30 @@ async function withDispatchLog(env, label, fn) {
   }
 }
 
-// per_page=30: the page has to be wide enough to still contain the run we are
-// judging, which is ~20h old by then. Newest-first means a burst of manual
-// re-dispatches is what could push it off the page, and 30 in 20 hours is not a
-// thing that happens — 10 conceivably could on a backfill day.
-async function fetchRunsForWorkflow(env, workflow) {
+// The `created` filter is what keeps this affordable, and it is load-bearing rather
+// than an optimisation: a cron invocation on Workers Free gets **10 ms of CPU**, and
+// the dispatch fan-out shares that budget with this check — so a check that parses
+// too much JSON could kill the dispatching it exists to watch.
+//
+// Measured against the live API on 2026-09-03, because a run object embeds the whole
+// repository, actor and head_commit and is ~12 KB:
+//   unfiltered, per_page=30 → 395 KB, 0.70 ms to parse
+//   unfiltered, per_page=10 → 122 KB, 0.23 ms
+//   created=>=<the day before the dispatch> → 3 runs, ~12 KB, well under 0.1 ms
+// The filter is honoured (85 runs → 3, verified). If GitHub ever stops honouring it,
+// this degrades to "the newest per_page runs", which is where it started — so it is
+// safe in both directions.
+//
+// Why the day BEFORE: the filter's granularity is a date, and correlateRun's window
+// opens 5 minutes before the dispatch. A dispatch just after midnight UTC would
+// otherwise have its own window fall outside the filter.
+async function fetchRunsForWorkflow(env, workflow, dispatchedAtIso) {
+  const since = new Date(new Date(dispatchedAtIso).getTime() - 24 * 3600 * 1000)
+    .toISOString()
+    .slice(0, 10);
   const resp = await fetch(
     `https://api.github.com/repos/${REPO}/actions/workflows/${workflow}/runs` +
-      `?event=workflow_dispatch&per_page=30`,
+      `?event=workflow_dispatch&per_page=30&created=${encodeURIComponent(">=" + since)}`,
     {
       headers: {
         Authorization: `Bearer ${env.GH_PAT}`,
@@ -282,7 +307,14 @@ async function verifyPreviousDispatches(env, now) {
 
   const results = [];
   const problems = [];
+  let judged = 0;
   for (const key of listing.keys) {
+    if (judged >= VERIFY_MAX_PER_PASS) {
+      console.error(
+        `list-maker-cron: verify cap reached (${VERIFY_MAX_PER_PASS}) — the rest keep until the next fire`
+      );
+      break;
+    }
     const record = await withDispatchLog(env, `get ${key.name}`, (kv) =>
       kv.get(key.name, { type: "json" })
     );
@@ -297,8 +329,10 @@ async function verifyPreviousDispatches(env, now) {
     }
     if (age < VERIFY_AFTER_MS) continue; // too recent to judge — the next fire will
 
+    judged += 1;
     try {
-      const run = correlateRun(await fetchRunsForWorkflow(env, record.workflow), record.dispatchedAt);
+      const runs = await fetchRunsForWorkflow(env, record.workflow, record.dispatchedAt);
+      const run = correlateRun(runs, record.dispatchedAt);
       const verdict = verdictFor(run);
       results.push({
         workflow: record.workflow,
