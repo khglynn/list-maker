@@ -1,5 +1,7 @@
-// Pins the Worker's fan-out logic. Runs in CI via `node --test cloudflare-trigger/`
-// (test.yml) — no dependencies, plain node:test.
+// Pins the Worker's fan-out logic and its run verification. Runs in CI via
+// `node --test cloudflare-trigger/worker.test.js` (test.yml) — no dependencies,
+// plain node:test. Name the FILE, not the directory: `node --test <dir>` treats the
+// argument as a module path on Node 25 and dies with MODULE_NOT_FOUND.
 //
 // Why this exists: the day logic once lived in five cron strings, where Cloudflare's
 // 1=Sunday convention silently shifted every weekday run a day early for six weeks
@@ -7,7 +9,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { dispatchesFor } from "./worker.js";
+import worker, {
+  dispatchesFor,
+  correlateRun,
+  verdictFor,
+  dispatchKey,
+  verifyMessage,
+  unverifiedMessage,
+} from "./worker.js";
 
 const at = (iso) => new Date(iso); // all fires are 20:30 UTC; the date is what matters
 const names = (d) => dispatchesFor(d).map((t) => t.workflow);
@@ -52,4 +61,355 @@ test("a Monday that is also the 1st gets everything at once", () => {
   assert.equal(d.getUTCDay(), 1);
   assert.deepEqual(names(d), ["entities.yml", "pipeline.yml", "eval.yml", "blogs.yml"]);
   assert.deepEqual(entities(d).inputs, { pulse: "true" });
+});
+
+// ---------------------------------------------------------------------------
+// Run verification (2026-09-03). The pure decisions are pinned directly; the
+// side-effecting paths get a fake fetch and a fake KV, both a few lines of plain
+// JS, because the thing worth proving is behavioural: a run that did not succeed
+// says so, and nothing about the checking can take the DISPATCHING down with it.
+// ---------------------------------------------------------------------------
+
+const run = (created_at, extra = {}) => ({
+  id: 1,
+  created_at,
+  status: "completed",
+  conclusion: "success",
+  html_url: "https://github.com/khglynn/list-maker/actions/runs/1",
+  ...extra,
+});
+
+test("correlateRun picks the run that started just after the dispatch", () => {
+  const r = run("2026-09-03T20:30:37Z");
+  assert.equal(correlateRun([r], "2026-09-03T20:30:35Z"), r);
+});
+
+test("correlateRun ignores a run from before the dispatch", () => {
+  // Yesterday's run is still inside GitHub's most-recent-10 window. Counting it
+  // would report a missed day as healthy.
+  assert.equal(correlateRun([run("2026-09-02T20:30:37Z")], "2026-09-03T20:30:35Z"), null);
+});
+
+test("correlateRun returns null when GitHub lists no runs at all", () => {
+  assert.equal(correlateRun([], "2026-09-03T20:30:35Z"), null);
+});
+
+test("correlateRun prefers the scheduled run over a later manual re-run", () => {
+  // The real 2026-09-02: the 20:30 dispatch failed and a 21:35 manual re-run
+  // followed. Latest-wins would let the re-run bury the failure.
+  const scheduled = run("2026-09-02T20:30:37Z", { id: 10, conclusion: "failure" });
+  const manual = run("2026-09-02T21:35:37Z", { id: 11 });
+  assert.equal(correlateRun([manual, scheduled], "2026-09-02T20:30:35Z").id, 10);
+});
+
+test("correlateRun's tolerance boundary is inclusive", () => {
+  const dispatchedAt = "2026-09-03T20:30:00Z";
+  const exactly = run("2026-09-03T20:25:00Z"); // dispatchedAt - 5 min
+  assert.equal(correlateRun([exactly], dispatchedAt), exactly);
+  assert.equal(correlateRun([run("2026-09-03T20:24:59Z")], dispatchedAt), null);
+});
+
+test("verdictFor names every state the alarm cares about", () => {
+  assert.equal(verdictFor(null), "missing");
+  assert.equal(verdictFor({ status: "completed", conclusion: "success" }), "success");
+  assert.equal(verdictFor({ status: "completed", conclusion: "failure" }), "failure");
+  assert.equal(verdictFor({ status: "completed", conclusion: "cancelled" }), "cancelled");
+  assert.equal(verdictFor({ status: "in_progress" }), "stuck-in_progress");
+  assert.equal(verdictFor({ status: "queued" }), "stuck-queued");
+});
+
+test("dispatchKey keeps the prefix verifyPreviousDispatches scans on", () => {
+  assert.equal(
+    dispatchKey("pipeline.yml", "2026-09-03T20:30:01.234Z"),
+    "dispatch:pipeline.yml:2026-09-03T20:30:01.234Z"
+  );
+});
+
+test("verifyMessage tells a run that never started apart from one that was cancelled", () => {
+  const record = { workflow: "entities.yml", dispatchedAt: "2026-09-02T20:30:35Z", inputs: {} };
+  const missing = verifyMessage(record, "missing", null);
+  assert.match(missing, /never started/);
+  assert.match(missing, /No run appeared/);
+
+  const cancelled = verifyMessage(record, "cancelled", run("2026-09-02T20:30:37Z"));
+  assert.match(cancelled, /was cancelled/);
+  assert.ok(!cancelled.includes("never started"), "a cancelled run did start");
+  assert.match(cancelled, /actions\/runs\/1/); // the link is what makes it actionable
+});
+
+test("verifyMessage names the inputs, so the Slack line says WHICH show", () => {
+  const record = {
+    workflow: "pipeline.yml",
+    dispatchedAt: "2026-09-02T20:30:35Z",
+    inputs: { show_id: "2" },
+  };
+  assert.match(verifyMessage(record, "failure", null), /pipeline\.yml \(show_id=2\)/);
+});
+
+test("unverifiedMessage blames the checker, not the pipeline", () => {
+  const text = unverifiedMessage(["entities.yml (dispatched X): 503"]);
+  assert.match(text, /:warning:/);
+  assert.match(text, /verifier failing, not the pipeline/);
+});
+
+// --- fakes -----------------------------------------------------------------
+
+function fakeKv(initial = {}) {
+  const store = new Map(Object.entries(initial));
+  return {
+    store,
+    failOn: null, // "get" | "put" | "list" — simulates a broken namespace
+    async get(name, opts) {
+      if (this.failOn === "get") throw new Error("KV get exploded");
+      const raw = store.get(name);
+      if (raw === undefined) return null;
+      return opts && opts.type === "json" ? JSON.parse(raw) : raw;
+    },
+    async put(name, value) {
+      if (this.failOn === "put") throw new Error("KV put exploded");
+      store.set(name, value);
+    },
+    async delete(name) {
+      store.delete(name);
+    },
+    async list({ prefix } = {}) {
+      if (this.failOn === "list") throw new Error("KV list exploded");
+      const keys = [...store.keys()]
+        .filter((k) => !prefix || k.startsWith(prefix))
+        .map((name) => ({ name }));
+      return { keys, list_complete: true };
+    },
+  };
+}
+
+const jsonResponse = (body, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+
+// Routes by URL substring. Anything unrouted throws, so a test can never pass by
+// silently reaching a network it thinks it stubbed.
+function fakeFetch(routes) {
+  const calls = [];
+  const impl = async (url, init = {}) => {
+    const href = String(url);
+    calls.push({ url: href, method: init.method || "GET", body: init.body });
+    for (const [pattern, handler] of routes) {
+      if (href.includes(pattern)) return handler(href, init);
+    }
+    throw new Error(`unrouted fetch: ${href}`);
+  };
+  impl.calls = calls;
+  return impl;
+}
+
+async function withFetch(impl, fn) {
+  const original = globalThis.fetch;
+  globalThis.fetch = impl;
+  try {
+    return await fn();
+  } finally {
+    globalThis.fetch = original;
+  }
+}
+
+// scheduled() hands its work to waitUntil; a test has to drain that to see it.
+async function runScheduled(env, { cron = "30 20 * * *", when = "2026-09-03T20:30:00Z" } = {}) {
+  const pending = [];
+  await worker.scheduled({ cron, scheduledTime: new Date(when).getTime() }, env, {
+    waitUntil: (p) => pending.push(p),
+  });
+  await Promise.all(pending);
+}
+
+const SLACK = "https://hooks.slack.test/webhook";
+const slackTexts = (impl) =>
+  impl.calls.filter((c) => c.url === SLACK).map((c) => JSON.parse(c.body).text);
+const dispatchedTo = (impl) =>
+  impl.calls.filter((c) => c.url.includes("/dispatches")).map((c) => c.url.split("/workflows/")[1]);
+
+const okRoutes = (runs = []) => [
+  ["/dispatches", () => new Response(null, { status: 204 })],
+  ["/runs?", () => jsonResponse({ workflow_runs: runs })],
+  [SLACK, () => new Response("ok")],
+];
+
+// --- /health ---------------------------------------------------------------
+
+test("/health answers before the token gate and before the PAT check", async () => {
+  const kv = fakeKv({
+    "meta:last_fire": JSON.stringify({ at: "2026-09-03T20:30:00Z", cron: "30 20 * * *" }),
+    "meta:last_verify": JSON.stringify({ at: "2026-09-03T20:30:00Z", results: [] }),
+  });
+  // No GH_PAT, no TRIGGER_TOKEN, no token in the URL: the two gates that stop
+  // every other path. The outside watcher must still get an answer.
+  const res = await worker.fetch(new Request("https://w.example/health"), { DISPATCH_LOG: kv });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.worker, "list-maker-cron");
+  assert.equal(body.last_fire.at, "2026-09-03T20:30:00Z");
+  assert.deepEqual(body.last_verify.results, []);
+});
+
+test("/health says the binding is missing rather than implying the Worker never fired", async () => {
+  const res = await worker.fetch(new Request("https://w.example/health"), {});
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.last_fire, null);
+  assert.match(body.kv_error, /DISPATCH_LOG/);
+});
+
+test("the manual trigger is still gated — /health changed nothing else", async () => {
+  const forbidden = await worker.fetch(new Request("https://w.example/?token=nope"), {
+    GH_PAT: "x",
+    TRIGGER_TOKEN: "secret",
+  });
+  assert.equal(forbidden.status, 403);
+  const noPat = await worker.fetch(new Request("https://w.example/"), {});
+  assert.equal(noPat.status, 500);
+});
+
+// --- recording -------------------------------------------------------------
+
+test("every dispatch is recorded under its own key, with its inputs", async () => {
+  const kv = fakeKv();
+  const impl = fakeFetch(okRoutes());
+  // A Monday: entities + pipeline(TAL) + eval + blogs — four dispatches, four records.
+  await withFetch(impl, () =>
+    runScheduled({ GH_PAT: "pat", DISPATCH_LOG: kv }, { when: "2026-08-31T20:30:00Z" })
+  );
+  const records = [...kv.store.keys()].filter((k) => k.startsWith("dispatch:"));
+  assert.equal(records.length, 4);
+  assert.equal(dispatchedTo(impl).length, 4);
+  const pipelineKey = records.find((k) => k.includes("pipeline.yml"));
+  assert.deepEqual(JSON.parse(kv.store.get(pipelineKey)).inputs, { show_id: "2" });
+});
+
+test("a KV write failure never turns a successful dispatch into a failure alert", async () => {
+  const kv = fakeKv();
+  kv.failOn = "put";
+  const impl = fakeFetch(okRoutes());
+  await withFetch(impl, () =>
+    runScheduled(
+      { GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv },
+      { when: "2026-09-05T20:30:00Z" }
+    )
+  );
+  assert.deepEqual(dispatchedTo(impl), ["entities.yml/dispatches"]);
+  assert.deepEqual(slackTexts(impl), [], "the work started; nothing should claim otherwise");
+});
+
+test("last_fire is written before the PAT guard, so a dead PAT still leaves a heartbeat", async () => {
+  const kv = fakeKv();
+  const impl = fakeFetch([[SLACK, () => new Response("ok")]]);
+  await withFetch(impl, () => runScheduled({ SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv }));
+  assert.equal(JSON.parse(kv.store.get("meta:last_fire")).at, "2026-09-03T20:30:00.000Z");
+  assert.match(slackTexts(impl)[0], /GH_PAT secret not set/);
+});
+
+// --- verifying -------------------------------------------------------------
+
+const YESTERDAY = "2026-09-02T20:30:35Z"; // 24h before the default fire above
+const yesterdayRecord = (workflow = "entities.yml", inputs = {}) => ({
+  [dispatchKey(workflow, YESTERDAY)]: JSON.stringify({
+    workflow,
+    dispatchedAt: YESTERDAY,
+    inputs,
+  }),
+});
+
+test("yesterday's cancelled run produces a Slack line and the record is dropped", async () => {
+  const kv = fakeKv(yesterdayRecord());
+  const impl = fakeFetch(
+    okRoutes([run("2026-09-02T20:30:37Z", { status: "completed", conclusion: "cancelled" })])
+  );
+  await withFetch(impl, () =>
+    runScheduled({ GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv })
+  );
+  const texts = slackTexts(impl);
+  assert.equal(texts.length, 1);
+  assert.match(texts[0], /entities\.yml was cancelled/);
+  assert.equal(kv.store.has(dispatchKey("entities.yml", YESTERDAY)), false, "judged once, then gone");
+  // and the verdict is on /health, for the outside watcher to see
+  assert.equal(JSON.parse(kv.store.get("meta:last_verify")).results[0].verdict, "cancelled");
+});
+
+test("a run that succeeded is silent, and its record is cleaned up", async () => {
+  const kv = fakeKv(yesterdayRecord());
+  const impl = fakeFetch(okRoutes([run("2026-09-02T20:30:37Z")]));
+  await withFetch(impl, () =>
+    runScheduled({ GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv })
+  );
+  assert.deepEqual(slackTexts(impl), []);
+  assert.equal(kv.store.has(dispatchKey("entities.yml", YESTERDAY)), false);
+});
+
+test("a run that never appeared is reported as never started", async () => {
+  const kv = fakeKv(yesterdayRecord("pipeline.yml", { show_id: "1" }));
+  const impl = fakeFetch(okRoutes([])); // GitHub lists nothing for that workflow
+  await withFetch(impl, () =>
+    runScheduled({ GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv })
+  );
+  assert.match(slackTexts(impl)[0], /pipeline\.yml \(show_id=1\) never started/);
+});
+
+test("a record younger than the verify window is left alone, not judged early", async () => {
+  const key = dispatchKey("entities.yml", "2026-09-03T08:00:00Z"); // 12.5h before the fire
+  const kv = fakeKv({
+    [key]: JSON.stringify({
+      workflow: "entities.yml",
+      dispatchedAt: "2026-09-03T08:00:00Z",
+      inputs: {},
+    }),
+  });
+  const impl = fakeFetch(okRoutes([]));
+  await withFetch(impl, () =>
+    runScheduled({ GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv })
+  );
+  assert.deepEqual(slackTexts(impl), [], "a run still in flight is not a missing run");
+  assert.ok(kv.store.has(key), "the record waits for the next fire");
+  assert.ok(!impl.calls.some((c) => c.url.includes("/runs?")), "GitHub was not even asked");
+});
+
+test("a GitHub failure keeps the record and says the CHECK failed, not the pipeline", async () => {
+  const kv = fakeKv(yesterdayRecord());
+  const impl = fakeFetch([
+    ["/dispatches", () => new Response(null, { status: 204 })],
+    ["/runs?", () => jsonResponse({ message: "Bad gateway" }, 502)],
+    [SLACK, () => new Response("ok")],
+  ]);
+  await withFetch(impl, () =>
+    runScheduled({ GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv })
+  );
+  const texts = slackTexts(impl);
+  assert.equal(texts.length, 1);
+  assert.match(texts[0], /could not be checked/);
+  assert.ok(
+    kv.store.has(dispatchKey("entities.yml", YESTERDAY)),
+    "left for the next fire — the TTL bounds the retries"
+  );
+  assert.equal(JSON.parse(kv.store.get("meta:last_verify")).results[0].verdict, "unverified");
+});
+
+// --- the invariant: checking never breaks starting ---------------------------
+
+test("a verify pass that crashes outright still lets the day's dispatches fire", async () => {
+  const kv = fakeKv();
+  kv.list = async () => ({ keys: null }); // KV answers something unusable
+  const impl = fakeFetch(okRoutes());
+  await withFetch(impl, () =>
+    runScheduled(
+      { GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv },
+      { when: "2026-09-05T20:30:00Z" }
+    )
+  );
+  assert.deepEqual(dispatchedTo(impl), ["entities.yml/dispatches"]);
+  assert.match(slackTexts(impl)[0], /run verifier crashed/);
+});
+
+test("no DISPATCH_LOG binding at all does not stop the day's dispatches", async () => {
+  const impl = fakeFetch(okRoutes());
+  await withFetch(impl, () =>
+    runScheduled({ GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK }, { when: "2026-09-05T20:30:00Z" })
+  );
+  assert.deepEqual(dispatchedTo(impl), ["entities.yml/dispatches"]);
+  assert.deepEqual(slackTexts(impl), []);
 });
