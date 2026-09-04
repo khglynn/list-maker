@@ -115,9 +115,10 @@ export function dispatchKey(workflow, dispatchedAtIso) {
 // plus `concurrency: {group: github.workflow}` on all four workflows already makes
 // at most one legitimate run in flight, so time is enough.
 //
-// EARLIEST-wins, deliberately: on 2026-09-02 entities.yml ran twice — the 20:30
-// scheduled run (which failed) and a 21:35 manual re-run. Picking the latest would
-// let a manual re-run mask the failure the alarm exists to report.
+// EARLIEST-wins, deliberately. Not hypothetical: on 2026-09-02 entities.yml has TWO
+// workflow_dispatch runs, 20:30:37 (the cron's, conclusion `failure`) and 21:35:37 —
+// so a second run following the scheduled one is a thing that happens. Picking the
+// latest would let whatever came after bury the failure the alarm exists to report.
 // The tolerance absorbs clock skew only; observed lag from dispatch to created_at
 // is under a second (2026-09-03: cron 20:30:00 → created_at 20:30:37, which is
 // when the POST actually landed).
@@ -162,25 +163,36 @@ const describeInputs = (inputs) => {
 // run that started and was cancelled. Conflating the two is how an alert stops
 // meaning anything.
 export function verifyMessage(record, verdict, run) {
+  const named = {
+    missing: "never started",
+    failure: "failed",
+    cancelled: "was cancelled",
+    timed_out: "timed out",
+  };
+  // stuck-in_progress reads like a log line; "is still in progress" reads like a
+  // person telling you something. Everything else GitHub can conclude falls through
+  // in its own words rather than being guessed at.
   const label =
-    { missing: "never started", failure: "failed", cancelled: "was cancelled", timed_out: "timed out" }[
-      verdict
-    ] ?? verdict;
+    named[verdict] ??
+    (verdict.startsWith("stuck-")
+      ? `is STILL ${verdict.slice("stuck-".length).replace(/_/g, " ")}`
+      : `ended as "${verdict}"`);
   const what = `${record.workflow}${describeInputs(record.inputs)}`;
   const tail = run
     ? `\n${run.html_url}`
     : "\nNo run appeared in GitHub Actions for that dispatch.";
   return (
-    `:rotating_light: *list-maker: ${what} ${label}* — dispatched ${record.dispatchedAt}, ` +
-    `no successful run followed.${tail}`
+    `:rotating_light: *list-maker: ${what} ${label}* — ` +
+    `dispatched ${record.dispatchedAt}, more than 20 hours ago.${tail}`
   );
 }
 
 // A third state, and a quieter one: GitHub would not tell us. The run may well be
 // fine — what failed is the checker. Saying that plainly keeps the red lines red.
 export function unverifiedMessage(problems) {
+  const n = problems.length;
   return (
-    `:warning: *list-maker: ${problems.length} dispatch(es) could not be checked* — ` +
+    `:warning: *list-maker: ${n} dispatch${n === 1 ? "" : "es"} could not be checked* — ` +
     `this is the verifier failing, not the pipeline. Retrying on the next fire.\n` +
     problems.join("\n")
   );
@@ -234,10 +246,14 @@ async function withDispatchLog(env, label, fn) {
   }
 }
 
+// per_page=30: the page has to be wide enough to still contain the run we are
+// judging, which is ~20h old by then. Newest-first means a burst of manual
+// re-dispatches is what could push it off the page, and 30 in 20 hours is not a
+// thing that happens — 10 conceivably could on a backfill day.
 async function fetchRunsForWorkflow(env, workflow) {
   const resp = await fetch(
     `https://api.github.com/repos/${REPO}/actions/workflows/${workflow}/runs` +
-      `?event=workflow_dispatch&per_page=10`,
+      `?event=workflow_dispatch&per_page=30`,
     {
       headers: {
         Authorization: `Bearer ${env.GH_PAT}`,
@@ -436,7 +452,9 @@ export default {
     const url = new URL(request.url);
     // Before the GH_PAT check as well as the token gate: an unset PAT is exactly
     // the kind of outage /health exists to stay legible through.
-    if (url.pathname === "/health") return healthResponse(env);
+    // Trailing slash tolerated: a poller or a human typing /health/ getting a bare
+    // "Forbidden" from the token gate would be a confusing way to learn nothing.
+    if (url.pathname.replace(/\/+$/, "") === "/health") return healthResponse(env);
     if (!env.GH_PAT) return new Response("GH_PAT not set\n", { status: 500 });
     const token = url.searchParams.get("token");
     if (!env.TRIGGER_TOKEN || token !== env.TRIGGER_TOKEN) {

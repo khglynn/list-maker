@@ -95,8 +95,9 @@ test("correlateRun returns null when GitHub lists no runs at all", () => {
 });
 
 test("correlateRun prefers the scheduled run over a later manual re-run", () => {
-  // The real 2026-09-02: the 20:30 dispatch failed and a 21:35 manual re-run
-  // followed. Latest-wins would let the re-run bury the failure.
+  // Shaped on the real 2026-09-02, where entities.yml has two workflow_dispatch
+  // runs: 20:30:37 (the cron's, failed) and 21:35:37. Latest-wins would let the
+  // second bury the first.
   const scheduled = run("2026-09-02T20:30:37Z", { id: 10, conclusion: "failure" });
   const manual = run("2026-09-02T21:35:37Z", { id: 11 });
   assert.equal(correlateRun([manual, scheduled], "2026-09-02T20:30:35Z").id, 10);
@@ -137,6 +138,15 @@ test("verifyMessage tells a run that never started apart from one that was cance
   assert.match(cancelled, /actions\/runs\/1/); // the link is what makes it actionable
 });
 
+test("verifyMessage says a stuck run in words, not in GitHub's status string", () => {
+  const record = { workflow: "blogs.yml", dispatchedAt: "2026-09-02T20:30:35Z", inputs: {} };
+  const stuck = verifyMessage(record, "stuck-in_progress", run("2026-09-02T20:30:37Z"));
+  assert.match(stuck, /is STILL in progress/);
+  assert.ok(!stuck.includes("stuck-"), "the raw verdict should not reach Slack");
+  // an unmapped GitHub conclusion still says something readable
+  assert.match(verifyMessage(record, "action_required", null), /ended as "action_required"/);
+});
+
 test("verifyMessage names the inputs, so the Slack line says WHICH show", () => {
   const record = {
     workflow: "pipeline.yml",
@@ -150,6 +160,8 @@ test("unverifiedMessage blames the checker, not the pipeline", () => {
   const text = unverifiedMessage(["entities.yml (dispatched X): 503"]);
   assert.match(text, /:warning:/);
   assert.match(text, /verifier failing, not the pipeline/);
+  assert.match(text, /1 dispatch could not/); // not "1 dispatch(es)"
+  assert.match(unverifiedMessage(["a", "b"]), /2 dispatches could not/);
 });
 
 // --- fakes -----------------------------------------------------------------
@@ -255,6 +267,12 @@ test("/health says the binding is missing rather than implying the Worker never 
   const body = await res.json();
   assert.equal(body.last_fire, null);
   assert.match(body.kv_error, /DISPATCH_LOG/);
+});
+
+test("/health tolerates a trailing slash", async () => {
+  const res = await worker.fetch(new Request("https://w.example/health/"), {});
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).worker, "list-maker-cron");
 });
 
 test("the manual trigger is still gated — /health changed nothing else", async () => {
