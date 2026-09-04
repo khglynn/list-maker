@@ -347,6 +347,15 @@ def test_one_word_is_never_enough_to_match_by_containment() -> None:
     assert show_match_ratio("Pivot", "Pivot") == 1.0
 
 
+def test_a_taglines_pipe_is_cut_even_when_containment_cannot_help() -> None:
+    """The ' | ' cut earns its keep exactly where containment cannot: a ONE-word show
+    name, where the >=2-word guard blocks the run match and the raw ratio has to carry
+    it. 'Amicus' vs 'Amicus | Law, justice, and the courts' is 0.308 without the cut
+    and 1.0 with it. Multi-word shows hide this — 'Hard Fork | The New York Times'
+    scores 1.0 either way — so without this test the cut looks optional."""
+    assert show_match_ratio("Amicus", "Amicus | Law, justice, and the courts") == 1.0
+
+
 def test_a_trailing_podcast_is_not_cut_off_the_taddy_side() -> None:
     """The asymmetry in the normalisation, pinned so nobody "tidies" it into symmetry.
     Cutting ' | ' and ' with ' off the Taddy side is safe; cutting a trailing 'Podcast'
@@ -518,6 +527,20 @@ def test_a_raising_transcript_fetch_also_degrades(monkeypatch) -> None:
     assert try_taddy_full("Election Night", "Science Vs", "u", "k") == (None, None)
 
 
+@pytest.mark.parametrize("show", ["", "   ", None])
+def test_no_show_name_means_no_taddy_upgrade_at_all(monkeypatch, show) -> None:
+    """The rule that keeps the gate from being bypassed on the link path. Without a
+    show name taddy_find_episode does not gate on show, so running it would be exactly
+    the ungated title-only match this module exists to refuse. Asserted by recorder —
+    the lookup must never even be reached, not merely return nothing."""
+    called: list = []
+    monkeypatch.setattr(save_episode, "taddy_find_episode",
+                        lambda *a, **k: called.append(a) or {"uuid": "x"})
+
+    assert try_taddy_full("Election Night", show, "u", "k") == (None, None)
+    assert called == []
+
+
 def test_a_hit_without_a_full_transcript_keeps_the_hit(monkeypatch) -> None:
     """The hit still carries the publish date and the real series name, so it is
     worth returning even when the transcript is a stub."""
@@ -648,6 +671,35 @@ def test_an_apple_podcasts_page_title_is_split_the_same_way(monkeypatch) -> None
 
     assert meta["title"] == "Beyonce country"
     assert meta["show"] == "Today, Explained"
+
+
+def test_the_show_is_the_last_segment_before_the_site_suffix(monkeypatch) -> None:
+    """Episode titles contain ' - ' far more often than show names do, so the episode
+    group is greedy and the LAST separator splits. Non-greedy would call this episode
+    'Edison, Tesla' and the show 'and the Electric Chair - Business History'."""
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    page = ('<meta property="og:title" content="Edison, Tesla - and the Electric Chair '
+            '- Business History | Podcast on Spotify">')
+    monkeypatch.setattr(save_episode.httpx, "get", lambda *a, **k: _FakeResponse(page))
+
+    meta = scrape_link_meta("https://open.spotify.com/episode/abc123")
+
+    assert meta["title"] == "Edison, Tesla - and the Electric Chair"
+    assert meta["show"] == "Business History"
+
+
+def test_the_site_suffix_must_end_the_title(monkeypatch) -> None:
+    """The patterns are anchored at both ends. Without the trailing anchor a title that
+    merely CONTAINS the suffix would be split at the wrong place."""
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    page = ('<meta property="og:title" content="Election Night - Science Vs '
+            '| Podcast on Spotify (unofficial mirror)">')
+    monkeypatch.setattr(save_episode.httpx, "get", lambda *a, **k: _FakeResponse(page))
+
+    meta = scrape_link_meta("https://example.com/ep/1")
+
+    assert meta["show"] == ""
+    assert meta["title"].endswith("(unofficial mirror)")
 
 
 def test_a_title_without_a_site_suffix_is_left_alone(monkeypatch) -> None:

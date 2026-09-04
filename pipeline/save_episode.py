@@ -76,8 +76,11 @@ FEED_VARIANT_WORDS = frozenset({"plus", "ad", "free", "adfree", "edition", "prem
 #   call, 2026-09-04 — keep the recovery without moving the floor).
 COMPANION_SHOWS = {"incognito mode": "search engine"}
 LINK_TITLE_PATTERNS = (
-    re.compile(r"^(?P<ep>.+?) - (?P<show>.+?) \| Podcast on Spotify$"),
-    re.compile(r"^(?P<ep>.+?) - (?P<show>.+?) - Apple Podcasts$"),
+    # `ep` is GREEDY so the LAST " - " is the split: episode titles contain " - "
+    # far more often than show names do ("Edison, Tesla - and the Electric Chair -
+    # Business History" must not yield the episode "Edison, Tesla").
+    re.compile(r"^(?P<ep>.+) - (?P<show>.+?) \| Podcast on Spotify$"),
+    re.compile(r"^(?P<ep>.+) - (?P<show>.+?) - Apple Podcasts$"),
 )
 MIN_FULL_TRANSCRIPT_CHARS = 1000  # below this a "transcript" is a stub, not an upgrade
 
@@ -244,7 +247,16 @@ def taddy_transcript_text(episode_uuid: str, user_id: str, api_key: str) -> Opti
 def try_taddy_full(title: str, show: str, user_id: str, api_key: str) -> tuple[Optional[dict], Optional[str]]:
     """Best-effort Taddy upgrade. Any Taddy failure degrades to (None, None) — the
     honest fallbacks (clip text / show notes) exist precisely for that, so a Taddy
-    hiccup must never kill the item."""
+    hiccup must never kill the item.
+
+    It also refuses to run at all without a show name. taddy_find_episode does not gate
+    on a show it was not given, so calling it there would be exactly the ungated
+    title-only match this module now exists to refuse — a page labelled show_notes is a
+    visible gap, the wrong show's transcript is a silent lie. The rule lives here
+    rather than at each call site so there is one place to read it and one to break."""
+    if not (show or "").strip():
+        log.info("no show name for %r — skipping the ungated Taddy upgrade", title[:50])
+        return None, None
     try:
         hit = taddy_find_episode(title, show, user_id, api_key)
         full = taddy_transcript_text(hit["uuid"], user_id, api_key) if hit else None
@@ -463,17 +475,11 @@ def main() -> None:  # noqa: PLR0915 — an orchestrator reads better linear tha
                         done += 1
                         log.info("already in DB under %s: %r", in_db_slug, meta["title"][:50])
                         continue
-                # No show name means taddy_find_episode would not gate on show at all,
-                # and an ungated title-only match is the defect this PR exists to close.
-                # The honest show_notes fallback is what the module already prefers, and
-                # it costs nothing measurable: no non-castro row has ever produced a
-                # Taddy upgrade (verified 2026-09-04 — all show_notes).
-                if meta["show"]:
-                    hit, full = try_taddy_full(meta["title"], meta["show"], taddy_user, taddy_key)
-                else:
-                    hit, full = None, None
-                    log.info("no show name for %s — skipping the ungated Taddy upgrade", url)
-                if not hit and meta.get("alt") and meta["alt"]["show"]:
+                # A link with no show name is skipped inside try_taddy_full — one rule,
+                # one place. It costs nothing measurable: no non-castro row has ever
+                # produced a Taddy upgrade (verified 2026-09-04 — all show_notes).
+                hit, full = try_taddy_full(meta["title"], meta["show"], taddy_user, taddy_key)
+                if not hit and meta.get("alt"):
                     # Ambiguous colon split: retry with the other candidate, and
                     # adopt it wholesale on a hit (its names are the clean ones).
                     hit, full = try_taddy_full(meta["alt"]["title"], meta["alt"]["show"],
