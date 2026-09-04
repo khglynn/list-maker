@@ -379,3 +379,56 @@ def test_tal_title_suffix_strip_and_curly_quote_normalisation(tmp_path: Path) ->
     fixture_path.write_text(json.dumps(payload))
     result = parse_episode(fixture_path)
     assert result["title"] == "Ira's Prologue"
+
+
+def test_format_one_artist_parenthetical_is_stripped(tmp_path: Path) -> None:
+    """Constructed: a bracketed-link ("## Song:") line whose artist carries a trailing
+    parenthetical, e.g. a live-version credit. Confirmed by mutation locally that
+    deleting parse.py's `re.sub(r'\\s*\\([^)]+\\)\\s*$', '', ...)` on the format-1 branch
+    leaves "Josephine Network (Live)" in the artist field and fails this test."""
+    markdown = (
+        "## Some Act\n\nSome act text.\n\n"
+        "## Song:\n\n"
+        "[\u201cMusic is Easy\u201d by Josephine Network (Live)](https://example.com/a)\n\n"
+        "## Related\n\nMore stuff.\n"
+    )
+    payload = {
+        "db_id": 9106,
+        "url": "https://www.thisamericanlife.org/000/parenthetical-artist-check",
+        "markdown": markdown,
+        "metadata": {
+            "og:title": "Parenthetical Artist Check - This American Life",
+            "article:published_time": "2026-05-01T00:00:00-04:00",
+        },
+    }
+    fixture_path = tmp_path / "9106.json"
+    fixture_path.write_text(json.dumps(payload))
+    result = parse_episode(fixture_path)
+    assert result["songs"] == [{"title": "Music is Easy", "artist": "Josephine Network"}]
+
+
+def test_format_two_performed_by_tail_is_cut_from_the_artist(tmp_path: Path) -> None:
+    """Constructed: the smallest plain-format ("## Song:") line whose artist string
+    carries a ", performed by ..." credit tail. Confirmed by mutation locally that
+    deleting parse.py's `(?:,\\s*performed by|$)` alternation on the format-2 branch
+    leaves "The Composer, performed by The Performers" in the artist field and fails
+    this test."""
+    markdown = (
+        "## Some Act\n\nSome act text.\n\n"
+        "## Song:\n\n"
+        "\u201cSome Song\u201d by The Composer, performed by The Performers\n\n"
+        "## Related\n\nMore stuff.\n"
+    )
+    payload = {
+        "db_id": 9107,
+        "url": "https://www.thisamericanlife.org/000/performed-by-check",
+        "markdown": markdown,
+        "metadata": {
+            "og:title": "Performed By Check - This American Life",
+            "article:published_time": "2026-05-01T00:00:00-04:00",
+        },
+    }
+    fixture_path = tmp_path / "9107.json"
+    fixture_path.write_text(json.dumps(payload))
+    result = parse_episode(fixture_path)
+    assert result["songs"] == [{"title": "Some Song", "artist": "The Composer"}]
