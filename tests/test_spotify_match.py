@@ -26,6 +26,7 @@ a batch would otherwise wait (the batch loop sleeps `API_DELAY` = 0.3s per song)
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from psycopg2.extras import RealDictCursor
@@ -94,6 +95,15 @@ class _FakeConn:
     @property
     def calls(self) -> List[Tuple[str, Any]]:
         return self._cursor.calls
+
+
+def _set_columns(sql: str) -> set:
+    """The exact set of columns an UPDATE's SET clause writes, so an ADDED column fails
+    as loudly as a removed one. Asserting a column is *present* in the SQL cannot see a
+    new one, and neither can the params tuple when the addition binds a literal
+    (`, spotify_popularity = 0`) rather than a %s."""
+    body = re.search(r"\bSET\b(.*?)\bWHERE\b", sql, re.S | re.I).group(1)
+    return {assignment.split("=")[0].strip() for assignment in body.split(",")}
 
 
 # =============================================================================
@@ -350,7 +360,7 @@ def test_saved_match_writes_every_column_keyed_on_song_id() -> None:
         "OutKast",
         4242,
     )
-    for column in (
+    assert _set_columns(sql) == {
         "spotify_track_id",
         "spotify_match_confidence",
         "album",
@@ -358,8 +368,7 @@ def test_saved_match_writes_every_column_keyed_on_song_id() -> None:
         "spotify_popularity",
         "spotify_title",
         "spotify_artist",
-    ):
-        assert column in sql
+    }
     assert "WHERE id = %s" in sql
 
     # Only the category string is persisted. The number that produced it is never
@@ -381,7 +390,8 @@ def test_not_found_writes_only_the_confidence_and_commits_once() -> None:
     assert [params for _sql, params in conn.calls] == [(11,), (22,)]
     for sql, _params in conn.calls:
         assert "spotify_match_confidence = 'NOT_FOUND'" in sql
-        assert "spotify_track_id" not in sql  # nothing else on the row is touched
+        assert _set_columns(sql) == {"spotify_match_confidence"}  # nothing else is touched
+        assert "WHERE id = %s" in sql  # and it is keyed on the song id, nothing else
     assert conn.commits == 1
 
     # Nothing to write still commits exactly once — an empty batch is not a special case.
