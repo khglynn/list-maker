@@ -18,13 +18,10 @@ Usage:
 
 import asyncio
 import argparse
-import os
 import sys
 from datetime import date
 from pathlib import Path
 from typing import Optional
-
-from dotenv import load_dotenv
 
 # Import sibling modules
 sys.path.insert(0, str(Path(__file__).parent))
@@ -42,9 +39,6 @@ from fill_songs import (
     check_duplicates,
     remove_duplicates,
 )
-
-
-SHOW_ID = 2  # TAL is show_id=2
 
 
 def get_db_connection():
@@ -222,11 +216,12 @@ def scrape_new_episodes(
 
 def main():
     """CLI entry point."""
-    script_dir = Path(__file__).parent
-    project_root = script_dir.parent.parent.parent
+    # The shared loader, same as fetch.py's. The hand-rolled pair this replaced read
+    # ~/.env and the repo's .env.local but not pipeline/.env.local, so a standalone run
+    # saw a different environment than the orchestrator that normally calls in.
+    from common import load_environment
 
-    load_dotenv(os.path.expanduser("~/.env"))
-    load_dotenv(project_root / ".env.local")
+    load_environment()
 
     parser = argparse.ArgumentParser(description="Scrape songs for TAL episodes missing them")
     parser.add_argument("--dry-run", action="store_true", help="Preview only")
