@@ -396,3 +396,59 @@ def test_nothing_to_add_calls_spotify_not_at_all() -> None:
     assert sync_playlist.add_tracks_to_playlist(sp, "PL", []) == 0
 
     assert sp.calls == []
+
+
+# =============================================================================
+# The public blurb: update_playlist_description
+# =============================================================================
+
+
+def _description(sp: FakeSpotify) -> Optional[str]:
+    calls = sp.calls_to("playlist_change_details")
+    return calls[-1].params["description"] if calls else None
+
+
+def test_the_public_description_is_the_template_filled_in(monkeypatch) -> None:
+    """This string is the only thing a stranger opening the playlist reads, so it is
+    written out in full here rather than rebuilt from the template — a test that
+    reuses DESCRIPTION_TEMPLATE would pass no matter what the template said.
+
+    `datetime` is imported *inside* the function, so it cannot be monkeypatched; the
+    expected month is computed the same way instead."""
+    db = _FakeDB({"songs": 4586}, {"episodes": 812})
+    monkeypatch.setattr(sync_playlist, "get_db_connection", db)
+    sp = FakeSpotify()
+
+    sync_playlist.update_playlist_description(sp, "PL", 1)
+
+    assert sp.calls_to("playlist_change_details")[0].params["playlist_id"] == "PL"
+    assert _description(sp) == (
+        "4,586 songs across 812 SOP episodes. "
+        f"Last updated {datetime.now().strftime('%m/%y')}. "
+        "Support: buymeacoffee.com/kevinhg. Requests: hi@kevinhg.com."
+    )
+
+
+def test_the_description_names_the_show_it_belongs_to(monkeypatch) -> None:
+    """Two playlists share one template, so the acronym is the only thing separating
+    them. Getting it from the wrong show would publish TAL's blurb on SOP's playlist."""
+    db = _FakeDB({"songs": 837}, {"episodes": 401})
+    monkeypatch.setattr(sync_playlist, "get_db_connection", db)
+    sp = FakeSpotify()
+
+    sync_playlist.update_playlist_description(sp, "PL", 2)
+
+    assert _description(sp).startswith("837 songs across 401 TAL episodes.")
+
+
+def test_a_failed_description_update_only_warns(monkeypatch, capsys) -> None:
+    """Deliberate: the description is cosmetic and the tracks are already added by the
+    time it runs, so a failure here must not fail a sync that worked. Pinned so a
+    future refactor doesn't quietly make the cosmetic step fatal."""
+    db = _FakeDB({"songs": 1}, {"episodes": 1})
+    monkeypatch.setattr(sync_playlist, "get_db_connection", db)
+    sp = FakeSpotify(errors={"playlist_change_details": spotify_error(403)})
+
+    sync_playlist.update_playlist_description(sp, "PL", 1)  # must not raise
+
+    assert "Could not update description" in capsys.readouterr().err
