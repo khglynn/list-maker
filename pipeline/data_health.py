@@ -145,16 +145,27 @@ def _feed_episode_is_held(episode: FeedEpisode, held: HeldEpisodes) -> bool:
     paths are ON CONFLICT (url) with COALESCE on publish_date), so a Taddy re-dating
     cannot make a held episode look missing.
 
-    Then title+date, for rows written before a show's importer changed hands — they hold
-    the same episode under an older url scheme. Measured against live Neon 2026-09-03:
-    3 of TAL's 15 recent feed episodes are exactly this (old bonus episodes Taddy still
-    returns in its "latest 15", stored under thisamericanlife.org urls), and without this
-    fallback TAL would report BEHIND 3 forever.
+    Then title+date, for rows holding the same episode under an older url scheme.
+    Measured against live Neon 2026-09-03: 3 of TAL's 15 recent feed episodes are exactly
+    this (old bonus episodes Taddy still returns in its "latest 15", stored under
+    thisamericanlife.org urls), and without this fallback TAL reports BEHIND 3 forever.
+
+    This fallback is PERMANENT, not transitional. upsert_episode matches
+    show_id+lower(title)+publish_date FIRST and its UPDATE branch never writes `url`, so
+    those three rows can never acquire a Taddy url no matter how many times the import
+    runs — the importer is structurally incapable of migrating them. Which also means
+    this check stays green on those episodes only as long as Taddy doesn't edit one of
+    their titles; if that ever happens the fix is to repair the row's url, not to loosen
+    this.
     """
     if episode.identity in held.urls:
         return True
-    title = episode.title.strip().lower()
-    return bool(title) and (title, episode.publish_date) in held.title_dates
+    # An untitled feed row is stored by the importer as "Untitled Episode"
+    # (import_transcripts.upsert_episode), so normalize to the same default rather than
+    # refusing to match: refusing would report an episode we hold, under a title the
+    # importer itself chose, as missing forever.
+    title = episode.title.strip().lower() or "untitled episode"
+    return (title, episode.publish_date) in held.title_dates
 
 
 def split_missing_feed_episodes(
@@ -561,25 +572,31 @@ def check_notion_sync_freshness(conn) -> CheckResult:
     return CheckResult("notion_sync_freshness", status, summary, failures + warnings)
 
 
-def _held_episodes_by_show(conn) -> dict[str, HeldEpisodes]:
+def _held_episodes_by_show(conn, slugs: set[str] | None = None) -> dict[str, HeldEpisodes]:
     """Every episode we hold, per show, in the forms the feed check compares against.
 
-    One round trip, deliberately UNBOUNDED (~4,300 rows fleet-wide on 2026-09-03). A
-    rolling date window is the obvious optimisation and it is a trap: Culture Gabfest
-    ended 2026-07-01 and its RSS still serves 15 pre-July episodes, so any window that
-    eventually excludes them would report the entire show as missing. If this table ever
-    gets big enough to matter, scope it by show_id per iteration — never by date.
+    One round trip, and deliberately UNBOUNDED BY DATE (~4,300 rows fleet-wide on
+    2026-09-03). A rolling date window is the obvious optimisation and it is a trap:
+    Culture Gabfest ended 2026-07-01 and its RSS still serves 15 pre-July episodes, so
+    any window that eventually excludes them would report the whole show as missing.
+    Bound it by SHOW instead — which is what `slugs` does, so the music workflow's
+    per-show run reads one show's rows rather than the fleet's.
 
     LEFT JOIN, and no `url IS NOT NULL` filter, so `latest` stays exactly the
     MAX(publish_date) the old query returned (a show with no episodes still gets an
     entry, and a row with a NULL url still counts toward the date shown in Slack).
     """
+    where, params = "", ()
+    if slugs:
+        where, params = "WHERE s.slug = ANY(%s)", (sorted(slugs),)
     rows = _rows(
         conn,
-        """
+        f"""
         SELECT s.slug, e.url, e.title, e.publish_date::date AS publish_date
         FROM shows s LEFT JOIN episodes e ON e.show_id = s.id
+        {where}
         """,
+        params,
     )
     held: dict[str, HeldEpisodes] = {}
     for row in rows:
@@ -622,10 +639,21 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
     episode simply hadn't met its Wednesday import yet.
     """
     wanted = set(slugs) if slugs is not None else None
-    held_by_show = _held_episodes_by_show(conn)
+    held_by_show = _held_episodes_by_show(conn, wanted)
     failures: list[str] = []
     warnings: list[str] = []
     details: list[str] = []
+    # A slug that isn't a show checks nothing and would otherwise report "Every show's
+    # import is caught up" with an empty detail list — a green nobody earned, from a
+    # typo or a renamed show. pipeline.yml runs this --strict to prove the run it just
+    # did discovered something, so a silent pass there is the exact failure this check
+    # exists to prevent.
+    unknown = sorted(wanted - set(SHOWS)) if wanted else []
+    if unknown:
+        failures.append(
+            f"unknown show slug(s) {', '.join(unknown)} — nothing was checked for them "
+            f"(known: {', '.join(sorted(SHOWS))})"
+        )
     curated = curated_show_slugs()
     for slug, cfg in SHOWS.items():
         if wanted is not None and slug not in wanted:
@@ -645,13 +673,11 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             if not feed_episodes:
                 warnings.append(f"{slug}: feed UNVERIFIED — second source unreachable")
                 continue
-            # Pre-migration rows carry legacy url schemes (hard-fork's three 2022 rows,
-            # ai-daily-brief's pre-2026-05 ones), so only the title+date fallback inside
-            # _feed_episode_is_held can match them. Harmless at limit=15 — no show's
-            # cadence reaches back that far — but a future limit bump would lean on that
-            # fallback for older and older episodes, where a title has had more chances
-            # to be edited since we stored it. Raise the limit and you are trading a
-            # bigger window for a softer identity; do it deliberately or not at all.
+            # Some rows in this window carry a legacy url scheme and match only via the
+            # title+date fallback (3 of TAL's 15 today — see _feed_episode_is_held).
+            # Raising `limit` widens the window into older episodes, where more rows are
+            # legacy-keyed and titles have had longer to be edited: a bigger window
+            # bought with a softer identity. Deliberate or not at all.
             overdue_eps, pending_eps = split_missing_feed_episodes(
                 feed_episodes, held, cfg.feed_grace_days
             )
@@ -661,12 +687,15 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             everything_missing = len(overdue) + len(pending) == len(feed_episodes)
             # Name the episodes, not just a count: identity comparison knows exactly
             # WHICH ones are missing, and "BEHIND 3" alone leaves the reader to go find
-            # out. Capped at 3 so a scheme change can't dump 15 titles into Slack.
+            # out. Oldest first, so the list starts with the same episode the message's
+            # "oldest missing" names; capped at 3 so a url-scheme change can't dump 15
+            # titles into Slack.
+            oldest_first = sorted(overdue_eps, key=lambda ep: ep.publish_date)
             named_missing = "; ".join(
-                f"{ep.publish_date} {ep.title[:60]!r}" for ep in overdue_eps[:3]
+                f"{ep.publish_date} {ep.title[:60]!r}" for ep in oldest_first[:3]
             )
-            if len(overdue_eps) > 3:
-                named_missing += f"; +{len(overdue_eps) - 3} more"
+            if len(oldest_first) > 3:
+                named_missing += f"; +{len(oldest_first) - 3} more"
         else:
             # No comparable identity (SOP: its scraper writes the urls, Taddy is only the
             # second source). Dates are all we can honestly compare — see

@@ -411,8 +411,12 @@ def test_feed_episode_held_by_title_and_date_when_the_url_scheme_is_older() -> N
     assert _feed_episode_is_held(
         FeedEpisode("taddy:other", date(2026, 1, 9), "An Update from Ira"), held
     ) is False
-    # An untitled feed row must never match on the empty string.
+    # An untitled feed row must not match some other episode's title...
     assert _feed_episode_is_held(FeedEpisode("taddy:blank", date(2025, 10, 16), ""), held) is False
+    # ...but it must match the title the IMPORTER gives an untitled episode, or we would
+    # report an episode we hold — under a title we chose — as missing forever.
+    untitled = _held(("legacy://x", "Untitled Episode", date(2026, 8, 20)))
+    assert _feed_episode_is_held(FeedEpisode("taddy:blank", date(2026, 8, 20), ""), untitled) is True
 
 
 def test_feed_check_catches_a_mid_series_hole_end_to_end(monkeypatch) -> None:
@@ -620,3 +624,82 @@ def test_sponsor_share_is_in_the_standard_check_set() -> None:
     from pipeline import data_health
 
     assert "check_sponsor_share(conn)" in inspect.getsource(data_health.run_checks)
+
+
+def test_held_episodes_by_show_keeps_max_publish_date_and_empty_shows(monkeypatch) -> None:
+    """The two claims the rest of the check leans on: a show with no episodes still gets
+    an entry (so the loop never KeyErrors), and a row with a NULL url still counts toward
+    `latest` — that is the "(we have X)" date in the Slack line, and it must stay exactly
+    the MAX(publish_date) the old aggregate query returned."""
+    import pipeline.data_health as dh
+
+    rows = [
+        _held_row("tal", None, "No url row", date(2026, 9, 2)),  # NULL url, newest
+        _held_row("tal", "u-1", "Held", date(2026, 8, 1)),
+        _held_row("tal", "u-2", None, date(2026, 7, 1)),  # NULL title
+        _held_row("empty-show", None, None, None),  # LEFT JOIN, show with no episodes
+    ]
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: rows)
+
+    held = dh._held_episodes_by_show(conn=None)
+
+    assert held["tal"].latest == date(2026, 9, 2)  # the NULL-url row still counts
+    assert held["tal"].urls == {"u-1", "u-2"}  # ...but is not an identity
+    # A NULL-url row is still an episode we hold, and title+date is the only way to
+    # match it — so it belongs here. A NULL-title row can't be matched either way.
+    assert held["tal"].title_dates == {
+        ("no url row", date(2026, 9, 2)),
+        ("held", date(2026, 8, 1)),
+    }
+    assert held["empty-show"].latest is None
+    assert held["empty-show"].urls == set()
+
+
+def test_held_episodes_by_show_reads_one_show_when_the_check_is_scoped(monkeypatch) -> None:
+    """The music workflow checks one show. Bounding the query by SHOW is the safe
+    optimisation; bounding it by DATE is the forbidden one — ended Culture Gabfest still
+    serves 15 pre-July episodes, so a rolling window eventually calls them all missing."""
+    import pipeline.data_health as dh
+
+    seen: dict = {}
+
+    def fake_rows(conn, sql, params=None):
+        seen["sql"], seen["params"] = sql, params
+        return []
+
+    monkeypatch.setattr(dh, "_rows", fake_rows)
+    dh._held_episodes_by_show(None, {"tal"})
+
+    assert "s.slug = ANY(%s)" in seen["sql"]
+    assert seen["params"] == (["tal"],)
+    assert "CURRENT_DATE" not in seen["sql"] and "publish_date >" not in seen["sql"]
+
+
+def test_feed_check_fails_loudly_on_an_unknown_show_slug(monkeypatch) -> None:
+    """A typo'd or renamed slug checks nothing. Reporting "Every show's import is caught
+    up" for it is a green nobody earned — and pipeline.yml runs this --strict to prove
+    the run it just did actually discovered something."""
+    result = _feed_check(monkeypatch, rows=[], today=date(2026, 9, 1), slugs=["taal"])
+
+    assert result.status == "fail"
+    assert any("unknown show slug(s) taal" in d for d in result.details), result.details
+
+
+def test_feed_check_names_the_oldest_missing_episodes_first(monkeypatch) -> None:
+    """The message says "oldest missing <date>" and then lists episodes; the list has to
+    start with that same episode, or the two halves of one sentence disagree."""
+    feed = [
+        FeedEpisode(f"taddy:{n}", date(2026, 8, day), f"Ep {n}")
+        for n, day in [(1, 28), (2, 26), (3, 24), (4, 22)]
+    ]
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("pchh", "taddy:held", "Held", date(2026, 8, 29))],
+        feed_episodes={"pchh": feed},
+        today=date(2026, 9, 1),
+        slugs=["pchh"],
+    )
+
+    detail = next(d for d in result.details if d.startswith("pchh: BEHIND"))
+    assert "oldest missing 2026-08-22" in detail
+    assert "missing: 2026-08-22 'Ep 4'; 2026-08-24 'Ep 3'; 2026-08-26 'Ep 2'; +1 more" in detail

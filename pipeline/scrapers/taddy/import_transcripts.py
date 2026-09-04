@@ -298,7 +298,11 @@ def episode_url_key(episode: dict[str, Any], show_id: Optional[int] = None) -> s
     if explicit:
         return explicit
     name = (episode.get("name") or "untitled").strip().lower()
-    published = episode.get("datePublished") or "no-date"
+    # The DATE, not the raw timestamp: a re-date within the same day (or an int-vs-string
+    # payload change) would otherwise fork the key and insert a duplicate row on the next
+    # import — and surviving a Taddy re-date is the whole point of the identity work this
+    # sits next to. It also makes the key match the publish_date actually stored on the row.
+    published = epoch_to_date(episode.get("datePublished")) or "no-date"
     return f"taddy-unidentified:{show_id if show_id is not None else 'no-show'}:{published}:{name}"
 
 

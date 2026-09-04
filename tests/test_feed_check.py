@@ -145,7 +145,11 @@ def test_taddy_recent_episodes_is_none_when_it_could_not_verify(monkeypatch) -> 
 def test_taddy_identity_matches_what_the_importer_writes() -> None:
     """THE drift guard. The feed check rebuilds an identity string and compares it to
     episodes.url; if the importer ever writes a different shape, every Taddy show reports
-    every episode missing. One import, one assertion, no way for that to happen quietly."""
+    every episode missing.
+
+    episode_url_key delegates to taddy_episode_url today, so this is near-tautological on
+    purpose — what it catches is someone re-inlining the f-string in the importer, which
+    is exactly how the two would come apart again."""
     from pipeline.scrapers.taddy.import_transcripts import episode_url_key
     from pipeline.show_config import taddy_episode_url
 

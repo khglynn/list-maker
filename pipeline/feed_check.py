@@ -171,17 +171,29 @@ def rss_recent_dates(feed_url: str, title_prefix: str = "", limit: int = 15) -> 
 
 
 def rss_recent_episodes(
-    feed_url: str, title_prefix: str = "", limit: int = 15
+    feed_url: str, title_prefix: Optional[str] = None, limit: int = 15
 ) -> Optional[list[FeedEpisode]]:
     """Like rss_recent_dates, but pairs each item's identity with its date and title.
 
-    The identity comes from import_gabfest.episode_url — the importer's own guid >
-    enclosure > link > synthetic chain, REUSED rather than re-implemented, so the
-    reader and the writer of episodes.url cannot drift. The import is function-level
-    on purpose: import_gabfest pulls in `common`, and this module's contract is
-    "read-only, no DB" for the four callers that never touch the RSS path.
+    Everything that decides what an episode IS comes from the importer: episode_url (its
+    guid > enclosure > link > synthetic chain), parse_feed, and TITLE_PREFIX for the
+    show filter — reused, never re-implemented, so the reader and the writer of
+    episodes.url cannot drift. The import is function-level on purpose: import_gabfest
+    pulls in `common`, and this module's contract is "read-only, no DB" for the callers
+    that never touch the RSS path.
+
+    NOTE, deliberate: the date here is parse_feed's (import_gabfest.parse_pubdate), which
+    does NOT normalize to UTC, while rss_recent_dates' _rss_date does. They disagree by a
+    day for an episode published late at night in a negative offset. This reader has to
+    match the importer, because that value is what landed in episodes.publish_date and
+    the title+date fallback compares against it — an "accurate" UTC date here would fail
+    to match our own row. The date reader is the one out of step with the DB; changing it
+    would move what the pulse reports and belongs in the pulse's own change.
     """
-    from scrapers.gabfest.import_gabfest import episode_url, parse_feed
+    from scrapers.gabfest.import_gabfest import TITLE_PREFIX, episode_url, parse_feed
+
+    if title_prefix is None:
+        title_prefix = TITLE_PREFIX
 
     try:
         resp = requests.get(feed_url, timeout=TIMEOUT, headers={"User-Agent": "list-maker-health"})
@@ -229,16 +241,20 @@ def feed_recent_episodes(cfg, limit: int = 15) -> Optional[list[FeedEpisode]]:
     It branches on cfg.episode_identity — NOT on cfg.taddy_uuid — because the question
     here is "can the feed's ids be compared to the ids we store for this show?", and for
     SOP the answer is no even though it has a taddy_uuid: Taddy is its second source but
-    its website scraper writes its urls. A show with no declared identity returns None,
-    which the caller reads as "no identity second source for this show", not as
-    "unreachable"; data_health picks the path from the same field, so the two Nones are
-    never confused.
+    its website scraper writes its urls.
+
+    Callers must decide WHICH path to take from cfg.episode_identity themselves (as
+    data_health does) rather than from this returning None: a show that declares a scheme
+    but is missing the config that scheme needs — or declares a scheme added here later
+    and not there — also lands in the `else` and would be reported as "unreachable",
+    which is a lie. tests/test_show_config.py keeps the two branch tables aligned; this
+    function cannot.
     """
     identity = getattr(cfg, "episode_identity", None)
     if identity == "taddy_uuid" and getattr(cfg, "taddy_uuid", None):
         episodes = taddy_recent_episodes(cfg.taddy_uuid, limit)
     elif identity == "rss_guid" and (url := getattr(cfg, "fallback_website_url", None)):
-        episodes = rss_recent_episodes(url, title_prefix="Culture Gabfest", limit=limit)
+        episodes = rss_recent_episodes(url, limit=limit)
     else:
         return None
     if episodes is None:
