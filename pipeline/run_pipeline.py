@@ -79,7 +79,7 @@ def discover_tal_episodes(dry_run: bool, limit: int = 25) -> dict:
     """Insert newly published TAL episodes into `episodes` via the Taddy importer.
 
     TAL had no discovery step at all. Its scraper starts from
-    `get_unscraped_episodes` (scrapers/tal/fetch.py:55), which reads rows ALREADY in
+    `get_episodes_missing_songs` (scrapers/tal/fetch.py), which reads rows ALREADY in
     the table — so it can only fill songs for episodes something else inserted. SOP
     discovers by diffing its episode-list page (scrapers/sop/scrape.py:271), which is
     why SOP stayed current while TAL silently froze at 2026-05-17 and drifted 6
@@ -88,6 +88,14 @@ def discover_tal_episodes(dry_run: bool, limit: int = 25) -> dict:
 
     The Taddy importer is already the discovery mechanism for every show with a
     taddy_uuid, and it upserts ON CONFLICT (url), so re-running is safe.
+
+    IT ALSO STAMPS `scraped_at` (import_transcripts.py:364 and :397) — on the INSERT
+    that creates the row, and on the title+date dedup UPDATE of a row that already
+    existed. That is harmless for the shows this importer was written for, and it was
+    NOT harmless here: it emptied the TAL song scrape's old `scraped_at IS NULL` queue
+    from the day this step was added (2026-08-02) until the queue was rewritten to ask
+    "has this episode got songs" instead. Adding a discovery step to another
+    website-scraped show means checking what its scraper keys on first.
     """
     if dry_run:
         print("  [dry-run] would import new TAL episodes from Taddy")

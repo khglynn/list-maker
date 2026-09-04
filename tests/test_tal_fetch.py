@@ -346,3 +346,70 @@ def test_a_feed_outage_degrades_to_slugs_instead_of_failing_the_run(monkeypatch)
     monkeypatch.setattr(requests, "get", _boom)
 
     assert fetch.fetch_feed_page_links("https://example.invalid/rss.xml") == {}
+
+
+# ------------------------------------------------- 3. the orchestrator's entry point
+
+def test_dry_run_previews_the_page_url_and_never_fetches(monkeypatch, capsys) -> None:
+    """run_pipeline.run_scrape calls scrape_new_episodes — the one changed function with
+    a caller outside this PR. The dry run must show the url it WOULD read (the old one
+    printed episodes.url, i.e. the Taddy key) and must not touch Firecrawl."""
+    from pipeline.scrapers.tal import scrape
+
+    queued = [
+        {
+            "id": 8843,
+            "url": f"{TADDY_EPISODE_URL_PREFIX}e457f2c3",
+            "title": "896: I Know What You Need",
+            "publish_date": date(2026, 8, 31),
+            "page_url": "https://www.thisamericanlife.org/896/i-know-what-you-need",
+        }
+    ]
+    unresolved = [{"id": 7422, "title": "An Update from Ira"}]
+    monkeypatch.setattr(scrape, "plan_fetch", lambda *a, **k: (queued, unresolved))
+    monkeypatch.setattr(scrape, "get_already_fetched", lambda: set())
+
+    def _no_fetching(*args, **kwargs):
+        raise AssertionError("a dry run must not call Firecrawl")
+
+    monkeypatch.setattr(scrape, "fetch_main", _no_fetching)
+
+    summary = scrape.scrape_new_episodes(dry_run=True)
+
+    out = capsys.readouterr().out
+    assert "https://www.thisamericanlife.org/896/i-know-what-you-need" in out
+    assert TADDY_EPISODE_URL_PREFIX not in out
+    assert summary["unresolved"] == 1
+    assert summary["errors"] == ["No page URL for 7422: 'An Update from Ira'"]
+    assert summary["fetched"] == 0
+
+
+def test_the_scrape_hands_the_fetcher_the_queue_it_just_printed(monkeypatch) -> None:
+    """One queue per run. The old code queried in scrape_new_episodes and then again
+    inside fetch.main, so the preview and the fetch could disagree — and the RSS would
+    have been read twice."""
+    from pipeline.scrapers.tal import scrape
+
+    queued = [
+        {"id": 1, "url": None, "title": "x", "page_url": "https://www.thisamericanlife.org/1/x"}
+    ]
+    monkeypatch.setattr(scrape, "plan_fetch", lambda *a, **k: (queued, []))
+    monkeypatch.setattr(scrape, "get_already_fetched", lambda: set())
+    handed: list = []
+
+    async def _capture(**kwargs):
+        handed.append(kwargs)
+
+    monkeypatch.setattr(scrape, "fetch_main", _capture)
+
+    def _no_db():
+        raise RuntimeError("stop after the fetch step")
+
+    monkeypatch.setattr(scrape, "get_db_connection", _no_db)
+
+    try:
+        scrape.scrape_new_episodes(dry_run=False, yes=True)
+    except RuntimeError:
+        pass  # step 4 needs a DB; this test is only about steps 1-2
+
+    assert handed == [{"episodes": queued, "dry_run": False}]

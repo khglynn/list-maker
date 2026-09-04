@@ -120,6 +120,12 @@ def get_episodes_missing_songs(
 
     The date floor is what keeps that from meaning "re-read the whole archive" — see
     DEFAULT_SONG_SCRAPE_FLOOR. Newest first so a --limit run drains the freshest gap.
+
+    Known edge, stated rather than papered over: `publish_date >= %s` also excludes a row
+    with a NULL publish_date, which would therefore never be queued. Zero TAL rows are in
+    that state (checked 2026-09-04) and the Taddy importer always supplies a date, so
+    this is a latent gap rather than a live one — but it is a real one, and a COALESCE to
+    some fake date here would hide it instead of leaving it visible.
     """
     if published_since is None:
         published_since = DEFAULT_SONG_SCRAPE_FLOOR
@@ -174,6 +180,20 @@ def get_already_fetched() -> set[int]:
 # Which page to read — TAL's site, never the Taddy identity url
 # =============================================================================
 
+def _title_key(title: Optional[str]) -> str:
+    """Match key for title -> feed link. Straightens curly quotes (the DB and the feed
+    disagree on them episode to episode) and folds case/whitespace."""
+    if not title:
+        return ""
+    straight = (
+        title.replace("“", '"')
+        .replace("”", '"')
+        .replace("‘", "'")
+        .replace("’", "'")
+    )
+    return " ".join(straight.split()).casefold()
+
+
 def page_links_from_feed_items(items: Iterable[dict]) -> dict[str, str]:
     """Map normalised episode title -> canonical page url, from parsed RSS items.
 
@@ -205,33 +225,23 @@ def fetch_feed_page_links(feed_url: Optional[str] = None) -> dict[str, str]:
     """
     if feed_url is None:
         feed_url = SHOWS["tal"].fallback_website_url
+
+    # Deliberately OUTSIDE the try: a broken import is a bug in this repo, not a feed
+    # outage, and swallowing it would silently disable the authoritative url source for
+    # good while every run still reported success. Only the network goes in the try.
+    import requests
+
+    from scrapers.gabfest.import_gabfest import parse_feed
+
     try:
-        import requests
-
-        from scrapers.gabfest.import_gabfest import parse_feed
-
         resp = requests.get(
             feed_url, timeout=30, headers={"User-Agent": "list-maker-tal-scrape"}
         )
-        resp.raise_for_status()
+        resp.raise_for_status()  # don't hand a 404 error page to an XML parser
         return page_links_from_feed_items(parse_feed(resp.content))
     except Exception as exc:  # noqa: BLE001
         print(f"  TAL feed unavailable ({exc}); falling back to title slugs")
         return {}
-
-
-def _title_key(title: Optional[str]) -> str:
-    """Match key for title -> feed link. Straightens curly quotes (the DB and the feed
-    disagree on them episode to episode) and folds case/whitespace."""
-    if not title:
-        return ""
-    straight = (
-        title.replace("“", '"')
-        .replace("”", '"')
-        .replace("‘", "'")
-        .replace("’", "'")
-    )
-    return " ".join(straight.split()).casefold()
 
 
 def resolve_page_url(row: dict, feed_links: Optional[dict[str, str]] = None) -> Optional[str]:
