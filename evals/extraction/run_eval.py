@@ -191,7 +191,11 @@ def build_report(args, results: list[dict], baseline_meta: dict, gold_meta: dict
     confs = [r["confidence"] for r in ok]
 
     conf_all_in_range = all(c["all_in_range"] for c in confs) if confs else True
-    conf_out = sum(c["n_out_of_range"] + c["n_missing"] for c in confs)
+    # Out-of-range breaches the contract; missing does not (see confidence_report's
+    # docstring — a NULL confidence is the sanitizer being honest, not a defect).
+    # Both are reported, so a run that starts producing many NULLs is still visible.
+    conf_out = sum(c["n_out_of_range"] for c in confs)
+    conf_missing = sum(c["n_missing"] for c in confs)
 
     baseline_section = None
     if regs:
@@ -231,7 +235,11 @@ def build_report(args, results: list[dict], baseline_meta: dict, gold_meta: dict
         }
         if golds
         else None,
-        "confidence": {"all_in_range": conf_all_in_range, "n_out_of_range_or_missing": conf_out},
+        "confidence": {
+            "all_in_range": conf_all_in_range,
+            "n_out_of_range": conf_out,
+            "n_missing": conf_missing,
+        },
         "failed_episodes": [{"episode_id": r["episode_id"], "error": r["error"]} for r in failed],
         "episodes": results,
     }
@@ -251,7 +259,7 @@ def check_floors(report: dict) -> list[str]:
         breaches.append(f"{report['n_failed']} episode(s) failed to extract")
     if not report["confidence"]["all_in_range"]:
         breaches.append(
-            f"{report['confidence']['n_out_of_range_or_missing']} confidence value(s) out of [0,1] or missing"
+            f"{report['confidence']['n_out_of_range']} confidence value(s) outside [0,1]"
         )
     base = report.get("baseline")
     if base:
@@ -300,7 +308,11 @@ def print_report(report: dict) -> None:
         print("\nCORRECTNESS: no gold_verified fixture for these episodes (baseline-only).", flush=True)
 
     c = report["confidence"]
-    print(f"\nCONFIDENCE contract: {'PASS' if c['all_in_range'] else 'FAIL'}  ({c['n_out_of_range_or_missing']} out-of-range/missing)", flush=True)
+    print(
+        f"\nCONFIDENCE contract: {'PASS' if c['all_in_range'] else 'FAIL'}  "
+        f"({c['n_out_of_range']} outside [0,1], gated; {c['n_missing']} missing, reported)",
+        flush=True,
+    )
 
     if report["failed_episodes"]:
         print("\nFAILED:", flush=True)

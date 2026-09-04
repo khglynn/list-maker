@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import os
 import random
 import re
@@ -530,6 +531,16 @@ def openai_extract(
     return parse_json_object(content), usage
 
 
+def _confidence_cell(value: Optional[float]) -> str:
+    """CSV cell for a confidence: four decimals, or an empty cell for an unknown one.
+
+    Empty, not "0.5" and not the string "none" — load_entity_batch reads an empty cell
+    as SQL NULL (same convention as sponsor_source), so an unknown confidence stays
+    unknown all the way into the column instead of arriving as a plausible number.
+    """
+    return "" if value is None else f"{value:.4f}"
+
+
 def sanitize_fact(fact: Any) -> Optional[dict[str, Any]]:
     if not isinstance(fact, dict):
         return None
@@ -581,14 +592,29 @@ def sanitize_mention(
     if sentiment not in SENTIMENTS:
         sentiment = "unknown"
 
-    confidence = mention.get("confidence", 0.5)
+    # A missing or unusable confidence becomes NULL, never a fabricated 0.5. A made-up
+    # 0.5 is indistinguishable from a model that genuinely said 0.5 — and it is the
+    # value the eval's calibration report and any future threshold would read as real.
+    # NaN/inf go the same way: json.loads accepts the bare NaN literal, and clamping it
+    # yields 1.0, the most confident value there is, for a number that means nothing.
+    confidence_raw = mention.get("confidence")
+    confidence: Optional[float]
     try:
-        confidence = float(confidence)
+        confidence = float(confidence_raw)  # type: ignore[arg-type]
     except (TypeError, ValueError):
-        confidence = 0.5
-    confidence = max(0.0, min(1.0, confidence))
+        confidence = None
+    if confidence is not None and not math.isfinite(confidence):
+        confidence = None
+    if confidence is not None:
+        confidence = max(0.0, min(1.0, confidence))
 
-    if confidence < confidence_review_threshold:
+    if confidence is None:
+        # "We don't know how sure it was" is review-worthy for the same reason low
+        # confidence is — with its own reason so a human can tell the two apart.
+        needs_review = True
+        if review_reason is None:
+            review_reason = "missing_confidence"
+    elif confidence < confidence_review_threshold:
         needs_review = True
         if review_reason is None:
             review_reason = "low_confidence"
@@ -1330,7 +1356,7 @@ def main() -> None:
             "is_editorial": str(mention["is_editorial"]).lower(),
             # Empty cell, not the string "none" — the loader turns "" into SQL NULL.
             "sponsor_source": mention.get("sponsor_source") or "",
-            "confidence": f"{mention['confidence']:.4f}",
+            "confidence": _confidence_cell(mention["confidence"]),
             "needs_review": str(mention["needs_review"]).lower(),
             "review_reason": mention["review_reason"] or "",
             "context_snippet": mention["context_snippet"],
@@ -1345,7 +1371,7 @@ def main() -> None:
                     "entity_type": mention["entity_type"],
                     "canonical_name": mention["canonical_name"],
                     "mention_text": mention["mention_text"],
-                    "confidence": f"{mention['confidence']:.4f}",
+                    "confidence": _confidence_cell(mention["confidence"]),
                     "review_reason": mention["review_reason"] or "",
                     "platform": mention["platform"] or "",
                     "source_url": mention["source_url"] or "",

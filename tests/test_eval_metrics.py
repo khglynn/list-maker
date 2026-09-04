@@ -193,9 +193,21 @@ def test_confidence_out_of_range_fails() -> None:
     assert r["n_out_of_range"] == 1
 
 
-def test_confidence_missing_value_fails() -> None:
+def test_confidence_missing_value_is_reported_not_gated() -> None:
+    """A NULL confidence is the sanitizer being honest (it stopped fabricating 0.5 on
+    2026-09-03), so it is counted and shown but does not breach the contract."""
     r = confidence_report([{"confidence": 0.9}, {"sentiment_label": "positive"}])
-    assert r["all_in_range"] is False
+    assert r["all_in_range"] is True
+    assert r["n_missing"] == 1
+    assert r["n_out_of_range"] == 0
+
+
+def test_confidence_out_of_range_and_missing_are_tracked_independently() -> None:
+    """The one that gates is out-of-range; a missing value alongside it must not
+    inflate the breach count, and must not be what fails the run."""
+    r = confidence_report([{"confidence": 0.9}, {}, {"confidence": 1.5}])
+    assert r["all_in_range"] is False  # the 1.5, not the missing one
+    assert r["n_out_of_range"] == 1
     assert r["n_missing"] == 1
 
 
@@ -218,3 +230,45 @@ def test_aggregate_ignores_bools() -> None:
     per_episode = [{"flag": True}, {"flag": 0.4}]
     out = aggregate(per_episode, ["flag"])
     assert out["flag"] == 0.4  # True is not counted as a number
+
+
+# ------------------------------------------------------- the CI gate (check_floors)
+# check_floors is what reddens the weekly eval workflow. It had no test until the
+# confidence contract was loosened on 2026-09-03 (missing is now reported, not gated),
+# and "never loosen a check without a test" is the rule that loosening had to satisfy.
+# Imported inside each test so this module keeps its no-DB/no-network import surface.
+
+
+def _floor_report(**overrides) -> dict:
+    """The smallest report check_floors will read: no failed episodes, a clean
+    contract, and no baseline/gold section (both optional and separately gated)."""
+    report = {
+        "n_failed": 0,
+        "confidence": {"all_in_range": True, "n_out_of_range": 0, "n_missing": 0},
+        "baseline": None,
+        "gold": None,
+    }
+    report.update(overrides)
+    return report
+
+
+def test_check_floors_passes_when_confidences_are_only_missing() -> None:
+    from evals.extraction.run_eval import check_floors
+
+    report = _floor_report(
+        confidence={"all_in_range": True, "n_out_of_range": 0, "n_missing": 12}
+    )
+    assert check_floors(report) == []
+
+
+def test_check_floors_still_breaches_on_out_of_range_confidence() -> None:
+    from evals.extraction.run_eval import check_floors
+
+    report = _floor_report(
+        confidence={"all_in_range": False, "n_out_of_range": 3, "n_missing": 12}
+    )
+    breaches = check_floors(report)
+    assert len(breaches) == 1
+    # The count in the message is the gated one — the 12 missing must not inflate it.
+    assert "3 confidence value(s) outside" in breaches[0]
+    assert "missing" not in breaches[0]

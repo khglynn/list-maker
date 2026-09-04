@@ -12,6 +12,7 @@ import pytest
 
 from pipeline.scrapers.ai_daily.extract_entities import (
     EPISODE_SUMMARY_FIELDS,
+    _confidence_cell,
     FILTER_STAT_KEYS,
     LOCKED_TYPES,
     MEDIA_TYPES,
@@ -147,7 +148,8 @@ def test_sanitize_fact_clamps_confidence_and_requires_key() -> None:
 def test_sanitize_mention_clamps_confidence_to_unit_interval() -> None:
     assert sanitize_mention(_mention(confidence=1.5), 1, 0.4)["confidence"] == 1.0
     assert sanitize_mention(_mention(confidence=-0.2), 1, 0.4)["confidence"] == 0.0
-    assert sanitize_mention(_mention(confidence="nope"), 1, 0.4)["confidence"] == 0.5
+    # Unparseable is not 0.5 — it is unknown. See the NULL-confidence tests below.
+    assert sanitize_mention(_mention(confidence="nope"), 1, 0.4)["confidence"] is None
 
 
 def test_sanitize_mention_flags_low_confidence_for_review() -> None:
@@ -175,10 +177,62 @@ def test_sanitize_mention_requires_core_fields() -> None:
 
 
 def test_sanitize_mention_confidence_always_in_unit_interval() -> None:
-    for value in [-5, 0, 0.5, 1, 99, "x", None]:
+    """Every value the model CAN give a number for lands in [0,1]."""
+    for value in [-5, 0, 0.5, 1, 99, "0.75"]:
         out = sanitize_mention(_mention(confidence=value), 1, 0.0)
         assert out is not None
         assert 0.0 <= out["confidence"] <= 1.0
+
+
+# --- the NULL-confidence contract (2026-09-03) ---
+# The sanitizer used to fabricate 0.5 whenever the model omitted or mangled the field,
+# which is indistinguishable from a model that genuinely said 0.5. It now writes NULL
+# and flags the mention. These tests pin "unknown stays unknown" at every entry point.
+
+
+def test_sanitize_mention_unusable_confidence_becomes_null_and_flagged() -> None:
+    for value in ["x", None, [], {}]:
+        out = sanitize_mention(_mention(confidence=value), 1, 0.4)
+        assert out is not None
+        assert out["confidence"] is None, value
+        assert out["needs_review"] is True, value
+        assert out["review_reason"] == "missing_confidence", value
+
+
+def test_sanitize_mention_missing_confidence_key_becomes_null_and_flagged() -> None:
+    mention = _mention()
+    del mention["confidence"]
+    out = sanitize_mention(mention, 1, 0.4)
+    assert out["confidence"] is None
+    assert out["needs_review"] is True
+    assert out["review_reason"] == "missing_confidence"
+
+
+def test_sanitize_mention_non_finite_confidence_becomes_null_not_one() -> None:
+    """json.loads accepts the bare NaN/Infinity literals, and clamping NaN yields 1.0 —
+    the most confident value there is, for a number that means nothing."""
+    for value in [float("nan"), float("inf"), float("-inf")]:
+        out = sanitize_mention(_mention(confidence=value), 1, 0.4)
+        assert out["confidence"] is None, value
+        assert out["review_reason"] == "missing_confidence", value
+
+
+def test_sanitize_mention_missing_confidence_does_not_steal_a_more_specific_reason() -> None:
+    """An unknown entity_type is the more actionable reason; missing_confidence only
+    fills a reason slot nothing else claimed."""
+    mention = _mention(entity_type="dragon")
+    del mention["confidence"]
+    out = sanitize_mention(mention, 1, 0.4)
+    assert out["confidence"] is None
+    assert out["review_reason"] == "model_proposed_unknown_type"
+
+
+def test_confidence_csv_cell_is_empty_for_unknown() -> None:
+    """f"{None:.4f}" raises TypeError, which would have crashed both CSV writers on the
+    first honest NULL. An empty cell is what load_entity_batch reads as SQL NULL."""
+    assert _confidence_cell(None) == ""
+    assert _confidence_cell(0.9) == "0.9000"
+    assert _confidence_cell(0) == "0.0000"
 
 
 # --- process_episode_mentions: the shared sanitize->postprocess->filter pipeline ---
