@@ -59,7 +59,7 @@ def scrape_new_episodes(
     dry_run: bool = True,
     limit: Optional[int] = None,
     yes: bool = False,
-    published_since=None,
+    published_since: Optional[date] = None,
 ) -> dict:
     """
     Fetch, parse, and insert songs for TAL episodes that don't have any yet.
