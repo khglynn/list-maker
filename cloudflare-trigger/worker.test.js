@@ -103,6 +103,21 @@ test("correlateRun prefers the scheduled run over a later manual re-run", () => 
   assert.equal(correlateRun([manual, scheduled], "2026-09-02T20:30:35Z").id, 10);
 });
 
+test("a run already claimed by an earlier dispatch is not handed to the next one", () => {
+  const manual = run("2026-09-02T20:27:30Z", { id: 20 });
+  const cron = run("2026-09-02T20:30:37Z", { id: 21, conclusion: "cancelled" });
+  const claimed = new Set();
+  const first = correlateRun([manual, cron], "2026-09-02T20:27:00Z", undefined, claimed);
+  assert.equal(first.id, 20);
+  claimed.add(first.id);
+  // Without the claimed set both records read the manual run, both say "success",
+  // and the cancelled cron run is deleted unexamined — a green verdict for a run
+  // that did not succeed.
+  const second = correlateRun([manual, cron], "2026-09-02T20:30:00Z", undefined, claimed);
+  assert.equal(second.id, 21);
+  assert.equal(verdictFor(second), "cancelled");
+});
+
 test("correlateRun's tolerance boundary is inclusive", () => {
   const dispatchedAt = "2026-09-03T20:30:00Z";
   const exactly = run("2026-09-03T20:25:00Z"); // dispatchedAt - 5 min
@@ -458,6 +473,39 @@ test("a GitHub failure keeps the record and says the CHECK failed, not the pipel
     "left for the next fire — the TTL bounds the retries"
   );
   assert.equal(JSON.parse(kv.store.get("meta:last_verify")).results[0].verdict, "unverified");
+});
+
+test("two dispatches in one window are judged against two runs, not the same one", async () => {
+  // A manual ?token= trigger at 20:27 and the cron at 20:30 the day before. The
+  // manual run succeeded; the cron's queued run was cancelled — the case
+  // `if: failure()` inside the workflow never fires for, so the verifier is the
+  // only thing that can report it.
+  const kv = fakeKv({
+    [dispatchKey("entities.yml", "2026-09-02T20:27:00Z")]: JSON.stringify({
+      workflow: "entities.yml",
+      dispatchedAt: "2026-09-02T20:27:00Z",
+      inputs: {},
+    }),
+    [dispatchKey("entities.yml", "2026-09-02T20:30:00Z")]: JSON.stringify({
+      workflow: "entities.yml",
+      dispatchedAt: "2026-09-02T20:30:00Z",
+      inputs: {},
+    }),
+  });
+  const impl = fakeFetch(
+    okRoutes([
+      run("2026-09-02T20:27:30Z", { id: 20 }),
+      run("2026-09-02T20:30:37Z", { id: 21, conclusion: "cancelled" }),
+    ])
+  );
+  await withFetch(impl, () =>
+    runScheduled({ GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv })
+  );
+  const texts = slackTexts(impl);
+  assert.equal(texts.length, 1, "the cancelled run must produce exactly one line");
+  assert.match(texts[0], /was cancelled/);
+  const verdicts = JSON.parse(kv.store.get("meta:last_verify")).results.map((r) => r.verdict);
+  assert.deepEqual(verdicts.sort(), ["cancelled", "success"]);
 });
 
 test("the runs lookup asks GitHub for the window, not for everything", async () => {

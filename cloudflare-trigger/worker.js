@@ -132,23 +132,26 @@ export function dispatchKey(workflow, dispatchedAtIso) {
 // is under a second (2026-09-03: cron 20:30:00 → created_at 20:30:37, which is
 // when the POST actually landed).
 //
-// KNOWN EDGE, accepted: two dispatches through this Worker inside the tolerance
-// window — a manual ?token= trigger fired minutes BEFORE the cron — give the
-// cron's record the manual run to read, because that run is the earliest one
-// after (dispatchedAt - tolerance). Usually harmless: both dispatches ask for the
-// same work, the second queues behind the first, and the verdict answers "did a
-// run succeed", which is the question worth asking. The residue is that a failure
-// of the LATER run could go unreported, so every alert carries the run's URL and
-// meta:last_verify records run_url for every verdict — the reader can always see
-// which run was judged. If that ever bites, the fix is to let a run be claimed by
-// only one record per verify pass (records sort oldest-first on the key), not to
-// shrink the tolerance.
-export function correlateRun(runs, dispatchedAtIso, toleranceMs = 5 * 60 * 1000) {
+// `claimed` is a Set of run ids already taken by an earlier record in this pass, and
+// it closes the one case where this design could hand back a GREEN verdict for a run
+// that did not succeed. Two dispatches through this Worker inside the tolerance
+// window — a manual ?token= trigger minutes before the cron — otherwise both resolve
+// to the earlier (manual) run: it succeeds, both records are marked success and
+// deleted, and the cron's own queued run is never examined. That run failing is
+// caught by the workflow's own `if: failure()` Slack step, but a run GitHub CANCELS
+// is exactly what `if: failure()` does not fire for — the 2026-08-06 case. Records
+// arrive oldest-first (the key is ISO-suffixed), so claiming makes the earlier
+// dispatch take the earlier run and leaves the later one to be judged on its own.
+//
+// Residual, not worth more code: the two records could still fall in different
+// passes if a fire lands between their 20h thresholds. The Set is per-pass, so that
+// window reopens — vanishingly rare, and the TTL bounds it.
+export function correlateRun(runs, dispatchedAtIso, toleranceMs = 5 * 60 * 1000, claimed = null) {
   const floor = new Date(dispatchedAtIso).getTime() - toleranceMs;
   if (!Number.isFinite(floor)) return null;
   const after = (runs || [])
     .map((run) => ({ run, at: new Date(run.created_at).getTime() }))
-    .filter((c) => Number.isFinite(c.at) && c.at >= floor)
+    .filter((c) => Number.isFinite(c.at) && c.at >= floor && !(claimed && claimed.has(c.run.id)))
     .sort((a, b) => a.at - b.at);
   return after.length ? after[0].run : null;
 }
@@ -312,6 +315,9 @@ async function verifyPreviousDispatches(env, now) {
 
   const results = [];
   const problems = [];
+  // One run answers for one dispatch. See correlateRun: without this, two dispatches
+  // in one tolerance window both read the earlier run and the later one goes unjudged.
+  const claimedRunIds = new Set();
   let judged = 0;
   for (const key of listing.keys) {
     if (judged >= VERIFY_MAX_PER_PASS) {
@@ -337,7 +343,8 @@ async function verifyPreviousDispatches(env, now) {
     judged += 1;
     try {
       const runs = await fetchRunsForWorkflow(env, record.workflow, record.dispatchedAt);
-      const run = correlateRun(runs, record.dispatchedAt);
+      const run = correlateRun(runs, record.dispatchedAt, undefined, claimedRunIds);
+      if (run) claimedRunIds.add(run.id);
       const verdict = verdictFor(run);
       results.push({
         workflow: record.workflow,
