@@ -75,3 +75,97 @@ def test_discovery_failure_raises_instead_of_passing_silently(monkeypatch) -> No
 
     with pytest.raises(RuntimeError, match="TAL episode discovery failed"):
         run_pipeline.discover_tal_episodes(dry_run=False)
+
+
+# ---------------------------------------------------------------------------
+# Partial step failures redden the run without aborting it
+#
+# A Monday where Firecrawl failed on every page used to exit 0: the scrape returned a
+# summary listing the failures, nothing raised, and pipeline.yml's Slack step is
+# `if: failure()`. "Found no work" and "could not do the work" reported identically —
+# the same shape as the outage this arc exists to close.
+# ---------------------------------------------------------------------------
+
+def _music_show(monkeypatch, scrape_result: dict) -> dict:
+    """Run the orchestrator for TAL with every step faked. No network, no DB."""
+    ran: list[str] = []
+
+    def _scrape(show_id, dry_run, yes):
+        ran.append("scrape")
+        return scrape_result
+
+    def _match(show_id, dry_run, cache_path):
+        ran.append("match")
+        return {"high": 1, "medium": 0, "low": 0, "not_found": 0}
+
+    def _sync(show_id, dry_run, cache_path):
+        ran.append("sync")
+        return {"added": 1}
+
+    monkeypatch.setattr(run_pipeline, "run_scrape", _scrape)
+    monkeypatch.setattr(run_pipeline, "run_match", _match)
+    monkeypatch.setattr(run_pipeline, "run_sync", _sync)
+
+    summary = run_pipeline.run_pipeline(show_id=2, dry_run=False, yes=True)
+    summary["_ran"] = ran
+    return summary
+
+
+def test_a_scrape_with_fetch_failures_fails_the_run(monkeypatch) -> None:
+    """Non-zero exit is what makes pipeline.yml's `if: failure()` Slack step fire."""
+    summary = _music_show(monkeypatch, {"fetched": 0, "failures": 24, "errors": ["boom"]})
+
+    assert summary["success"] is False
+    assert summary["step_failures"] == [{"step": "scrape", "failures": 24}]
+    assert "24" in summary["error"]
+
+
+def test_fetch_failures_do_not_throw_away_the_pages_that_worked(monkeypatch) -> None:
+    """Red AND useful. Raising on the first failure would strand every page that did come
+    back — unparsed, uninserted, unmatched, unsynced — until someone noticed by hand."""
+    summary = _music_show(monkeypatch, {"fetched": 20, "failures": 4, "errors": ["boom"]})
+
+    assert summary["_ran"] == ["scrape", "match", "sync"], "match and sync must still run"
+    assert summary["steps"]["sync"] == {"added": 1}
+    assert summary["success"] is False
+
+
+def test_unresolved_only_does_not_redden_the_run(monkeypatch) -> None:
+    """Row 7422 has no page url anywhere and never will. Counting it would fail the run
+    every single Monday — an alert that can never be cleared is how a real one gets
+    ignored. It is already printed and counted as `unresolved`."""
+    summary = _music_show(
+        monkeypatch,
+        {"fetched": 23, "failures": 0, "unresolved": 1, "errors": ["No page URL for 7422"]},
+    )
+
+    assert summary["success"] is True
+    assert "step_failures" not in summary
+
+
+def test_a_clean_scrape_stays_green(monkeypatch) -> None:
+    summary = _music_show(monkeypatch, {"fetched": 3, "failures": 0, "errors": []})
+
+    assert summary["success"] is True
+    assert summary["error"] is None
+
+
+def test_record_step_failures_is_generic_across_steps() -> None:
+    """One key, any step. A sync PR that surfaces dropped playlist batches sets
+    `failures` and needs no change in run_pipeline."""
+    summary = {"success": True, "error": None}
+
+    run_pipeline.record_step_failures(summary, "sync", {"added": 40, "failures": 60})
+
+    assert summary["success"] is False
+    assert summary["step_failures"] == [{"step": "sync", "failures": 60}]
+    assert run_pipeline.STEP_FAILURE_KEY == "failures"
+
+
+def test_record_step_failures_tolerates_a_step_that_returns_nothing() -> None:
+    summary = {"success": True, "error": None}
+
+    run_pipeline.record_step_failures(summary, "scrape", None)
+    run_pipeline.record_step_failures(summary, "scrape", {})
+
+    assert summary["success"] is True
