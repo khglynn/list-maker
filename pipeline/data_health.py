@@ -150,13 +150,27 @@ def _feed_episode_is_held(episode: FeedEpisode, held: HeldEpisodes) -> bool:
     this (old bonus episodes Taddy still returns in its "latest 15", stored under
     thisamericanlife.org urls), and without this fallback TAL reports BEHIND 3 forever.
 
-    This fallback is PERMANENT, not transitional. upsert_episode matches
-    show_id+lower(title)+publish_date FIRST and its UPDATE branch never writes `url`, so
-    those three rows can never acquire a Taddy url no matter how many times the import
-    runs — the importer is structurally incapable of migrating them. Which also means
-    this check stays green on those episodes only as long as Taddy doesn't edit one of
-    their titles; if that ever happens the fix is to repair the row's url, not to loosen
-    this.
+    This fallback is PERMANENT while the episode's title and date hold still:
+    upsert_episode matches show_id+lower(title)+publish_date FIRST and that UPDATE branch
+    never writes `url`, so a steady-state re-import can never migrate these rows onto a
+    Taddy url.
+
+    Which means THE RE-DATE IMMUNITY ABOVE IS A PROPERTY OF THE URL PATH ONLY. This path
+    keys on the date, so a Taddy edit to either the TITLE or the PUBLISH DATE of a legacy
+    row makes that episode read as missing — a real FAIL on the daily unscoped --strict
+    run in entities.yml (TAL imports on Mondays, so a Tuesday re-date reddens the daily
+    entities run, not the music one, which imports before it checks). It does clear
+    itself at that show's next import: the title+date lookup misses, so the INSERT branch
+    writes a uuid-keyed row and identity matching takes over from then on — at the cost
+    of a duplicate row that check_duplicate_episodes will NOT surface, since it groups by
+    show/title/date and the new row carries the new date.
+
+    Do NOT "fix" that by dropping the date from the match. TAL reruns archival episodes
+    under their original titles with new dates (2 of its recent 15 are archival numbers),
+    so a title-only match would report those as held while we do not have them: a false
+    PASS on a real gap, which is the worse direction and the one this check exists to
+    prevent. A self-clearing false FAIL is the defensible side of that trade. If it
+    fires, the repair is the row's url — not this rule.
     """
     if episode.identity in held.urls:
         return True
@@ -625,7 +639,9 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
         SOP). A set difference, so it sees a hole in the MIDDLE of a series — which
         MAX(publish_date) never could — and a re-dated episode we hold is a non-event,
         because identity doesn't move when a date does (the TAL false BEHIND, DEVLOG
-        2026-09-01).
+        2026-09-01). That last part holds for rows carrying the show's own identity url;
+        a row still held under a LEGACY url matches only by title+date and is not immune
+        to a re-date — deliberately, and with the reasoning, in _feed_episode_is_held.
       - BY DATE for SOP, whose rows come from its website scraper while Taddy is only its
         second source, so there is no id to compare. Unchanged from before.
 
