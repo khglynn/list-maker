@@ -257,6 +257,7 @@ SCHEDULED_PATH_MODULES = (
     "pipeline/scrapers/tal/scrape.py",
     "pipeline/scrapers/tal/fetch.py",
     "pipeline/scrapers/tal/fill_songs.py",
+    "pipeline/scrapers/tal/repair_metadata.py",
     "pipeline/scrapers/gabfest/import_gabfest.py",
     "pipeline/scrapers/blog/import_blog.py",
 )
