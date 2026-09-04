@@ -282,8 +282,11 @@ def resolve_page_url(row: dict, feed_links: Optional[dict[str, str]] = None) -> 
     Three sources, most trustworthy first:
 
       1. The row's own url, when it already IS a TAL page url. Rows the website scraper
-         discovered carry the real page, including the unnumbered ones a slug could never
-         reach (/blackjack, /bless-this-mess).
+         discovered carry the real page, including the unnumbered ones. The derived slug
+         handles those unevenly and it is not worth guessing which: /466/blackjack 301s
+         to /blackjack, but /885/bless-this-mess and /884/the-idiot are plain 404s
+         (all checked live 2026-09-04). The row's own url is cheaper and certain either
+         way — one request, no redirect, no guess.
       2. The RSS <link> for a matching title — authoritative, but a rolling 15-item window
          (measured 2026-09-04), so it covers roughly the last four months only, and only
          for items whose link is episode-specific (page_links_from_feed_items drops the
