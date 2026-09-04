@@ -66,6 +66,15 @@ FEED_VARIANT_WORDS = frozenset({"plus", "ad", "free", "adfree", "edition", "prem
 # Spotify and Apple episode pages put the show INSIDE og:title, with a fixed site
 # suffix: "<episode> - <show> | Podcast on Spotify". Parsing it is what gives the
 # show gate anything to bite on for a non-castro link — see scrape_link_meta.
+# Feeds that carry another show's episodes under a name no string metric can relate
+# to it — a members-only or companion feed. OBSERVED, NOT DERIVED: each entry is here
+# because a real saved episode proved the pair, and the map grows only that way. It is
+# consulted before the ratio so a known companion scores 1.0 without loosening the
+# floor for everything else. Keys and values are compared after _show_words.
+#   "incognito mode" -> "search engine": row saved 2026-09-04 from a members-only
+#   feed; the episode title matched Taddy exactly, the names score 0.222 (Kevin's
+#   call, 2026-09-04 — keep the recovery without moving the floor).
+COMPANION_SHOWS = {"incognito mode": "search engine"}
 LINK_TITLE_PATTERNS = (
     re.compile(r"^(?P<ep>.+?) - (?P<show>.+?) \| Podcast on Spotify$"),
     re.compile(r"^(?P<ep>.+?) - (?P<show>.+?) - Apple Podcasts$"),
@@ -147,12 +156,19 @@ def show_match_ratio(want_show: str, series_name: str) -> float:
 
     WHY THE FLOOR IS 0.60. Scored this way, the same 2026-09-04 sweep separates
     cleanly: every correct pair lands at 1.000 except 'Vergecast' vs 'The Vergecast'
-    at 0.818, while the wrong pairs land at 0.222 ('Incognito Mode' vs 'Search
-    Engine'), 0.267 ('Science Vs' vs 'Pivot'), 0.286 ('Science Vs' vs 'This American
-    Life'), 0.455 ('Pivot' vs 'The Pivot Podcast') and 0.481 — the last being a LIVE
+    at 0.818, while the wrong pairs land at 0.267 ('Science Vs' vs 'Pivot'), 0.286
+    ('Science Vs' vs 'This American Life'), 0.455 ('Pivot' vs 'The Pivot Podcast')
+    and 0.481 — the last being a LIVE
     defect this floor fixes, where a Pop Culture Happy Hour episode matched 'Neubauer
     Artists Happy Hour Show' on a 1.000 title. 0.60 sits in the empty band between
     0.481 and 0.818, with room on both sides rather than shaved to either.
+
+    One thing no metric can reach at all: a companion or members-only feed carrying
+    another show's episodes under an unrelated name. 'Incognito Mode' vs 'Search
+    Engine' is 0.222 on a PERFECT title, and no threshold that admits it would still
+    reject a stranger. That is what COMPANION_SHOWS is for — an observed list, checked
+    before the ratio, that grows only when a real saved episode proves a pair. A table
+    of facts is honest where a loosened threshold would be a guess.
 
     Two things it knowingly does NOT separate, so nobody reads more into it later:
     'The AI Daily Brief' vs 'The AI in Media Daily Brief' scores 0.800, and 'Decoder
@@ -168,6 +184,9 @@ def show_match_ratio(want_show: str, series_name: str) -> float:
     want = _show_words(want_show)
     while len(want) > 1 and want[-1] in FEED_VARIANT_WORDS:
         want.pop()  # 'Amicus Plus' -> 'Amicus'; never down to nothing
+    companion = COMPANION_SHOWS.get(" ".join(want))
+    if companion and companion == " ".join(_show_words(series_name)):
+        return 1.0
     # Taddy carries the host and the tagline; the show name is what precedes them.
     series_head = re.split(r"(?i)\bwith\b", re.split(r"\s*\|\s*", series_name or "")[0])[0]
     series = _show_words(series_head)

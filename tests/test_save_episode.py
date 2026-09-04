@@ -322,7 +322,6 @@ def test_a_show_named_two_ways_still_scores_as_one_show(caller: str, taddy: str)
     ("Pop Culture Happy Hour Plus", "Neubauer Artists Happy Hour Show", 0.481),
     ("Science Vs", "This American Life", 0.286),
     ("Science Vs", "Pivot", 0.267),
-    ("Incognito Mode", "Search Engine", 0.222),
 ])
 def test_a_genuinely_different_show_lands_below_the_floor(caller: str, taddy: str, score: float) -> None:
     """The first pair is the live defect: a real PCHH episode whose 1.000 title match
@@ -369,6 +368,27 @@ def test_feed_words_are_stripped_from_the_caller_not_from_taddy() -> None:
     name. Stripping the Taddy side too would erase real distinctions."""
     assert show_match_ratio("Amicus Plus", "Amicus") == 1.0
     assert show_match_ratio("The Vergecast: Ad-Free Edition", "The Vergecast") == 1.0
+
+
+def test_a_known_companion_feed_matches_its_parent_show() -> None:
+    """The one shape no string metric can reach: a members-only feed carrying another
+    show's episodes under an unrelated name. 'Incognito Mode' vs 'Search Engine' is
+    0.222 on a perfect title match, and no floor admitting it would still reject a
+    stranger — so it is a recorded fact, not a loosened threshold."""
+    assert show_match_ratio("Incognito Mode", "Search Engine") == 1.0
+
+
+def test_the_companion_map_is_not_a_wildcard() -> None:
+    """A companion entry matches its recorded parent and nothing else — otherwise the
+    map would quietly become the hole the floor exists to close."""
+    assert show_match_ratio("Incognito Mode", "Pivot") < TADDY_SHOW_MIN_RATIO
+    assert show_match_ratio("Science Vs", "Search Engine") < TADDY_SHOW_MIN_RATIO
+
+
+def test_a_companion_pair_is_reached_through_the_feed_word_strip() -> None:
+    """The lookup happens AFTER the feed-word strip, so a paid variant of a companion
+    feed resolves too — 'Incognito Mode Plus' is the same feed."""
+    assert show_match_ratio("Incognito Mode Plus", "Search Engine") == 1.0
 
 
 def test_containment_matches_a_word_run_anywhere_not_just_a_prefix() -> None:
