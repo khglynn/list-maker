@@ -213,6 +213,15 @@ before the connection is opened) and exits inline for the unknown slug; its
 only fails once rows are being inserted stays exit 1 too, because at that point it
 cannot be told apart from a genuine database error without a new validation step.
 
+**A partial playlist sync is exit 1** (2026-09-04, Kevin's call). `sync_playlist.py`
+used to add 150 of 250 tracks, print `Done!` and exit 0. It now reports one `failures`
+per dropped batch — plus one if the playlist *read* was truncated, in which case it
+refuses to add anything at all, because the diff is the only dedup there is and a
+partial read makes it re-add tracks Spotify already holds. One, not two: a dropped batch
+is a Spotify blip and the next run adds what this one missed, so it *should* be retried.
+Both orchestrators see it — `run_pipeline` reads the `failures` key in-process through
+`record_step_failures`, and `run_new_episodes` shells out and reads the exit code.
+
 ---
 
 ## GitHub Actions Automation
