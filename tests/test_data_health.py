@@ -1272,7 +1272,10 @@ def test_music_silence_fails_when_a_show_stops_acquiring_songs(monkeypatch) -> N
     detail = next(d for d in result.details if d.startswith("tal:"))
     assert "NO NEW SONGS in 117 days" in detail
     assert "newest episode with songs 2026-05-10" in detail
-    assert "13 episode(s) published since with none" in detail
+    # 13 ROWS, 12 distinct episodes: 3040 and 7845 are both "887: Two Is One, One
+    # Is None!". The predicate counts rows on purpose; the sentence says so.
+    assert "13 episode row(s) published since with none" in detail
+    assert "duplicate titles counted" in detail
     # Ids, not just a count — the rule PR #44 set for every FAIL in this file.
     assert "ep 3040 (2026-05-17)" in detail
     # The diagnostic that separates "the scraper writes nothing" from "it writes, but
@@ -1321,7 +1324,7 @@ def test_music_silence_ignores_a_single_songless_rerun(monkeypatch) -> None:
     )
 
     assert result.status == "pass"
-    assert any("1 episode(s) since with none" in d for d in result.details)
+    assert any("1 episode row(s) since with none" in d for d in result.details)
 
 
 def test_music_silence_leaves_the_archive_alone(monkeypatch) -> None:
@@ -1375,9 +1378,9 @@ def test_music_silence_stays_quiet_inside_the_day_window(monkeypatch) -> None:
 
 
 def test_music_silence_warns_one_tier_before_it_fails(monkeypatch) -> None:
-    """SOP's worst measured LIVE run: three songless episodes spanning 14 days, peaking
-    2026-02-10. Worth a glance, not worth a Slack — only failures Slack and only
-    failures exit non-zero (see main())."""
+    """SOP's worst measured LIVE run: three songless ROWS spanning 14 days, peaking
+    2026-02-10 — two distinct episodes (1384 and 2871 share a title) plus 3019. Worth a
+    glance, not worth a Slack: only failures Slack and only failures exit non-zero."""
     result, _ = _music_check(
         monkeypatch,
         aggregate_rows=[
@@ -1538,7 +1541,7 @@ def test_music_silence_fail_caps_the_ids_it_lists(monkeypatch) -> None:
     )
 
     detail = next(d for d in result.details if d.startswith("tal:"))
-    assert "25 episode(s) published since with none" in detail  # the count stays exact
+    assert "25 episode row(s) published since with none" in detail  # count stays exact
     assert "+15 more" in detail                                  # only the naming is capped
     assert "ep 9010" not in detail
 

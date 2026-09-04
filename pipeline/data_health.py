@@ -562,15 +562,24 @@ def check_episode_freshness(conn) -> CheckResult:
 # episode in Neon. The honest era for this is "since the first song row was ever
 # written" (2025-12-19): every song predating that arrived in one December-2025
 # backfill, so the songless runs before it are backfill gaps, not live behaviour.
-#   - SOP's worst LIVE songless run: 3 episodes / 14 days (peaking 2026-02-10).
+#   - SOP's worst LIVE songless run: 3 rows / 14 days (peaking 2026-02-10) — and only
+#     TWO of those are distinct episodes: ids 1384 and 2871 share a title ("Does humor
+#     belong in music?"), plus 3019.
 #   - TAL pre-outage (2024-01-01 → 2025-12-31): longest run 1 episode. Its longest gap
 #     between song-bearing episodes was 42 days — a publishing break, streak 1.
 #   - FAIL (3 episodes AND 21 days) fires ZERO times on SOP's live era and zero times on
 #     TAL pre-2026. On TAL's real outage it first becomes true 2026-02-22 — six weeks in,
 #     instead of never.
-#   - WARN (2 episodes AND 14 days) fires ONCE on SOP's live era, on that same
-#     three-in-a-row — which is worth a glance, and a warn neither Slacks nor exits
-#     non-zero (only failures do, see main()).
+#   - WARN (2 episodes AND 14 days) fires ONCE on SOP's live era, on that same run of
+#     three rows (two real episodes plus a duplicate) — worth a glance, and a warn
+#     neither Slacks nor exits non-zero (only failures do, see main()).
+#
+# The streak counts ROWS, not distinct titles, and that is deliberate. Deduping by title
+# inside the predicate was checked day by day on 2026-09-04: SOP's verdict is identical
+# on all 260 days either way, and on TAL dedup only ever pushes a REAL alarm later. So
+# the predicate keeps rows and the detail line is honest about what it counted — loosen
+# the sentence, never the test.
+#
 # BOTH axes are load-bearing, and each one is what stops the other's false positive:
 # SOP's Feb-2026 run met the episode threshold (3) but not the day one (14 < 21); TAL's
 # 42-day 2024 break met the day threshold but not the episode one.
@@ -709,19 +718,21 @@ def check_music_songs_still_arriving(conn) -> CheckResult:
         if streak >= MUSIC_SILENCE_FAIL_EPISODES and days >= MUSIC_SILENCE_FAIL_DAYS:
             failures.append(
                 f"{slug}: NO NEW SONGS in {days} days — {anchor_text}, "
-                f"{streak} episode(s) published since with none ({written_text})"
+                f"{streak} episode row(s) published since with none "
+                f"(duplicate titles counted; {written_text})"
                 + named
             )
         elif streak >= MUSIC_SILENCE_WARN_EPISODES and days >= MUSIC_SILENCE_WARN_DAYS:
             warnings.append(
                 f"{slug}: no new songs in {days} days — {anchor_text}, "
-                f"{streak} episode(s) published since with none ({written_text})"
+                f"{streak} episode row(s) published since with none "
+                f"(duplicate titles counted; {written_text})"
                 + named
             )
         else:
             details.append(
                 f"{slug}: songs current — {anchor_text} ({days}d ago), "
-                f"{streak} episode(s) since with none"
+                f"{streak} episode row(s) since with none"
             )
 
     if failures:
