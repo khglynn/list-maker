@@ -1,17 +1,18 @@
-"""Spotify playlist sync — the diff that keeps a track out of the playlist twice.
+"""Spotify playlist sync — the diff that keeps a track from landing twice.
 
 `pipeline/sync_playlist.py` is the last step of the music chain: it reads the matched
 tracks out of Neon, reads what the playlist already holds, and adds the difference. Two
-things make that worth this much test:
+things make that worth this much testing:
 
 1. **The diff is the only dedup there is.** Spotify happily accepts a track that is
    already in a playlist, and nothing in this repo ever removes one. So if the "what's
    already there" read comes back short, the sync re-adds real tracks and the playlist
    grows duplicates that only a human can clean up.
-2. **A half-written sync still exits 0.** Both write paths swallow their failures — a
-   dropped batch and a truncated read are printed and then reported as success. The
-   tests below pin that as *today's* behaviour, deliberately, so the question ("should a
-   partial sync fail loudly?") gets answered on purpose rather than by accident.
+2. **A half-written sync still exits 0.** The read and the write both swallow their
+   failures — a truncated page and a dropped batch are printed, then reported as
+   success. The tests below pin that as *today's* behaviour, deliberately, so the
+   question ("should a partial sync fail loudly?") gets answered on purpose rather than
+   by accident.
 
 Scope: this module's own surface. `get_latest_episode` is dead code (called from
 nowhere) and is not tested here — see the PR body. `get_spotify_client` is real OAuth
