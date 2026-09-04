@@ -273,6 +273,12 @@ def run_pipeline(
         if "discovered" in scrape:
             print(f"  Episodes discovered: {scrape['discovered']}")
         print(f"  Episodes scraped: {episodes_scraped}")
+        # Episodes we know need songs but could not find a page for (TAL only today).
+        # Printed only when non-zero, and printed at all because a skipped episode that
+        # nothing mentions is indistinguishable from an episode that didn't need doing —
+        # the exact confusion that let the TAL scrape sit dead for eight months.
+        if scrape.get("unresolved"):
+            print(f"  Episodes SKIPPED (no page URL found): {scrape['unresolved']}")
         print(f"  Songs found: {songs_found}")
         print(f"  Matched - HIGH: {match.get('high', 0)}, "
               f"MEDIUM: {match.get('medium', 0)}, "
