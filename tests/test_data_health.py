@@ -708,3 +708,108 @@ def test_feed_check_names_the_oldest_missing_episodes_first(monkeypatch) -> None
     detail = next(d for d in result.details if d.startswith("pchh: BEHIND"))
     assert "oldest missing 2026-08-22" in detail
     assert "missing: 2026-08-22 'Ep 4'; 2026-08-24 'Ep 3'; 2026-08-26 'Ep 2'; +1 more" in detail
+
+
+# ---- an incomplete batch load is visible (2026-09-03) ----------------------------
+#
+# The loader now writes its run 'loading' first and flips it to 'completed' on the one
+# commit that also lands every mention. These two checks read the two states that leaves
+# behind: a completed run whose count disagrees with the CSV it declared, and a run that
+# never got to flip.
+
+
+def test_run_completeness_passes_when_every_run_matches_its_csv(monkeypatch) -> None:
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [])
+    result = dh.check_ai_run_completeness(conn=None)
+    assert result.status == "pass"
+
+
+def test_run_completeness_fails_and_names_the_short_run(monkeypatch) -> None:
+    """The alert has to be actionable: which run, which show, which batch, and by how
+    much — a bare count would send someone hunting through 600+ runs."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 641, "slug": "ai-daily-brief",
+        "batch_name": "incremental-8430-to-8434",
+        "expected_mentions": 20, "actual_mentions": 8,
+    }])
+
+    result = dh.check_ai_run_completeness(conn=None)
+    assert result.status == "fail"
+    assert result.details == [
+        "ai-daily-brief run 641 (incremental-8430-to-8434): expected 20, has 8"
+    ]
+
+
+def test_run_completeness_skips_runs_written_before_expected_mentions_existed() -> None:
+    """The one line between a clean rollout and every historical run flooding red: 628
+    runs (2026-09-03) predate expected_mentions and have no honest number to compare."""
+    import inspect
+
+    import pipeline.data_health as dh
+
+    source = inspect.getsource(dh.check_ai_run_completeness)
+    assert "r.parameters ? 'expected_mentions'" in source
+
+
+def test_run_stuck_loading_passes_when_nothing_is_loading(monkeypatch) -> None:
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [])
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "pass"
+
+
+def test_run_stuck_loading_stays_quiet_for_a_batch_in_flight(monkeypatch) -> None:
+    """A load running right now is the system working. Warning on it every time the
+    pulse overlaps the entities run is how an alert stops meaning anything."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 700, "slug": "ai-daily-brief", "batch_name": "b", "minutes_pending": 2,
+    }])
+
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "pass"
+    assert "in flight" in result.summary
+
+
+def test_run_stuck_loading_warns_past_one_load_attempt(monkeypatch) -> None:
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 700, "slug": "ai-daily-brief", "batch_name": "b", "minutes_pending": 15,
+    }])
+
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "warn"
+    assert dh.AI_RUN_LOADING_WARN_MINUTES < 15 <= dh.AI_RUN_LOADING_FAIL_MINUTES
+
+
+def test_run_stuck_loading_fails_once_the_load_cannot_still_be_running(monkeypatch) -> None:
+    """Each retry deletes and re-inserts the row, so a single 'loading' row can never
+    legitimately outlive one attempt of the load step (600s). 45m is abandoned."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 700, "slug": "ai-daily-brief",
+        "batch_name": "incremental-8430-to-8434", "minutes_pending": 45,
+    }])
+
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "fail"
+    assert any("run 700 (incremental-8430-to-8434): 45m" in d for d in result.details)
+
+
+def test_both_new_ai_run_checks_are_in_the_standard_check_set() -> None:
+    """A check nothing runs is a check that does not exist."""
+    import inspect
+
+    from pipeline import data_health
+
+    source = inspect.getsource(data_health.run_checks)
+    assert "check_ai_run_completeness(conn)" in source
+    assert "check_ai_run_stuck_loading(conn)" in source

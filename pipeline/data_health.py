@@ -853,6 +853,133 @@ def check_ai_daily_extraction(conn) -> CheckResult:
     return CheckResult("ai_daily_extraction_integrity", status, summary, details)
 
 
+# A batch load is pure DB work over at most EXTRACTION_BATCH_SIZE=5 episodes' worth of
+# CSV rows — seconds in the healthy case. A single 'loading' row cannot legitimately be
+# older than ONE attempt of the load step (run_script's 600s timeout), because each
+# retry re-runs load_entity_batch with the same batch name and delete_existing_run wipes
+# the previous attempt's row before inserting a fresh one. So 10 minutes is the edge of
+# "still in flight" and 30 is three times past it: at that age the orchestrator process
+# itself is gone, not merely slow.
+AI_RUN_LOADING_WARN_MINUTES = 10
+AI_RUN_LOADING_FAIL_MINUTES = 30
+
+
+def check_ai_run_completeness(conn) -> CheckResult:
+    """Did every 'completed' run load as many mentions as its CSV actually had?
+
+    load_entity_batch records expected_mentions on the run row at load time, from the
+    same mentions.csv it is about to read — evidence and comparison from one file, read
+    once, in one process. A completed run whose live mention count disagrees with that
+    number is unambiguously wrong, so this is a fail with no warn tier; a batch that is
+    merely still in flight is 'loading', which the check below owns.
+
+    The `? 'expected_mentions'` guard is load-bearing: 628 runs predating this field
+    (2026-09-03) have no honest number to be judged against, and flagging them would
+    turn the check red on rollout day for data written under a different contract.
+    """
+    rows = _rows(
+        conn,
+        """
+        WITH run_counts AS (
+          SELECT r.id AS run_id, s.slug, r.batch_name,
+                 (r.parameters->>'expected_mentions')::int AS expected_mentions,
+                 COUNT(m.id) AS actual_mentions
+          FROM ai_runs r
+          JOIN shows s ON s.id = r.show_id
+          LEFT JOIN ai_mentions m ON m.run_id = r.id
+          WHERE r.status = 'completed'
+            AND r.parameters ? 'expected_mentions'
+          GROUP BY r.id, s.slug, r.batch_name, r.parameters
+        )
+        SELECT * FROM run_counts
+        WHERE actual_mentions <> expected_mentions
+        ORDER BY run_id;
+        """,
+    )
+    if not rows:
+        return CheckResult(
+            "ai_run_completeness",
+            "pass",
+            "Every completed AI run loaded as many mentions as its CSV had.",
+            [],
+        )
+    details = [
+        f"{r['slug']} run {r['run_id']} ({r['batch_name']}): "
+        f"expected {r['expected_mentions']}, has {r['actual_mentions']}"
+        for r in rows
+    ]
+    return CheckResult(
+        "ai_run_completeness",
+        "fail",
+        f"{len(rows)} completed AI run(s) loaded a different number of mentions "
+        "than their CSV had.",
+        details,
+    )
+
+
+def check_ai_run_stuck_loading(conn) -> CheckResult:
+    """Is a batch load stuck mid-transaction — a crash that never reached 'completed'?
+
+    Mirrors check_transcript_race_selfheal's warn-then-fail-by-age shape. A 'loading'
+    row seconds old is a batch in flight, which is the system working; one older than a
+    single load attempt could possibly be is abandoned, and its episodes are waiting for
+    the next run to re-extract them. started_at is the only honest age signal here —
+    a loading row deliberately carries no completed_at.
+    """
+    rows = _rows(
+        conn,
+        """
+        SELECT r.id AS run_id, s.slug, r.batch_name,
+               EXTRACT(EPOCH FROM (NOW() - r.started_at)) / 60 AS minutes_pending
+        FROM ai_runs r
+        JOIN shows s ON s.id = r.show_id
+        WHERE r.status = 'loading'
+        ORDER BY r.started_at;
+        """,
+    )
+    if not rows:
+        return CheckResult(
+            "ai_run_stuck_loading",
+            "pass",
+            "No batch load is stuck mid-transaction.",
+            [],
+        )
+
+    details = [
+        f"{r['slug']} run {r['run_id']} ({r['batch_name']}): "
+        f"{float(r['minutes_pending'] or 0):.0f}m in 'loading'"
+        for r in rows
+    ]
+    oldest = max(float(r["minutes_pending"] or 0) for r in rows)
+    if oldest > AI_RUN_LOADING_FAIL_MINUTES:
+        stuck = [r for r in rows if float(r["minutes_pending"] or 0) > AI_RUN_LOADING_FAIL_MINUTES]
+        return CheckResult(
+            "ai_run_stuck_loading",
+            "fail",
+            f"{len(stuck)} batch load(s) still 'loading' more than "
+            f"{AI_RUN_LOADING_FAIL_MINUTES} minutes after starting — abandoned, not in "
+            "progress; their episodes have no mentions and need a re-run.",
+            details,
+        )
+    if oldest > AI_RUN_LOADING_WARN_MINUTES:
+        return CheckResult(
+            "ai_run_stuck_loading",
+            "warn",
+            f"{len(rows)} batch load(s) in 'loading', the oldest {oldest:.0f}m in — "
+            "past a single load attempt's timeout, so probably not still running.",
+            details,
+        )
+    # A batch loading right now is the system working. Reporting it as a warning every
+    # time the pulse overlaps the entities run is how an alert stops meaning anything.
+    return CheckResult(
+        "ai_run_stuck_loading",
+        "pass",
+        f"{len(rows)} batch load(s) in flight; none older than "
+        f"{AI_RUN_LOADING_WARN_MINUTES} minutes.",
+        details,
+    )
+
+
 def check_transcript_race_selfheal(conn) -> CheckResult:
     """Is the transcript-race self-heal keeping up?
 
@@ -1107,6 +1234,8 @@ def run_checks(conn, include_feed_check: bool = False) -> list[CheckResult]:
         check_episode_freshness(conn),
         check_notion_sync_freshness(conn),
         check_ai_daily_extraction(conn),
+        check_ai_run_completeness(conn),
+        check_ai_run_stuck_loading(conn),
         check_transcript_race_selfheal(conn),
         check_ai_mention_fields(conn),
         check_sponsor_share(conn),
