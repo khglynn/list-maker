@@ -110,7 +110,15 @@ def get_show_id(conn, show_slug: str) -> int:
         cur.execute("SELECT id FROM shows WHERE slug = %s LIMIT 1;", (show_slug,))
         row = cur.fetchone()
         if not row:
-            raise RuntimeError(f"Show slug not found: {show_slug}")
+            # exit 2 = deterministic; the orchestrator must not retry it (see
+            # run_new_episodes.DETERMINISTIC_EXIT_CODE). Inline rather than a
+            # `except RuntimeError` handler in __main__, because RuntimeError is ALSO
+            # how finalize_run_completed reports a row-count anomaly from inside the
+            # batch transaction — and that one must keep its retry, since the retry
+            # deleting and replacing the 'loading' row is the whole point of the
+            # transactional load. A type-based handler would silently take that away.
+            print(f"Show slug not found: {show_slug}", file=sys.stderr)
+            sys.exit(2)
         return int(row["id"])
 
 
@@ -528,6 +536,11 @@ def insert_mention(
     transcript_id = transcript_map.get(episode_id)
     entity_type = normalize_entity_type(row["entity_type"])
 
+    # An empty cell is an UNKNOWN confidence, and it stays unknown: SQL NULL, never a
+    # default. Since 2026-09-03 the extractor writes an empty cell whenever the model
+    # omitted or mangled the field, instead of fabricating 0.5 — a number nobody could
+    # tell apart from a model that really said 0.5. This line was written defensively
+    # before any caller could produce an empty cell; it is now the live path.
     confidence = float(row["confidence"]) if row["confidence"] else None
     is_editorial = row["is_editorial"].strip().lower() == "true"
     sponsor_source = normalize_sponsor_source(row.get("sponsor_source"))
@@ -686,6 +699,9 @@ def main() -> None:
     batch_dir = Path(args.batch_dir).expanduser().resolve()
     manifest_path = batch_dir / "batch_manifest.json"
     mentions_path = batch_dir / "mentions.csv"
+    # Both of these, and the unknown-slug refusal below, run BEFORE get_db_connection()
+    # — which is what makes it safe for __main__ to map FileNotFoundError to exit 2
+    # (deterministic, not retried). Nothing inside the transaction can raise it.
     if not manifest_path.exists():
         raise FileNotFoundError(f"Missing batch manifest: {manifest_path}")
     if not mentions_path.exists():
@@ -830,6 +846,17 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
+    except FileNotFoundError as exc:
+        # A missing batch manifest or mentions.csv will still be missing on the next
+        # attempt: deterministic (exit 2), so run_script reports it instead of retrying
+        # twice. Safe as a type handler because both raises happen before the database
+        # connection is opened — nothing inside the batch transaction can raise this.
+        print(f"Missing input file: {exc}", file=sys.stderr)
+        sys.exit(2)
     except Exception as exc:
+        # Everything else — including any database error that rolled the batch back —
+        # exits 1 and IS retried. That retry is what makes the transactional load work:
+        # the next attempt's delete_existing_run clears the abandoned 'loading' row and
+        # re-runs the batch whole. Do not widen this into exit 2.
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)

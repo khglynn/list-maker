@@ -724,7 +724,7 @@ class _MainConn:
         self.closed = True
 
 
-def _run_main(monkeypatch, tmp_path, conn) -> None:
+def _run_main(monkeypatch, tmp_path, conn, rows=None) -> None:
     import sys
 
     from pipeline.scrapers.ai_daily import load_entity_batch as leb
@@ -734,7 +734,8 @@ def _run_main(monkeypatch, tmp_path, conn) -> None:
         encoding="utf-8",
     )
     header = ",".join(_csv_row().keys())
-    rows = [_csv_row(canonical_name="Cursor"), _csv_row(canonical_name="Claude Code")]
+    if rows is None:
+        rows = [_csv_row(canonical_name="Cursor"), _csv_row(canonical_name="Claude Code")]
     body = "\n".join(",".join(r[k] for k in _csv_row()) for r in rows)
     (tmp_path / "mentions.csv").write_text(f"{header}\n{body}\n", encoding="utf-8")
 
@@ -791,3 +792,115 @@ def test_main_leaves_a_loading_row_and_no_mentions_when_a_row_crashes(
     assert conn.rolled_back is True
     assert conn.closed is True
     assert not any("SET status = 'completed'" in s for s, _ in conn.cur.calls)
+
+
+# --- an unknown confidence survives the CSV as SQL NULL (2026-09-03) ---------------
+
+
+# Columns of the ai_mentions INSERT whose VALUES are literals, not placeholders.
+_INSERT_LITERAL_COLUMNS = {
+    "mention_count", "link_candidates", "review_status", "created_at", "updated_at",
+}
+
+
+def _bound_mention_value(conn, column: str):
+    """The value the ai_mentions INSERT actually binds to `column`.
+
+    Derived from the statement's own column list minus the literal-valued columns, so
+    it follows a column reorder instead of pinning a magic index — and the length
+    assertion below fails loudly if that mapping ever stops lining up.
+    """
+    sql, params = next(
+        (s, p) for s, p in conn.cur.calls if "INSERT INTO ai_mentions" in s
+    )
+    columns = [c.strip() for c in sql.split("(", 1)[1].split(")", 1)[0].split(",")]
+    bound = [c for c in columns if c not in _INSERT_LITERAL_COLUMNS]
+    assert len(bound) == len(params), f"{len(bound)} columns vs {len(params)} params"
+    return params[bound.index(column)]
+
+
+def test_an_empty_confidence_cell_is_written_as_null(monkeypatch, tmp_path) -> None:
+    """The other end of the extractor's honest NULL. An empty cell must reach the
+    column as None — not 0.0, not 0.5, not the string "". ai_mentions.confidence is
+    nullable with no CHECK (verified against Neon, 2026-09-03), so NULL is storable."""
+    conn = _MainConn()
+    _run_main(monkeypatch, tmp_path, conn, rows=[_csv_row(confidence="")])
+
+    assert _bound_mention_value(conn, "confidence") is None
+
+
+def test_a_real_zero_confidence_is_not_mistaken_for_missing(monkeypatch, tmp_path) -> None:
+    """"0.0000" is falsy as a float but not as a string, and the loader tests the
+    STRING — so a model that genuinely said zero is stored as 0.0, not NULL. Pinned
+    because the obvious "simplification" (float() first, then truthiness) breaks it."""
+    conn = _MainConn()
+    _run_main(monkeypatch, tmp_path, conn, rows=[_csv_row(confidence="0.0000")])
+
+    assert _bound_mention_value(conn, "confidence") == 0.0
+
+
+# --- exit codes: only pre-transaction failures are deterministic -------------------
+
+
+def test_missing_mentions_csv_raises_before_the_database_is_touched(
+    monkeypatch, tmp_path
+) -> None:
+    """__main__ maps FileNotFoundError to exit 2 (deterministic, not retried). That is
+    only safe because both raises happen before get_db_connection — if a file check
+    ever moves inside the transaction, this test is what should fail."""
+    import sys
+
+    import pytest
+
+    from pipeline.scrapers.ai_daily import load_entity_batch as leb
+
+    (tmp_path / "batch_manifest.json").write_text(json.dumps({}), encoding="utf-8")
+    monkeypatch.setattr(leb, "load_environment", lambda repo_root: None)
+
+    def explode() -> None:
+        raise AssertionError("the database must not be reached")
+
+    monkeypatch.setattr(leb, "get_db_connection", explode)
+    monkeypatch.setattr(
+        sys, "argv",
+        ["load_entity_batch.py", "--batch-dir", str(tmp_path), "--show-slug", "x"],
+    )
+    with pytest.raises(FileNotFoundError, match="Missing mentions.csv"):
+        leb.main()
+
+
+def test_unknown_show_slug_exits_deterministically(monkeypatch, tmp_path) -> None:
+    """A slug that isn't a show fails identically on every attempt — exit 2, refused
+    before a single write."""
+    import pytest
+
+    class _NoShowCursor(_MainCursor):
+        def fetchone(self):
+            return None  # the shows lookup misses
+
+    conn = _MainConn()
+    conn.cur = _NoShowCursor()
+
+    with pytest.raises(SystemExit) as exc:
+        _run_main(monkeypatch, tmp_path, conn)
+    assert exc.value.code == 2
+    assert not any("INSERT INTO ai_runs" in s for s, _ in conn.cur.calls)
+
+
+def test_a_rolled_back_batch_is_retryable_not_deterministic(monkeypatch, tmp_path) -> None:
+    """THE hard rule of PR 3 + PR 4 together. A database error that rolls the batch back
+    must exit 1 and be retried, because the retry is what clears the abandoned 'loading'
+    row and re-runs the batch whole. If a future change routes RuntimeError (or any
+    database error) to exit 2, run_script stops retrying and the row is stranded."""
+    import pytest
+
+    conn = _MainConn(raise_on_sql="INSERT INTO ai_mentions", nth=2)
+    with pytest.raises(Exception) as exc:
+        _run_main(monkeypatch, tmp_path, conn)
+
+    assert conn.rolled_back is True
+    # __main__ maps exactly one type to exit 2. What escapes here is not it, so this
+    # falls through to the exit-1 handler and run_script retries — which is what
+    # replaces the abandoned 'loading' row.
+    assert not isinstance(exc.value, FileNotFoundError)
+    assert not isinstance(exc.value, SystemExit)
