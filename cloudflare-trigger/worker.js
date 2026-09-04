@@ -298,8 +298,13 @@ async function verifyPreviousDispatches(env, now) {
   // The missing-PAT case already alerts on the dispatch side; a second alarm for
   // one root cause is how a channel learns to ignore both.
   if (!env.GH_PAT) return [];
-  // No pagination: the key set is bounded by (dispatches per day × the 3-day TTL),
-  // about a dozen, well under KV's 1000-key page.
+  // No pagination: the key set is bounded by (dispatches per day × the 3-day TTL) —
+  // about a dozen, well under KV's 1000-key page. Note what that bound rests on: the
+  // cron contributes at most 4 a day, but the manual ?token= trigger is unbounded, so
+  // someone hammering it would make this loop iterate (a KV read each) past the
+  // VERIFY_MAX_PER_PASS cap below, which only limits how many are JUDGED. Left as is
+  // — the records still expire on their own, and the failure is self-inflicted and
+  // has never happened. If it ever does, page the listing instead of widening the cap.
   const listing = await withDispatchLog(env, "list dispatches", (kv) =>
     kv.list({ prefix: "dispatch:" })
   );
