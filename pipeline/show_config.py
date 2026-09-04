@@ -50,6 +50,25 @@ class ShowConfig:
     # loudly — TAL's 10-week gap in 2026-07 would have tripped it on day three.
     feed_grace_days: int = 2
 
+    # WHICH IDENTITY THIS SHOW'S `episodes.url` CARRIES — i.e. whether the feed check can
+    # compare the FEED's episode ids against the ids we hold, or must fall back to
+    # comparing dates. It is a fact about WHO WRITES THE ROW, not about who we ask for a
+    # second source, and the two are not the same show-by-show:
+    #   "taddy_uuid" — the Taddy importer writes the row, so url is
+    #       taddy_episode_url(uuid). True for the entity/media shows (run_new_episodes'
+    #       step_import) AND for TAL, whose discovery step runs that same importer
+    #       (run_pipeline.discover_tal_episodes).
+    #   "rss_guid"  — the Gabfest importer writes the row, so url is the Megaphone <guid>
+    #       (scrapers/gabfest/import_gabfest.episode_url).
+    #   None        — a scraper writes urls the feed knows nothing about. SOP is the one
+    #       podcast in this bucket: its rows come from switchedonpop.com/episodes/... via
+    #       scrapers/sop/scrape.py, while Taddy is only its second source. Measured
+    #       2026-09-03 against live Neon: 13 of the 15 episodes in SOP's Taddy feed carry
+    #       no matching url — every one of them held under its website url — so an
+    #       identity comparison there would report a 13-episode BEHIND every single day.
+    #       Curated sources are None too: no feed at all (see curated_show_slugs).
+    episode_identity: Optional[str] = None
+
     # Taddy
     taddy_uuid: Optional[str] = None
     fallback_website_url: Optional[str] = None
@@ -76,6 +95,9 @@ SHOWS: dict[str, ShowConfig] = {
         # Publishes Tuesdays; imported Wed + Fri. By Saturday both runs have had their
         # chance, so a Tuesday episode still missing then is a real miss.
         feed_grace_days=4,
+        # Deliberately no episode_identity: scrapers/sop/scrape.py writes
+        # switchedonpop.com/episodes/... urls, so Taddy uuids match almost nothing we
+        # hold. The feed check compares DATES for SOP (see ShowConfig.episode_identity).
         taddy_uuid="97ed51a4-460e-4dc8-8db5-30df96ad59bc",
         fallback_website_url="https://switchedonpop.com",
         spotify_playlist_id="0cEVeX4pdHf5RJOiTRzgxX",
@@ -90,6 +112,9 @@ SHOWS: dict[str, ShowConfig] = {
         # Publishes Sun/Mon; imported Mondays (same minute as the daily check, so the
         # Monday check can't see Monday's import). Missing by Wednesday = Monday missed.
         feed_grace_days=2,
+        # run_pipeline.discover_tal_episodes runs the Taddy importer, so TAL rows do
+        # carry the Taddy uuid url — unlike SOP.
+        episode_identity="taddy_uuid",
         taddy_uuid="d682a935-ad2d-46ee-a0ac-139198b83bcc",
         fallback_website_url="https://www.thisamericanlife.org/podcast/rss.xml",
         spotify_playlist_id="3d7fjfrTTKvrl7VHv5JzIz",
@@ -101,6 +126,7 @@ SHOWS: dict[str, ShowConfig] = {
         name="The AI Daily Brief",
         show_id=3,
         content_types=["entities"],
+        episode_identity="taddy_uuid",
         taddy_uuid="60fabbea-f51e-4c8b-82b4-1cbd57fe8c02",
         fallback_website_url="https://www.aidailybrief.ai/",
         store_raw_content=True,
@@ -112,6 +138,7 @@ SHOWS: dict[str, ShowConfig] = {
         name="Pop Culture Happy Hour",
         show_id=11,
         content_types=["mixed"],
+        episode_identity="taddy_uuid",
         taddy_uuid="81b2a312-6976-4d22-bc54-4e3991fee332",
         fallback_website_url="https://www.npr.org/podcasts/510282/pop-culture-happy-hour",
         store_raw_content=True,
@@ -124,6 +151,7 @@ SHOWS: dict[str, ShowConfig] = {
         name="Hard Fork",
         show_id=48,
         content_types=["entities"],
+        episode_identity="taddy_uuid",
         taddy_uuid="ff1d51d4-4fc9-4161-b23b-f0079f6dd5a0",
         fallback_website_url="https://www.nytimes.com/column/hard-fork",
         store_raw_content=True,
@@ -136,6 +164,7 @@ SHOWS: dict[str, ShowConfig] = {
         show_id=54,
         content_types=["media"],
         importer="gabfest_rss",
+        episode_identity="rss_guid",
         taddy_uuid=None,  # Taddy won't transcribe Gabfest (iHeart rights) — Megaphone RSS show-notes instead
         fallback_website_url="https://feeds.megaphone.fm/slatesculturegabfest",
         # Slate ended the show: final episode 2026-07-01, "So Long, and Thanks for All
@@ -213,6 +242,25 @@ TRANSCRIPT_NOTION_SHOWS: tuple[str, ...] = ("ai-daily-brief", "hard-fork", "save
 # --target blog-posts). agentic-research is deliberately absent: those docs'
 # canonical home is the Obsidian vault — only their MENTIONS go to Notion.
 BLOG_NOTION_SHOWS: tuple[str, ...] = ("openai-blog", "anthropic-blog", "saved-articles")
+
+
+# The one place this format string lives. The Taddy importer writes it into
+# `episodes.url` (scrapers/taddy/import_transcripts.episode_url_key, which delegates
+# here) and the feed check rebuilds it from the feed's uuid to ask "do we hold this
+# episode?" — two readers of the same identity, so it must not exist twice.
+TADDY_EPISODE_URL_PREFIX = "https://api.taddy.org/podcast-episode/"
+
+
+def taddy_episode_url(uuid: str) -> str:
+    """The exact `episodes.url` the Taddy importer writes for this episode uuid.
+
+    Identity, not a link: the uuid is unique per episode where a show's websiteUrl may
+    not be (Hard Fork returns one show-level url for every episode), and it is stable
+    when Taddy re-dates an episode — the upsert is ON CONFLICT (url) with
+    COALESCE on publish_date, so a re-date moves the date and never the identity.
+    tests/test_feed_check.py pins this against the importer so they cannot drift.
+    """
+    return f"{TADDY_EPISODE_URL_PREFIX}{uuid}"
 
 
 def get_show(slug: str) -> ShowConfig:
