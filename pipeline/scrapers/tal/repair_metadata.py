@@ -42,16 +42,16 @@ def load_environment() -> None:
 
 
 def get_db_connection():
-    try:
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-    except ImportError as exc:
-        raise RuntimeError("Missing dependency: psycopg2-binary") from exc
+    """Connect to Neon database (delegates to common.get_db_connection)."""
+    # This is a manual tool run by hand, not on the cron; its private copy had no connect
+    # timeout, keepalives or retry — exactly the hand-run that would rediscover the 08-31
+    # 41-minute hang. Lazy import so this file still runs as a script from its own directory.
+    pipeline_dir = str(Path(__file__).resolve().parents[2])
+    if pipeline_dir not in sys.path:
+        sys.path.insert(0, pipeline_dir)
+    from common import get_db_connection as shared_connection
 
-    db_url = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL")
-    if not db_url:
-        raise RuntimeError("DATABASE_URL (or NEON_DATABASE_URL) is required")
-    return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+    return shared_connection()
 
 
 def extract_meta_content(markup: str, key: str) -> str | None:

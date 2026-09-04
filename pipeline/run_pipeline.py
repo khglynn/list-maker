@@ -30,7 +30,7 @@ import os
 import subprocess
 import sys
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -64,6 +64,57 @@ SHOWS = {
 # Pipeline Steps
 # =============================================================================
 
+# The one key any step's summary uses to say "I attempted N units of work and could not
+# complete them." Raising is for "this step cannot proceed"; this is for partial loss —
+# the step did real work, the rest of the pipeline should still run on what came back,
+# and the run must still end RED so the failure Slack fires (pipeline.yml's notify step
+# is `if: failure()`, so exit 0 means silence).
+#
+# Without this, a Monday where Firecrawl failed on every page exited 0: scrape_new_episodes
+# returned a summary listing the failures, nothing raised, and the only signal was a line
+# in a log nobody reads. That is the same shape as the eight-month TAL outage this arc
+# exists to close — "found no work" and "could not do the work" reported identically.
+#
+# Any step can set it. Two do: the scrape (Firecrawl failures) and, since 2026-09-04,
+# the playlist sync (one per dropped batch, one for a truncated playlist read —
+# sync_playlist.STEP_FAILURE_KEY, which spells this same string because importing it
+# from here would be circular).
+STEP_FAILURE_KEY = "failures"
+
+
+def _utc_now_iso() -> str:
+    """UTC timestamp, byte-identical to the datetime.utcnow().isoformat() it replaced.
+
+    Same naive-with-no-offset string, so the JSON summary pipeline.yml prints does not
+    change shape. utcnow() is deprecated in 3.12 and these three calls were the only
+    DeprecationWarnings in the suite once the run_pipeline tests below began exercising
+    this function — a clean run is worth keeping clean.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+
+
+def record_step_failures(summary: dict, step: str, result) -> None:
+    """Mark the run degraded when a step reports partial failures — WITHOUT aborting it.
+
+    Deliberately does not return early or raise: the episodes that did come back still
+    deserve to be parsed, inserted, matched and synced. Red and useful, not red instead
+    of useful.
+
+    A step that reports 0 (or omits the key) is untouched, which is what keeps a
+    permanently-unresolvable row — TAL's row 7422 has no page anywhere — from reddening
+    every run forever. Those are printed and counted separately as `unresolved`; an alert
+    that can never be cleared is noise, and noise is how a real alert gets ignored.
+    """
+    count = (result or {}).get(STEP_FAILURE_KEY) or 0
+    if not count:
+        return
+    summary["success"] = False
+    summary.setdefault("step_failures", []).append({"step": step, STEP_FAILURE_KEY: count})
+    if not summary.get("error"):
+        summary["error"] = f"{step}: {count} item(s) failed"
+    print(f"\n  ⚠ {step}: {count} item(s) failed — run will exit non-zero")
+
+
 def count_tal_episodes() -> int:
     """Row count for TAL, used to report how many episodes discovery actually added."""
     conn = get_db_connection()
@@ -79,7 +130,7 @@ def discover_tal_episodes(dry_run: bool, limit: int = 25) -> dict:
     """Insert newly published TAL episodes into `episodes` via the Taddy importer.
 
     TAL had no discovery step at all. Its scraper starts from
-    `get_unscraped_episodes` (scrapers/tal/fetch.py:55), which reads rows ALREADY in
+    `get_episodes_missing_songs` (scrapers/tal/fetch.py), which reads rows ALREADY in
     the table — so it can only fill songs for episodes something else inserted. SOP
     discovers by diffing its episode-list page (scrapers/sop/scrape.py:271), which is
     why SOP stayed current while TAL silently froze at 2026-05-17 and drifted 6
@@ -88,6 +139,14 @@ def discover_tal_episodes(dry_run: bool, limit: int = 25) -> dict:
 
     The Taddy importer is already the discovery mechanism for every show with a
     taddy_uuid, and it upserts ON CONFLICT (url), so re-running is safe.
+
+    IT ALSO STAMPS `scraped_at` (import_transcripts.py:364 and :397) — on the INSERT
+    that creates the row, and on the title+date dedup UPDATE of a row that already
+    existed. That is harmless for the shows this importer was written for, and it was
+    NOT harmless here: it emptied the TAL song scrape's old `scraped_at IS NULL` queue
+    from the day this step was added (2026-08-02) until the queue was rewritten to ask
+    "has this episode got songs" instead. Adding a discovery step to another
+    website-scraped show means checking what its scraper keys on first.
     """
     if dry_run:
         print("  [dry-run] would import new TAL episodes from Taddy")
@@ -186,7 +245,7 @@ def run_pipeline(
     if not show:
         raise ValueError(f"Unknown show_id: {show_id}. Valid: {list(SHOWS.keys())}")
 
-    started_at = datetime.utcnow().isoformat()
+    started_at = _utc_now_iso()
     print("\n" + "=" * 60)
     print(f"PIPELINE: {show['name']} (show_id={show_id})")
     print(f"Mode: {'DRY RUN' if dry_run else 'LIVE'}")
@@ -208,6 +267,7 @@ def run_pipeline(
         print(f"\n--- Step 1: Scrape new episodes ---")
         scrape_result = run_scrape(show_id, dry_run, yes)
         summary["steps"]["scrape"] = scrape_result
+        record_step_failures(summary, "scrape", scrape_result)
     except Exception as e:
         summary["steps"]["scrape"] = {"error": str(e)}
         summary["success"] = False
@@ -223,6 +283,7 @@ def run_pipeline(
             print(f"\n--- Step 2: Match songs to Spotify ---")
             match_result = run_match(show_id, dry_run, cache_path)
             summary["steps"]["match"] = match_result
+            record_step_failures(summary, "match", match_result)
         except Exception as e:
             summary["steps"]["match"] = {"error": str(e)}
             summary["success"] = False
@@ -236,6 +297,11 @@ def run_pipeline(
             print(f"\n--- Step 3: Sync Spotify playlist ---")
             sync_result = run_sync(show_id, dry_run, cache_path)
             summary["steps"]["sync"] = sync_result
+            # Live since 2026-09-04: sync_show reports one `failures` per dropped batch
+            # and one for a truncated playlist read, so a run that adds 150 of 250
+            # tracks exits non-zero instead of printing "Done!" and reporting success.
+            # Nothing had to change here to pick that up — the point of one shared key.
+            record_step_failures(summary, "sync", sync_result)
         except Exception as e:
             summary["steps"]["sync"] = {"error": str(e)}
             summary["success"] = False
@@ -244,7 +310,7 @@ def run_pipeline(
             traceback.print_exc()
             return summary
 
-    summary["completed_at"] = datetime.utcnow().isoformat()
+    summary["completed_at"] = _utc_now_iso()
 
     # Print final summary
     print("\n" + "=" * 60)
@@ -265,6 +331,12 @@ def run_pipeline(
         if "discovered" in scrape:
             print(f"  Episodes discovered: {scrape['discovered']}")
         print(f"  Episodes scraped: {episodes_scraped}")
+        # Episodes we know need songs but could not find a page for (TAL only today).
+        # Printed only when non-zero, and printed at all because a skipped episode that
+        # nothing mentions is indistinguishable from an episode that didn't need doing —
+        # the exact confusion that let the TAL scrape sit dead for eight months.
+        if scrape.get("unresolved"):
+            print(f"  Episodes SKIPPED (no page URL found): {scrape['unresolved']}")
         print(f"  Songs found: {songs_found}")
         print(f"  Matched - HIGH: {match.get('high', 0)}, "
               f"MEDIUM: {match.get('medium', 0)}, "
@@ -384,7 +456,7 @@ def main():
         output = {
             "summaries": all_summaries,
             "all_success": not any_failed,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utc_now_iso(),
         }
         print("\n--- JSON SUMMARY ---")
         print(json.dumps(output, indent=2))

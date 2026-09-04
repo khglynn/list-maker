@@ -29,7 +29,6 @@ pipeline/
 │   │   ├── parse.py           # Parse episode pages
 │   │   ├── fill_songs.py      # Fill in song data
 │   │   ├── repair_metadata.py # Dry-run-first official metadata repair
-│   │   ├── scoring_match.py   # Match scoring tracks
 │   │   └── download_episode_art.py
 │   │
 │   ├── ai_daily/          # AI Daily Brief entity extraction
@@ -88,6 +87,7 @@ Current health policy:
 | Duplicates | Same show/title/date more than once | None |
 | Transcripts | AI Daily/PCHH must be complete; SOP/TAL latest transcript must stay fresh | Historic SOP/TAL transcript coverage can be partial |
 | AI Daily | Transcript without mentions, mention without transcript, completed run with zero mentions, a completed run holding fewer mentions than its CSV declared, a batch load abandoned in `loading` | Entity alias split candidates are warning-level until curated; a batch load in flight is a pass |
+| Music songs | A music show (any show with a Spotify playlist) that has published 3+ episodes over 21+ days without acquiring a single song — the show still runs, still exits 0, and produces nothing | One songless episode is normal (TAL reruns archive episodes with no music credits); the archive is out of scope entirely (only episodes newer than the last song-bearing one count); 2 episodes / 14 days is a warning; a show on break never trips it (no new episodes, no streak) and an ended show is skipped |
 
 Dry-run-first repair commands:
 
@@ -212,6 +212,15 @@ before the connection is opened) and exits inline for the unknown slug; its
 `RuntimeError` from `finalize_run_completed` stays retryable, and a malformed CSV that
 only fails once rows are being inserted stays exit 1 too, because at that point it
 cannot be told apart from a genuine database error without a new validation step.
+
+**A partial playlist sync is exit 1** (2026-09-04, Kevin's call). `sync_playlist.py`
+used to add 150 of 250 tracks, print `Done!` and exit 0. It now reports one `failures`
+per dropped batch — plus one if the playlist *read* was truncated, in which case it
+refuses to add anything at all, because the diff is the only dedup there is and a
+partial read makes it re-add tracks Spotify already holds. One, not two: a dropped batch
+is a Spotify blip and the next run adds what this one missed, so it *should* be retried.
+Both orchestrators see it — `run_pipeline` reads the `failures` key in-process through
+`record_step_failures`, and `run_new_episodes` shells out and reads the exit code.
 
 ---
 

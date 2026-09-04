@@ -62,7 +62,7 @@ Cascading source strategy (cheapest first): website show-notes → free transcri
 - `pipeline/scrapers/blog/import_blog.py` — blog storage primitive: Firecrawl scrape, `canonicalize_url` (the episodes.url dedup key), thin-scrape guard, metadata/URL-path date parsing.
 - `pipeline/scrapers/research/import_research.py` — local-only Agentic Research ingester (obsidian:// keys, infra-file filter).
 - `pipeline/search_transcripts.py` — Postgres FTS over transcripts (websearch_to_tsquery + ts_headline snippets).
-- `pipeline/data_health.py` — read-only health checks (transcript coverage, episode freshness/staleness, mention integrity…); Slacks on a failed check.
+- `pipeline/data_health.py` — read-only health checks (transcript coverage, episode freshness/staleness, mention integrity, song acquisition for the music shows…); Slacks on a failed check.
 - `evals/extraction/` — extraction eval harness (deterministic scorers, frozen baseline + gold fixtures, gated runner). The honest gradient for the one LLM step; see `evals/README.md`.
 - `cloudflare-trigger/` — the durable control plane: a Worker cron → GitHub `workflow_dispatch` for all three workflows.
 - `tests/` — pytest (110 tests): config drift, idempotency, retry, logging, staleness, extraction + load contracts, eval scorers, transcript chunking.

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from pipeline.data_health import (
     CheckResult,
@@ -1175,3 +1175,384 @@ def test_a_redated_legacy_row_is_reported_missing_on_purpose() -> None:
     assert _feed_episode_is_held(
         FeedEpisode("taddy:uuid-1", date(2024, 10, 17), "A Big Announcement"), identity_held
     ) is True
+
+
+# --- music silence: a show that stops producing SONGS (Phase 5 PR 7, 2026-09-04) ------
+#
+# The outage this block pins: TAL's website scrape stopped producing song rows in
+# January 2026, every Monday run reported success, and the health checks stayed green
+# for eight months because they watch EPISODES, not songs.
+
+
+def _music_check(monkeypatch, *, aggregate_rows, streak_rows, today, ended=frozenset()):
+    """Drive check_music_songs_still_arriving with both of its queries stubbed.
+
+    Dispatched by SQL content, not blanket-stubbed: the check makes TWO _rows calls (the
+    per-show aggregate, then the episodes in the streak) and a blanket stub would hand
+    the aggregate rows to the streak query — the test would keep passing while measuring
+    nothing. `ended_show_slugs` is patched because neither music show has ended in real
+    config, so that skip branch is otherwise unreachable.
+
+    Returns (result, calls) where calls is [(flattened_sql, params), ...].
+    """
+    import pipeline.data_health as dh
+
+    calls: list[tuple[str, object]] = []
+
+    def fake_rows(conn, sql, params=None):
+        flat = " ".join(sql.split())
+        calls.append((flat, params))
+        return streak_rows if "WITH anchor AS" in flat else aggregate_rows
+
+    monkeypatch.setattr(dh, "_rows", fake_rows)
+    monkeypatch.setattr(dh, "_today", lambda: today)
+    monkeypatch.setattr(dh, "ended_show_slugs", lambda: set(ended))
+    return dh.check_music_songs_still_arriving(conn=None), calls
+
+
+def _agg(
+    slug,
+    *,
+    newest_episode,
+    newest_with_songs,
+    oldest_episode=date(2011, 1, 1),
+    last_song_written=None,
+):
+    """One row as the per-show aggregate query returns it."""
+    return {
+        "slug": slug,
+        "newest_episode": newest_episode,
+        "oldest_episode": oldest_episode,
+        "newest_with_songs": newest_with_songs,
+        "last_song_written": last_song_written,
+    }
+
+
+def _streak(slug, *episodes):
+    """Rows as the streak query returns them, from (id, publish_date) pairs."""
+    return [
+        {"slug": slug, "id": ep_id, "publish_date": d, "title": f"Episode {ep_id}"}
+        for ep_id, d in episodes
+    ]
+
+
+def test_music_silence_fails_when_a_show_stops_acquiring_songs(monkeypatch) -> None:
+    """TAL as it actually stood on 2026-09-04: episodes arriving weekly, last song on
+    2026-05-10, thirteen episodes since with none, and every run green."""
+    result, _ = _music_check(
+        monkeypatch,
+        aggregate_rows=[
+            _agg(
+                "tal",
+                newest_episode=date(2026, 8, 31),
+                newest_with_songs=date(2026, 5, 10),
+                last_song_written=date(2026, 1, 13),
+            )
+        ],
+        streak_rows=_streak(
+            "tal",
+            (3040, date(2026, 5, 17)),
+            (7845, date(2026, 5, 18)),
+            (7421, date(2026, 6, 8)),
+            (7420, date(2026, 6, 22)),
+            (7419, date(2026, 7, 6)),
+            (7418, date(2026, 7, 13)),
+            (7417, date(2026, 7, 20)),
+            (7416, date(2026, 7, 27)),
+            (7526, date(2026, 8, 3)),
+            (7837, date(2026, 8, 10)),
+            (8168, date(2026, 8, 17)),
+            (8532, date(2026, 8, 24)),
+            (8843, date(2026, 8, 31)),
+        ),
+        today=date(2026, 9, 4),
+    )
+
+    assert result.status == "fail"
+    detail = next(d for d in result.details if d.startswith("tal:"))
+    assert "NO NEW SONGS in 117 days" in detail
+    assert "newest episode with songs 2026-05-10" in detail
+    # 13 ROWS, 12 distinct episodes: 3040 and 7845 are both "887: Two Is One, One
+    # Is None!". The predicate counts rows on purpose; the sentence says so.
+    assert "13 episode row(s) published since with none" in detail
+    assert "duplicate titles counted" in detail
+    # Ids, not just a count — the rule PR #44 set for every FAIL in this file.
+    assert "ep 3040 (2026-05-17)" in detail
+    # The diagnostic that separates "the scraper writes nothing" from "it writes, but
+    # only for episodes we already had".
+    assert "last song row written 2026-01-13" in detail
+    # Slack only ever sees the summary, so the show has to be named there too.
+    assert "tal" in result.summary
+
+
+def test_music_silence_passes_for_a_show_that_is_current(monkeypatch) -> None:
+    """SOP on 2026-09-04: the newest episode is also the newest one with songs."""
+    result, _ = _music_check(
+        monkeypatch,
+        aggregate_rows=[
+            _agg(
+                "sop",
+                newest_episode=date(2026, 9, 1),
+                newest_with_songs=date(2026, 9, 1),
+                last_song_written=date(2026, 9, 2),
+            )
+        ],
+        streak_rows=[],
+        today=date(2026, 9, 4),
+    )
+
+    assert result.status == "pass"
+    assert any("sop: songs current" in d for d in result.details)
+
+
+def test_music_silence_ignores_a_single_songless_rerun(monkeypatch) -> None:
+    """TAL reruns archive episodes that genuinely carry no music credits. One of them
+    must never turn the run red — that is why the episode count is a threshold and not
+    a trigger."""
+    result, _ = _music_check(
+        monkeypatch,
+        aggregate_rows=[
+            _agg(
+                "tal",
+                newest_episode=date(2026, 8, 31),
+                newest_with_songs=date(2026, 8, 24),
+                last_song_written=date(2026, 8, 25),
+            )
+        ],
+        streak_rows=_streak("tal", (8843, date(2026, 8, 31))),
+        today=date(2026, 9, 30),  # 37 days: well past the day window, streak of 1
+    )
+
+    assert result.status == "pass"
+    assert any("1 episode row(s) since with none" in d for d in result.details)
+
+
+def test_music_silence_leaves_the_archive_alone(monkeypatch) -> None:
+    """213 of TAL's episodes hold no songs and most are archive episodes with no music
+    credits. They sit BEHIND the anchor, so they never enter the streak — and the SQL is
+    what guarantees that, so pin the predicate as well as the behaviour."""
+    result, calls = _music_check(
+        monkeypatch,
+        aggregate_rows=[
+            _agg(
+                "tal",
+                newest_episode=date(2026, 8, 31),
+                newest_with_songs=date(2026, 8, 31),
+                oldest_episode=date(1995, 11, 17),
+                last_song_written=date(2026, 8, 31),
+            )
+        ],
+        streak_rows=[],
+        today=date(2026, 9, 4),
+    )
+
+    assert result.status == "pass"
+    streak_sql = next(s for s, _ in calls if "WITH anchor AS" in s)
+    # Only episodes NEWER than the newest one with songs may enter the streak.
+    assert "e.publish_date > a.newest_with_songs" in streak_sql
+
+
+def test_music_silence_stays_quiet_inside_the_day_window(monkeypatch) -> None:
+    """Three episodes in eleven days is a burst, not a drought — SOP published three in
+    three days in June 2026. The day window is what stops the episode count firing."""
+    result, _ = _music_check(
+        monkeypatch,
+        aggregate_rows=[
+            _agg(
+                "sop",
+                newest_episode=date(2026, 6, 18),
+                newest_with_songs=date(2026, 6, 7),
+                last_song_written=date(2026, 6, 7),
+            )
+        ],
+        streak_rows=_streak(
+            "sop",
+            (5186, date(2026, 6, 16)),
+            (5185, date(2026, 6, 17)),
+            (5342, date(2026, 6, 18)),
+        ),
+        today=date(2026, 6, 18),  # 11 days since the anchor: under both windows
+    )
+
+    assert result.status == "pass"
+
+
+def test_music_silence_warns_one_tier_before_it_fails(monkeypatch) -> None:
+    """SOP's worst measured LIVE run: three songless ROWS spanning 14 days, peaking
+    2026-02-10 — two distinct episodes (1384 and 2871 share a title) plus 3019. Worth a
+    glance, not worth a Slack: only failures Slack and only failures exit non-zero."""
+    result, _ = _music_check(
+        monkeypatch,
+        aggregate_rows=[
+            _agg(
+                "sop",
+                newest_episode=date(2026, 2, 10),
+                newest_with_songs=date(2026, 1, 27),
+                last_song_written=date(2026, 1, 27),
+            )
+        ],
+        streak_rows=_streak(
+            "sop",
+            (1384, date(2026, 2, 3)),
+            (2871, date(2026, 2, 6)),
+            (3019, date(2026, 2, 10)),
+        ),
+        today=date(2026, 2, 10),  # 14 days: over the WARN window, under the FAIL one
+    )
+
+    assert result.status == "warn"
+    assert any("no new songs in 14 days" in d for d in result.details)
+
+
+def test_music_silence_thresholds_are_inclusive_on_both_axes(monkeypatch) -> None:
+    """The exact boundary in both directions — the pair a mutation would move."""
+    from pipeline.data_health import (
+        MUSIC_SILENCE_FAIL_DAYS,
+        MUSIC_SILENCE_FAIL_EPISODES,
+        MUSIC_SILENCE_WARN_DAYS,
+        MUSIC_SILENCE_WARN_EPISODES,
+    )
+
+    assert (MUSIC_SILENCE_FAIL_EPISODES, MUSIC_SILENCE_FAIL_DAYS) == (3, 21)
+    assert (MUSIC_SILENCE_WARN_EPISODES, MUSIC_SILENCE_WARN_DAYS) == (2, 14)
+
+    def run(streak_len, days):
+        anchor = date(2026, 5, 10)
+        return _music_check(
+            monkeypatch,
+            aggregate_rows=[
+                _agg("tal", newest_episode=anchor, newest_with_songs=anchor)
+            ],
+            streak_rows=_streak(
+                "tal", *[(9000 + i, date(2026, 5, 20)) for i in range(streak_len)]
+            ),
+            today=anchor + timedelta(days=days),
+        )[0].status
+
+    assert run(3, 21) == "fail"    # exactly on both FAIL thresholds
+    assert run(3, 20) == "warn"    # one day short — the day axis holds it back
+    assert run(2, 21) == "warn"    # one episode short — the episode axis does
+    assert run(2, 14) == "warn"    # exactly on both WARN thresholds
+    assert run(2, 13) == "pass"    # one day under the warn window
+    assert run(1, 400) == "pass"   # one songless episode is never an alarm
+
+
+def test_music_silence_fails_a_show_that_has_never_acquired_a_song(monkeypatch) -> None:
+    """A music show whose scraper has never produced a row is broken, not new. With no
+    anchor the show's own oldest episode is the only honest 'since'."""
+    result, _ = _music_check(
+        monkeypatch,
+        aggregate_rows=[
+            _agg(
+                "sop",
+                newest_episode=date(2026, 9, 1),
+                newest_with_songs=None,
+                oldest_episode=date(2026, 1, 1),
+                last_song_written=None,
+            )
+        ],
+        streak_rows=_streak(
+            "sop",
+            (1, date(2026, 1, 1)),
+            (2, date(2026, 2, 1)),
+            (3, date(2026, 3, 1)),
+        ),
+        today=date(2026, 9, 4),
+    )
+
+    assert result.status == "fail"
+    detail = next(d for d in result.details if d.startswith("sop:"))
+    assert "NO song has ever been acquired" in detail
+    assert "no song rows at all" in detail
+
+
+def test_music_silence_survives_a_show_with_no_dated_episodes(monkeypatch) -> None:
+    """Two NULL shapes, neither of which may crash the daily run: a row with no dates to
+    measure against, and a show absent from the aggregate entirely."""
+    result, _ = _music_check(
+        monkeypatch,
+        aggregate_rows=[
+            _agg("sop", newest_episode=None, newest_with_songs=None, oldest_episode=None)
+        ],
+        streak_rows=[],
+        today=date(2026, 9, 4),
+    )
+
+    assert result.status == "pass"
+    assert any("sop: no dated episodes to measure against" in d for d in result.details)
+    # tal never appeared in the aggregate at all.
+    assert any("tal: no dated episodes yet (skipped)" in d for d in result.details)
+
+
+def test_music_silence_skips_a_show_that_has_ended(monkeypatch) -> None:
+    """A concluded show can never acquire another song; failing forever is how an alert
+    stops meaning anything (same reasoning as check_episode_freshness)."""
+    result, _ = _music_check(
+        monkeypatch,
+        aggregate_rows=[
+            _agg("tal", newest_episode=date(2026, 8, 31), newest_with_songs=date(2020, 1, 1))
+        ],
+        streak_rows=_streak("tal", *[(9000 + i, date(2026, 8, 1)) for i in range(9)]),
+        today=date(2026, 9, 4),
+        ended={"tal"},
+    )
+
+    assert result.status == "pass"
+    assert any("tal: show ended" in d for d in result.details)
+
+
+def test_music_silence_watches_the_spotify_shows_and_asks_neon_for_only_those() -> None:
+    """Derived from show_config, never a hardcoded pair of playlist ids — so onboarding
+    a third music show cannot silently leave it unwatched."""
+    from pipeline.data_health import MUSIC_SILENCE_SHOWS
+    from pipeline.show_config import shows_with_spotify
+
+    assert MUSIC_SILENCE_SHOWS == ("sop", "tal")
+    assert MUSIC_SILENCE_SHOWS == tuple(sorted(c.slug for c in shows_with_spotify()))
+    for other in ("ai-daily-brief", "pchh", "hard-fork", "openai-blog", "culture-gabfest"):
+        assert other not in MUSIC_SILENCE_SHOWS
+
+
+def test_music_silence_scopes_both_queries_to_the_music_shows(monkeypatch) -> None:
+    """Both queries must be scoped, not just one: an unscoped streak query would drag
+    every entity show's episodes through a check about music."""
+    _, calls = _music_check(
+        monkeypatch,
+        aggregate_rows=[],
+        streak_rows=[],
+        today=date(2026, 9, 4),
+    )
+
+    assert len(calls) == 2
+    for sql, params in calls:
+        assert "s.slug = ANY(%s)" in sql
+        assert params == [["sop", "tal"]]
+
+
+def test_music_silence_fail_caps_the_ids_it_lists(monkeypatch) -> None:
+    """A show that has never scraped would otherwise dump hundreds of ids into Slack."""
+    result, _ = _music_check(
+        monkeypatch,
+        aggregate_rows=[
+            _agg("tal", newest_episode=date(2026, 9, 1), newest_with_songs=date(2026, 1, 1))
+        ],
+        streak_rows=_streak("tal", *[(9000 + i, date(2026, 2, 1)) for i in range(25)]),
+        today=date(2026, 9, 4),
+    )
+
+    detail = next(d for d in result.details if d.startswith("tal:"))
+    assert "25 episode row(s) published since with none" in detail  # count stays exact
+    assert "+15 more" in detail                                  # only the naming is capped
+    assert "ep 9010" not in detail
+
+
+def test_music_silence_is_in_the_standard_check_set() -> None:
+    """A check nothing runs is a check that does not exist — and this one only earns its
+    keep by Slacking from the daily --strict run in entities.yml."""
+    import inspect
+
+    from pipeline import data_health
+
+    assert "check_music_songs_still_arriving(conn)" in inspect.getsource(
+        data_health.run_checks
+    )
