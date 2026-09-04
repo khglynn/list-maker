@@ -296,7 +296,9 @@ def record_empty_batch(
     return run_id, episodes
 
 
-def delete_existing_run(conn, *, show_id: int, batch_name: str) -> int:
+def delete_existing_run(
+    conn, *, show_id: int, batch_name: str, commit: bool = True
+) -> int:
     """Make batch (re)loads idempotent: remove any prior run — and its mentions —
     for this (show_id, batch_name) before inserting a fresh one. A re-load thus
     replaces rather than duplicates, and a partially-loaded run self-heals on the
@@ -320,7 +322,8 @@ def delete_existing_run(conn, *, show_id: int, batch_name: str) -> int:
             (show_id, batch_name),
         )
         removed_runs = cur.rowcount
-    conn.commit()
+    if commit:
+        conn.commit()
     return removed_runs
 
 
@@ -731,7 +734,13 @@ def main() -> None:
                 "falling back to a load-time transcript lookup, which cannot tell whether "
                 "the extractor actually read that transcript."
             )
-        removed_runs = delete_existing_run(conn, show_id=show_id, batch_name=batch_name)
+        # The delete rides the 'loading' insert's commit: "replace" is then atomic at
+        # the row-existence level, so a crash between them can never leave the batch
+        # with its old run deleted and no new row at all — a state with nothing for the
+        # health check to see.
+        removed_runs = delete_existing_run(
+            conn, show_id=show_id, batch_name=batch_name, commit=False
+        )
         if removed_runs:
             print(
                 f"Idempotent re-load: removed {removed_runs} prior run(s) "
@@ -787,7 +796,15 @@ def main() -> None:
             finalize_run_completed(conn, run_id, commit=False)
             conn.commit()
         except Exception:
-            conn.rollback()
+            try:
+                conn.rollback()
+            except Exception:
+                # A dead connection is the canonical crash this whole transaction
+                # defends against, and rollback() raises on one. The server aborts the
+                # open transaction when the socket closes, so the rollback is a courtesy
+                # — never let its failure replace the error that caused it. __main__
+                # prints only str(exc), so a masked error is an error nobody sees.
+                pass
             raise
 
         from_transcript = sum(1 for eid in episode_ids if transcript_map.get(eid) is not None)

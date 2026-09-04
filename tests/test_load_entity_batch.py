@@ -749,12 +749,13 @@ def _run_main(monkeypatch, tmp_path, conn) -> None:
 
 
 def test_main_commits_the_whole_batch_exactly_once(monkeypatch, tmp_path, capsys) -> None:
-    """Three commits and no more: the delete, the 'loading' run row, and then ONE that
-    carries every entity, every mention and the flip to 'completed' together."""
+    """Two commits and no more: the delete of the prior run together with the 'loading'
+    row, and then ONE that carries every entity, every mention and the flip to
+    'completed'."""
     conn = _MainConn()
     _run_main(monkeypatch, tmp_path, conn)
 
-    assert conn.commits == 3
+    assert conn.commits == 2
     executed = [sql for sql, _ in conn.cur.calls]
     flip_at = next(i for i, s in enumerate(executed) if "SET status = 'completed'" in s)
     first_mention_at = next(i for i, s in enumerate(executed) if "INSERT INTO ai_mentions" in s)
@@ -785,8 +786,8 @@ def test_main_leaves_a_loading_row_and_no_mentions_when_a_row_crashes(
         (s, p) for s, p in conn.cur.calls if "INSERT INTO ai_runs" in s
     )
     assert run_params[5] == "loading" and run_params[6] is False
-    # Two commits only: the delete and the 'loading' row. Nothing after.
-    assert conn.commits == 2
+    # One commit only: the delete and the 'loading' row, together. Nothing after.
+    assert conn.commits == 1
     assert conn.rolled_back is True
     assert conn.closed is True
     assert not any("SET status = 'completed'" in s for s, _ in conn.cur.calls)
