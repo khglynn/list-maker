@@ -285,6 +285,22 @@ test("the manual trigger is still gated — /health changed nothing else", async
   assert.equal(noPat.status, 500);
 });
 
+test("the manual trigger records itself, so the deploy-verification dispatch is checked too", async () => {
+  const kv = fakeKv();
+  const impl = fakeFetch(okRoutes());
+  const res = await withFetch(impl, () =>
+    worker.fetch(new Request("https://w.example/?token=secret&workflow=pipeline.yml&show_id=1"), {
+      GH_PAT: "pat",
+      TRIGGER_TOKEN: "secret",
+      DISPATCH_LOG: kv,
+    })
+  );
+  assert.equal(res.status, 200);
+  const [key] = [...kv.store.keys()];
+  assert.match(key, /^dispatch:pipeline\.yml:/);
+  assert.deepEqual(JSON.parse(kv.store.get(key)).inputs, { show_id: "1" });
+});
+
 // --- recording -------------------------------------------------------------
 
 test("every dispatch is recorded under its own key, with its inputs", async () => {
