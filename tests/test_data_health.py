@@ -2,12 +2,30 @@ from datetime import date
 
 from pipeline.data_health import (
     CheckResult,
+    HeldEpisodes,
     _date_lag_days,
     check_episode_freshness,
     check_import_caught_up,
     check_notion_sync_freshness,
     render_text,
 )
+from pipeline.feed_check import FeedEpisode
+
+
+def _held_row(slug: str, url: str | None, title: str | None, publish_date: date | None) -> dict:
+    """One row as _held_episodes_by_show's bulk query returns it."""
+    return {"slug": slug, "url": url, "title": title, "publish_date": publish_date}
+
+
+def _held(*episodes: tuple[str, str, date]) -> HeldEpisodes:
+    """A HeldEpisodes built from (url, title, publish_date) triples."""
+    held = HeldEpisodes(urls=set(), title_dates=set())
+    for url, title, published in episodes:
+        held.urls.add(url)
+        held.title_dates.add((title.strip().lower(), published))
+        if held.latest is None or published > held.latest:
+            held.latest = published
+    return held
 
 
 def _patch_notion_freshness(monkeypatch, *, transcript_rows, stale_entities, failed_entities):
@@ -97,16 +115,16 @@ def test_feed_check_can_scope_to_one_show(monkeypatch) -> None:
     paying for a call per show on every music run is what makes people delete the check."""
     import pipeline.data_health as dh
 
-    monkeypatch.setattr(
-        dh, "_rows", lambda *a, **k: [{"slug": "tal", "db_latest": date(2026, 5, 17)}]
-    )
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [_held_row("tal", "held-1", "Old one", date(2026, 5, 17))])
     asked: list[str] = []
 
     def fake_feed(cfg, limit=15):
         asked.append(cfg.slug)
-        return [date(2026, 7, 26)]
+        return [FeedEpisode("tal-new", date(2026, 7, 26), "A new episode")]
 
-    monkeypatch.setattr(dh, "feed_recent_dates", fake_feed)
+    # TAL is identity-compared (its discovery runs the Taddy importer), so the seam
+    # this test holds is feed_recent_episodes, not feed_recent_dates.
+    monkeypatch.setattr(dh, "feed_recent_episodes", fake_feed)
 
     result = check_import_caught_up(conn=None, slugs=["tal"])
 
@@ -116,12 +134,18 @@ def test_feed_check_can_scope_to_one_show(monkeypatch) -> None:
 
 
 def test_feed_check_unscoped_still_covers_every_show(monkeypatch) -> None:
+    """Both readers must be asked: SOP has no comparable identity and takes the date
+    path, every other show takes the identity path. Watching only one seam would let
+    half the catalogue go unchecked while the test still passed."""
     import pipeline.data_health as dh
 
     monkeypatch.setattr(dh, "_rows", lambda *a, **k: [])
     asked: list[str] = []
     monkeypatch.setattr(
         dh, "feed_recent_dates", lambda cfg, limit=15: asked.append(cfg.slug) or None
+    )
+    monkeypatch.setattr(
+        dh, "feed_recent_episodes", lambda cfg, limit=15: asked.append(cfg.slug) or None
     )
 
     check_import_caught_up(conn=None)
@@ -227,23 +251,39 @@ def test_extraction_integrity_no_longer_double_reports_the_race(monkeypatch) -> 
 
 # ---- feed check grace window (the August-2026 "1 show behind" noise) ----
 
-def _feed_check(monkeypatch, db_latest: dict, feed: dict, today: date, slugs: list[str]):
+def _feed_check(
+    monkeypatch,
+    *,
+    rows: list[dict],
+    today: date,
+    slugs: list[str],
+    feed_dates: dict | None = None,
+    feed_episodes: dict | None = None,
+):
+    """Drive check_import_caught_up with both feed readers stubbed.
+
+    Both seams are always patched, never just the one a given show uses — an unpatched
+    reader would reach the real network inside a "hermetic" test, and the identity path
+    and the date path are chosen per show by ShowConfig.episode_identity.
+    """
     import pipeline.data_health as dh
 
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: rows)
+    monkeypatch.setattr(dh, "feed_recent_dates", lambda cfg, limit=15: (feed_dates or {}).get(cfg.slug))
     monkeypatch.setattr(
-        dh, "_rows", lambda *a, **k: [{"slug": s, "db_latest": d} for s, d in db_latest.items()]
+        dh, "feed_recent_episodes", lambda cfg, limit=15: (feed_episodes or {}).get(cfg.slug)
     )
-    monkeypatch.setattr(dh, "feed_recent_dates", lambda cfg, limit=15: feed.get(cfg.slug))
     monkeypatch.setattr(dh, "_today", lambda: today)
     return check_import_caught_up(conn=None, slugs=slugs)
 
 
 def test_feed_check_tolerates_a_fresh_episode_inside_the_import_window(monkeypatch) -> None:
     # Tuesday: SOP published today; its next import is Wednesday. Not a gap.
+    # SOP is the date-compared show (its scraper writes the urls Taddy never sees).
     result = _feed_check(
         monkeypatch,
-        {"sop": date(2026, 8, 25)},
-        {"sop": [date(2026, 9, 1), date(2026, 8, 25)]},
+        rows=[_held_row("sop", "https://switchedonpop.com/episodes/x", "X", date(2026, 8, 25))],
+        feed_dates={"sop": [date(2026, 9, 1), date(2026, 8, 25)]},
         today=date(2026, 9, 1),
         slugs=["sop"],
     )
@@ -255,8 +295,8 @@ def test_feed_check_fails_once_a_missing_episode_is_older_than_the_grace(monkeyp
     # Sunday: the Wed AND Fri imports both had their turn and the 09-01 episode is still absent.
     result = _feed_check(
         monkeypatch,
-        {"sop": date(2026, 8, 25)},
-        {"sop": [date(2026, 9, 1), date(2026, 8, 25)]},
+        rows=[_held_row("sop", "https://switchedonpop.com/episodes/x", "X", date(2026, 8, 25))],
+        feed_dates={"sop": [date(2026, 9, 1), date(2026, 8, 25)]},
         today=date(2026, 9, 6),
         slugs=["sop"],
     )
@@ -266,12 +306,16 @@ def test_feed_check_fails_once_a_missing_episode_is_older_than_the_grace(monkeyp
 
 def test_feed_grace_is_per_show(monkeypatch) -> None:
     # The same 3-day-old feed episode is fine for SOP (4-day window) and a real miss
-    # for AI Daily (2-day window, imported every day).
-    feed = [date(2026, 9, 1)]
+    # for AI Daily (2-day window, imported every day). SOP is compared by date, AI Daily
+    # by identity — the grace window means the same thing on both paths.
     result = _feed_check(
         monkeypatch,
-        {"sop": date(2026, 8, 25), "ai-daily-brief": date(2026, 8, 29)},
-        {"sop": feed, "ai-daily-brief": feed},
+        rows=[
+            _held_row("sop", "https://switchedonpop.com/episodes/x", "X", date(2026, 8, 25)),
+            _held_row("ai-daily-brief", "taddy:held", "Held one", date(2026, 8, 29)),
+        ],
+        feed_dates={"sop": [date(2026, 9, 1)]},
+        feed_episodes={"ai-daily-brief": [FeedEpisode("taddy:missing", date(2026, 9, 1), "New")]},
         today=date(2026, 9, 4),
         slugs=["sop", "ai-daily-brief"],
     )
@@ -292,6 +336,148 @@ def test_split_missing_feed_dates_partitions_by_grace() -> None:
     # Nothing in the DB at all: every feed date is missing, still graded by age.
     assert split_missing_feed_dates([date(2026, 9, 9)], None, 2, today=today) == ([], [date(2026, 9, 9)])
     assert split_missing_feed_dates([date(2026, 9, 1)], None, 2, today=today) == ([date(2026, 9, 1)], [])
+
+
+# ---- feed check BY EPISODE IDENTITY (the re-dating false positive + mid-series holes) ----
+
+def test_split_missing_feed_episodes_catches_a_mid_series_hole() -> None:
+    """THE acceptance case. B is missing and OLDER than the newest episode we hold, so
+    MAX(publish_date) can never see it — split_missing_feed_dates would call this show
+    caught up forever. Identity is a set question, so the hole is just another entry."""
+    from pipeline.data_health import split_missing_feed_episodes
+
+    feed = [
+        FeedEpisode("ep-A", date(2026, 9, 1), "A"),
+        FeedEpisode("ep-B", date(2026, 8, 25), "B"),
+        FeedEpisode("ep-C", date(2026, 8, 18), "C"),
+    ]
+    held = _held(("ep-A", "A", date(2026, 9, 1)), ("ep-C", "C", date(2026, 8, 18)))
+
+    overdue, pending = split_missing_feed_episodes(feed, held, 2, today=date(2026, 9, 1))
+
+    assert [ep.identity for ep in overdue] == ["ep-B"]
+    assert pending == []
+    # And proof the old comparison is blind to it: nothing in the feed is newer than
+    # the newest date we hold, so the date-only split reports nothing at all.
+    from pipeline.data_health import split_missing_feed_dates
+
+    assert split_missing_feed_dates(
+        [ep.publish_date for ep in feed], held.latest, 2, today=date(2026, 9, 1)
+    ) == ([], [])
+
+
+def test_split_missing_feed_episodes_ignores_a_redated_episode() -> None:
+    """The TAL incident (DEVLOG 2026-09-01): Taddy moved an episode's publish date, the
+    date check read the new date as a brand-new missing episode, and the channel got a
+    BEHIND that no import could ever clear. Identity does not move when a date does —
+    episodes.url is UNIQUE and both upserts COALESCE publish_date ON CONFLICT (url)."""
+    from pipeline.data_health import split_missing_feed_episodes
+
+    held = _held(("ep-X", "The Episode", date(2026, 7, 1)))  # stored under its ORIGINAL date
+    redated = [FeedEpisode("ep-X", date(2026, 8, 20), "The Episode")]
+
+    # Nothing missing, at any grace window or any "today".
+    assert split_missing_feed_episodes(redated, held, 2, today=date(2026, 9, 1)) == ([], [])
+    assert split_missing_feed_episodes(redated, held, 0, today=date(2026, 12, 31)) == ([], [])
+
+
+def test_split_missing_feed_episodes_keeps_the_grace_window() -> None:
+    """A missing episode inside the show's import window is pending, not an alarm — the
+    contract split_missing_feed_dates set in PR #4, unchanged by the identity switch."""
+    from pipeline.data_health import split_missing_feed_episodes
+
+    feed = [FeedEpisode("ep-new", date(2026, 9, 5), "New"), FeedEpisode("ep-old", date(2026, 9, 1), "Old")]
+    held = _held(("ep-held", "Held", date(2026, 8, 30)))
+
+    overdue, pending = split_missing_feed_episodes(feed, held, 2, today=date(2026, 9, 6))
+
+    assert [ep.identity for ep in overdue] == ["ep-old"]  # past the 2-day window
+    assert [ep.identity for ep in pending] == ["ep-new"]  # published yesterday, still fine
+
+
+def test_feed_episode_held_by_title_and_date_when_the_url_scheme_is_older() -> None:
+    """A row written before a show's importer changed hands holds the same episode under
+    an older url. Measured 2026-09-03: 3 of TAL's 15 recent feed episodes are exactly
+    this. Falling back to the importer's own title+date dedup rule is what stops them
+    reporting BEHIND forever — if the importer would call it present, no import can
+    ever create it, so 'missing' would be an alarm nothing could clear."""
+    from pipeline.data_health import _feed_episode_is_held
+
+    held = _held(("https://www.thisamericanlife.org/anon", "An Update from Ira", date(2025, 10, 16)))
+    legacy = FeedEpisode("taddy:uuid-not-in-db", date(2025, 10, 16), "An Update from Ira")
+
+    assert _feed_episode_is_held(legacy, held) is True
+    # Same title, different date = a different episode. Not held.
+    assert _feed_episode_is_held(
+        FeedEpisode("taddy:other", date(2026, 1, 9), "An Update from Ira"), held
+    ) is False
+    # An untitled feed row must never match on the empty string.
+    assert _feed_episode_is_held(FeedEpisode("taddy:blank", date(2025, 10, 16), ""), held) is False
+
+
+def test_feed_check_catches_a_mid_series_hole_end_to_end(monkeypatch) -> None:
+    """The same gap through the real check: status fail, and the gap's date named."""
+    result = _feed_check(
+        monkeypatch,
+        rows=[
+            _held_row("ai-daily-brief", "taddy:A", "A", date(2026, 9, 1)),
+            _held_row("ai-daily-brief", "taddy:C", "C", date(2026, 8, 18)),
+        ],
+        feed_episodes={
+            "ai-daily-brief": [
+                FeedEpisode("taddy:A", date(2026, 9, 1), "A"),
+                FeedEpisode("taddy:B", date(2026, 8, 25), "B"),
+                FeedEpisode("taddy:C", date(2026, 8, 18), "C"),
+            ]
+        },
+        today=date(2026, 9, 1),
+        slugs=["ai-daily-brief"],
+    )
+
+    assert result.status == "fail"
+    assert any(
+        d.startswith("ai-daily-brief: BEHIND 1") and "oldest missing 2026-08-25" in d
+        for d in result.details
+    ), result.details
+    # We hold the NEWEST episode, so the Slack line still reads "we have 2026-09-01" —
+    # which is exactly why the date-only check called this show caught up.
+    assert any("we have 2026-09-01" in d for d in result.details)
+
+
+def test_feed_check_names_a_scheme_change_when_every_episode_looks_missing(monkeypatch) -> None:
+    """All 15 missing is either a dead importer or an importer that quietly changed the
+    url it writes. The alert has to name both, or the second one reads as the first."""
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("hard-fork", "old-scheme://1", "Held", date(2026, 8, 28))],
+        feed_episodes={
+            "hard-fork": [
+                FeedEpisode("taddy:1", date(2026, 8, 28), "One"),
+                FeedEpisode("taddy:2", date(2026, 8, 21), "Two"),
+            ]
+        },
+        today=date(2026, 9, 1),
+        slugs=["hard-fork"],
+    )
+
+    assert result.status == "fail"
+    assert any("EVERY recent feed episode is missing" in d for d in result.details)
+
+
+def test_feed_check_still_skips_curated_sources(monkeypatch) -> None:
+    """Blogs and research docs have no feed of any kind — neither reader is even asked."""
+    asked: list[str] = []
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [])
+    monkeypatch.setattr(dh, "feed_recent_dates", lambda cfg, limit=15: asked.append(cfg.slug))
+    monkeypatch.setattr(dh, "feed_recent_episodes", lambda cfg, limit=15: asked.append(cfg.slug))
+
+    result = check_import_caught_up(conn=None, slugs=["openai-blog", "agentic-research"])
+
+    assert asked == []
+    assert result.status == "pass"
+    assert all("curated source" in d for d in result.details)
 
 
 def test_transcript_coverage_tolerates_a_transcript_that_is_not_out_yet(monkeypatch) -> None:
