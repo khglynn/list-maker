@@ -14,7 +14,10 @@
 3. **Dependabot #27–#29** still open.
 4. ~~Backfill (decision 6)~~ — **complete 2026-09-02 17:38 CT:** PCHH 2,073 mentions + Culture Gabfest 3,660, every media entity mirrored to Notion (the ten-minute sync steps timed out and resumed until done; the limit is parked in `BACKLOG.md`). Working tree back on `main`, worktrees and merged branches removed.
 
-## Next arc (agreed 2026-09-01, in progress since 2026-09-02) — "curated intake v2 + ads as data"
+## Now building: Phase 4 (started 2026-09-03 evening) — health checks and data you can trust
+Four PRs on `arc/phase-4`, mapped against the live code first: the Worker verifies its own dispatches and exposes `/health` for the fleet-watchdog; the feed check compares episode identities (a mid-series hole fails, a re-dated episode doesn't); the batch load becomes transactional with a completeness check; the small honesty fixes (zero-mention window, NULL confidence, no retries on deterministic failures). Plan + the five readers' notes: `claude-plans/2026-09-03-phase-4/`. Kevin's part: create the `DISPATCH_LOG` KV namespace on the trimm profile, deploy the Worker after merge, deploy the fleet-watchdog.
+
+## Done arc (2026-09-02) — "curated intake v2 + ads as data"
 **PR 1 of 3 (ads as data) is open as a draft against `arc/curated-intake-v2`.**
 Automated blog/article intake judged by an inexpensive classifier instead of a Notion checkbox; sponsor reads kept, tagged, and weight-capped. **Arc plan (design, schema, PR split): `claude-plans/2026-09-02-curated-intake-v2/PLAN.md`.** Spec, acceptance, and the kickoff paste: `claude-plans/2026-09-01-ground-it-cleanup-plan.md` → "Next arc". After it: plan Phases 4 (feed check by identity, run watchdog via `fleet-watchdog`, transactional load) and 5 (Spotify-path tests).
 
