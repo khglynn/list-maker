@@ -12,8 +12,10 @@ Hermetic: `taddy_query`, `get_episode_transcript`, Firecrawl's `scrape_post`,
 DB-touching function takes `conn` as a parameter so a fake connection goes
 straight in. No live tokens anywhere.
 
-Written for Phase 5 PR 5 (2026-09-04). Tests only: `pipeline/save_episode.py` is
-not modified by this file.
+Written for Phase 5 PR 5 (2026-09-04) as a tests-only file. Phase 5 PR 9 (also
+2026-09-04) changed `taddy_find_episode` on purpose — the Taddy search term is capped
+at 8 WORDS, not 120 characters, because Taddy rejects a longer term outright — so the
+test that pinned the character cut now pins the word cap, and says so in its name.
 """
 
 from __future__ import annotations
