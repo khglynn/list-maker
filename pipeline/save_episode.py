@@ -63,6 +63,13 @@ TADDY_SHOW_MIN_RATIO = 0.60
 # a different show ("Amicus Plus", "The Vergecast: Ad-Free Edition"). Stripped from the
 # caller side only — see show_match_ratio for why the Taddy side is trimmed differently.
 FEED_VARIANT_WORDS = frozenset({"plus", "ad", "free", "adfree", "edition", "premium"})
+# Spotify and Apple episode pages put the show INSIDE og:title, with a fixed site
+# suffix: "<episode> - <show> | Podcast on Spotify". Parsing it is what gives the
+# show gate anything to bite on for a non-castro link — see scrape_link_meta.
+LINK_TITLE_PATTERNS = (
+    re.compile(r"^(?P<ep>.+?) - (?P<show>.+?) \| Podcast on Spotify$"),
+    re.compile(r"^(?P<ep>.+?) - (?P<show>.+?) - Apple Podcasts$"),
+)
 MIN_FULL_TRANSCRIPT_CHARS = 1000  # below this a "transcript" is a stub, not an upgrade
 
 log = get_logger("pipeline.save_episode")
@@ -271,6 +278,16 @@ def scrape_link_meta(url: str) -> dict:
             last_show, last_title = (s.strip() for s in title.rsplit(":", 1))
             return {"title": first_title, "show": first_show, "notes": notes,
                     "alt": {"title": last_title, "show": last_show}}
+    # Spotify/Apple carry the show in the title, so the show gate was inert on every
+    # non-castro link — scrape_link_meta returned show="" and an empty show means "do
+    # not gate", which is exactly the ungated title-only match this module now refuses.
+    # Parsing it also strips a marketing suffix that was being STORED as the episode
+    # title, sinking title_ratio and (before PR 9) blowing Taddy's 8-word term cap.
+    for pattern in LINK_TITLE_PATTERNS:
+        m = pattern.match(title)
+        if m:
+            title, show = m.group("ep").strip(), m.group("show").strip()
+            break
     return {"title": title, "show": show, "notes": notes}
 
 
@@ -427,8 +444,17 @@ def main() -> None:  # noqa: PLR0915 — an orchestrator reads better linear tha
                         done += 1
                         log.info("already in DB under %s: %r", in_db_slug, meta["title"][:50])
                         continue
-                hit, full = try_taddy_full(meta["title"], meta["show"], taddy_user, taddy_key)
-                if not hit and meta.get("alt"):
+                # No show name means taddy_find_episode would not gate on show at all,
+                # and an ungated title-only match is the defect this PR exists to close.
+                # The honest show_notes fallback is what the module already prefers, and
+                # it costs nothing measurable: no non-castro row has ever produced a
+                # Taddy upgrade (verified 2026-09-04 — all show_notes).
+                if meta["show"]:
+                    hit, full = try_taddy_full(meta["title"], meta["show"], taddy_user, taddy_key)
+                else:
+                    hit, full = None, None
+                    log.info("no show name for %s — skipping the ungated Taddy upgrade", url)
+                if not hit and meta.get("alt") and meta["alt"]["show"]:
                     # Ambiguous colon split: retry with the other candidate, and
                     # adopt it wholesale on a hit (its names are the clean ones).
                     hit, full = try_taddy_full(meta["alt"]["title"], meta["alt"]["show"],

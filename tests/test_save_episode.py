@@ -598,6 +598,69 @@ def test_a_non_castro_page_reports_no_show_and_falls_back_to_the_title_tag(monke
     assert meta == {"title": "Ep 42: The Interview", "show": "", "notes": ""}
 
 
+def test_a_spotify_page_title_yields_both_the_episode_and_the_show(monkeypatch) -> None:
+    """The gate was INERT on every non-castro link: scrape_link_meta returned show=""
+    and an empty show means "do not gate", so a Spotify link could still attach any
+    show's transcript on a title match alone. Spotify puts the show inside og:title,
+    so it is parsed rather than discarded.
+
+    This is the same suffix that PR 9's review found STORED as the episode title on
+    rows 4817 and 4818 ('… - Switched on Pop | Podcast on Spotify'), where it sank
+    title_ratio to 0.719 and 0.583 and put both under the 0.80 bar."""
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    page = ('<meta property="og:title" content="Eurovision 2024: from Baby Lasagna to '
+            'Windows95Man - Switched on Pop | Podcast on Spotify">')
+    monkeypatch.setattr(save_episode.httpx, "get", lambda *a, **k: _FakeResponse(page))
+
+    meta = scrape_link_meta("https://open.spotify.com/episode/abc123")
+
+    assert meta["title"] == "Eurovision 2024: from Baby Lasagna to Windows95Man"
+    assert meta["show"] == "Switched on Pop"
+
+
+def test_an_apple_podcasts_page_title_is_split_the_same_way(monkeypatch) -> None:
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    page = ('<meta property="og:title" content="Beyonce country - Today, Explained '
+            '- Apple Podcasts">')
+    monkeypatch.setattr(save_episode.httpx, "get", lambda *a, **k: _FakeResponse(page))
+
+    meta = scrape_link_meta("https://podcasts.apple.com/us/podcast/x/id1?i=2")
+
+    assert meta["title"] == "Beyonce country"
+    assert meta["show"] == "Today, Explained"
+
+
+def test_a_title_without_a_site_suffix_is_left_alone(monkeypatch) -> None:
+    """The patterns are anchored and require the full site suffix, so an ordinary
+    title keeps its hyphens and reports no show — which still takes the no-gate path
+    rather than inventing one."""
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    page = '<meta property="og:title" content="Edison, Tesla - and the Electric Chair">'
+    monkeypatch.setattr(save_episode.httpx, "get", lambda *a, **k: _FakeResponse(page))
+
+    meta = scrape_link_meta("https://example.com/ep/1")
+
+    assert meta["title"] == "Edison, Tesla - and the Electric Chair"
+    assert meta["show"] == ""
+
+
+def test_the_show_gate_is_live_on_a_spotify_link_end_to_end(monkeypatch) -> None:
+    """The point of the two edits together: a Spotify link now carries a show name, so
+    a wrong-show candidate is gated instead of silently selected. Before this the same
+    link produced show="" and the wrong show would have been taken."""
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    page = ('<meta property="og:title" content="Election Night - Science Vs '
+            '| Podcast on Spotify">')
+    monkeypatch.setattr(save_episode.httpx, "get", lambda *a, **k: _FakeResponse(page))
+    monkeypatch.setattr(save_episode, "taddy_query",
+                        _fake_search([_episode("wrong-show", "Election Night", "Pivot")]))
+
+    meta = scrape_link_meta("https://open.spotify.com/episode/abc123")
+
+    assert meta["show"] == "Science Vs"
+    assert taddy_find_episode(meta["title"], meta["show"], "u", "k") is None
+
+
 def test_firecrawl_is_preferred_when_a_key_is_present(monkeypatch) -> None:
     """castro.fm TLS-resets repeated raw hits, so the proxy goes first; when it
     answers, no raw request is made at all.
