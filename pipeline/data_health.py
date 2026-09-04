@@ -898,7 +898,13 @@ def check_ai_run_completeness(conn) -> CheckResult:
         """
         WITH run_counts AS (
           SELECT r.id AS run_id, s.slug, r.batch_name,
-                 (r.parameters->>'expected_mentions')::int AS expected_mentions,
+                 -- Cast only what is actually a number. A bare ::int on a malformed
+                 -- value raises, which would take down the whole data_health process
+                 -- over one bad row; NULL here keeps the row visible (IS DISTINCT FROM
+                 -- below flags it) and contains the damage to one detail line.
+                 CASE WHEN jsonb_typeof(r.parameters->'expected_mentions') = 'number'
+                      THEN (r.parameters->>'expected_mentions')::int END
+                   AS expected_mentions,
                  COUNT(m.id) AS actual_mentions
           FROM ai_runs r
           JOIN shows s ON s.id = r.show_id
@@ -924,7 +930,12 @@ def check_ai_run_completeness(conn) -> CheckResult:
         )
     details = [
         f"{r['slug']} run {r['run_id']} ({r['batch_name']}): "
-        f"expected {r['expected_mentions']}, has {r['actual_mentions']}"
+        + (
+            f"expected {r['expected_mentions']}, has {r['actual_mentions']}"
+            if r["expected_mentions"] is not None
+            else f"expected_mentions is not a number (malformed run row); "
+                 f"has {r['actual_mentions']}"
+        )
         for r in rows
     ]
     return CheckResult(
@@ -944,6 +955,17 @@ def check_ai_run_stuck_loading(conn) -> CheckResult:
     single load attempt could possibly run has been abandoned, and its episodes are
     sitting with no mentions, waiting for the next run to re-extract them. started_at is
     the only honest age signal here — a loading row deliberately carries no completed_at.
+
+    ONLY rows whose work is still undone count, and that clause is what keeps this check
+    honest rather than permanently red. A retry deletes the previous attempt's row only
+    when it re-runs under the SAME batch name, and the name is derived from the current
+    unextracted set (run_new_episodes: `incremental-{first}-to-{last}`). So a crash on
+    Monday followed by a new episode on Tuesday produces a DIFFERENT name: Tuesday's
+    load succeeds, Monday's row is stranded forever, and an age-only check would fail
+    every day after that — telling Kevin to re-run episodes that already loaded, on a
+    daily --strict run that Slacks. Asking whether the batch's episodes still lack
+    mentions answers the question the alert actually claims to answer, and it clears
+    itself the moment the work is done by any route.
     """
     rows = _rows(
         conn,
@@ -953,6 +975,16 @@ def check_ai_run_stuck_loading(conn) -> CheckResult:
         FROM ai_runs r
         JOIN shows s ON s.id = r.show_id
         WHERE r.status = 'loading'
+          -- Still undone: not one episode this batch declared has any mention yet. An
+          -- empty or absent episode list makes this true, which is the safe direction —
+          -- a run row we cannot interpret gets looked at rather than hidden.
+          AND NOT EXISTS (
+              SELECT 1
+              FROM jsonb_array_elements_text(
+                       COALESCE(r.parameters->'episodes', '[]'::jsonb)
+                   ) AS declared(episode_id)
+              JOIN ai_mentions m ON m.episode_id = declared.episode_id::int
+          )
         ORDER BY r.started_at;
         """,
     )
@@ -972,12 +1004,13 @@ def check_ai_run_stuck_loading(conn) -> CheckResult:
     oldest = max(float(r["minutes_pending"] or 0) for r in rows)
     if oldest > AI_RUN_LOADING_FAIL_MINUTES:
         stuck = [r for r in rows if float(r["minutes_pending"] or 0) > AI_RUN_LOADING_FAIL_MINUTES]
+        # "N of M": details list every loading row, so a bare N would not add up.
         return CheckResult(
             "ai_run_stuck_loading",
             "fail",
-            f"{len(stuck)} batch load(s) still 'loading' more than "
-            f"{AI_RUN_LOADING_FAIL_MINUTES} minutes after starting — abandoned, not in "
-            "progress; their episodes have no mentions and need a re-run.",
+            f"{len(stuck)} of {len(rows)} batch load(s) in 'loading' started more than "
+            f"{AI_RUN_LOADING_FAIL_MINUTES} minutes ago — abandoned, not in progress; "
+            "their episodes still have no mentions and need a re-run.",
             details,
         )
     if oldest > AI_RUN_LOADING_WARN_MINUTES:
