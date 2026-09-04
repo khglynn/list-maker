@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import date
+from pathlib import Path
 
 from pipeline.scrapers.tal import fetch
 from pipeline.scrapers.gabfest.import_gabfest import parse_feed
@@ -158,6 +159,20 @@ def test_limit_is_bound_not_interpolated(monkeypatch) -> None:
     assert "LIMIT %s" in sql and params[-1] == 5
 
 
+def test_limit_zero_means_zero_and_negative_is_refused(monkeypatch) -> None:
+    """`if limit:` made --limit 0 mean 'no limit' and fetch everything — the opposite of
+    what anyone typing 0 wants — and a negative reached Postgres as LIMIT -1."""
+    import pytest
+
+    conn = _queue(monkeypatch, [])
+    fetch.get_episodes_missing_songs(limit=0)
+    sql, params = conn.cursor().calls[0]
+    assert "LIMIT %s" in sql and params[-1] == 0
+
+    with pytest.raises(ValueError):
+        fetch.get_episodes_missing_songs(limit=-1)
+
+
 def test_the_queue_closes_its_connection(monkeypatch) -> None:
     conn = _queue(monkeypatch, [_taddy_row()])
 
@@ -230,23 +245,68 @@ def test_page_url_from_the_feed_survives_a_curly_apostrophe() -> None:
     )
 
 
-def test_page_url_from_the_feed_reaches_an_episode_no_slug_could_guess() -> None:
-    """Live row 7422: no episode number, and its real page is /lifepartners. Only the
-    feed knows — which is why the feed is tried before the derived slug."""
+def test_a_promo_link_is_not_an_episode_page(monkeypatch) -> None:
+    """Row 7422 has NO readable page, and the honest answer is to say so.
+
+    TAL's feed points "Ira (Reluctantly) Gives a Graduation Speech" at /lifepartners.
+    That is not an episode — it is the Supercast subscription pitch, which 307s off-site
+    to thisamericanlife.supercast.com and carries zero song credits (verified live
+    2026-09-04). Accepting it would buy a Firecrawl call that can never return a song, on
+    a row that therefore never leaves the queue: a permanent weekly charge for nothing.
+    """
     links = fetch.page_links_from_feed_items(parse_feed(FEED))
     row = _taddy_row(id=7422, title="Ira (Reluctantly) Gives a Graduation Speech")
 
-    assert tal_episode_page_url(row["title"]) is None
-    assert fetch.resolve_page_url(row, links) == "https://www.thisamericanlife.org/lifepartners"
+    assert tal_episode_page_url(row["title"]) is None, "no episode number to derive from"
+    assert fetch.resolve_page_url(row, links) is None
+
+    _queue(monkeypatch, [row])
+    monkeypatch.setattr(fetch, "fetch_feed_page_links", lambda *a, **k: links)
+    resolved, unresolved = fetch.plan_fetch()
+
+    assert resolved == []
+    assert [r["id"] for r in unresolved] == [7422], "reported, not silently fetched"
 
 
-def test_the_feed_map_ignores_items_that_link_to_the_site_root() -> None:
-    """TAL's bonus items link to the bare homepage. Fetching that returns a 200 with no
-    song credits — a wasted call that looks like a successful read."""
+def test_the_feed_map_drops_links_that_are_not_episode_specific() -> None:
+    """Two shapes of non-episode link, both live in TAL's feed today.
+
+    The bare site root ("A Big Announcement") is caught by the url predicate. A link
+    SHARED by several items is caught by shape: a url that more than one episode points
+    at is a show-level page, the same failure this repo already documents for Hard Fork's
+    generic Taddy websiteUrl. Belt and braces — the denylist catches what we have seen,
+    this catches what we have not.
+    """
     links = fetch.page_links_from_feed_items(parse_feed(FEED))
 
     assert "a big announcement" not in links
-    assert len(links) == 3
+    assert "an update from ira" not in links
+    assert "ira (reluctantly) gives a graduation speech" not in links
+    assert set(links) == {
+        "896: i know what you need",
+        "889: there's something about hail mary",
+    }
+
+
+def test_a_shared_link_is_dropped_even_when_the_path_is_unknown() -> None:
+    """The shape rule standing alone: an invented promo path is not on any denylist, and
+    is still dropped because two episodes point at it."""
+    feed = b"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>TAL</title>
+  <item><title>900: Real One</title>
+    <link>https://www.thisamericanlife.org/900/real-one</link>
+    <pubDate>Sun, 30 Aug 2026 20:00:00 -0400</pubDate></item>
+  <item><title>Promo A</title>
+    <link>https://www.thisamericanlife.org/some-new-campaign</link>
+    <pubDate>Sun, 23 Aug 2026 20:00:00 -0400</pubDate></item>
+  <item><title>Promo B</title>
+    <link>https://www.thisamericanlife.org/some-new-campaign</link>
+    <pubDate>Sun, 16 Aug 2026 20:00:00 -0400</pubDate></item>
+</channel></rss>"""
+
+    links = fetch.page_links_from_feed_items(parse_feed(feed))
+
+    assert set(links) == {"900: real one"}
 
 
 def test_page_url_falls_back_to_the_slug_when_the_feed_has_rolled_over() -> None:
@@ -356,6 +416,36 @@ def test_a_lookalike_host_is_not_a_tal_page() -> None:
     )
 
 
+def test_known_non_episode_pages_are_rejected() -> None:
+    """/lifepartners is the live one — TAL's feed hands it out as the <link> for promo
+    items and it already sits in episodes.url on row 3022. It 307s to
+    thisamericanlife.supercast.com and has no song credits.
+
+    Honest about the mechanism: nothing in a TAL url distinguishes an episode from a
+    marketing page — /blackjack IS episode 466 — so this is an observed denylist, not a
+    derivation, and the assertion below is what keeps it from silently shrinking.
+    """
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org/lifepartners")
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org/lifepartners/")
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org/about")
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org/archive")
+
+    # Bare slugs that ARE episodes must survive the same rule.
+    assert is_tal_episode_page_url("https://www.thisamericanlife.org/blackjack")
+    assert is_tal_episode_page_url("https://www.thisamericanlife.org/bless-this-mess")
+
+
+def test_the_slug_is_stable_across_unicode_forms() -> None:
+    """The same visible title must produce one url. Composed vs decomposed accents
+    otherwise yield /901/cafe-society and /901/caf-society from equal strings."""
+    nfc = "901: Café Society"
+    nfd = "901: Café Society"
+
+    assert nfc != nfd  # different bytes, same title to a reader
+    assert tal_episode_page_url(nfc) == tal_episode_page_url(nfd)
+    assert tal_episode_page_url(nfc) == "https://www.thisamericanlife.org/901/cafe-society"
+
+
 def test_a_feed_outage_degrades_to_slugs_instead_of_failing_the_run(monkeypatch) -> None:
     """A dead feed must not take out the Monday music run — the derived slug resolved
     22 of the 24 live backlog rows on 2026-09-04, so degrading still does real work."""
@@ -434,3 +524,36 @@ def test_the_scrape_hands_the_fetcher_the_queue_it_just_printed(monkeypatch) -> 
         pass  # step 4 needs a DB; this test is only about steps 1-2
 
     assert handed == [{"episodes": queued, "dry_run": False}]
+
+
+def test_a_run_where_every_fetch_failed_does_not_report_them_as_scraped(monkeypatch) -> None:
+    """Attempts are not results. `summary["fetched"] = len(to_fetch)` meant a run where
+    Firecrawl 402'd on all 24 still printed "Episodes scraped: 24" beside "Songs found:
+    0" — the same reported-success-for-nothing shape this whole PR removes, one layer up.
+    """
+    from pipeline.scrapers.tal import scrape
+
+    queued = [
+        {"id": i, "url": None, "title": "x", "page_url": f"https://www.thisamericanlife.org/{i}/x"}
+        for i in (1, 2, 3)
+    ]
+    monkeypatch.setattr(scrape, "plan_fetch", lambda *a, **k: (queued, []))
+    monkeypatch.setattr(scrape, "get_already_fetched", lambda: set())
+    # No cache dir -> step 3 returns before the DB, so this exercises steps 1-2 only.
+    monkeypatch.setattr(scrape, "OUTPUT_DIR", Path("/nonexistent-tal-cache"))
+
+    async def _all_ok(**kwargs):
+        return {"success": 3, "errors": 0}
+
+    monkeypatch.setattr(scrape, "fetch_main", _all_ok)
+    ok = scrape.scrape_new_episodes(dry_run=False, yes=True)
+    assert ok["fetched"] == 3
+    assert not [e for e in ok["errors"] if "Firecrawl failed" in e]
+
+    async def _all_failed(**kwargs):
+        return {"success": 0, "errors": 3}
+
+    monkeypatch.setattr(scrape, "fetch_main", _all_failed)
+    failed = scrape.scrape_new_episodes(dry_run=False, yes=True)
+    assert failed["fetched"] == 0, "zero successes must report as zero scraped"
+    assert any("Firecrawl failed on 3" in e for e in failed["errors"])

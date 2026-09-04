@@ -78,7 +78,10 @@ def scrape_new_episodes(
     # Resolved ONCE here and handed to the fetcher, so the preview and the fetch cannot
     # disagree — and so the RSS is read once per run rather than once per caller.
     to_fetch, unresolved = plan_fetch(limit, published_since)
-    already_fetched = get_already_fetched()
+    # Intersected with the queue: get_already_fetched() returns every id in the cache
+    # directory, which after a local backfill can dwarf today's queue and make "of these"
+    # a lie.
+    already_fetched = get_already_fetched() & {ep["id"] for ep in to_fetch}
 
     print(f"TAL: {len(to_fetch) + len(unresolved)} episodes missing songs")
     print(f"  {len(to_fetch)} with a page url, {len(unresolved)} without")
@@ -121,8 +124,13 @@ def scrape_new_episodes(
     # Step 2: Fetch those pages via Firecrawl
     if to_fetch:
         print(f"\nFetching {len(to_fetch)} episodes...")
-        asyncio.run(fetch_main(episodes=to_fetch, dry_run=False))
-        summary["fetched"] = len(to_fetch)
+        # What came back, not what was attempted. Reporting len(to_fetch) here meant a run
+        # where every Firecrawl call failed still printed "Episodes scraped: 24" beside
+        # "Songs found: 0" — the reported-success-for-nothing shape this PR exists to kill.
+        result = asyncio.run(fetch_main(episodes=to_fetch, dry_run=False)) or {}
+        summary["fetched"] = result.get("success", 0)
+        if result.get("errors"):
+            summary["errors"].append(f"Firecrawl failed on {result['errors']} episode(s)")
 
     # Step 3: Parse all JSON files and find missing songs
     fetched_dir = OUTPUT_DIR

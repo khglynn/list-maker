@@ -45,7 +45,11 @@ import httpx
 # own directory or as pipeline.scrapers.tal.fetch — the same bootstrap the Taddy importer
 # and the Gabfest importer use. The TAL url helpers live in show_config beside the Taddy
 # one so the identity url and the page url stay visibly different things.
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+# Guarded: unguarded, every import of this module appended another copy, and pytest
+# collection imports it alongside scrape.py's own insert.
+_PIPELINE_DIR = str(Path(__file__).resolve().parents[2])
+if _PIPELINE_DIR not in sys.path:
+    sys.path.insert(0, _PIPELINE_DIR)
 from show_config import (  # noqa: E402
     SHOWS,
     is_tal_episode_page_url,
@@ -141,7 +145,12 @@ def get_episodes_missing_songs(
                 ORDER BY e.publish_date DESC, e.id DESC
             """
             params: list[Any] = [TAL_SHOW_ID, published_since]
-            if limit:
+            if limit is not None:
+                # `is not None`, not truthiness: --limit 0 meant "no limit" and fetched
+                # everything, which is the opposite of what anyone typing 0 wants. A
+                # negative value would have reached Postgres as LIMIT -1 and errored.
+                if limit < 0:
+                    raise ValueError(f"limit must be >= 0, got {limit}")
                 sql += " LIMIT %s"
                 params.append(limit)
             cur.execute(sql, params)
@@ -199,18 +208,30 @@ def page_links_from_feed_items(items: Iterable[dict]) -> dict[str, str]:
 
     The feed's <link> is the authority on where an episode lives, because TAL's own url
     scheme is not derivable: /885/bless-this-mess is a 404 while /bless-this-mess is the
-    real page, and row 7422's page is /lifepartners with no number in it at all
-    (both verified live 2026-09-04).
+    real page (verified live 2026-09-04).
+
+    A link shared by MORE THAN ONE feed item is dropped, not kept. A url that several
+    episodes point at is a show-level or marketing page, not an episode page — the same
+    failure this repo already documents for Hard Fork, whose Taddy websiteUrl is one
+    generic url for every episode (see show_config.taddy_episode_url and
+    import_transcripts.episode_url_key). TAL's live feed has two such: the bare site root
+    (also caught by is_tal_episode_page_url) and /lifepartners, the Supercast
+    subscription pitch it hands out for promo items. Belt and braces on purpose — the
+    denylist catches the ones we have seen, this catches the shape.
 
     Pure so it can be tested against a frozen feed; the fetch is fetch_feed_page_links.
     """
-    links: dict[str, str] = {}
+    candidates: dict[str, str] = {}
+    link_users: dict[str, int] = {}
     for item in items:
         title = _title_key(item.get("title"))
         link = (item.get("link") or "").strip()
-        if title and is_tal_episode_page_url(link):
-            links.setdefault(title, link)
-    return links
+        if not (title and is_tal_episode_page_url(link)):
+            continue
+        if title not in candidates:
+            candidates[title] = link
+            link_users[link] = link_users.get(link, 0) + 1
+    return {t: link for t, link in candidates.items() if link_users[link] == 1}
 
 
 def fetch_feed_page_links(feed_url: Optional[str] = None) -> dict[str, str]:
@@ -228,7 +249,7 @@ def fetch_feed_page_links(feed_url: Optional[str] = None) -> dict[str, str]:
 
     # Deliberately OUTSIDE the try: a broken import is a bug in this repo, not a feed
     # outage, and swallowing it would silently disable the authoritative url source for
-    # good while every run still reported success. Only the network goes in the try.
+    # good while every run still reported success.
     import requests
 
     from scrapers.gabfest.import_gabfest import parse_feed
@@ -238,9 +259,18 @@ def fetch_feed_page_links(feed_url: Optional[str] = None) -> dict[str, str]:
             feed_url, timeout=30, headers={"User-Agent": "list-maker-tal-scrape"}
         )
         resp.raise_for_status()  # don't hand a 404 error page to an XML parser
+    except Exception as exc:  # noqa: BLE001
+        print(f"  TAL feed unreachable ({exc}); falling back to title slugs")
+        return {}
+
+    # The PARSE is its own try with its own message. Folding it into the network one
+    # reported a parse_feed regression as "feed unavailable" — a misdiagnosis, and exactly
+    # the quiet fallback the split above is meant to prevent.
+    try:
         return page_links_from_feed_items(parse_feed(resp.content))
     except Exception as exc:  # noqa: BLE001
-        print(f"  TAL feed unavailable ({exc}); falling back to title slugs")
+        print(f"  TAL feed did not PARSE ({exc}) — this is our bug, not an outage; "
+              "falling back to title slugs")
         return {}
 
 
@@ -253,8 +283,15 @@ def resolve_page_url(row: dict, feed_links: Optional[dict[str, str]] = None) -> 
          discovered carry the real page, including the unnumbered ones a slug could never
          reach (/blackjack, /bless-this-mess).
       2. The RSS <link> for a matching title — authoritative, but a rolling 15-item window
-         (measured 2026-09-04), so it covers roughly the last four months only.
+         (measured 2026-09-04), so it covers roughly the last four months only, and only
+         for items whose link is episode-specific (page_links_from_feed_items drops the
+         promo links TAL shares across items).
       3. tal_episode_page_url(title), the derived slug. Best effort; see its docstring.
+
+    None is a real answer, not a failure to try. Row 7422 ("Ira (Reluctantly) Gives a
+    Graduation Speech") has no episode page at all — the feed points it at /lifepartners,
+    a subscription pitch — so the caller reports it as unresolved rather than paying for a
+    fetch that can only come back empty.
 
     Never returns an api.taddy.org url. That is the second half of the 2026-08 bug: even
     when a Taddy-discovered row WAS queued, the fetch pointed Firecrawl at the identity
@@ -384,23 +421,31 @@ async def main(
 
     `episodes` accepts an already-resolved queue (each row carrying `page_url`) so the
     orchestrator does not re-query and risk a different answer than the one it printed.
+
+    Returns {"success": n, "errors": n} — ATTEMPTS ARE NOT RESULTS. The caller used to
+    report len(queue) as "episodes scraped", so a run where Firecrawl 402'd on all 24
+    still printed a confident number next to "Songs found: 0". That is the same
+    reported-success-for-doing-nothing shape this whole module exists to remove, and it
+    does not get to come back one layer up.
     """
     if episodes is None:
         episodes, unresolved = plan_fetch(limit, published_since)
         print(f"Found {len(episodes) + len(unresolved)} episodes missing songs in database")
         for ep in unresolved:
-            # Loud, per episode: this is a real gap that no later step can recover, and
-            # there is exactly one of them today (row 7422, an untitled bonus episode).
+            # Loud, per episode: a real gap no later step can recover.
             print(f"  NO PAGE URL for {ep['id']}: {ep.get('title')!r} — skipped, not fetched")
 
-    already_fetched = get_already_fetched()
-    if already_fetched:
+    queued_ids = {ep["id"] for ep in episodes}
+    cached = get_already_fetched() & queued_ids
+    if cached:
         # Reported, not subtracted — see get_already_fetched. The DB is the queue.
-        print(f"  ({len(already_fetched)} of these have a local JSON from a previous run)")
+        # Intersected with the queue so "of these" is true: the cache can hold thousands
+        # of ids that are not in today's queue at all.
+        print(f"  ({len(cached)} of these have a local JSON from a previous run)")
 
     if not episodes:
         print("Nothing to fetch!")
-        return
+        return {"success": 0, "errors": 0}
 
     print(f"Will fetch {len(episodes)} episodes")
 
@@ -410,7 +455,7 @@ async def main(
             print(f"  {ep['id']}: {ep['page_url']}")
         if len(episodes) > 10:
             print(f"  ... and {len(episodes) - 10} more")
-        return
+        return {"success": 0, "errors": 0}
 
     # Fetch with concurrency limit
     api_key = os.getenv("FIRECRAWL_API_KEY")
@@ -451,6 +496,7 @@ async def main(
 
     print(f"\nDone! Fetched {success_count} episodes, {error_count} errors")
     print(f"JSON files saved to: {OUTPUT_DIR}")
+    return {"success": success_count, "errors": error_count}
 
 
 if __name__ == "__main__":
