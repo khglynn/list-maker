@@ -764,10 +764,12 @@ def main() -> None:
         # to 'completed' land on one commit, or none of them do — so a crash can only
         # ever leave a 'loading' row with ZERO mentions, which the next attempt replaces
         # (delete_existing_run is status-blind) and which the health check can see.
-        # Safe to hold open: a batch is at most EXTRACTION_BATCH_SIZE=5 episodes (~74
-        # mentions at the observed 30-day maximum, 2026-09-03) of pure DB work with no
-        # network call between statements, and Neon's idle_in_transaction_session_timeout
-        # is 5 minutes — measured on IDLE time, of which this transaction has none.
+        # Safe to hold open: the daily path batches EXTRACTION_BATCH_SIZE=5 episodes and
+        # the largest run ever recorded holds 74 mentions (measured 2026-09-03; the
+        # backfill era's 10- and 25-episode batches are the outliers). That is a few
+        # hundred statements of pure DB work with no network call between them, and
+        # Neon's idle_in_transaction_session_timeout of 5 minutes is measured on IDLE
+        # time, of which this transaction has none.
         try:
             (
                 mention_inserted,

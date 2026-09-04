@@ -869,13 +869,13 @@ def check_ai_daily_extraction(conn) -> CheckResult:
     return CheckResult("ai_daily_extraction_integrity", status, summary, details)
 
 
-# A batch load is pure DB work over at most EXTRACTION_BATCH_SIZE=5 episodes' worth of
-# CSV rows — seconds in the healthy case. A single 'loading' row cannot legitimately be
-# older than ONE attempt of the load step (run_script's 600s timeout), because each
-# retry re-runs load_entity_batch with the same batch name and delete_existing_run wipes
-# the previous attempt's row before inserting a fresh one. So 10 minutes is the edge of
-# "still in flight" and 30 is three times past it: at that age the orchestrator process
-# itself is gone, not merely slow.
+# A batch load is pure DB work over a few episodes' worth of CSV rows — seconds in the
+# healthy case. A single 'loading' row cannot legitimately be older than ONE attempt of
+# the load step (run_script's 600s timeout), because each retry re-runs
+# load_entity_batch with the same batch name and delete_existing_run wipes the previous
+# attempt's row before inserting a fresh one. So 10 minutes is the edge of "still in
+# flight" and 30 is three times past it: at that age the orchestrator process itself is
+# gone, not merely slow.
 AI_RUN_LOADING_WARN_MINUTES = 10
 AI_RUN_LOADING_FAIL_MINUTES = 30
 
@@ -940,10 +940,10 @@ def check_ai_run_stuck_loading(conn) -> CheckResult:
     """Is a batch load stuck mid-transaction — a crash that never reached 'completed'?
 
     Mirrors check_transcript_race_selfheal's warn-then-fail-by-age shape. A 'loading'
-    row seconds old is a batch in flight, which is the system working; one older than a
-    single load attempt could possibly be is abandoned, and its episodes are waiting for
-    the next run to re-extract them. started_at is the only honest age signal here —
-    a loading row deliberately carries no completed_at.
+    row seconds old is a batch in flight, which is the system working. One older than a
+    single load attempt could possibly run has been abandoned, and its episodes are
+    sitting with no mentions, waiting for the next run to re-extract them. started_at is
+    the only honest age signal here — a loading row deliberately carries no completed_at.
     """
     rows = _rows(
         conn,
