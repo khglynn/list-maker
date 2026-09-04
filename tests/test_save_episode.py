@@ -12,8 +12,10 @@ Hermetic: `taddy_query`, `get_episode_transcript`, Firecrawl's `scrape_post`,
 DB-touching function takes `conn` as a parameter so a fake connection goes
 straight in. No live tokens anywhere.
 
-Written for Phase 5 PR 5 (2026-09-04). Tests only: `pipeline/save_episode.py` is
-not modified by this file.
+Written for Phase 5 PR 5 (2026-09-04) as a tests-only file. Phase 5 PR 8 (also
+2026-09-04) changed `taddy_find_episode` on purpose — a perfect title from the wrong
+show is no longer a match — so the tests that pinned that tradeoff now pin the show
+floor instead, and say so in their names.
 """
 
 from __future__ import annotations
@@ -28,10 +30,12 @@ from pipeline import save_episode
 from pipeline.save_episode import (
     MIN_FULL_TRANSCRIPT_CHARS,
     SAVED_SLUG,
+    TADDY_SHOW_MIN_RATIO,
     TADDY_TITLE_MIN_RATIO,
     page_id_for,
     parse_og,
     scrape_link_meta,
+    show_match_ratio,
     sync_saved_pages,
     taddy_find_episode,
     taddy_transcript_text,
@@ -97,26 +101,35 @@ def _fake_search(episodes: list[dict], recorder: list | None = None):
     return _query
 
 
-# ── taddy_find_episode: the title bar and the blend ──────────────────────────
+# ── taddy_find_episode: two bars, then the blend ─────────────────────────────
 #
-# The ratios below are difflib.SequenceMatcher on the lower-cased strings, computed
-# against the live implementation on 2026-09-04. They are written into the comments
-# so a future reader can see WHY a candidate wins without re-deriving them.
+# The ratios below were computed against the live implementation on 2026-09-04 and
+# are written into the comments so a future reader can see WHY a candidate wins
+# without re-deriving them. Titles use difflib on the lower-cased strings; shows use
+# `show_match_ratio`, which normalises first and scores a contiguous word-run
+# containment as 1.0 (see its docstring for the measurements behind that).
 #
 #   "election night" vs "election night special" -> 0.7778   (below the 0.80 bar)
 #   "election night" vs "election night 2026"    -> 0.8485
 #   "election night" vs "election nights"        -> 0.9655
-#   "science vs"     vs "science vs"             -> 1.0
-#   "science vs"     vs "pivot"                  -> 0.2667
+#   "Science Vs"     vs "Science Vs"             -> 1.0
+#   "Science Vs"     vs "Science Weekly"         -> 0.6667  (clears the 0.60 floor)
+#   "Science Vs"     vs "Cinema Vus"             -> 0.6000  (exactly the floor)
+#   "Science Vs"     vs "Silence Weekly"         -> 0.5833  (just under)
+#   "Science Vs"     vs "Pivot"                  -> 0.2667
 
 def test_a_title_below_the_bar_is_never_selected_however_good_the_show_match(monkeypatch) -> None:
     """TADDY_TITLE_MIN_RATIO is an absolute gate, not one term in a score. The
     rejected candidate here has the HIGHER blended score (0.778*0.7 + 1.0*0.3 =
-    0.844 against 0.849*0.7 + 0.267*0.3 = 0.674) and still loses, because it never
-    clears 0.80 on the title. If the gate ever became advisory this test fails."""
+    0.844 against 0.849*0.7 + 0.667*0.3 = 0.794) and still loses, because it never
+    clears 0.80 on the title. If the gate ever became advisory this test fails.
+
+    Both candidates sit on shows that clear the show floor, deliberately: this test
+    is about the TITLE bar, so nothing here may depend on the show gate.
+    """
     monkeypatch.setattr(save_episode, "taddy_query", _fake_search([
         _episode("below-bar", "Election Night Special", "Science Vs"),
-        _episode("above-bar", "Election Night 2026", "Pivot"),
+        _episode("above-bar", "Election Night 2026", "Science Weekly"),
     ]))
 
     hit = taddy_find_episode("Election Night", "Science Vs", "u", "k")
@@ -124,13 +137,14 @@ def test_a_title_below_the_bar_is_never_selected_however_good_the_show_match(mon
     assert hit is not None and hit["uuid"] == "above-bar"
 
 
-def test_the_show_orders_candidates_that_already_cleared_the_title_bar(monkeypatch) -> None:
-    """Among candidates past the gate, the 0.7 title / 0.3 show blend decides — so a
-    slightly worse title on the RIGHT show beats a better title on the wrong one
-    (0.849*0.7 + 1.0*0.3 = 0.894 against 0.966*0.7 + 0.267*0.3 = 0.756)."""
+def test_the_show_orders_candidates_that_already_cleared_both_bars(monkeypatch) -> None:
+    """Past BOTH gates, the 0.7 title / 0.3 show blend still decides — so a slightly
+    worse title on the better-matching show wins (0.849*0.7 + 1.0*0.3 = 0.894 against
+    0.966*0.7 + 0.667*0.3 = 0.876). The floor is a gate, not the ranking: this is the
+    test that fails if the blend is ever collapsed to title-only."""
     monkeypatch.setattr(save_episode, "taddy_query", _fake_search([
         _episode("right-show", "Election Night 2026", "Science Vs"),
-        _episode("better-title", "Election Nights", "Pivot"),
+        _episode("better-title", "Election Nights", "Science Weekly"),
     ]))
 
     hit = taddy_find_episode("Election Night", "Science Vs", "u", "k")
@@ -138,17 +152,17 @@ def test_the_show_orders_candidates_that_already_cleared_the_title_bar(monkeypat
     assert hit["uuid"] == "right-show"
 
 
-def test_an_empty_show_name_makes_the_show_stop_deciding(monkeypatch) -> None:
-    """With no show to compare, every candidate gets the same show_ratio (0.5 in the
-    code), so the wrong-show candidate stops being penalised and the better title
-    wins — the same two candidates as the test above, opposite winner.
+def test_an_empty_show_name_does_not_gate_the_show_at_all(monkeypatch) -> None:
+    """With no show name from the caller there is nothing to compare, so the show
+    neither gates nor scores and the best title wins outright — including a candidate
+    that WOULD be gated out if a show name had been supplied. That is the pairing that
+    matters: 'Pivot' is rejected by the test above and selected here, off the same
+    fixture, which is what makes "no show name means no show gate" observable rather
+    than an implementation detail.
 
-    Being precise about what this can and cannot pin: the literal 0.5 is not
-    observable through the return value, because a constant applied uniformly to
-    every candidate cannot change their order whatever its value. What IS observable,
-    and what this pins, is that the show stops discriminating at all when the caller
-    has no show name — which is the behaviour that matters for a Castro link whose
-    colon split gave us no series.
+    It replaces the old silent 0.5 default. A constant applied uniformly to every
+    candidate never changed their order — but under a floor it would have quietly
+    passed every candidate instead, which is a decision hiding as a number.
     """
     monkeypatch.setattr(save_episode, "taddy_query", _fake_search([
         _episode("right-show", "Election Night 2026", "Science Vs"),
@@ -158,6 +172,16 @@ def test_an_empty_show_name_makes_the_show_stop_deciding(monkeypatch) -> None:
     hit = taddy_find_episode("Election Night", "", "u", "k")
 
     assert hit["uuid"] == "better-title"
+
+
+def test_a_whitespace_only_show_name_counts_as_no_show_name(monkeypatch) -> None:
+    """`meta["show"]` comes off a scraped og:title, so " " is as likely as "". It must
+    take the no-gate path rather than being compared as a literal space, which would
+    score 0.0 against every series and reject everything."""
+    monkeypatch.setattr(save_episode, "taddy_query",
+                        _fake_search([_episode("wrong-show", "Election Night", "Pivot")]))
+
+    assert taddy_find_episode("Election Night", "   ", "u", "k")["uuid"] == "wrong-show"
 
 
 def test_a_tie_keeps_taddys_own_ranking(monkeypatch) -> None:
@@ -187,17 +211,60 @@ def test_an_empty_result_set_returns_no_hit(monkeypatch) -> None:
     assert taddy_find_episode("Election Night", "Science Vs", "u", "k") is None
 
 
-def test_a_perfect_title_from_the_wrong_show_is_still_selected(monkeypatch) -> None:
-    """A documented tradeoff, not a bug to fix here: the show never gates, it only
-    orders. Two podcasts with the same episode title ("Election Night", "Season
-    Finale") can attach the other show's transcript, invisibly. Pinned so the
-    behaviour is a decision rather than a surprise — see the PR body."""
+def test_a_perfect_title_from_the_wrong_show_returns_no_hit(monkeypatch) -> None:
+    """The behaviour this PR exists to change (Kevin, 2026-09-04). Two podcasts can
+    share an episode title ("Election Night", "Season Finale"), and until now a 1.000
+    title on the wrong show attached that show's full transcript invisibly. It now
+    returns None, and `try_taddy_full` degrades to the honest excerpt — a page
+    labelled `castro_clip`/`show_notes` is a visible gap; the wrong show's transcript
+    is a silent lie.
+
+    Not hypothetical: replaying every saved episode through the live Taddy search on
+    2026-09-04 found a Pop Culture Happy Hour episode matched to 'Neubauer Artists
+    Happy Hour Show' on a 1.000 title, show ratio 0.508.
+    """
     monkeypatch.setattr(save_episode, "taddy_query",
                         _fake_search([_episode("wrong-show", "Election Night", "Pivot")]))
 
+    assert taddy_find_episode("Election Night", "Science Vs", "u", "k") is None
+
+
+def test_the_right_show_wins_over_a_wrong_show_with_a_better_title(monkeypatch) -> None:
+    """The gate's whole point, stated as a choice between two candidates rather than
+    as a rejection: the wrong show holds the PERFECT title (1.000 against 0.849) and
+    is still not selected, because 0.267 never reaches the floor. Distinct from the
+    ordering test above, which is decided by the blend among survivors — here the
+    loser never enters the ranking at all."""
+    monkeypatch.setattr(save_episode, "taddy_query", _fake_search([
+        _episode("wrong-show", "Election Night", "Pivot"),
+        _episode("right-show", "Election Night 2026", "Science Vs"),
+    ]))
+
     hit = taddy_find_episode("Election Night", "Science Vs", "u", "k")
 
-    assert hit["uuid"] == "wrong-show"
+    assert hit["uuid"] == "right-show"
+
+
+def test_a_show_exactly_at_the_floor_is_selected(monkeypatch) -> None:
+    """The floor is inclusive: `show_ratio < TADDY_SHOW_MIN_RATIO` rejects, so a
+    candidate landing exactly on 0.60 is kept. 'Science Vs' vs 'Cinema Vus' scores
+    0.600000 exactly — chosen for that, not for meaning anything. Flipping the
+    comparison to `<=` fails here."""
+    monkeypatch.setattr(save_episode, "taddy_query",
+                        _fake_search([_episode("at-floor", "Election Night", "Cinema Vus")]))
+
+    assert taddy_find_episode("Election Night", "Science Vs", "u", "k")["uuid"] == "at-floor"
+
+
+def test_a_show_just_under_the_floor_is_not_selected(monkeypatch) -> None:
+    """The other side of the same boundary, as close as a real string gets: 'Silence
+    Weekly' scores 0.5833 against 'Science Vs' — 0.017 below the floor — on a perfect
+    title. Together with the test above this pins the floor's VALUE, not merely that
+    some floor exists."""
+    monkeypatch.setattr(save_episode, "taddy_query",
+                        _fake_search([_episode("under-floor", "Election Night", "Silence Weekly")]))
+
+    assert taddy_find_episode("Election Night", "Science Vs", "u", "k") is None
 
 
 def test_the_search_term_is_quote_free_and_capped(monkeypatch) -> None:
@@ -214,6 +281,112 @@ def test_the_search_term_is_quote_free_and_capped(monkeypatch) -> None:
     term = re.search(r'term:"([^"]*)"', query).group(1)
     assert term.startswith("The  Real  Story")
     assert len(term) == 120
+
+
+# ── show_match_ratio: the metric the floor is applied to ─────────────────────
+#
+# Every pair below is REAL — the caller-side names are the distinct show names
+# `saved-episodes` has actually stored in Neon, and the Taddy-side names came back
+# from the live Taddy search on 2026-09-04. Pinned as executable facts rather than a
+# comment, because they are the entire evidence for the floor's value: if Taddy ever
+# restyles its show names, this is the test that notices.
+
+@pytest.mark.parametrize("caller, taddy", [
+    # the same show, spelled differently — a raw difflib ratio scores these 0.456,
+    # 0.605, 0.898 and 0.925, which is why the metric is not a raw difflib ratio
+    ("The AI Daily Brief", "The AI Daily Brief: Artificial Intelligence News and Analysis"),
+    ("The Vergecast: Ad-Free Edition", "The Vergecast"),
+    ("Pop Culture Happy Hour Plus", "Pop Culture Happy Hour"),
+    ("The Indicator from Planet Money Plus", "The Indicator from Planet Money"),
+    ("Culture Gabfest", "Slate Culture Gabfest"),          # a network prefix, not a suffix
+    ("This American Life", "This American Life Podcast"),  # the trailing "Podcast"
+    ("Hard Fork", "Hard Fork | The New York Times"),
+    ("Switched On Pop", "Switched on Pop"),                # case only
+    ("Today, Explained", "Today Explained"),               # punctuation only
+    # the one pair that does NOT reach 1.0: a dropped leading "The" leaves a
+    # single-word name, so the >=2-word guard blocks containment and the raw ratio
+    # carries it at 0.818. It is the only thing keeping the ratio branch honest, and
+    # the reason the floor cannot be raised to 0.85.
+    ("Vergecast", "The Vergecast"),
+])
+def test_a_show_named_two_ways_still_scores_as_one_show(caller: str, taddy: str) -> None:
+    assert show_match_ratio(caller, taddy) >= TADDY_SHOW_MIN_RATIO
+
+
+@pytest.mark.parametrize("caller, taddy, score", [
+    ("Pop Culture Happy Hour Plus", "Neubauer Artists Happy Hour Show", 0.508),
+    ("Science Vs", "This American Life", 0.286),
+    ("Science Vs", "Pivot", 0.267),
+    ("Amicus Plus", "Amicus With Dahlia Lithwick | Law, justice, and the courts", 0.308),
+])
+def test_a_genuinely_different_show_lands_below_the_floor(caller: str, taddy: str, score: float) -> None:
+    """The first pair is the live defect: a real PCHH episode whose 1.000 title match
+    sat on this unrelated show. The scores are asserted to 2dp so a change to the
+    metric that happens to keep them under the floor still shows up here."""
+    assert show_match_ratio(caller, taddy) == pytest.approx(score, abs=0.005)
+    assert show_match_ratio(caller, taddy) < TADDY_SHOW_MIN_RATIO
+
+
+def test_one_word_is_never_enough_to_match_by_containment() -> None:
+    """A garbled colon split puts junk in the show slot — Neon holds a saved episode
+    whose show name came out as 'Fela Kuti: Fear No Man'. So containment needs at
+    least two words: 'Bonus' must not swallow 'The Bonus Show' the way 'Pop Culture
+    Happy Hour' legitimately matches '… Plus'. Dropping the guard fails here."""
+    assert show_match_ratio("Bonus", "The Bonus Show") < TADDY_SHOW_MIN_RATIO
+    assert show_match_ratio("Pivot", "The Pivot Podcast") < TADDY_SHOW_MIN_RATIO
+    # …while an exact one-word name still matches itself on the ratio, no guard needed
+    assert show_match_ratio("Pivot", "Pivot") == 1.0
+
+
+def test_containment_matches_a_word_run_anywhere_not_just_a_prefix() -> None:
+    """Network names attach at the FRONT ('Slate Culture Gabfest', 'WSJ Tech News
+    Briefing') while subtitles attach at the back, so containment looks for the words
+    anywhere rather than only at the start. Asserting 1.0 rather than "clears the
+    floor" on purpose: a prefix-only rule still scores this 0.833, which passes the
+    gate but can lose the 0.7/0.3 blend to a wrong show whose name happens to sit
+    closer — so the difference is invisible until it silently picks the wrong one."""
+    assert show_match_ratio("Culture Gabfest", "Slate Culture Gabfest") == 1.0
+    assert show_match_ratio("Tech News Briefing", "WSJ Tech News Briefing") == 1.0
+
+
+def test_containment_is_symmetric_because_either_side_can_be_the_longer_name() -> None:
+    """Taddy is the verbose one for AI Daily Brief and the terse one for the
+    Vergecast's ad-free feed, so the rule cannot assume which name is longer."""
+    assert show_match_ratio("The Vergecast", "The Vergecast: Ad-Free Edition") == 1.0
+    assert show_match_ratio("The Vergecast: Ad-Free Edition", "The Vergecast") == 1.0
+
+
+def test_an_absent_show_name_on_either_side_scores_zero() -> None:
+    """Taddy can return an episode with no podcastSeries. Scoring that 0.0 means it is
+    rejected by the floor rather than defaulting into a match — the caller asked for a
+    named show and this candidate cannot prove it is that show."""
+    assert show_match_ratio("Science Vs", "") == 0.0
+    assert show_match_ratio("", "Science Vs") == 0.0
+    assert show_match_ratio("Science Vs", "!!! ???") == 0.0
+
+
+def test_a_candidate_with_no_series_name_is_gated_out(monkeypatch) -> None:
+    """The wiring for the case above: a perfect title on a series-less candidate is
+    not a hit when the caller named a show."""
+    monkeypatch.setattr(save_episode, "taddy_query",
+                        _fake_search([_episode("no-series", "Election Night", "")]))
+
+    assert taddy_find_episode("Election Night", "Science Vs", "u", "k") is None
+
+
+def test_the_real_ai_daily_brief_subtitle_still_matches_end_to_end(monkeypatch) -> None:
+    """The metric and the gate wired together on the pair that would break a naive
+    raw-ratio floor: these two names score 0.456 on raw difflib, so any raw floor able
+    to reject 'Pivot' would also have killed this real, correct upgrade. Two live rows
+    in Neon depend on it."""
+    monkeypatch.setattr(save_episode, "taddy_query", _fake_search([
+        _episode("real-hit", "The 6 AI Use Case Primitives",
+                 "The AI Daily Brief: Artificial Intelligence News and Analysis"),
+    ]))
+
+    hit = taddy_find_episode("The 6 AI Use Case Primitives", "The AI Daily Brief", "u", "k")
+
+    assert hit["uuid"] == "real-hit"
 
 
 # ── taddy_transcript_text: the stub gate ─────────────────────────────────────
@@ -563,10 +736,11 @@ def test_the_saved_pages_sync_targets_the_transcripts_db_for_saved_episodes(monk
     assert kwargs["check"] is True
 
 
-def test_the_taddy_title_bar_is_where_the_module_says_it_is() -> None:
-    # Constants the tests above reason about, asserted once so a change to either
+def test_the_taddy_bars_are_where_the_module_says_they_are() -> None:
+    # Constants the tests above reason about, asserted once so a change to any of them
     # shows up here rather than as an unexplained failure three tests away.
     assert TADDY_TITLE_MIN_RATIO == 0.80
+    assert TADDY_SHOW_MIN_RATIO == 0.60
     assert MIN_FULL_TRANSCRIPT_CHARS == 1000
 
 

@@ -54,12 +54,81 @@ from pipeline.show_config import get_show  # noqa: E402
 SAVED_SLUG = "saved-episodes"
 DEFAULT_LINKS_FILE = CACHE_DIR.parent / "apple-notes" / "podcast-links.txt"
 TADDY_TITLE_MIN_RATIO = 0.80
+# A perfect title from the WRONG show is not a match (Kevin's call, 2026-09-04). The
+# show name is a GATE as well as a term in the blend: a candidate scoring below this
+# floor is never selected, however good its title. Sized against real data — the
+# measurements, and why 0.60 rather than something tighter, are in show_match_ratio.
+TADDY_SHOW_MIN_RATIO = 0.60
 MIN_FULL_TRANSCRIPT_CHARS = 1000  # below this a "transcript" is a stub, not an upgrade
 
 log = get_logger("pipeline.save_episode")
 
 
 # ── Taddy episode lookup (the one-off path the registry never needed) ───────
+
+def _show_words(name: str) -> list[str]:
+    """A show name as comparable words: case-folded, punctuation dropped."""
+    return re.sub(r"[^a-z0-9]+", " ", (name or "").lower()).split()
+
+
+def show_match_ratio(want_show: str, series_name: str) -> float:
+    """How much a Taddy series name looks like the show the caller asked for, 0..1.
+
+    Deliberately NOT a plain difflib ratio, because the two names differ
+    SYSTEMATICALLY: Taddy carries a show's full marketing name, while the caller
+    carries whatever a Castro publisher tag or a castro.fm og:title happened to say.
+    Measured 2026-09-04 against live Neon and the live Taddy search, over every
+    distinct show name `saved-episodes` has ever stored:
+
+        'The AI Daily Brief'             vs 'The AI Daily Brief: Artificial
+                                             Intelligence News and Analysis'  raw 0.456
+        'The Vergecast: Ad-Free Edition' vs 'The Vergecast'                    raw 0.605
+        'Pop Culture Happy Hour Plus'    vs 'Pop Culture Happy Hour'           raw 0.898
+        'The Indicator from Planet Money Plus'
+                                         vs 'The Indicator from Planet Money'  raw 0.925
+
+    Every one of those is the same show and correct today (the first two are live
+    rows). So a floor on the RAW ratio could not sit above 0.45 without destroying
+    real upgrades — far too low to reject anything. What they all share is that one
+    name's words are a contiguous run of the other's, which is what a subtitle, a
+    network suffix, a "Plus"/"Ad-Free" feed variant and a trailing "Podcast" all look
+    like. That case scores 1.0 here, which leaves the raw ratio responsible only for
+    ordinary spelling variation ('Vergecast' vs 'The Vergecast' = 0.818).
+
+    The >=2-word guard on containment stops a single common word matching everything.
+    A garbled colon split really does put junk in the show slot — we hold a row whose
+    show name came out as 'Fela Kuti: Fear No Man' — and 'Bonus' must not match
+    'The Bonus Show' (0.526, rejected) the way 'Pivot' matches 'Pivot' (1.0).
+
+    WHY THE FLOOR IS 0.60. Scored this way, the same 2026-09-04 sweep separates
+    cleanly: every correct pair lands at 1.000 except 'Vergecast' vs 'The Vergecast'
+    at 0.818, while the wrong pairs land at 0.267 ('Science Vs' vs 'Pivot'), 0.286
+    ('Science Vs' vs 'This American Life'), 0.308 ('Amicus Plus' vs Slate's full
+    Amicus name) and 0.508 — the last being a LIVE defect this floor fixes, where a
+    Pop Culture Happy Hour episode matched 'Neubauer Artists Happy Hour Show' on a
+    1.000 title. 0.60 sits in the empty band between 0.508 and 0.818, with room on
+    both sides rather than shaved to either.
+
+    Two things it knowingly does NOT separate, so nobody reads more into it later:
+    'The AI Daily Brief' vs 'The AI in Media Daily Brief' scores 0.800, and 'Decoder
+    Ring' vs 'Decoder Ring Theatre' scores 1.000 — the latter being the identical
+    string shape to 'Pop Culture Happy Hour' vs '… Plus', which is correct, so no
+    metric can split them. That is tolerable because this is a GATE, not the ranking:
+    the 0.7/0.3 blend still orders everything that survives, and whenever the true
+    show is among Taddy's eight candidates it scores 1.0 and out-ranks a 0.800
+    impostor. The floor's job is the gross mismatch, which is what the live data
+    actually shows happening; raising it to 0.85 to catch that impostor would also
+    reject 'Vergecast' vs 'The Vergecast' at 0.818 and buy nothing.
+    """
+    want, series = _show_words(want_show), _show_words(series_name)
+    if not want or not series:
+        return 0.0
+    short, long_ = sorted((want, series), key=len)
+    if len(short) >= 2 and any(long_[i:i + len(short)] == short
+                               for i in range(len(long_) - len(short) + 1)):
+        return 1.0
+    return difflib.SequenceMatcher(None, " ".join(want), " ".join(series)).ratio()
+
 
 def taddy_find_episode(episode_title: str, show_name: str, user_id: str, api_key: str) -> Optional[dict]:
     term = episode_title.replace('"', " ").strip()[:120]
@@ -75,14 +144,24 @@ def taddy_find_episode(episode_title: str, show_name: str, user_id: str, api_key
     data = taddy_query(query, user_id=user_id, api_key=api_key)
     episodes = (data.get("search") or {}).get("podcastEpisodes") or []
     want_title = episode_title.lower()
-    want_show = (show_name or "").lower()
+    want_show = (show_name or "").strip()
     best, best_score = None, 0.0
     for ep in episodes:
         title_ratio = difflib.SequenceMatcher(None, want_title, (ep.get("name") or "").lower()).ratio()
-        series = ((ep.get("podcastSeries") or {}).get("name") or "").lower()
-        show_ratio = difflib.SequenceMatcher(None, want_show, series).ratio() if want_show else 0.5
-        score = title_ratio * 0.7 + show_ratio * 0.3
-        if title_ratio >= TADDY_TITLE_MIN_RATIO and score > best_score:
+        if title_ratio < TADDY_TITLE_MIN_RATIO:
+            continue
+        if not want_show:
+            # No show name to check against, so the show neither gates NOR scores.
+            # Said out loud, because the 0.5 this replaced was a decision hiding as a
+            # number: a constant applied to every candidate cannot change their order,
+            # and under a floor it would have silently passed every one of them.
+            score = title_ratio
+        else:
+            show_ratio = show_match_ratio(want_show, (ep.get("podcastSeries") or {}).get("name") or "")
+            if show_ratio < TADDY_SHOW_MIN_RATIO:
+                continue  # right title, wrong show — not a match at any title ratio
+            score = title_ratio * 0.7 + show_ratio * 0.3
+        if score > best_score:
             best, best_score = ep, score
     return best
 
