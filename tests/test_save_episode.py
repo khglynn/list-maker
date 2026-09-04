@@ -356,6 +356,20 @@ def test_containment_is_symmetric_because_either_side_can_be_the_longer_name() -
     assert show_match_ratio("The Vergecast: Ad-Free Edition", "The Vergecast") == 1.0
 
 
+@pytest.mark.parametrize("name", ["東京ポッドキャスト", "Разбор", "بودكاست", "Ελληνικά"])
+def test_a_show_name_in_any_script_matches_itself(name: str) -> None:
+    """The invariant an ASCII-only normaliser broke: a name must match itself, whatever
+    alphabet it is written in. Before this, every character was stripped, the word list
+    came back empty, and the floor rejected the show against its own exact self."""
+    assert show_match_ratio(name, name) == 1.0
+
+
+def test_a_non_latin_feed_variant_still_clears_the_floor() -> None:
+    """The same containment and ratio machinery has to work in other scripts, not just
+    survive them: a bonus-feed suffix behaves the way 'Plus' does in Latin."""
+    assert show_match_ratio("東京ポッドキャスト", "東京ポッドキャスト（ボーナス）") >= TADDY_SHOW_MIN_RATIO
+
+
 def test_an_absent_show_name_on_either_side_scores_zero() -> None:
     """Taddy can return an episode with no podcastSeries. Scoring that 0.0 means it is
     rejected by the floor rather than defaulting into a match — the caller asked for a

@@ -67,8 +67,22 @@ log = get_logger("pipeline.save_episode")
 # ── Taddy episode lookup (the one-off path the registry never needed) ───────
 
 def _show_words(name: str) -> list[str]:
-    """A show name as comparable words: case-folded, punctuation dropped."""
-    return re.sub(r"[^a-z0-9]+", " ", (name or "").lower()).split()
+    r"""A show name as comparable words: case-folded, punctuation dropped.
+
+    `\W` with re.UNICODE rather than `[^a-z0-9]`, because an ASCII-only class deletes
+    every character of a name written in another script — so a CJK, Cyrillic or Arabic
+    show name normalised to the empty list and show_match_ratio hard-rejected it at
+    0.0 AGAINST ITS OWN EXACT SELF. Nothing in Neon speaks a non-Latin script today
+    (all 22 distinct saved-episode show names are Latin), so this is a latent broken
+    invariant rather than a live defect — but f(x, x) == 0.0 is the kind of thing that
+    surfaces as an inexplicable missing transcript years later. casefold() over
+    lower() for the same reason: it folds ß and Turkish dotted-I correctly.
+
+    Junk still scores 0.0 — punctuation is `\W`, so '!!! ???' has no words — which is
+    the distinction that matters: "no comparable words" must mean junk in the show
+    slot, not another alphabet.
+    """
+    return re.sub(r"[\W_]+", " ", (name or "").casefold(), flags=re.UNICODE).split()
 
 
 def show_match_ratio(want_show: str, series_name: str) -> float:
