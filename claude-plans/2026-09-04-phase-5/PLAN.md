@@ -225,7 +225,7 @@ Monkeypatch `spotify_match.time.sleep` in every retry/batch test — `API_DELAY`
 2. `scrapers/tal/fill_songs.py:29-34` — replace the private `psycopg2.connect(os.getenv("DATABASE_URL"))` with the same lazy `common.get_db_connection` delegate its neighbours `scrape.py:47-58` and `fetch.py:47-58` already carry, comment and all. It is reachable only via `fill_songs.py`'s own `__main__` today, which is exactly the hand-run that would rediscover the 41-minute hang.
 3. Add `pipeline/scrapers/tal/fill_songs.py` to `SCHEDULED_PATH_MODULES` (`tests/test_common.py:234-260`) so the grep guard keeps it honest.
 
-**Do not touch.** `tal/repair_metadata.py` and the two `download_episode_art.py` scripts — also unwired, but they are documented manual tools with a stated purpose (`pipeline/README.md:95-96`, and `marketing/` owns the artwork ones). Different risk tier; leave them.
+**Do not touch.** The two `download_episode_art.py` scripts — unwired, documented manual tools (`marketing/` owns the artwork ones). *Amended 2026-09-04 while building:* `tal/repair_metadata.py` also carried its own untimed `psycopg2.connect()` (`:54`), which made acceptance 3's grep impossible to satisfy under the original do-not-touch line; the acceptance wins — it moves onto the shared `common.get_db_connection` delegate and into the guard list in this PR, nothing else in that file changes.
 
 **Needs Kevin.** One yes/no: delete `scoring_match.py`, or keep it? Default is delete. See (d).
 
