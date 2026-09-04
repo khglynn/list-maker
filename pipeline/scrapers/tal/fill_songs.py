@@ -25,10 +25,9 @@ from parse import parse_episode
 
 def get_db_connection():
     """Connect to Neon database (delegates to common.get_db_connection)."""
-    # One implementation for the scheduled path — pipeline/common.py carries the connect
-    # timeout, keepalives, and bounded retry. This module's private copy had none, and it
-    # sits on pipeline.yml's Mon/Wed/Fri chain (rewired 2026-09-01 after the 08-31 41-minute
-    # hang). Lazy import so this file still runs as a script from its own directory.
+    # This is a manual tool run by hand, not on the cron; its private copy had no connect
+    # timeout, keepalives or retry — exactly the hand-run that would rediscover the 08-31
+    # 41-minute hang. Lazy import so this file still runs as a script from its own directory.
     pipeline_dir = str(Path(__file__).resolve().parents[2])
     if pipeline_dir not in sys.path:
         sys.path.insert(0, pipeline_dir)
