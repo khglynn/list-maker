@@ -317,3 +317,82 @@ def test_an_error_mid_pagination_returns_a_truncated_playlist(capsys) -> None:
     assert len(found) == 200  # pages 1-2 only; page 3 onwards never read
     assert len(sp.calls_to("playlist_tracks")) == 3
     assert "Error fetching playlist tracks" in capsys.readouterr().err
+
+
+# =============================================================================
+# Writing to the playlist: add_tracks_to_playlist
+# =============================================================================
+
+
+def _sent(sp: FakeSpotify) -> List[List[str]]:
+    """The uri lists handed to Spotify, one entry per API call."""
+    return [call.params["items"] for call in sp.calls_to("playlist_add_items")]
+
+
+def test_tracks_go_out_in_batches_of_a_hundred_in_order(sleeps) -> None:
+    """Spotify's add endpoint caps at 100 uris, so 250 tracks is 100 / 100 / 50 — and
+    every id is sent exactly once, in the order the query returned them."""
+    sp = FakeSpotify()
+    track_ids = _many(250)
+
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", track_ids) == 250
+
+    assert [len(batch) for batch in _sent(sp)] == [100, 100, 50]
+    assert [uri for batch in _sent(sp) for uri in batch] == [
+        f"spotify:track:{tid}" for tid in track_ids
+    ]
+    assert {c.params["playlist_id"] for c in sp.calls_to("playlist_add_items")} == {"PL"}
+    assert sleeps == [0.5, 0.5, 0.5]  # API_DELAY after each accepted batch
+
+
+def test_a_rate_limited_batch_is_retried_whole_after_the_header_delay(sleeps) -> None:
+    """429 is the one error worth waiting on. The retry re-sends the SAME 100 uris —
+    Spotify rejected the batch outright, so no partial write has to be reasoned about."""
+    sp = FakeSpotify(errors={"playlist_add_items": {1: rate_limited(2)}})
+
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", _many(150)) == 150
+
+    assert [len(batch) for batch in _sent(sp)] == [100, 100, 50]
+    assert _sent(sp)[0] == _sent(sp)[1]  # the same batch, not the next one
+    assert sleeps == [3, 0.5, 0.5]  # Retry-After 2, plus the one second production adds
+
+
+def test_a_rate_limit_with_no_retry_after_header_waits_six_seconds(sleeps) -> None:
+    """Spotify does not always send the header. The fallback is 5 + 1, not zero — a
+    tight retry loop against a rate limiter is how a soft limit becomes a hard one."""
+    sp = FakeSpotify(errors={"playlist_add_items": {1: rate_limited()}})
+
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", ["t1"]) == 1
+
+    assert sleeps == [6, 0.5]
+
+
+def test_a_permanent_rate_limit_gives_up_after_three_attempts(sleeps) -> None:
+    """TODAY'S BEHAVIOUR, pinned not endorsed. The batch is abandoned after MAX_RETRIES
+    with no raise: `added` silently undercounts and the caller reports success."""
+    sp = FakeSpotify(errors={"playlist_add_items": rate_limited(2)})
+
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", _many(50)) == 0
+
+    assert len(sp.calls_to("playlist_add_items")) == sync_playlist.MAX_RETRIES == 3
+    assert sleeps == [3, 3, 3]  # it waits after the final attempt too, for nothing
+
+
+def test_a_non_rate_limit_error_drops_that_batch_and_keeps_going(sleeps, capsys) -> None:
+    """TODAY'S BEHAVIOUR, pinned not endorsed. 100 of 250 tracks never reach the
+    playlist, `added` comes back 150, nothing raises, and the run exits 0. The only
+    evidence is a line on stderr in a log nobody reads on a green run."""
+    sp = FakeSpotify(errors={"playlist_add_items": {2: spotify_error(500)}})
+
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", _many(250)) == 150
+
+    assert [len(batch) for batch in _sent(sp)] == [100, 100, 50]  # no retry of batch 2
+    assert "Error adding tracks" in capsys.readouterr().err
+
+
+def test_nothing_to_add_calls_spotify_not_at_all() -> None:
+    sp = FakeSpotify()
+
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", []) == 0
+
+    assert sp.calls == []
