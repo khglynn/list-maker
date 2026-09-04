@@ -2,27 +2,51 @@ from datetime import date
 
 from pipeline.data_health import (
     CheckResult,
+    HeldEpisodes,
     _date_lag_days,
     check_episode_freshness,
     check_import_caught_up,
     check_notion_sync_freshness,
     render_text,
 )
+from pipeline.feed_check import FeedEpisode
 
 
-def _patch_notion_freshness(monkeypatch, *, transcript_rows, stale_entities, failed_entities):
-    """The check makes one _rows call (transcript backlog) and two _one calls
-    (stale entity count, failed entity count) — dispatch _one on SQL content."""
+def _held_row(slug: str, url: str | None, title: str | None, publish_date: date | None) -> dict:
+    """One row as _held_episodes_by_show's bulk query returns it."""
+    return {"slug": slug, "url": url, "title": title, "publish_date": publish_date}
+
+
+def _held(*episodes: tuple[str, str, date]) -> HeldEpisodes:
+    """A HeldEpisodes built from (url, title, publish_date) triples."""
+    held = HeldEpisodes(urls=set(), title_dates=set())
+    for url, title, published in episodes:
+        held.urls.add(url)
+        held.title_dates.add((title.strip().lower(), published))
+        if held.latest is None or published > held.latest:
+            held.latest = published
+    return held
+
+
+def _patch_notion_freshness(
+    monkeypatch, *, transcript_rows, stale_entity_rows, failed_entities
+):
+    """The check makes TWO _rows calls (transcript backlog, stale entity pages) and one
+    _one call (failed entity count) — dispatch both on SQL content.
+
+    The stale-entity query became row-returning in 4f so the FAIL can name the entities
+    rather than only count them; a blanket `_rows` stub would hand the transcript rows
+    to both queries and quietly test the wrong thing.
+    """
     import pipeline.data_health as dh
 
-    monkeypatch.setattr(dh, "_rows", lambda *a, **k: transcript_rows)
+    def fake_rows(conn, sql, params=None):
+        return stale_entity_rows if "FROM ai_entities" in sql else transcript_rows
 
-    def fake_one(conn, sql, params=None):
-        if "notion_sync_status" in sql:
-            return {"count": failed_entities}
-        return {"count": stale_entities}
-
-    monkeypatch.setattr(dh, "_one", fake_one)
+    monkeypatch.setattr(dh, "_rows", fake_rows)
+    monkeypatch.setattr(
+        dh, "_one", lambda conn, sql, params=None: {"count": failed_entities}
+    )
 
 
 def test_date_lag_days_handles_missing_dates() -> None:
@@ -97,16 +121,16 @@ def test_feed_check_can_scope_to_one_show(monkeypatch) -> None:
     paying for a call per show on every music run is what makes people delete the check."""
     import pipeline.data_health as dh
 
-    monkeypatch.setattr(
-        dh, "_rows", lambda *a, **k: [{"slug": "tal", "db_latest": date(2026, 5, 17)}]
-    )
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [_held_row("tal", "held-1", "Old one", date(2026, 5, 17))])
     asked: list[str] = []
 
     def fake_feed(cfg, limit=15):
         asked.append(cfg.slug)
-        return [date(2026, 7, 26)]
+        return [FeedEpisode("tal-new", date(2026, 7, 26), "A new episode")]
 
-    monkeypatch.setattr(dh, "feed_recent_dates", fake_feed)
+    # TAL is identity-compared (its discovery runs the Taddy importer), so the seam
+    # this test holds is feed_recent_episodes, not feed_recent_dates.
+    monkeypatch.setattr(dh, "feed_recent_episodes", fake_feed)
 
     result = check_import_caught_up(conn=None, slugs=["tal"])
 
@@ -116,12 +140,18 @@ def test_feed_check_can_scope_to_one_show(monkeypatch) -> None:
 
 
 def test_feed_check_unscoped_still_covers_every_show(monkeypatch) -> None:
+    """Both readers must be asked: SOP has no comparable identity and takes the date
+    path, every other show takes the identity path. Watching only one seam would let
+    half the catalogue go unchecked while the test still passed."""
     import pipeline.data_health as dh
 
     monkeypatch.setattr(dh, "_rows", lambda *a, **k: [])
     asked: list[str] = []
     monkeypatch.setattr(
         dh, "feed_recent_dates", lambda cfg, limit=15: asked.append(cfg.slug) or None
+    )
+    monkeypatch.setattr(
+        dh, "feed_recent_episodes", lambda cfg, limit=15: asked.append(cfg.slug) or None
     )
 
     check_import_caught_up(conn=None)
@@ -133,7 +163,7 @@ def test_notion_sync_freshness_fails_on_transcript_backlog(monkeypatch) -> None:
     _patch_notion_freshness(
         monkeypatch,
         transcript_rows=[{"slug": "ai-daily-brief", "unsynced": 3, "oldest": date(2026, 6, 7)}],
-        stale_entities=0,
+        stale_entity_rows=[],
         failed_entities=0,
     )
     result = check_notion_sync_freshness(conn=None)
@@ -143,16 +173,42 @@ def test_notion_sync_freshness_fails_on_transcript_backlog(monkeypatch) -> None:
 
 def test_notion_sync_freshness_fails_on_stale_entity_pages(monkeypatch) -> None:
     _patch_notion_freshness(
-        monkeypatch, transcript_rows=[], stale_entities=5, failed_entities=0
+        monkeypatch,
+        transcript_rows=[],
+        stale_entity_rows=[
+            {"id": i, "canonical_name": f"Tool {i}"} for i in range(1, 6)
+        ],
+        failed_entities=0,
     )
     result = check_notion_sync_freshness(conn=None)
     assert result.status == "fail"
     assert any("5 entity page(s)" in d for d in result.details)
+    # 4f: the alert names them, so a person can open those pages without first
+    # writing the query themselves.
+    assert any("Tool 1 (1)" in d for d in result.details)
+
+
+def test_stale_entity_failure_caps_the_names_it_lists(monkeypatch) -> None:
+    """A systemic sync break must post a bounded line, not 400 entity names."""
+    _patch_notion_freshness(
+        monkeypatch,
+        transcript_rows=[],
+        stale_entity_rows=[
+            {"id": i, "canonical_name": f"Tool {i}"} for i in range(1, 26)
+        ],
+        failed_entities=0,
+    )
+    detail = next(
+        d for d in check_notion_sync_freshness(conn=None).details if "entity page(s)" in d
+    )
+    assert "25 entity page(s)" in detail  # the count stays exact
+    assert "+15 more" in detail           # only the naming is capped, at 10
+    assert "Tool 11 (11)" not in detail
 
 
 def test_notion_sync_freshness_warns_on_lingering_failed(monkeypatch) -> None:
     _patch_notion_freshness(
-        monkeypatch, transcript_rows=[], stale_entities=0, failed_entities=2
+        monkeypatch, transcript_rows=[], stale_entity_rows=[], failed_entities=2
     )
     result = check_notion_sync_freshness(conn=None)
     assert result.status == "warn"
@@ -160,7 +216,7 @@ def test_notion_sync_freshness_warns_on_lingering_failed(monkeypatch) -> None:
 
 def test_notion_sync_freshness_passes_when_clean(monkeypatch) -> None:
     _patch_notion_freshness(
-        monkeypatch, transcript_rows=[], stale_entities=0, failed_entities=0
+        monkeypatch, transcript_rows=[], stale_entity_rows=[], failed_entities=0
     )
     assert check_notion_sync_freshness(conn=None).status == "pass"
 
@@ -206,44 +262,91 @@ def test_selfheal_check_fails_when_the_queue_stops_draining(monkeypatch) -> None
     assert any("hard-fork ep 5133" in d for d in result.details)
 
 
+def _extraction_check(
+    monkeypatch,
+    *,
+    missing_rows=None,
+    orphan_rows=None,
+    zero_mention_rows=None,
+    declared_empty: int = 0,
+):
+    """Drive check_ai_daily_extraction with all four of its queries stubbed.
+
+    Three became _rows in 4f (so each count can name the rows behind it) and the
+    informational declared-empty tally is still a _one. Both seams are dispatched by
+    SQL content on purpose: a blanket stub would hand one query's rows to another and
+    the test would keep passing while measuring nothing.
+
+    Returns (result, calls) where calls is [(flattened_sql, params), ...].
+    """
+    import pipeline.data_health as dh
+
+    calls: list[tuple[str, object]] = []
+
+    def fake_rows(conn, sql, params=None):
+        flat = " ".join(sql.split())
+        calls.append((flat, params))
+        if "HAVING COUNT(m.id) = 0" in flat:
+            return zero_mention_rows or []
+        if "m.transcript_id IS NOT NULL" in flat:
+            return orphan_rows or []
+        return missing_rows or []
+
+    def fake_one(conn, sql, params=None):
+        flat = " ".join(sql.split())
+        calls.append((flat, params))
+        return {"count": declared_empty}
+
+    monkeypatch.setattr(dh, "_rows", fake_rows)
+    monkeypatch.setattr(dh, "_one", fake_one)
+    return dh.check_ai_daily_extraction(conn=None), calls
+
+
 def test_extraction_integrity_no_longer_double_reports_the_race(monkeypatch) -> None:
     """The race has one owner (check_transcript_race_selfheal). This check keeps only
     the orphan case: transcript_id pointing at a transcript that no longer exists."""
-    import pipeline.data_health as dh
-
-    seen: list[str] = []
-
-    def fake_one(conn, sql, params=None):
-        seen.append(" ".join(sql.split()))
-        return {"transcripted_without_mentions": 0, "count": 0}
-
-    monkeypatch.setattr(dh, "_one", fake_one)
-    result = dh.check_ai_daily_extraction(conn=None)
+    result, calls = _extraction_check(monkeypatch)
 
     assert result.status == "pass"
-    orphan_sql = next(s for s in seen if "transcript_id IS NOT NULL" in s)
+    orphan_sql = next(s for s, _ in calls if "m.transcript_id IS NOT NULL" in s)
     assert "m.transcript_id IS NULL" not in orphan_sql
 
 
 # ---- feed check grace window (the August-2026 "1 show behind" noise) ----
 
-def _feed_check(monkeypatch, db_latest: dict, feed: dict, today: date, slugs: list[str]):
+def _feed_check(
+    monkeypatch,
+    *,
+    rows: list[dict],
+    today: date,
+    slugs: list[str],
+    feed_dates: dict | None = None,
+    feed_episodes: dict | None = None,
+):
+    """Drive check_import_caught_up with both feed readers stubbed.
+
+    Both seams are always patched, never just the one a given show uses — an unpatched
+    reader would reach the real network inside a "hermetic" test, and the identity path
+    and the date path are chosen per show by ShowConfig.episode_identity.
+    """
     import pipeline.data_health as dh
 
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: rows)
+    monkeypatch.setattr(dh, "feed_recent_dates", lambda cfg, limit=15: (feed_dates or {}).get(cfg.slug))
     monkeypatch.setattr(
-        dh, "_rows", lambda *a, **k: [{"slug": s, "db_latest": d} for s, d in db_latest.items()]
+        dh, "feed_recent_episodes", lambda cfg, limit=15: (feed_episodes or {}).get(cfg.slug)
     )
-    monkeypatch.setattr(dh, "feed_recent_dates", lambda cfg, limit=15: feed.get(cfg.slug))
     monkeypatch.setattr(dh, "_today", lambda: today)
     return check_import_caught_up(conn=None, slugs=slugs)
 
 
 def test_feed_check_tolerates_a_fresh_episode_inside_the_import_window(monkeypatch) -> None:
     # Tuesday: SOP published today; its next import is Wednesday. Not a gap.
+    # SOP is the date-compared show (its scraper writes the urls Taddy never sees).
     result = _feed_check(
         monkeypatch,
-        {"sop": date(2026, 8, 25)},
-        {"sop": [date(2026, 9, 1), date(2026, 8, 25)]},
+        rows=[_held_row("sop", "https://switchedonpop.com/episodes/x", "X", date(2026, 8, 25))],
+        feed_dates={"sop": [date(2026, 9, 1), date(2026, 8, 25)]},
         today=date(2026, 9, 1),
         slugs=["sop"],
     )
@@ -255,8 +358,8 @@ def test_feed_check_fails_once_a_missing_episode_is_older_than_the_grace(monkeyp
     # Sunday: the Wed AND Fri imports both had their turn and the 09-01 episode is still absent.
     result = _feed_check(
         monkeypatch,
-        {"sop": date(2026, 8, 25)},
-        {"sop": [date(2026, 9, 1), date(2026, 8, 25)]},
+        rows=[_held_row("sop", "https://switchedonpop.com/episodes/x", "X", date(2026, 8, 25))],
+        feed_dates={"sop": [date(2026, 9, 1), date(2026, 8, 25)]},
         today=date(2026, 9, 6),
         slugs=["sop"],
     )
@@ -266,12 +369,16 @@ def test_feed_check_fails_once_a_missing_episode_is_older_than_the_grace(monkeyp
 
 def test_feed_grace_is_per_show(monkeypatch) -> None:
     # The same 3-day-old feed episode is fine for SOP (4-day window) and a real miss
-    # for AI Daily (2-day window, imported every day).
-    feed = [date(2026, 9, 1)]
+    # for AI Daily (2-day window, imported every day). SOP is compared by date, AI Daily
+    # by identity — the grace window means the same thing on both paths.
     result = _feed_check(
         monkeypatch,
-        {"sop": date(2026, 8, 25), "ai-daily-brief": date(2026, 8, 29)},
-        {"sop": feed, "ai-daily-brief": feed},
+        rows=[
+            _held_row("sop", "https://switchedonpop.com/episodes/x", "X", date(2026, 8, 25)),
+            _held_row("ai-daily-brief", "taddy:held", "Held one", date(2026, 8, 29)),
+        ],
+        feed_dates={"sop": [date(2026, 9, 1)]},
+        feed_episodes={"ai-daily-brief": [FeedEpisode("taddy:missing", date(2026, 9, 1), "New")]},
         today=date(2026, 9, 4),
         slugs=["sop", "ai-daily-brief"],
     )
@@ -292,6 +399,155 @@ def test_split_missing_feed_dates_partitions_by_grace() -> None:
     # Nothing in the DB at all: every feed date is missing, still graded by age.
     assert split_missing_feed_dates([date(2026, 9, 9)], None, 2, today=today) == ([], [date(2026, 9, 9)])
     assert split_missing_feed_dates([date(2026, 9, 1)], None, 2, today=today) == ([date(2026, 9, 1)], [])
+
+
+# ---- feed check BY EPISODE IDENTITY (the re-dating false positive + mid-series holes) ----
+
+def test_split_missing_feed_episodes_catches_a_mid_series_hole() -> None:
+    """THE acceptance case. B is missing and OLDER than the newest episode we hold, so
+    MAX(publish_date) can never see it — split_missing_feed_dates would call this show
+    caught up forever. Identity is a set question, so the hole is just another entry."""
+    from pipeline.data_health import split_missing_feed_episodes
+
+    feed = [
+        FeedEpisode("ep-A", date(2026, 9, 1), "A"),
+        FeedEpisode("ep-B", date(2026, 8, 25), "B"),
+        FeedEpisode("ep-C", date(2026, 8, 18), "C"),
+    ]
+    held = _held(("ep-A", "A", date(2026, 9, 1)), ("ep-C", "C", date(2026, 8, 18)))
+
+    overdue, pending = split_missing_feed_episodes(feed, held, 2, today=date(2026, 9, 1))
+
+    assert [ep.identity for ep in overdue] == ["ep-B"]
+    assert pending == []
+    # And proof the old comparison is blind to it: nothing in the feed is newer than
+    # the newest date we hold, so the date-only split reports nothing at all.
+    from pipeline.data_health import split_missing_feed_dates
+
+    assert split_missing_feed_dates(
+        [ep.publish_date for ep in feed], held.latest, 2, today=date(2026, 9, 1)
+    ) == ([], [])
+
+
+def test_split_missing_feed_episodes_ignores_a_redated_episode() -> None:
+    """The TAL incident (DEVLOG 2026-09-01): Taddy moved an episode's publish date, the
+    date check read the new date as a brand-new missing episode, and the channel got a
+    BEHIND that no import could ever clear. Identity does not move when a date does —
+    episodes.url is UNIQUE and both upserts COALESCE publish_date ON CONFLICT (url)."""
+    from pipeline.data_health import split_missing_feed_episodes
+
+    held = _held(("ep-X", "The Episode", date(2026, 7, 1)))  # stored under its ORIGINAL date
+    redated = [FeedEpisode("ep-X", date(2026, 8, 20), "The Episode")]
+
+    # Nothing missing, at any grace window or any "today".
+    assert split_missing_feed_episodes(redated, held, 2, today=date(2026, 9, 1)) == ([], [])
+    assert split_missing_feed_episodes(redated, held, 0, today=date(2026, 12, 31)) == ([], [])
+
+
+def test_split_missing_feed_episodes_keeps_the_grace_window() -> None:
+    """A missing episode inside the show's import window is pending, not an alarm — the
+    contract split_missing_feed_dates set in PR #4, unchanged by the identity switch."""
+    from pipeline.data_health import split_missing_feed_episodes
+
+    feed = [FeedEpisode("ep-new", date(2026, 9, 5), "New"), FeedEpisode("ep-old", date(2026, 9, 1), "Old")]
+    held = _held(("ep-held", "Held", date(2026, 8, 30)))
+
+    overdue, pending = split_missing_feed_episodes(feed, held, 2, today=date(2026, 9, 6))
+
+    assert [ep.identity for ep in overdue] == ["ep-old"]  # past the 2-day window
+    assert [ep.identity for ep in pending] == ["ep-new"]  # published yesterday, still fine
+
+
+def test_feed_episode_held_by_title_and_date_when_the_url_scheme_is_older() -> None:
+    """A row written before a show's importer changed hands holds the same episode under
+    an older url. Measured 2026-09-03: 3 of TAL's 15 recent feed episodes are exactly
+    this. Falling back to the importer's own title+date dedup rule is what stops them
+    reporting BEHIND forever — if the importer would call it present, no import can
+    ever create it, so 'missing' would be an alarm nothing could clear."""
+    from pipeline.data_health import _feed_episode_is_held
+
+    held = _held(("https://www.thisamericanlife.org/anon", "An Update from Ira", date(2025, 10, 16)))
+    legacy = FeedEpisode("taddy:uuid-not-in-db", date(2025, 10, 16), "An Update from Ira")
+
+    assert _feed_episode_is_held(legacy, held) is True
+    # Same title, different date = a different episode. Not held.
+    assert _feed_episode_is_held(
+        FeedEpisode("taddy:other", date(2026, 1, 9), "An Update from Ira"), held
+    ) is False
+    # An untitled feed row must not match some other episode's title...
+    assert _feed_episode_is_held(FeedEpisode("taddy:blank", date(2025, 10, 16), ""), held) is False
+    # ...but it must match the title the IMPORTER gives an untitled episode, or we would
+    # report an episode we hold — under a title we chose — as missing forever.
+    untitled = _held(("legacy://x", "Untitled Episode", date(2026, 8, 20)))
+    assert _feed_episode_is_held(FeedEpisode("taddy:blank", date(2026, 8, 20), ""), untitled) is True
+
+
+def test_feed_check_catches_a_mid_series_hole_end_to_end(monkeypatch) -> None:
+    """The same gap through the real check: status fail, and the gap's date named."""
+    result = _feed_check(
+        monkeypatch,
+        rows=[
+            _held_row("ai-daily-brief", "taddy:A", "A", date(2026, 9, 1)),
+            _held_row("ai-daily-brief", "taddy:C", "C", date(2026, 8, 18)),
+        ],
+        feed_episodes={
+            "ai-daily-brief": [
+                FeedEpisode("taddy:A", date(2026, 9, 1), "A"),
+                FeedEpisode("taddy:B", date(2026, 8, 25), "B"),
+                FeedEpisode("taddy:C", date(2026, 8, 18), "C"),
+            ]
+        },
+        today=date(2026, 9, 1),
+        slugs=["ai-daily-brief"],
+    )
+
+    assert result.status == "fail"
+    assert any(
+        d.startswith("ai-daily-brief: BEHIND 1") and "oldest missing 2026-08-25" in d
+        for d in result.details
+    ), result.details
+    # Actionable, not just a count: identity comparison knows exactly which episode is
+    # missing, so the alert names it rather than leaving the reader to go find out.
+    assert any("missing: 2026-08-25 'B'" in d for d in result.details), result.details
+    # We hold the NEWEST episode, so the Slack line still reads "we have 2026-09-01" —
+    # which is exactly why the date-only check called this show caught up.
+    assert any("we have 2026-09-01" in d for d in result.details)
+
+
+def test_feed_check_names_a_scheme_change_when_every_episode_looks_missing(monkeypatch) -> None:
+    """All 15 missing is either a dead importer or an importer that quietly changed the
+    url it writes. The alert has to name both, or the second one reads as the first."""
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("hard-fork", "old-scheme://1", "Held", date(2026, 8, 28))],
+        feed_episodes={
+            "hard-fork": [
+                FeedEpisode("taddy:1", date(2026, 8, 28), "One"),
+                FeedEpisode("taddy:2", date(2026, 8, 21), "Two"),
+            ]
+        },
+        today=date(2026, 9, 1),
+        slugs=["hard-fork"],
+    )
+
+    assert result.status == "fail"
+    assert any("EVERY recent feed episode is missing" in d for d in result.details)
+
+
+def test_feed_check_still_skips_curated_sources(monkeypatch) -> None:
+    """Blogs and research docs have no feed of any kind — neither reader is even asked."""
+    asked: list[str] = []
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [])
+    monkeypatch.setattr(dh, "feed_recent_dates", lambda cfg, limit=15: asked.append(cfg.slug))
+    monkeypatch.setattr(dh, "feed_recent_episodes", lambda cfg, limit=15: asked.append(cfg.slug))
+
+    result = check_import_caught_up(conn=None, slugs=["openai-blog", "agentic-research"])
+
+    assert asked == []
+    assert result.status == "pass"
+    assert all("curated source" in d for d in result.details)
 
 
 def test_transcript_coverage_tolerates_a_transcript_that_is_not_out_yet(monkeypatch) -> None:
@@ -327,24 +583,181 @@ def test_transcript_coverage_tolerates_a_transcript_that_is_not_out_yet(monkeypa
 def test_extraction_integrity_ignores_declared_empty_episodes(monkeypatch) -> None:
     """An episode the extractor ran on and kept nothing for is an answer, not a gap —
     otherwise the first legitimately-empty episode pins this check red forever."""
-    import pipeline.data_health as dh
-
-    seen: list[str] = []
-
-    def fake_one(conn, sql, params=None):
-        flat = " ".join(sql.split())
-        seen.append(flat)
-        if "completed_empty' AND r.created_at" in flat:
-            return {"count": 2}
-        return {"transcripted_without_mentions": 0, "count": 0}
-
-    monkeypatch.setattr(dh, "_one", fake_one)
-    result = dh.check_ai_daily_extraction(conn=None)
+    result, calls = _extraction_check(monkeypatch, declared_empty=2)
 
     assert result.status == "pass"  # declared empties are informational
-    missing_sql = next(s for s in seen if "transcripted_without_mentions" in s)
+    missing_sql = next(s for s, _ in calls if "JOIN episode_transcripts" in s)
     assert "completed_empty" in missing_sql and "6 hours" in missing_sql
     assert any("declared empty" in d and "2" in d for d in result.details)
+
+
+# --- zero-mention runs: scoped and windowed (4a, 2026-09-03) -----------------------
+
+
+def test_extraction_integrity_flags_recent_zero_mention_runs(monkeypatch) -> None:
+    """A completed run that loaded nothing is a real fault — it must still fail once
+    the query is scoped and windowed, or 4a would have traded a false positive for a
+    blind spot."""
+    result, _ = _extraction_check(
+        monkeypatch,
+        zero_mention_rows=[{"id": 91, "batch_name": "incremental-7300-to-7304"}],
+    )
+
+    assert result.status == "fail"
+    assert any("zero mentions" in d for d in result.details)
+
+
+def test_zero_mention_runs_is_scoped_to_a_show_and_a_window(monkeypatch) -> None:
+    """Unscoped and unwindowed, one anomaly from any show — or a legacy NULL-show_id
+    row — pinned a check named for AI Daily permanently red.
+
+    The shape is asserted through the PARAMS, not by grepping the SQL for the literals:
+    the whole point of 4a is that both values are constants a reader can change in one
+    line, so the test has to prove those constants reach the database.
+    """
+    from pipeline.data_health import (
+        ZERO_MENTION_RUN_SHOWS,
+        ZERO_MENTION_RUN_WINDOW_DAYS,
+    )
+
+    _, calls = _extraction_check(monkeypatch)
+    sql, params = next(c for c in calls if "HAVING COUNT(m.id) = 0" in c[0])
+
+    assert "JOIN shows s ON s.id = r.show_id" in sql
+    assert "s.slug = ANY(%s)" in sql
+    assert "r.created_at >= NOW() - make_interval(days => %s)" in sql
+    assert params == [list(ZERO_MENTION_RUN_SHOWS), ZERO_MENTION_RUN_WINDOW_DAYS]
+    assert ZERO_MENTION_RUN_SHOWS == ("ai-daily-brief",)  # Kevin's call, 2026-09-03
+
+
+# --- every FAIL names rows, not just counts (4f, 2026-09-03) -----------------------
+
+
+def test_extraction_integrity_failures_name_the_rows(monkeypatch) -> None:
+    """Phase 4's acceptance line: every FAIL in the health run is actionable. These
+    details go to Slack, where a bare count leaves nobody anywhere to look."""
+    result, _ = _extraction_check(
+        monkeypatch,
+        missing_rows=[{"id": 7301, "publish_date": date(2026, 9, 1)}],
+        orphan_rows=[{"id": 4242, "episode_id": 7261, "transcript_id": 99}],
+        zero_mention_rows=[{"id": 91, "batch_name": "incremental-7300-to-7304"}],
+    )
+
+    assert result.status == "fail"
+    joined = " | ".join(result.details)
+    assert "ep 7301 (2026-09-01)" in joined
+    assert "mention 4242 (ep 7261)" in joined
+    assert "run 91 (incremental-7300-to-7304)" in joined
+    assert "3 AI extraction integrity issue(s)" in result.summary
+
+
+def test_extraction_integrity_caps_the_names_but_not_the_count(monkeypatch) -> None:
+    """A systemic break — a schema edit, an importer that stopped writing mentions —
+    must not dump hundreds of ids into a Slack message."""
+    result, _ = _extraction_check(
+        monkeypatch,
+        missing_rows=[{"id": i, "publish_date": date(2026, 9, 1)} for i in range(200)],
+    )
+
+    detail = next(d for d in result.details if "without mentions" in d)
+    assert "without mentions: 200" in detail  # the count is exact
+    assert "+190 more" in detail              # the naming stops at 10
+    assert "ep 11 " not in detail
+
+
+def test_mention_field_failures_name_the_mentions(monkeypatch) -> None:
+    """`bad_confidence=3` gives nobody a way to find those three mentions."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [
+        {
+            "id": 811, "missing_mention_text": False, "missing_canonical_name": True,
+            "missing_context": False, "bad_confidence": False, "bad_mention_count": False,
+        },
+        {
+            "id": 822, "missing_mention_text": False, "missing_canonical_name": False,
+            "missing_context": False, "bad_confidence": True, "bad_mention_count": False,
+        },
+    ])
+
+    result = dh.check_ai_mention_fields(conn=None)
+
+    assert result.status == "fail"
+    assert any("missing_canonical_name=1 — 811" in d for d in result.details)
+    assert any("bad_confidence=1 — 822" in d for d in result.details)
+
+
+def test_a_mention_with_two_problems_still_counts_twice(monkeypatch) -> None:
+    """Unchanged from the aggregate version this replaced: issue_count sums per
+    category, so one row with two faults contributes two issues. Pinned because
+    switching from five COUNT(*) FILTERs to per-row flags could have quietly
+    changed it."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [
+        {
+            "id": 900, "missing_mention_text": True, "missing_canonical_name": True,
+            "missing_context": False, "bad_confidence": False, "bad_mention_count": False,
+        },
+    ])
+
+    assert "2 AI mention field issue(s)" in dh.check_ai_mention_fields(conn=None).summary
+
+
+def test_a_null_confidence_is_not_a_mention_field_fault(monkeypatch) -> None:
+    """The extractor writes NULL when the model gives no confidence (this branch's
+    first commit). Only a PRESENT value outside [0,1] is a fault — otherwise honest
+    NULLs would redden the daily run."""
+    import pipeline.data_health as dh
+
+    captured: list[str] = []
+
+    def fake_rows(conn, sql, params=None):
+        captured.append(" ".join(sql.split()))
+        return []
+
+    monkeypatch.setattr(dh, "_rows", fake_rows)
+    result = dh.check_ai_mention_fields(conn=None)
+
+    assert result.status == "pass"
+    assert "confidence IS NOT NULL AND (confidence < 0 OR confidence > 1)" in captured[0]
+
+
+# --- the null map is reported, not alerted on (4b, 2026-09-03) ---------------------
+
+
+def test_optional_null_map_is_not_in_the_alerting_list() -> None:
+    """It hardcodes status='pass', so it can never reach the fail/warn reduction that
+    drives the Slack alert or the pulse digest — it was only costing a per-show
+    COUNT(*) over the whole episodes table on every daily and biweekly run."""
+    import inspect
+
+    from pipeline import data_health
+
+    assert "check_optional_null_map" not in inspect.getsource(data_health.run_checks)
+
+
+def test_optional_null_map_still_reaches_the_cli_report() -> None:
+    """Dropped from run_checks but NOT from the human-readable output — the per-show
+    null map is exactly what a person reads the CLI report for."""
+    import inspect
+
+    from pipeline import data_health
+
+    assert "results.append(check_optional_null_map(conn))" in inspect.getsource(
+        data_health.main
+    )
+
+
+def test_optional_null_map_can_only_ever_pass(monkeypatch) -> None:
+    """The premise of both tests above. If this check ever grows a real verdict, it
+    belongs back in run_checks and these tests should fail to say so."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [
+        {"slug": "sop", "episodes": 10, "audio_url_nulls": 10},
+    ])
+    assert dh.check_optional_null_map(conn=None).status == "pass"
 
 
 # --- sponsor share (ads as data, 2026-09-02) ---------------------------------------
@@ -431,3 +844,334 @@ def test_sponsor_share_is_in_the_standard_check_set() -> None:
     from pipeline import data_health
 
     assert "check_sponsor_share(conn)" in inspect.getsource(data_health.run_checks)
+
+
+def test_held_episodes_by_show_keeps_max_publish_date_and_empty_shows(monkeypatch) -> None:
+    """The two claims the rest of the check leans on: a show with no episodes still gets
+    an entry (so the loop never KeyErrors), and a row with a NULL url still counts toward
+    `latest` — that is the "(we have X)" date in the Slack line, and it must stay exactly
+    the MAX(publish_date) the old aggregate query returned."""
+    import pipeline.data_health as dh
+
+    rows = [
+        _held_row("tal", None, "No url row", date(2026, 9, 2)),  # NULL url, newest
+        _held_row("tal", "u-1", "Held", date(2026, 8, 1)),
+        _held_row("tal", "u-2", None, date(2026, 7, 1)),  # NULL title
+        _held_row("empty-show", None, None, None),  # LEFT JOIN, show with no episodes
+    ]
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: rows)
+
+    held = dh._held_episodes_by_show(conn=None)
+
+    assert held["tal"].latest == date(2026, 9, 2)  # the NULL-url row still counts
+    assert held["tal"].urls == {"u-1", "u-2"}  # ...but is not an identity
+    # A NULL-url row is still an episode we hold, and title+date is the only way to
+    # match it — so it belongs here. A NULL-title row can't be matched either way.
+    assert held["tal"].title_dates == {
+        ("no url row", date(2026, 9, 2)),
+        ("held", date(2026, 8, 1)),
+    }
+    assert held["empty-show"].latest is None
+    assert held["empty-show"].urls == set()
+
+
+def test_held_episodes_by_show_reads_one_show_when_the_check_is_scoped(monkeypatch) -> None:
+    """The music workflow checks one show. Bounding the query by SHOW is the safe
+    optimisation; bounding it by DATE is the forbidden one — ended Culture Gabfest still
+    serves 15 pre-July episodes, so a rolling window eventually calls them all missing."""
+    import pipeline.data_health as dh
+
+    seen: dict = {}
+
+    def fake_rows(conn, sql, params=None):
+        seen["sql"], seen["params"] = sql, params
+        return []
+
+    monkeypatch.setattr(dh, "_rows", fake_rows)
+    dh._held_episodes_by_show(None, {"tal"})
+
+    assert "s.slug = ANY(%s)" in seen["sql"]
+    assert seen["params"] == (["tal"],)
+    assert "CURRENT_DATE" not in seen["sql"] and "publish_date >" not in seen["sql"]
+
+
+def test_feed_check_fails_loudly_on_an_unknown_show_slug(monkeypatch) -> None:
+    """A typo'd or renamed slug checks nothing. Reporting "Every show's import is caught
+    up" for it is a green nobody earned — and pipeline.yml runs this --strict to prove
+    the run it just did actually discovered something."""
+    result = _feed_check(monkeypatch, rows=[], today=date(2026, 9, 1), slugs=["taal"])
+
+    assert result.status == "fail"
+    assert any("unknown show slug(s) taal" in d for d in result.details), result.details
+
+    # `--shows " "` parses to an empty scope — the same silent green by another route.
+    empty = _feed_check(monkeypatch, rows=[], today=date(2026, 9, 1), slugs=[])
+    assert empty.status == "fail"
+    assert any("the scope given was empty" in d for d in empty.details), empty.details
+
+
+def test_feed_check_names_the_oldest_missing_episodes_first(monkeypatch) -> None:
+    """The message says "oldest missing <date>" and then lists episodes; the list has to
+    start with that same episode, or the two halves of one sentence disagree."""
+    feed = [
+        FeedEpisode(f"taddy:{n}", date(2026, 8, day), f"Ep {n}")
+        for n, day in [(1, 28), (2, 26), (3, 24), (4, 22)]
+    ]
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("pchh", "taddy:held", "Held", date(2026, 8, 29))],
+        feed_episodes={"pchh": feed},
+        today=date(2026, 9, 1),
+        slugs=["pchh"],
+    )
+
+    detail = next(d for d in result.details if d.startswith("pchh: BEHIND"))
+    assert "oldest missing 2026-08-22" in detail
+    assert "missing: 2026-08-22 'Ep 4'; 2026-08-24 'Ep 3'; 2026-08-26 'Ep 2'; +1 more" in detail
+
+
+# ---- an incomplete batch load is visible (2026-09-03) ----------------------------
+#
+# The loader now writes its run 'loading' first and flips it to 'completed' on the one
+# commit that also lands every mention. These two checks read the two states that leaves
+# behind: a completed run whose count disagrees with the CSV it declared, and a run that
+# never got to flip.
+
+
+def test_run_completeness_passes_when_every_run_matches_its_csv(monkeypatch) -> None:
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [])
+    result = dh.check_ai_run_completeness(conn=None)
+    assert result.status == "pass"
+
+
+def test_run_completeness_fails_and_names_the_short_run(monkeypatch) -> None:
+    """The alert has to be actionable: which run, which show, which batch, and by how
+    much — a bare count would send someone hunting through 600+ runs."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 641, "slug": "ai-daily-brief",
+        "batch_name": "incremental-8430-to-8434",
+        "expected_mentions": 20, "actual_mentions": 8,
+    }])
+
+    result = dh.check_ai_run_completeness(conn=None)
+    assert result.status == "fail"
+    assert result.details == [
+        "ai-daily-brief run 641 (incremental-8430-to-8434): expected 20, has 8"
+    ]
+
+
+def test_run_completeness_does_not_silently_drop_a_null_expectation() -> None:
+    """`WHERE actual <> expected` evaluates to NULL on a null expectation and drops the
+    row — the silent skip this check exists to prevent. IS DISTINCT FROM keeps it."""
+    import inspect
+
+    import pipeline.data_health as dh
+
+    source = inspect.getsource(dh.check_ai_run_completeness)
+    assert "IS DISTINCT FROM" in source
+    assert "actual_mentions <> expected_mentions" not in source
+
+
+def test_run_completeness_skips_runs_written_before_expected_mentions_existed() -> None:
+    """The one line between a clean rollout and every historical run flooding red: 628
+    runs (2026-09-03) predate expected_mentions and have no honest number to compare."""
+    import inspect
+
+    import pipeline.data_health as dh
+
+    source = inspect.getsource(dh.check_ai_run_completeness)
+    assert "r.parameters ? 'expected_mentions'" in source
+
+
+def test_run_completeness_explains_a_malformed_expectation(monkeypatch) -> None:
+    """The SQL nulls a non-numeric expected_mentions rather than letting ::int take the
+    whole health run down. The detail then has to say what happened — "expected None"
+    would leave the reader guessing at the one case IS DISTINCT FROM exists to catch."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 641, "slug": "ai-daily-brief", "batch_name": "b",
+        "expected_mentions": None, "actual_mentions": 8,
+    }])
+
+    result = dh.check_ai_run_completeness(conn=None)
+    assert result.status == "fail"
+    assert any("not a number (malformed run row); has 8" in d for d in result.details)
+    assert not any("expected None" in d for d in result.details)
+
+
+def test_run_completeness_only_casts_what_is_a_number() -> None:
+    """A bare ::int on a malformed jsonb value raises, and _rows has no try/except — one
+    bad row would abort every remaining check, not just this one."""
+    import inspect
+
+    import pipeline.data_health as dh
+
+    source = inspect.getsource(dh.check_ai_run_completeness)
+    assert "jsonb_typeof(r.parameters->'expected_mentions') = 'number'" in source
+    # Not redundant: 20.5 is a JSON 'number' and ::int still raises on it.
+    assert "r.parameters->>'expected_mentions' ~ '^[0-9]{1,9}$'" in source
+
+
+def test_run_stuck_loading_passes_when_nothing_is_loading(monkeypatch) -> None:
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [])
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "pass"
+
+
+def test_run_stuck_loading_stays_quiet_for_a_batch_in_flight(monkeypatch) -> None:
+    """A load running right now is the system working. Warning on it every time the
+    pulse overlaps the entities run is how an alert stops meaning anything."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 700, "slug": "ai-daily-brief", "batch_name": "b", "minutes_pending": 2,
+    }])
+
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "pass"
+    assert "in flight" in result.summary
+
+
+def test_run_stuck_loading_warns_past_one_load_attempt(monkeypatch) -> None:
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 700, "slug": "ai-daily-brief", "batch_name": "b", "minutes_pending": 15,
+    }])
+
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "warn"
+    assert dh.AI_RUN_LOADING_WARN_MINUTES < 15 <= dh.AI_RUN_LOADING_FAIL_MINUTES
+
+
+def test_run_stuck_loading_fails_once_the_load_cannot_still_be_running(monkeypatch) -> None:
+    """Each retry deletes and re-inserts the row, so a single 'loading' row can never
+    legitimately outlive one attempt of the load step (600s). 45m is abandoned."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 700, "slug": "ai-daily-brief",
+        "batch_name": "incremental-8430-to-8434", "minutes_pending": 45,
+    }])
+
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "fail"
+    assert any("run 700 (incremental-8430-to-8434): 45m" in d for d in result.details)
+
+
+def test_run_stuck_loading_ignores_a_batch_whose_work_is_already_done() -> None:
+    """The bug this clause exists for, pinned in SQL.
+
+    A retry deletes the previous attempt's row only when the batch name matches, and the
+    name comes from the current unextracted set. Crash on Monday, a new episode on
+    Tuesday, and Tuesday's load runs under a DIFFERENT name — it succeeds, Monday's row
+    is stranded forever, and an age-only check fails every day from then on, telling
+    Kevin to re-run episodes that already loaded. entities.yml runs --strict daily, so
+    that is a permanent red and a daily Slack. The check must ask whether the work is
+    still undone, not merely how old the row is.
+    """
+    import inspect
+
+    import pipeline.data_health as dh
+
+    source = inspect.getsource(dh.check_ai_run_stuck_loading)
+    assert "NOT EXISTS" in source
+    assert "jsonb_array_elements_text" in source
+    assert "JOIN ai_mentions m" in source
+
+
+def test_run_stuck_loading_cannot_be_aborted_by_one_malformed_run_row() -> None:
+    """Both guards are load-bearing and neither is obvious, so pin them.
+
+    jsonb_array_elements_text raises "cannot extract elements from a scalar" on a
+    present-but-null 'episodes' key, and COALESCE does NOT catch that — `->` returns
+    jsonb null, not SQL NULL (verified against Neon, 2026-09-03). _rows has no
+    try/except, so one such row would abort every remaining check in the run, not just
+    this one. Same for a non-integer element reaching ::int.
+    """
+    import inspect
+
+    import pipeline.data_health as dh
+
+    source = inspect.getsource(dh.check_ai_run_stuck_loading)
+    assert "jsonb_typeof(r.parameters->'episodes') = 'array'" in source
+    assert "COALESCE(r.parameters->'episodes'" not in source
+    # Bounded, not '+': an 11-digit element overflows int and raises.
+    assert "declared.episode_id ~ '^[0-9]{1,9}$'" in source
+
+
+def test_run_stuck_loading_fail_summary_agrees_with_its_detail_list(monkeypatch) -> None:
+    """Details list every loading row, so a bare count of the stuck ones would not add
+    up — a reader seeing "1 batch load(s)" above two lines distrusts the whole report."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [
+        {"run_id": 700, "slug": "ai-daily-brief", "batch_name": "old", "minutes_pending": 45},
+        {"run_id": 701, "slug": "ai-daily-brief", "batch_name": "new", "minutes_pending": 2},
+    ])
+
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "fail"
+    assert "1 of 2 batch load(s)" in result.summary
+    assert len(result.details) == 2
+
+
+def test_both_new_ai_run_checks_are_in_the_standard_check_set() -> None:
+    """A check nothing runs is a check that does not exist."""
+    import inspect
+
+    from pipeline import data_health
+
+    source = inspect.getsource(data_health.run_checks)
+    assert "check_ai_run_completeness(conn)" in source
+    assert "check_ai_run_stuck_loading(conn)" in source
+
+# ---- feed identity: the one documented re-date exception -------------------------
+
+
+def test_a_redated_legacy_row_is_reported_missing_on_purpose() -> None:
+    """The re-date immunity has one documented exception, and it is a trade, not an
+    oversight — pinned here so nobody "fixes" it into a title-only match.
+
+    A row still held under a LEGACY url matches only by title+date, so a Taddy re-date
+    makes it read as missing: a real FAIL on the daily unscoped --strict run. It clears
+    at the show's next import (the title+date lookup misses, the INSERT writes a
+    uuid-keyed row, identity takes over).
+
+    Dropping the date would be worse. TAL reruns archival episodes under their ORIGINAL
+    titles with NEW dates — 2 of its recent 15 feed rows are archival numbers — so a
+    title-only match would call those held while we do not have them: a false PASS on a
+    real gap, in the direction this check exists to prevent. A self-clearing false FAIL
+    is the defensible side of the trade.
+    """
+    from pipeline.data_health import _feed_episode_is_held, split_missing_feed_episodes
+
+    # A real one: held under its pre-migration url, so identity can never match it.
+    held = _held(("https://www.thisamericanlife.org/anon", "A Big Announcement", date(2024, 10, 16)))
+    same_date = FeedEpisode("taddy:uuid-not-in-db", date(2024, 10, 16), "A Big Announcement")
+    redated = FeedEpisode("taddy:uuid-not-in-db", date(2024, 10, 17), "A Big Announcement")
+
+    assert _feed_episode_is_held(same_date, held) is True
+    assert _feed_episode_is_held(redated, held) is False  # the documented exception
+    overdue, _ = split_missing_feed_episodes([redated], held, 2, today=date(2026, 9, 1))
+    assert [ep.publish_date for ep in overdue] == [date(2024, 10, 17)]
+
+    # The reason it stays date-keyed: an archival rerun is a DIFFERENT episode under the
+    # same title, and it must not be reported as held when we don't have it.
+    assert _feed_episode_is_held(
+        FeedEpisode("taddy:rerun", date(2026, 8, 24), "A Big Announcement"), held
+    ) is False
+
+    # And an episode that carries the identity url is immune either way — that is the
+    # asymmetry the docstring in _feed_episode_is_held spells out.
+    identity_held = _held(("taddy:uuid-1", "A Big Announcement", date(2024, 10, 16)))
+    assert _feed_episode_is_held(
+        FeedEpisode("taddy:uuid-1", date(2024, 10, 17), "A Big Announcement"), identity_held
+    ) is True

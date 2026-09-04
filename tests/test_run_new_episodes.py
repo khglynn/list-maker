@@ -7,6 +7,8 @@ recent_only, and omits it entirely under backfill.
 
 from __future__ import annotations
 
+import pytest
+
 from pipeline.run_new_episodes import (
     RECENT_EPISODE_WINDOW_DAYS,
     SELF_HEAL_MAX_EPISODES_PER_RUN,
@@ -191,6 +193,93 @@ def test_run_script_gives_up_after_max_retries(monkeypatch) -> None:
     assert rne.run_script("x.py", [], dry_run=False, label="step") is False
     assert calls["n"] == rne.MAX_STEP_RETRIES + 1
     assert sleeps == [5, 10]  # exponential backoff between the 3 attempts
+
+
+# --- retryable vs deterministic (exit 2) ---
+# A missing credential or an unknown show slug fails identically on every attempt, so
+# retrying spends 15s of backoff to relearn it and buries the cause under two more
+# identical tracebacks. Exit 2 opts a step out of the retry; everything else keeps it.
+
+
+def _never_sleep(_s) -> None:
+    raise AssertionError("run_script slept — it retried when it should not have")
+
+
+def test_run_script_does_not_retry_on_deterministic_exit_code(monkeypatch) -> None:
+    from pipeline import run_new_episodes as rne
+
+    class _Result:
+        returncode = rne.DETERMINISTIC_EXIT_CODE
+        stdout = ""
+        stderr = "OPENAI_API_KEY is required"
+
+    calls = {"n": 0}
+
+    def fake_run(cmd, **kwargs):
+        calls["n"] += 1
+        return _Result()
+
+    monkeypatch.setattr(rne.subprocess, "run", fake_run)
+    # Sleeping is what proves a retry happened; a fast test would pass either way.
+    monkeypatch.setattr(rne.time, "sleep", _never_sleep)
+
+    assert rne.run_script("x.py", [], dry_run=False, label="step") is False
+    assert calls["n"] == 1
+
+
+def test_run_script_still_retries_other_nonzero_exits(monkeypatch) -> None:
+    """The deterministic branch must not swallow the ordinary failure path: only
+    exit 2 opts out, and 3 (or 127, or anything else) is still worth another try."""
+    from pipeline import run_new_episodes as rne
+
+    class _Result:
+        returncode = 3
+        stdout = ""
+        stderr = "boom"
+
+    calls = {"n": 0}
+
+    def fake_run(cmd, **kwargs):
+        calls["n"] += 1
+        return _Result()
+
+    monkeypatch.setattr(rne.subprocess, "run", fake_run)
+    monkeypatch.setattr(rne.time, "sleep", lambda _s: None)
+
+    assert rne.run_script("x.py", [], dry_run=False, label="step") is False
+    assert calls["n"] == rne.MAX_STEP_RETRIES + 1
+
+
+def test_run_script_timeout_is_not_mistaken_for_deterministic(monkeypatch) -> None:
+    """On TimeoutExpired `result` stays None, so the exit-code check must not read it.
+    A timeout is the canonical transient failure and has to keep retrying."""
+    from pipeline import run_new_episodes as rne
+
+    calls = {"n": 0}
+
+    def fake_run(cmd, **kwargs):
+        calls["n"] += 1
+        raise rne.subprocess.TimeoutExpired(cmd, kwargs.get("timeout", 600))
+
+    monkeypatch.setattr(rne.subprocess, "run", fake_run)
+    monkeypatch.setattr(rne.time, "sleep", lambda _s: None)
+
+    assert rne.run_script("x.py", [], dry_run=False, label="step") is False
+    assert calls["n"] == rne.MAX_STEP_RETRIES + 1
+
+
+def test_deterministic_exit_code_matches_argparse_usage_convention() -> None:
+    """2 is not an invented number — argparse already exits 2 on a bad invocation, so
+    a step called with wrong arguments lands in the no-retry branch for free."""
+    import argparse
+
+    from pipeline import run_new_episodes as rne
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--show-id", type=int, required=True)
+    with pytest.raises(SystemExit) as exc:
+        parser.parse_args(["--show-id", "not-a-number"])
+    assert exc.value.code == rne.DETERMINISTIC_EXIT_CODE
 
 
 def test_run_script_retries_on_timeout(monkeypatch) -> None:

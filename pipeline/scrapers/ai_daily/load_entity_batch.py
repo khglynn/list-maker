@@ -110,7 +110,15 @@ def get_show_id(conn, show_slug: str) -> int:
         cur.execute("SELECT id FROM shows WHERE slug = %s LIMIT 1;", (show_slug,))
         row = cur.fetchone()
         if not row:
-            raise RuntimeError(f"Show slug not found: {show_slug}")
+            # exit 2 = deterministic; the orchestrator must not retry it (see
+            # run_new_episodes.DETERMINISTIC_EXIT_CODE). Inline rather than a
+            # `except RuntimeError` handler in __main__, because RuntimeError is ALSO
+            # how finalize_run_completed reports a row-count anomaly from inside the
+            # batch transaction — and that one must keep its retry, since the retry
+            # deleting and replacing the 'loading' row is the whole point of the
+            # transactional load. A type-based handler would silently take that away.
+            print(f"Show slug not found: {show_slug}", file=sys.stderr)
+            sys.exit(2)
         return int(row["id"])
 
 
@@ -165,6 +173,9 @@ def resolve_transcript_map(
     return resolved, inferred
 
 
+LOADING_RUN_STATUS = "loading"
+
+
 def insert_run(
     conn,
     *,
@@ -174,7 +185,20 @@ def insert_run(
     prompt_version: str,
     parameters: dict[str, Any],
     status: str = "completed",
+    commit: bool = True,
 ) -> int:
+    """Write the ai_runs row for one batch.
+
+    `completed_at` used to be a hardcoded NOW() for every status, which was harmless
+    while every run was born 'completed' — but a LOADING_RUN_STATUS row has not
+    completed, and a timestamp saying otherwise is exactly the kind of plausible-but-
+    false value docs/principles.md says to write NULL for instead. It stays on the
+    DATABASE clock (a CASE over NOW(), not a Python datetime) so every existing caller
+    — record_empty_batch above all — keeps writing the identical value it writes today.
+
+    `commit=False` lets the caller make the whole batch one transaction; see main().
+    """
+    has_completed = status != LOADING_RUN_STATUS
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -183,14 +207,43 @@ def insert_run(
               parameters, status, started_at, completed_at, created_at
             )
             VALUES (%s, %s, 'entity_extraction', 'openai', %s, %s, %s::jsonb,
-                    %s, NOW(), NOW(), NOW())
+                    %s, NOW(), CASE WHEN %s THEN NOW() END, NOW())
             RETURNING id;
             """,
-            (show_id, batch_name, model, prompt_version, json.dumps(parameters), status),
+            (show_id, batch_name, model, prompt_version, json.dumps(parameters),
+             status, has_completed),
         )
         row = cur.fetchone()
-    conn.commit()
+    if commit:
+        conn.commit()
     return int(row["id"])
+
+
+def finalize_run_completed(conn, run_id: int, *, commit: bool = True) -> None:
+    """Flip a 'loading' run to 'completed' once every entity and mention has landed.
+
+    This is the LAST statement of the batch transaction — its commit is what makes the
+    entities, the mentions, and the run's completed status appear atomically together.
+    A row count other than 1 means the run row vanished under us, which would leave a
+    batch of mentions attached to nothing; raising rolls the whole batch back rather
+    than reporting a success nobody can trace.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE ai_runs
+            SET status = 'completed', completed_at = NOW()
+            WHERE id = %s;
+            """,
+            (run_id,),
+        )
+        updated = cur.rowcount
+    if updated != 1:
+        raise RuntimeError(
+            f"finalize_run_completed matched {updated} rows for run {run_id} (expected 1)"
+        )
+    if commit:
+        conn.commit()
 
 
 EMPTY_RUN_STATUS = "completed_empty"
@@ -251,7 +304,9 @@ def record_empty_batch(
     return run_id, episodes
 
 
-def delete_existing_run(conn, *, show_id: int, batch_name: str) -> int:
+def delete_existing_run(
+    conn, *, show_id: int, batch_name: str, commit: bool = True
+) -> int:
     """Make batch (re)loads idempotent: remove any prior run — and its mentions —
     for this (show_id, batch_name) before inserting a fresh one. A re-load thus
     replaces rather than duplicates, and a partially-loaded run self-heals on the
@@ -275,7 +330,8 @@ def delete_existing_run(conn, *, show_id: int, batch_name: str) -> int:
             (show_id, batch_name),
         )
         removed_runs = cur.rowcount
-    conn.commit()
+    if commit:
+        conn.commit()
     return removed_runs
 
 
@@ -306,6 +362,7 @@ def upsert_entity(
     canonical_name: str,
     platform: str | None,
     source_alias: str | None,
+    commit: bool = True,
 ) -> int:
     normalized = normalize_name(canonical_name)
     platform_value = platform or ""
@@ -341,7 +398,8 @@ def upsert_entity(
                 """,
                 (canonical_name, json.dumps(merged_aliases), entity_id),
             )
-            conn.commit()
+            if commit:
+                conn.commit()
             return entity_id
 
         aliases = parse_aliases([source_alias] if source_alias else [])
@@ -357,11 +415,14 @@ def upsert_entity(
             (entity_type, canonical_name, normalized, platform if platform else None, json.dumps(aliases)),
         )
         row = cur.fetchone()
-    conn.commit()
+    if commit:
+        conn.commit()
     return int(row["id"])
 
 
-def record_first_seen_as_ad(conn, entity_id: int, publish_date: Any) -> bool:
+def record_first_seen_as_ad(
+    conn, entity_id: int, publish_date: Any, *, commit: bool = True
+) -> bool:
     """Stamp attributes.first_seen_as_ad when an entity's EARLIEST mention is an ad.
 
     Why this is worth a column: "we only know about this product because someone paid to
@@ -396,7 +457,8 @@ def record_first_seen_as_ad(conn, entity_id: int, publish_date: Any) -> bool:
             (str(publish_date), entity_id, str(publish_date)),
         )
         wrote = cur.rowcount > 0
-    conn.commit()
+    if commit:
+        conn.commit()
     return wrote
 
 
@@ -468,11 +530,17 @@ def insert_mention(
     transcript_map: dict[int, int | None],
     row: dict[str, str],
     entity_id: int,
+    commit: bool = True,
 ) -> None:
     episode_id = int(row["episode_id"])
     transcript_id = transcript_map.get(episode_id)
     entity_type = normalize_entity_type(row["entity_type"])
 
+    # An empty cell is an UNKNOWN confidence, and it stays unknown: SQL NULL, never a
+    # default. Since 2026-09-03 the extractor writes an empty cell whenever the model
+    # omitted or mangled the field, instead of fabricating 0.5 — a number nobody could
+    # tell apart from a model that really said 0.5. This line was written defensively
+    # before any caller could produce an empty cell; it is now the live path.
     confidence = float(row["confidence"]) if row["confidence"] else None
     is_editorial = row["is_editorial"].strip().lower() == "true"
     sponsor_source = normalize_sponsor_source(row.get("sponsor_source"))
@@ -538,7 +606,89 @@ def insert_mention(
                 json.dumps(tags),
             ),
         )
-    conn.commit()
+    if commit:
+        conn.commit()
+
+
+def load_batch_rows(
+    conn,
+    *,
+    run_id: int,
+    rows: list[dict[str, str]],
+    transcript_map: dict[int, int | None],
+    publish_dates: dict[int, Any],
+) -> tuple[int, int, int, int, dict[tuple[str, str, str], int]]:
+    """Insert every entity and mention for one batch. NEVER commits.
+
+    The caller commits exactly once, together with the run's flip to 'completed'
+    (finalize_run_completed) — that single commit is the whole fix. Before it, each
+    helper committed on its own, so a process killed mid-loop left a run already
+    marked 'completed' next to some fraction of its mentions, and nothing downstream
+    could tell that from a healthy batch: find_unextracted_episodes decides "already
+    extracted" on the presence of mentions alone, so whichever episodes happened to
+    land first were never retried.
+
+    Returns (mention_inserted, review_open, sponsor_inserted, first_seen_as_ad,
+    entity_cache).
+    """
+    mention_inserted = 0
+    review_open = 0
+    sponsor_inserted = 0
+    first_seen_as_ad = 0
+    entity_cache: dict[tuple[str, str, str], int] = {}
+    # (entity_id, publish_date) per ad mention, stamped after the batch lands.
+    sponsor_stamps: list[tuple[int, Any]] = []
+
+    for row in rows:
+        entity_type = normalize_entity_type(row["entity_type"])
+        canonical_name = row["canonical_name"].strip()
+        mention_text = row["mention_text"].strip()
+        platform = row["platform"].strip() or None
+        key = (entity_type, normalize_name(canonical_name), platform or "")
+
+        entity_id = entity_cache.get(key)
+        if entity_id is None:
+            entity_id = upsert_entity(
+                conn,
+                entity_type=entity_type,
+                canonical_name=canonical_name,
+                platform=platform,
+                source_alias=mention_text if mention_text != canonical_name else None,
+                commit=False,
+            )
+            entity_cache[key] = entity_id
+
+        insert_mention(
+            conn,
+            run_id=run_id,
+            transcript_map=transcript_map,
+            row=row,
+            entity_id=entity_id,
+            commit=False,
+        )
+        mention_inserted += 1
+        if row["needs_review"].strip().lower() == "true":
+            review_open += 1
+        if normalize_sponsor_source(row.get("sponsor_source")):
+            sponsor_inserted += 1
+            sponsor_stamps.append(
+                (entity_id, publish_dates.get(int(row["episode_id"])))
+            )
+
+    # Stamp first_seen_as_ad only once the WHOLE batch has landed. The guard inside
+    # record_first_seen_as_ad asks "does an earlier mention of this entity exist?",
+    # and mentions.csv arrives in episode order — which for a multi-episode catch-up
+    # is newest-first, because Taddy inserts newest-first and the newer episode gets
+    # the smaller id. Stamping inline therefore let an ad in the NEWER episode claim
+    # "first seen" before the older episode's editorial mention had been inserted,
+    # writing a date that is real but wrong. A second pass sees every row — including,
+    # now that nothing commits mid-batch, the batch's own uncommitted mentions, which
+    # are visible to this same transaction exactly as the committed ones used to be.
+    for entity_id, publish_date in sponsor_stamps:
+        if record_first_seen_as_ad(conn, entity_id, publish_date, commit=False):
+            first_seen_as_ad += 1
+
+    return mention_inserted, review_open, sponsor_inserted, first_seen_as_ad, entity_cache
 
 
 def main() -> None:
@@ -549,6 +699,9 @@ def main() -> None:
     batch_dir = Path(args.batch_dir).expanduser().resolve()
     manifest_path = batch_dir / "batch_manifest.json"
     mentions_path = batch_dir / "mentions.csv"
+    # Both of these, and the unknown-slug refusal below, run BEFORE get_db_connection()
+    # — which is what makes it safe for __main__ to map FileNotFoundError to exit 2
+    # (deterministic, not retried). Nothing inside the transaction can raise it.
     if not manifest_path.exists():
         raise FileNotFoundError(f"Missing batch manifest: {manifest_path}")
     if not mentions_path.exists():
@@ -597,79 +750,78 @@ def main() -> None:
                 "falling back to a load-time transcript lookup, which cannot tell whether "
                 "the extractor actually read that transcript."
             )
-        removed_runs = delete_existing_run(conn, show_id=show_id, batch_name=batch_name)
+        # The delete rides the 'loading' insert's commit: "replace" is then atomic at
+        # the row-existence level, so a crash between them can never leave the batch
+        # with its old run deleted and no new row at all — a state with nothing for the
+        # health check to see.
+        removed_runs = delete_existing_run(
+            conn, show_id=show_id, batch_name=batch_name, commit=False
+        )
         if removed_runs:
             print(
                 f"Idempotent re-load: removed {removed_runs} prior run(s) "
                 f"for batch '{batch_name}' before reloading."
             )
+        # The run is born 'loading', with its own commit, so the row is visible in Neon
+        # while the batch is in flight — that is what data_health's ai_run_stuck_loading
+        # check reads. expected_mentions is the number of rows THIS process read out of
+        # mentions.csv, not a count copied from batch_manifest.json: the evidence and the
+        # thing it will be compared against then come from one file, read once, here.
         run_id = insert_run(
             conn,
             show_id=show_id,
             batch_name=batch_name,
             model=model,
             prompt_version=args.prompt_version,
+            status=LOADING_RUN_STATUS,
             parameters={
                 "batch_dir": str(batch_dir),
                 "episodes": episode_ids,
                 "source": "extract_entities.py",
+                "expected_mentions": len(rows),
                 "loaded_at_utc": datetime.now(timezone.utc).isoformat(),
             },
         )
 
-        mention_inserted = 0
-        review_open = 0
-        sponsor_inserted = 0
-        first_seen_as_ad = 0
-        entity_cache: dict[tuple[str, str, str], int] = {}
-        # (entity_id, publish_date) per ad mention, stamped after the batch lands.
-        sponsor_stamps: list[tuple[int, Any]] = []
         publish_dates = get_episode_publish_dates(conn, episode_ids)
 
-        for row in rows:
-            entity_type = normalize_entity_type(row["entity_type"])
-            canonical_name = row["canonical_name"].strip()
-            mention_text = row["mention_text"].strip()
-            platform = row["platform"].strip() or None
-            key = (entity_type, normalize_name(canonical_name), platform or "")
-
-            entity_id = entity_cache.get(key)
-            if entity_id is None:
-                entity_id = upsert_entity(
-                    conn,
-                    entity_type=entity_type,
-                    canonical_name=canonical_name,
-                    platform=platform,
-                    source_alias=mention_text if mention_text != canonical_name else None,
-                )
-                entity_cache[key] = entity_id
-
-            insert_mention(
+        # One transaction for the whole batch. Every entity, every mention and the flip
+        # to 'completed' land on one commit, or none of them do — so a crash can only
+        # ever leave a 'loading' row with ZERO mentions, which the next attempt replaces
+        # (delete_existing_run is status-blind) and which the health check can see.
+        # Safe to hold open: the daily path batches EXTRACTION_BATCH_SIZE=5 episodes and
+        # the largest run ever recorded holds 74 mentions (measured 2026-09-03; the
+        # backfill era's 10- and 25-episode batches are the outliers). That is a few
+        # hundred statements of pure DB work with no network call between them, and
+        # Neon's idle_in_transaction_session_timeout of 5 minutes is measured on IDLE
+        # time, of which this transaction has none.
+        try:
+            (
+                mention_inserted,
+                review_open,
+                sponsor_inserted,
+                first_seen_as_ad,
+                entity_cache,
+            ) = load_batch_rows(
                 conn,
                 run_id=run_id,
+                rows=rows,
                 transcript_map=transcript_map,
-                row=row,
-                entity_id=entity_id,
+                publish_dates=publish_dates,
             )
-            mention_inserted += 1
-            if row["needs_review"].strip().lower() == "true":
-                review_open += 1
-            if normalize_sponsor_source(row.get("sponsor_source")):
-                sponsor_inserted += 1
-                sponsor_stamps.append(
-                    (entity_id, publish_dates.get(int(row["episode_id"])))
-                )
-
-        # Stamp first_seen_as_ad only once the WHOLE batch has landed. The guard inside
-        # record_first_seen_as_ad asks "does an earlier mention of this entity exist?",
-        # and mentions.csv arrives in episode order — which for a multi-episode catch-up
-        # is newest-first, because Taddy inserts newest-first and the newer episode gets
-        # the smaller id. Stamping inline therefore let an ad in the NEWER episode claim
-        # "first seen" before the older episode's editorial mention had been inserted,
-        # writing a date that is real but wrong. A second pass sees every row.
-        for entity_id, publish_date in sponsor_stamps:
-            if record_first_seen_as_ad(conn, entity_id, publish_date):
-                first_seen_as_ad += 1
+            finalize_run_completed(conn, run_id, commit=False)
+            conn.commit()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                # A dead connection is the canonical crash this whole transaction
+                # defends against, and rollback() raises on one. The server aborts the
+                # open transaction when the socket closes, so the rollback is a courtesy
+                # — never let its failure replace the error that caused it. __main__
+                # prints only str(exc), so a masked error is an error nobody sees.
+                pass
+            raise
 
         from_transcript = sum(1 for eid in episode_ids if transcript_map.get(eid) is not None)
         print(f"Loaded batch: {batch_name}")
@@ -694,6 +846,17 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
+    except FileNotFoundError as exc:
+        # A missing batch manifest or mentions.csv will still be missing on the next
+        # attempt: deterministic (exit 2), so run_script reports it instead of retrying
+        # twice. Safe as a type handler because both raises happen before the database
+        # connection is opened — nothing inside the batch transaction can raise this.
+        print(f"Missing input file: {exc}", file=sys.stderr)
+        sys.exit(2)
     except Exception as exc:
+        # Everything else — including any database error that rolled the batch back —
+        # exits 1 and IS retried. That retry is what makes the transactional load work:
+        # the next attempt's delete_existing_run clears the abandoned 'loading' row and
+        # re-runs the batch whole. Do not widen this into exit 2.
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)

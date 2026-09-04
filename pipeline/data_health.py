@@ -19,7 +19,7 @@ from typing import Any, Iterable
 # Allow running as `python pipeline/data_health.py` from the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import get_db_connection, load_environment, post_slack
-from feed_check import feed_recent_dates
+from feed_check import FeedEpisode, feed_recent_dates, feed_recent_episodes
 from show_config import (
     BLOG_NOTION_SHOWS,
     SHOWS,
@@ -105,13 +105,106 @@ def split_missing_feed_dates(
     OVERDUE — a real gap, worth waking someone — once it is older than the show's grace
     window (ShowConfig.feed_grace_days). Inside the window it is merely PENDING: the
     episode is out, but the scheduled import that normally fetches it hasn't had its
-    turn. The daily check and the pulse both use this, so they can't disagree about
-    what "behind" means.
+    turn.
+
+    Still live, still used, and NOT the whole story since 2026-09-03: this is the
+    comparison for shows with no comparable episode identity (SOP), and for any show
+    row with no config at all. split_missing_feed_episodes is the identity-based twin
+    used everywhere else. Both callers — the daily check here and pulse_report's digest
+    — take the same fork on the same two functions, so they cannot reach different
+    verdicts about the same show. (Between 2026-09-03's two PRs they briefly could: the
+    check compared identities while the pulse still compared dates, which left the TAL
+    false BEHIND alive in the biweekly digest. Do not reintroduce that split.)
     """
     today = today or _today()
     cutoff = today - timedelta(days=grace_days)
     missing = [d for d in feed if db_latest is None or d > db_latest]
     return [d for d in missing if d <= cutoff], [d for d in missing if d > cutoff]
+
+
+@dataclass
+class HeldEpisodes:
+    """What we hold for one show, in the two forms the importer itself uses for dedup.
+
+    `urls` is `episodes.url` — the identity. `title_dates` is (lower(title),
+    publish_date), the fallback the Taddy importer tries FIRST when deciding whether an
+    episode is already present (import_transcripts.upsert_episode). Keeping both here is
+    what makes "do we hold this feed episode?" answer the same question the importer
+    would: if the importer would consider it present, no future import can ever create
+    it, so calling it missing would be an alarm nothing can clear.
+    """
+
+    urls: set[str]
+    title_dates: set[tuple[str, date]]
+    latest: date | None = None
+
+
+def _feed_episode_is_held(episode: FeedEpisode, held: HeldEpisodes) -> bool:
+    """Do we already hold this feed episode?
+
+    Identity first: `episodes.url` is UNIQUE and stable across a re-date (both upsert
+    paths are ON CONFLICT (url) with COALESCE on publish_date), so a Taddy re-dating
+    cannot make a held episode look missing.
+
+    Then title+date, for rows holding the same episode under an older url scheme.
+    Measured against live Neon 2026-09-03: 3 of TAL's 15 recent feed episodes are exactly
+    this (old bonus episodes Taddy still returns in its "latest 15", stored under
+    thisamericanlife.org urls), and without this fallback TAL reports BEHIND 3 forever.
+
+    This fallback is PERMANENT while the episode's title and date hold still:
+    upsert_episode matches show_id+lower(title)+publish_date FIRST and that UPDATE branch
+    never writes `url`, so a steady-state re-import can never migrate these rows onto a
+    Taddy url.
+
+    Which means THE RE-DATE IMMUNITY ABOVE IS A PROPERTY OF THE URL PATH ONLY. This path
+    keys on the date, so a Taddy edit to either the TITLE or the PUBLISH DATE of a legacy
+    row makes that episode read as missing — a real FAIL on the daily unscoped --strict
+    run in entities.yml (TAL imports on Mondays, so a Tuesday re-date reddens the daily
+    entities run, not the music one, which imports before it checks). It does clear
+    itself at that show's next import: the title+date lookup misses, so the INSERT branch
+    writes a uuid-keyed row and identity matching takes over from then on — at the cost
+    of a duplicate row that check_duplicate_episodes will NOT surface, since it groups by
+    show/title/date and the new row carries the new date.
+
+    Do NOT "fix" that by dropping the date from the match. TAL reruns archival episodes
+    under their original titles with new dates (2 of its recent 15 are archival numbers),
+    so a title-only match would report those as held while we do not have them: a false
+    PASS on a real gap, which is the worse direction and the one this check exists to
+    prevent. A self-clearing false FAIL is the defensible side of that trade. If it
+    fires, the repair is the row's url — not this rule.
+    """
+    if episode.identity in held.urls:
+        return True
+    # An untitled feed row is stored by the importer as "Untitled Episode"
+    # (import_transcripts.upsert_episode), so normalize to the same default rather than
+    # refusing to match: refusing would report an episode we hold, under a title the
+    # importer itself chose, as missing forever.
+    title = episode.title.strip().lower() or "untitled episode"
+    return (title, episode.publish_date) in held.title_dates
+
+
+def split_missing_feed_episodes(
+    feed: Iterable[FeedEpisode], held: HeldEpisodes, grace_days: int, today: date | None = None
+) -> tuple[list[FeedEpisode], list[FeedEpisode]]:
+    """Identity-based twin of split_missing_feed_dates: (overdue, pending).
+
+    A feed episode is MISSING when we do not hold it — a set question, not a date one.
+    That is the whole fix: split_missing_feed_dates asks "is this newer than our newest?",
+    so an episode we never imported sitting BEHIND our newest was structurally invisible
+    no matter how missing it was, and a re-dated episode we do hold read as brand new.
+    Here a hole in the middle of a series is just another set-difference entry.
+
+    Grading is unchanged — each missing episode's OWN date against the show's
+    feed_grace_days cutoff, so "published but not imported yet" is still pending, not an
+    alarm. The grace-window contract is identical; only membership changed.
+    """
+    today = today or _today()
+    cutoff = today - timedelta(days=grace_days)
+    missing = [ep for ep in feed if not _feed_episode_is_held(ep, held)]
+    return (
+        [ep for ep in missing if ep.publish_date <= cutoff],
+        [ep for ep in missing if ep.publish_date > cutoff],
+    )
 
 
 def _rows(conn, sql: str, params: Iterable[Any] | None = None) -> list[dict[str, Any]]:
@@ -125,6 +218,26 @@ def _one(conn, sql: str, params: Iterable[Any] | None = None) -> dict[str, Any]:
         cur.execute(sql, tuple(params or ()))
         row = cur.fetchone()
         return dict(row) if row else {}
+
+
+def _name_some(labels: list[str], *, limit: int = 10) -> str:
+    """A ' — a, b, c, +N more' suffix naming the rows behind a count, or '' for none.
+
+    A bare count says something is wrong; it does not say where to look — and these
+    details land in a Slack message, where nobody can run a follow-up query against a
+    number. Phase 4's acceptance line is that every FAIL in the health run is
+    actionable, and naming rows is what makes it one.
+
+    Capped, because the counts that matter here are small when the pipeline is merely
+    broken and enormous when it is systemically broken (a url-scheme change, a schema
+    edit). The first ten ids identify either case; a thousand ids in Slack identify
+    neither.
+    """
+    if not labels:
+        return ""
+    shown = labels[:limit]
+    more = len(labels) - len(shown)
+    return " — " + ", ".join(shown) + (f", +{more} more" if more else "")
 
 
 def _status_from_count(count: int, *, warn_only: bool = False) -> str:
@@ -449,19 +562,21 @@ def check_notion_sync_freshness(conn) -> CheckResult:
         # Watch BOTH full-text mirrors: the Transcripts DB and the Blog Posts DB.
         [list(TRANSCRIPT_NOTION_SHOWS + BLOG_NOTION_SHOWS), NOTION_SYNC_MAX_LAG_DAYS],
     )
-    stale_entities = int(
-        _one(
-            conn,
-            """
-            SELECT COUNT(*) AS count
-            FROM ai_entities
-            WHERE notion_page_id IS NOT NULL
-              AND notion_synced_at < updated_at - make_interval(days => %s);
-            """,
-            [NOTION_SYNC_MAX_LAG_DAYS],
-        ).get("count")
-        or 0
+    # Rows, so the FAIL can name the entities (4f) — "12 entity page(s) have Neon
+    # updates that never reached Notion" is not something a person can act on without
+    # first writing this query themselves.
+    stale_entity_rows = _rows(
+        conn,
+        """
+        SELECT id, canonical_name
+        FROM ai_entities
+        WHERE notion_page_id IS NOT NULL
+          AND notion_synced_at < updated_at - make_interval(days => %s)
+        ORDER BY id;
+        """,
+        [NOTION_SYNC_MAX_LAG_DAYS],
     )
+    stale_entities = len(stale_entity_rows)
     failed_entities = int(
         _one(
             conn,
@@ -481,6 +596,9 @@ def check_notion_sync_freshness(conn) -> CheckResult:
         failures.append(
             f"{stale_entities} entity page(s) have Neon updates >{NOTION_SYNC_MAX_LAG_DAYS}d "
             "old that never reached Notion"
+            + _name_some(
+                [f"{r['canonical_name']} ({r['id']})" for r in stale_entity_rows]
+            )
         )
     if failed_entities:
         warnings.append(f"{failed_entities} entity(ies) lingering in notion_sync_status='failed'")
@@ -494,14 +612,64 @@ def check_notion_sync_freshness(conn) -> CheckResult:
     return CheckResult("notion_sync_freshness", status, summary, failures + warnings)
 
 
+def _held_episodes_by_show(conn, slugs: set[str] | None = None) -> dict[str, HeldEpisodes]:
+    """Every episode we hold, per show, in the forms the feed check compares against.
+
+    One round trip, and deliberately UNBOUNDED BY DATE (~4,300 rows fleet-wide on
+    2026-09-03). A rolling date window is the obvious optimisation and it is a trap:
+    Culture Gabfest ended 2026-07-01 and its RSS still serves 15 pre-July episodes, so
+    any window that eventually excludes them would report the whole show as missing.
+    Bound it by SHOW instead — which is what `slugs` does, so the music workflow's
+    per-show run reads one show's rows rather than the fleet's.
+
+    LEFT JOIN, and no `url IS NOT NULL` filter, so `latest` stays exactly the
+    MAX(publish_date) the old query returned (a show with no episodes still gets an
+    entry, and a row with a NULL url still counts toward the date shown in Slack).
+    """
+    where, params = "", ()
+    if slugs:
+        where, params = "WHERE s.slug = ANY(%s)", (sorted(slugs),)
+    rows = _rows(
+        conn,
+        f"""
+        SELECT s.slug, e.url, e.title, e.publish_date::date AS publish_date
+        FROM shows s LEFT JOIN episodes e ON e.show_id = s.id
+        {where}
+        """,
+        params,
+    )
+    held: dict[str, HeldEpisodes] = {}
+    for row in rows:
+        entry = held.setdefault(row["slug"], HeldEpisodes(urls=set(), title_dates=set()))
+        url, title, published = row.get("url"), row.get("title"), row.get("publish_date")
+        if url:
+            entry.urls.add(url)
+        if title and published:
+            entry.title_dates.add((title.strip().lower(), published))
+        if published and (entry.latest is None or published > entry.latest):
+            entry.latest = published
+    return held
+
+
 def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckResult:
     """SECOND-SOURCE freshness: is our import behind each show's REAL feed?
 
     episode_freshness_by_show only knows "days since OUR latest", which can't tell a show
     on break from an import that silently broke. This asks each feed (Taddy / Megaphone
-    RSS via feed_check) what the latest episode is — if the feed is ahead of us, we're
-    behind and missing episodes. A feed we can't reach is reported, not failed (don't cry
-    wolf on a flaky feed); a confirmed BEHIND is a real, actionable failure.
+    RSS via feed_check) which episodes it has, and compares that to what we hold. A feed
+    we can't reach is reported, not failed (don't cry wolf on a flaky feed); a confirmed
+    BEHIND is a real, actionable failure.
+
+    Two comparisons, chosen per show by ShowConfig.episode_identity:
+      - BY IDENTITY where the feed's episode ids are the ids we store (every show but
+        SOP). A set difference, so it sees a hole in the MIDDLE of a series — which
+        MAX(publish_date) never could — and a re-dated episode we hold is a non-event,
+        because identity doesn't move when a date does (the TAL false BEHIND, DEVLOG
+        2026-09-01). That last part holds for rows carrying the show's own identity url;
+        a row still held under a LEGACY url matches only by title+date and is not immune
+        to a re-date — deliberately, and with the reasoning, in _feed_episode_is_held.
+      - BY DATE for SOP, whose rows come from its website scraper while Taddy is only its
+        second source, so there is no id to compare. Unchanged from before.
 
     `slugs` narrows the check to specific shows. The music workflow passes the one show
     it just ran, so a single Taddy call proves that run actually discovered something,
@@ -513,18 +681,25 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
     episode simply hadn't met its Wednesday import yet.
     """
     wanted = set(slugs) if slugs is not None else None
-    rows = _rows(
-        conn,
-        """
-        SELECT s.slug, MAX(e.publish_date)::date AS db_latest
-        FROM shows s LEFT JOIN episodes e ON e.show_id = s.id
-        GROUP BY s.slug
-        """,
-    )
-    db_latest = {r["slug"]: r["db_latest"] for r in rows}
+    held_by_show = _held_episodes_by_show(conn, wanted)
     failures: list[str] = []
     warnings: list[str] = []
     details: list[str] = []
+    # A slug that isn't a show checks nothing and would otherwise report "Every show's
+    # import is caught up" with an empty detail list — a green nobody earned, from a
+    # typo or a renamed show. pipeline.yml runs this --strict to prove the run it just
+    # did discovered something, so a silent pass there is the exact failure this check
+    # exists to prevent.
+    # An EMPTY scope is the same silent green by another route (`--shows " "` parses to
+    # nothing), so it is named too rather than reported as a clean run of zero shows.
+    if wanted is not None and not wanted:
+        failures.append("no show slugs to check — the scope given was empty")
+    unknown = sorted(wanted - set(SHOWS)) if wanted else []
+    if unknown:
+        failures.append(
+            f"unknown show slug(s) {', '.join(unknown)} — nothing was checked for them "
+            f"(known: {', '.join(sorted(SHOWS))})"
+        )
     curated = curated_show_slugs()
     for slug, cfg in SHOWS.items():
         if wanted is not None and slug not in wanted:
@@ -533,24 +708,73 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             # No feed to verify against — skipping avoids a permanent UNVERIFIED warn.
             details.append(f"{slug}: curated source — no feed second-source (skipped)")
             continue
-        latest = db_latest.get(slug)
-        feed = feed_recent_dates(cfg)
-        if not feed:
-            # None = couldn't get a trustworthy answer (unreachable / error / empty). A
-            # persistent one means the second source itself is broken — surface it as a
-            # WARN so it can't hide as a silent pass, without crying wolf on a flaky run.
-            warnings.append(f"{slug}: feed UNVERIFIED — second source unreachable")
-            continue
-        overdue, pending = split_missing_feed_dates(feed, latest, cfg.feed_grace_days)
+        held = held_by_show.get(slug) or HeldEpisodes(urls=set(), title_dates=set())
+        latest = held.latest
+        # UNVERIFIED = None from either reader: couldn't get a trustworthy answer
+        # (unreachable / error / empty). A persistent one means the second source itself
+        # is broken — surface it as a WARN so it can't hide as a silent pass, without
+        # crying wolf on a flaky run.
+        if cfg.episode_identity:
+            feed_episodes = feed_recent_episodes(cfg)
+            if not feed_episodes:
+                warnings.append(f"{slug}: feed UNVERIFIED — second source unreachable")
+                continue
+            # Some rows in this window carry a legacy url scheme and match only via the
+            # title+date fallback (3 of TAL's 15 today — see _feed_episode_is_held).
+            # Raising `limit` widens the window into older episodes, where more rows are
+            # legacy-keyed and titles have had longer to be edited: a bigger window
+            # bought with a softer identity. Deliberate or not at all.
+            overdue_eps, pending_eps = split_missing_feed_episodes(
+                feed_episodes, held, cfg.feed_grace_days
+            )
+            overdue = [ep.publish_date for ep in overdue_eps]
+            pending = [ep.publish_date for ep in pending_eps]
+            feed_latest = feed_episodes[0].publish_date
+            everything_missing = len(overdue) + len(pending) == len(feed_episodes)
+            # Name the episodes, not just a count: identity comparison knows exactly
+            # WHICH ones are missing, and "BEHIND 3" alone leaves the reader to go find
+            # out. Oldest first, so the list starts with the same episode the message's
+            # "oldest missing" names; capped at 3 so a url-scheme change can't dump 15
+            # titles into Slack.
+            oldest_first = sorted(overdue_eps, key=lambda ep: ep.publish_date)
+            named_missing = "; ".join(
+                f"{ep.publish_date} {ep.title[:60]!r}" for ep in oldest_first[:3]
+            )
+            if len(oldest_first) > 3:
+                named_missing += f"; +{len(oldest_first) - 3} more"
+        else:
+            # No comparable identity (SOP: its scraper writes the urls, Taddy is only the
+            # second source). Dates are all we can honestly compare — see
+            # ShowConfig.episode_identity.
+            feed_dates = feed_recent_dates(cfg)
+            if not feed_dates:
+                warnings.append(f"{slug}: feed UNVERIFIED — second source unreachable")
+                continue
+            overdue, pending = split_missing_feed_dates(feed_dates, latest, cfg.feed_grace_days)
+            feed_latest = feed_dates[0]
+            everything_missing = False  # a date compare cannot tell this apart
+            named_missing = ""  # the feed's dates are all we have; no titles to name
         if overdue:
+            # "Every one of them" is also the signature of an importer that changed its
+            # url scheme, which would otherwise read as a catastrophic outage. Say both,
+            # so the alert names what to check instead of just a number.
+            scheme_hint = (
+                " — EVERY recent feed episode is missing; check the importer, and whether"
+                " the url scheme it writes still matches ShowConfig.episode_identity"
+                if everything_missing
+                else ""
+            )
             failures.append(
-                f"{slug}: BEHIND {len(overdue)} — feed at {feed[0]}, we have {latest} "
-                f"(oldest missing {min(overdue)}, past the {cfg.feed_grace_days}-day import window)"
+                f"{slug}: BEHIND {len(overdue)} — feed at {feed_latest}, we have {latest} "
+                f"(oldest missing {min(overdue)}, past the {cfg.feed_grace_days}-day import "
+                f"window)"
+                + (f" — missing: {named_missing}" if named_missing else "")
+                + scheme_hint
             )
         elif pending:
             details.append(
-                f"{slug}: caught up ({latest}) — {len(pending)} newer feed episode(s) pending "
-                f"inside the {cfg.feed_grace_days}-day import window (feed at {feed[0]})"
+                f"{slug}: caught up ({latest}) — {len(pending)} feed episode(s) pending "
+                f"inside the {cfg.feed_grace_days}-day import window (feed at {feed_latest})"
             )
         else:
             details.append(f"{slug}: caught up ({latest})")
@@ -563,19 +787,40 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
     return CheckResult("import_caught_up_to_feed", status, summary, failures + warnings + details)
 
 
+# Which shows a zero-mention `completed` run is an ALARM for, and how far back to look.
+#
+# Scoped, because this check is named for AI Daily and `ai_runs` now carries every
+# entity/media show: unscoped, one anomaly from any of them — or a legacy row whose
+# show_id the FK set to NULL — pinned a check about AI Daily permanently red. Windowed
+# for the same reason in time: without one, a single old anomaly outlives every fix,
+# which is exactly the "silence you can't tell from fine" this phase exists to remove.
+# 30 days matches the sibling declared_empty_runs query in the same function.
+#
+# Kevin's call, 2026-09-03: ai-daily-brief only for now. Whether a zero-mention run on
+# Hard Fork / PCHH / Gabfest should also wake someone is a real product question, not
+# an implementer's, so widening is left as ONE LINE here rather than a rewrite. Rows
+# with a NULL show_id are deliberately out of scope — they cannot be attributed to any
+# show, so no show-scoped check can honestly claim them.
+#
+# Parameterized (unlike declared_empty_runs' literal INTERVAL two blocks down) for that
+# same reason: this one is expected to change, that one is not.
+ZERO_MENTION_RUN_SHOWS = ("ai-daily-brief",)
+ZERO_MENTION_RUN_WINDOW_DAYS = 30
+
+
 def check_ai_daily_extraction(conn) -> CheckResult:
-    row = _one(
+    # Rows, not a COUNT: the count is len(rows) and the ids come along for free, so the
+    # FAIL detail can name the episodes instead of only counting them (4f). The number
+    # is unchanged by construction — episode_transcripts.episode_id is UNIQUE, so this
+    # join could never return two rows for one episode and the old COUNT(*) FILTER was
+    # already counting distinct episodes (verified against Neon, 2026-09-03).
+    missing_rows = _rows(
         conn,
         """
         WITH ai_show AS (
           SELECT id FROM shows WHERE slug = 'ai-daily-brief'
         )
-        SELECT
-          COUNT(*) FILTER (
-            WHERE NOT EXISTS (
-              SELECT 1 FROM ai_mentions m WHERE m.episode_id = ep.id
-            )
-          ) AS transcripted_without_mentions
+        SELECT ep.id, ep.publish_date::date AS publish_date
         FROM episodes ep
         JOIN ai_show s ON s.id = ep.show_id
         JOIN episode_transcripts et ON et.episode_id = ep.id
@@ -592,10 +837,14 @@ def check_ai_daily_extraction(conn) -> CheckResult:
             SELECT 1 FROM ai_runs r
             WHERE r.status = 'completed_empty'
               AND r.parameters->'episodes' @> to_jsonb(ep.id)
-          );
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM ai_mentions m WHERE m.episode_id = ep.id
+          )
+        ORDER BY ep.id;
         """,
     )
-    missing_mentions = int(row.get("transcripted_without_mentions") or 0)
+    missing_mentions = len(missing_rows)
     declared_empty_runs = int(
         _one(
             conn,
@@ -613,48 +862,56 @@ def check_ai_daily_extraction(conn) -> CheckResult:
     # transcript — is the transcript race, and check_transcript_race_selfheal owns it. It
     # used to be counted here too, which meant one problem raised two alerts and neither
     # said whether the pipeline was already fixing it.
-    orphan_transcript_mentions = int(
-        _one(
-            conn,
-            """
-            SELECT COUNT(*) AS count
-            FROM ai_mentions m
-            WHERE m.transcript_id IS NOT NULL
-              AND NOT EXISTS (SELECT 1 FROM episode_transcripts et WHERE et.id = m.transcript_id);
-            """,
-        ).get("count")
-        or 0
+    orphan_rows = _rows(
+        conn,
+        """
+        SELECT m.id, m.episode_id, m.transcript_id
+        FROM ai_mentions m
+        WHERE m.transcript_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM episode_transcripts et WHERE et.id = m.transcript_id)
+        ORDER BY m.id;
+        """,
     )
-    zero_mention_runs = int(
-        _one(
-            conn,
-            """
-            SELECT COUNT(*) AS count
-            FROM (
-              SELECT r.id
-              FROM ai_runs r
-              LEFT JOIN ai_mentions m ON m.run_id = r.id
-              WHERE r.status = 'completed'
-              GROUP BY r.id
-              HAVING COUNT(m.id) = 0
-            ) x;
-            """,
-        ).get("count")
-        or 0
+    orphan_transcript_mentions = len(orphan_rows)
+    zero_mention_rows = _rows(
+        conn,
+        """
+        SELECT r.id, r.batch_name
+        FROM ai_runs r
+        JOIN shows s ON s.id = r.show_id
+        LEFT JOIN ai_mentions m ON m.run_id = r.id
+        WHERE r.status = 'completed'
+          AND s.slug = ANY(%s)
+          AND r.created_at >= NOW() - make_interval(days => %s)
+        GROUP BY r.id, r.batch_name
+        HAVING COUNT(m.id) = 0
+        ORDER BY r.id;
+        """,
+        [list(ZERO_MENTION_RUN_SHOWS), ZERO_MENTION_RUN_WINDOW_DAYS],
     )
+    zero_mention_runs = len(zero_mention_rows)
 
     issue_count = missing_mentions + orphan_transcript_mentions + zero_mention_runs
     details = []
     if missing_mentions:
         details.append(
             f"AI Daily episodes transcripted >6h ago without mentions: {missing_mentions}"
+            + _name_some([f"ep {r['id']} ({r['publish_date']})" for r in missing_rows])
         )
     if orphan_transcript_mentions:
         details.append(
             f"AI mentions pointing at a deleted transcript: {orphan_transcript_mentions}"
+            + _name_some(
+                [f"mention {r['id']} (ep {r['episode_id']})" for r in orphan_rows]
+            )
         )
     if zero_mention_runs:
-        details.append(f"completed AI runs with zero mentions: {zero_mention_runs}")
+        details.append(
+            f"completed AI runs with zero mentions: {zero_mention_runs}"
+            + _name_some(
+                [f"run {r['id']} ({r['batch_name']})" for r in zero_mention_rows]
+            )
+        )
     if declared_empty_runs:
         # Informational — a declared empty result is an answer, not an issue. Listed so
         # a sudden run of them (a broken prompt, a filter that eats everything) is
@@ -669,6 +926,198 @@ def check_ai_daily_extraction(conn) -> CheckResult:
         f"{issue_count} AI extraction integrity issue(s) found."
     )
     return CheckResult("ai_daily_extraction_integrity", status, summary, details)
+
+
+# A batch load is pure DB work over a few episodes' worth of CSV rows — seconds in the
+# healthy case. A single 'loading' row cannot legitimately be older than ONE attempt of
+# the load step (run_script's 600s timeout), because each retry re-runs
+# load_entity_batch with the same batch name and delete_existing_run wipes the previous
+# attempt's row before inserting a fresh one. So 10 minutes is the edge of "still in
+# flight" and 30 is three times past it: at that age the orchestrator process itself is
+# gone, not merely slow.
+AI_RUN_LOADING_WARN_MINUTES = 10
+AI_RUN_LOADING_FAIL_MINUTES = 30
+
+
+def check_ai_run_completeness(conn) -> CheckResult:
+    """Did every 'completed' run load as many mentions as its CSV actually had?
+
+    load_entity_batch records expected_mentions on the run row at load time, from the
+    same mentions.csv it is about to read — evidence and comparison from one file, read
+    once, in one process. A completed run whose live mention count disagrees with that
+    number is unambiguously wrong, so this is a fail with no warn tier; a batch that is
+    merely still in flight is 'loading', which the check below owns.
+
+    The `? 'expected_mentions'` guard is load-bearing: 628 runs predating this field
+    (2026-09-03) have no honest number to be judged against, and flagging them would
+    turn the check red on rollout day for data written under a different contract.
+    """
+    rows = _rows(
+        conn,
+        """
+        WITH run_counts AS (
+          SELECT r.id AS run_id, s.slug, r.batch_name,
+                 -- Cast only what is actually a whole number. A bare ::int on a
+                 -- malformed value raises, which would take down the whole data_health
+                 -- process over one bad row; NULL here keeps the row visible (IS
+                 -- DISTINCT FROM below flags it) and contains the damage to one detail
+                 -- line. The regex is not redundant with jsonb_typeof: 20.5 is a JSON
+                 -- 'number' and ::int still raises on it. Bounded to 9 digits because
+                 -- '^[0-9]+$' alone still admits 99999999999, which overflows int and
+                 -- raises — the guard is only worth having if it is total.
+                 CASE WHEN jsonb_typeof(r.parameters->'expected_mentions') = 'number'
+                       AND r.parameters->>'expected_mentions' ~ '^[0-9]{1,9}$'
+                      THEN (r.parameters->>'expected_mentions')::int END
+                   AS expected_mentions,
+                 COUNT(m.id) AS actual_mentions
+          FROM ai_runs r
+          JOIN shows s ON s.id = r.show_id
+          LEFT JOIN ai_mentions m ON m.run_id = r.id
+          WHERE r.status = 'completed'
+            AND r.parameters ? 'expected_mentions'
+          GROUP BY r.id, s.slug, r.batch_name, r.parameters
+        )
+        -- IS DISTINCT FROM, not <>: a row whose expected_mentions key exists but holds
+        -- null is malformed, and plain <> would evaluate to NULL and quietly drop it —
+        -- the silent-skip this check exists to prevent.
+        SELECT * FROM run_counts
+        WHERE actual_mentions IS DISTINCT FROM expected_mentions
+        ORDER BY run_id;
+        """,
+    )
+    if not rows:
+        return CheckResult(
+            "ai_run_completeness",
+            "pass",
+            "Every completed AI run loaded as many mentions as its CSV had.",
+            [],
+        )
+    details = [
+        f"{r['slug']} run {r['run_id']} ({r['batch_name']}): "
+        + (
+            f"expected {r['expected_mentions']}, has {r['actual_mentions']}"
+            if r["expected_mentions"] is not None
+            else f"expected_mentions is not a number (malformed run row); "
+                 f"has {r['actual_mentions']}"
+        )
+        for r in rows
+    ]
+    return CheckResult(
+        "ai_run_completeness",
+        "fail",
+        f"{len(rows)} completed AI run(s) loaded a different number of mentions "
+        "than their CSV had.",
+        details,
+    )
+
+
+def check_ai_run_stuck_loading(conn) -> CheckResult:
+    """Is a batch load stuck mid-transaction — a crash that never reached 'completed'?
+
+    Mirrors check_transcript_race_selfheal's warn-then-fail-by-age shape. A 'loading'
+    row seconds old is a batch in flight, which is the system working. One older than a
+    single load attempt could possibly run has been abandoned, and its episodes are
+    sitting with no mentions, waiting for the next run to re-extract them. started_at is
+    the only honest age signal here — a loading row deliberately carries no completed_at.
+
+    ONLY rows whose work is still undone count, and that clause is what keeps this check
+    honest rather than permanently red. A retry deletes the previous attempt's row only
+    when it re-runs under the SAME batch name, and the name is derived from the current
+    unextracted set (run_new_episodes: `incremental-{first}-to-{last}`). So a crash on
+    Monday followed by a new episode on Tuesday produces a DIFFERENT name: Tuesday's
+    load succeeds, Monday's row is stranded forever, and an age-only check would fail
+    every day after that — telling Kevin to re-run episodes that already loaded, on a
+    daily --strict run that Slacks. Asking whether the batch's episodes still lack
+    mentions answers the question the alert actually claims to answer, and it clears
+    itself the moment the work is done by any route.
+
+    If you ever test the CASE digit-guards here or in check_ai_run_completeness, drive
+    them from a column or a set-returning function, never from a literal. Postgres folds
+    constant expressions at PLAN time, so `CASE WHEN '9'x11 ~ ... THEN '9'x11::int END`
+    raises before the CASE can guard anything, and the guard looks broken when it is
+    not. Both real call sites are non-foldable — r.parameters is a column, and
+    declared.episode_id comes from an SRF in FROM — so the guard genuinely runs in
+    production (verified both shapes against Neon, 2026-09-03).
+    """
+    rows = _rows(
+        conn,
+        """
+        SELECT r.id AS run_id, s.slug, r.batch_name,
+               EXTRACT(EPOCH FROM (NOW() - r.started_at)) / 60 AS minutes_pending
+        FROM ai_runs r
+        JOIN shows s ON s.id = r.show_id
+        WHERE r.status = 'loading'
+          -- Still undone: not ONE episode this batch declared has any mention yet.
+          -- All-undone rather than any-undone, deliberately: a batch that mixes loaded
+          -- and unloaded episodes is unreachable through either orchestrator path
+          -- (find_unextracted_episodes returns only mention-less episodes, and the
+          -- self-heal path's delete clears the whole batch), and any-undone would need
+          -- an extra clause to keep the empty-list case flagged.
+          --
+          -- Both guards below exist so one malformed run row cannot abort the entire
+          -- health run: jsonb_array_elements_text raises on a scalar, so a present-but-
+          -- null 'episodes' would take down every remaining check, and COALESCE does
+          -- NOT catch that (-> returns jsonb null, not SQL NULL). A non-array, or an
+          -- element that is not an int-sized integer, is therefore read as "nothing
+          -- loaded yet", which flags the row for a human rather than hiding it or
+          -- crashing. Nine digits, not '+', because an 11-digit element overflows int
+          -- and raises — no real episode id is anywhere near that.
+          AND NOT EXISTS (
+              SELECT 1
+              FROM jsonb_array_elements_text(
+                       CASE WHEN jsonb_typeof(r.parameters->'episodes') = 'array'
+                            THEN r.parameters->'episodes'
+                            ELSE '[]'::jsonb END
+                   ) AS declared(episode_id)
+              JOIN ai_mentions m
+                ON m.episode_id = CASE WHEN declared.episode_id ~ '^[0-9]{1,9}$'
+                                       THEN declared.episode_id::int END
+          )
+        ORDER BY r.started_at;
+        """,
+    )
+    if not rows:
+        return CheckResult(
+            "ai_run_stuck_loading",
+            "pass",
+            "No batch load is stuck mid-transaction.",
+            [],
+        )
+
+    details = [
+        f"{r['slug']} run {r['run_id']} ({r['batch_name']}): "
+        f"{float(r['minutes_pending'] or 0):.0f}m in 'loading'"
+        for r in rows
+    ]
+    oldest = max(float(r["minutes_pending"] or 0) for r in rows)
+    if oldest > AI_RUN_LOADING_FAIL_MINUTES:
+        stuck = [r for r in rows if float(r["minutes_pending"] or 0) > AI_RUN_LOADING_FAIL_MINUTES]
+        # "N of M": details list every loading row, so a bare N would not add up.
+        return CheckResult(
+            "ai_run_stuck_loading",
+            "fail",
+            f"{len(stuck)} of {len(rows)} batch load(s) in 'loading' started more than "
+            f"{AI_RUN_LOADING_FAIL_MINUTES} minutes ago — abandoned, not in progress; "
+            "their episodes still have no mentions and need a re-run.",
+            details,
+        )
+    if oldest > AI_RUN_LOADING_WARN_MINUTES:
+        return CheckResult(
+            "ai_run_stuck_loading",
+            "warn",
+            f"{len(rows)} batch load(s) in 'loading', the oldest {oldest:.0f}m in — "
+            "past a single load attempt's timeout, so probably not still running.",
+            details,
+        )
+    # A batch loading right now is the system working. Reporting it as a warning every
+    # time the pulse overlaps the entities run is how an alert stops meaning anything.
+    return CheckResult(
+        "ai_run_stuck_loading",
+        "pass",
+        f"{len(rows)} batch load(s) in flight; none older than "
+        f"{AI_RUN_LOADING_WARN_MINUTES} minutes.",
+        details,
+    )
 
 
 def check_transcript_race_selfheal(conn) -> CheckResult:
@@ -732,25 +1181,43 @@ def check_transcript_race_selfheal(conn) -> CheckResult:
 
 
 def check_ai_mention_fields(conn) -> CheckResult:
-    row = _one(
+    # The offending rows themselves, not five counts: `bad_confidence=3` in a Slack
+    # message gives nobody a way to find those three mentions (4f). Same predicates as
+    # before, once per row instead of once per aggregate, so every count is unchanged —
+    # including a row with two problems counting toward both, which is how issue_count
+    # has always behaved. NULL confidence is still fine by design: only a present value
+    # outside [0,1] is a fault, which is what lets the extractor write an honest NULL.
+    bad_rows = _rows(
         conn,
         """
-        SELECT
-          COUNT(*) FILTER (WHERE mention_text IS NULL OR BTRIM(mention_text) = '') AS missing_mention_text,
-          COUNT(*) FILTER (WHERE canonical_name IS NULL OR BTRIM(canonical_name) = '') AS missing_canonical_name,
-          COUNT(*) FILTER (WHERE context_snippet IS NULL OR BTRIM(context_snippet) = '') AS missing_context,
-          COUNT(*) FILTER (WHERE confidence IS NOT NULL AND (confidence < 0 OR confidence > 1)) AS bad_confidence,
-          COUNT(*) FILTER (WHERE mention_count < 1) AS bad_mention_count
-        FROM ai_mentions;
+        SELECT id,
+               (mention_text IS NULL OR BTRIM(mention_text) = '') AS missing_mention_text,
+               (canonical_name IS NULL OR BTRIM(canonical_name) = '') AS missing_canonical_name,
+               (context_snippet IS NULL OR BTRIM(context_snippet) = '') AS missing_context,
+               (confidence IS NOT NULL AND (confidence < 0 OR confidence > 1)) AS bad_confidence,
+               (mention_count < 1) AS bad_mention_count
+        FROM ai_mentions
+        WHERE mention_text IS NULL OR BTRIM(mention_text) = ''
+           OR canonical_name IS NULL OR BTRIM(canonical_name) = ''
+           OR context_snippet IS NULL OR BTRIM(context_snippet) = ''
+           OR (confidence IS NOT NULL AND (confidence < 0 OR confidence > 1))
+           OR mention_count < 1
+        ORDER BY id;
         """,
     )
     details = []
     issue_count = 0
-    for key, value in row.items():
-        count = int(value or 0)
-        issue_count += count
-        if count:
-            details.append(f"{key}={count}")
+    for key in (
+        "missing_mention_text",
+        "missing_canonical_name",
+        "missing_context",
+        "bad_confidence",
+        "bad_mention_count",
+    ):
+        ids = [str(r["id"]) for r in bad_rows if r[key]]
+        issue_count += len(ids)
+        if ids:
+            details.append(f"{key}={len(ids)}" + _name_some(ids))
 
     status = _status_from_count(issue_count)
     summary = "AI mention required fields and numeric ranges are clean." if status == "pass" else (
@@ -925,11 +1392,12 @@ def run_checks(conn, include_feed_check: bool = False) -> list[CheckResult]:
         check_episode_freshness(conn),
         check_notion_sync_freshness(conn),
         check_ai_daily_extraction(conn),
+        check_ai_run_completeness(conn),
+        check_ai_run_stuck_loading(conn),
         check_transcript_race_selfheal(conn),
         check_ai_mention_fields(conn),
         check_sponsor_share(conn),
         check_possible_entity_alias_splits(conn),
-        check_optional_null_map(conn),
     ]
     if include_feed_check:
         # Opt-in: makes external Taddy/RSS calls. The CLI enables it (the daily alarm);
@@ -993,6 +1461,14 @@ def main() -> None:
         else:
             # Daily CLI run includes the second-source feed check (the loud import-behind alarm).
             results = run_checks(conn, include_feed_check=True)
+            # Appended to the REPORT, never to run_checks(). check_optional_null_map
+            # hardcodes status="pass", so it can never appear in the fail/warn
+            # reduction that drives the Slack alert here or the pulse digest — it was
+            # paying for a per-show COUNT(*) over the whole episodes table on every
+            # daily AND biweekly run to contribute nothing to either. Its details (the
+            # per-show null map) are for a human reading the CLI output, so that is
+            # where it lives now.
+            results.append(check_optional_null_map(conn))
     finally:
         conn.close()
 

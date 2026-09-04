@@ -40,7 +40,7 @@ RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 # about a show is duplicated here — tests/test_show_config.py guards against drift.
 # NOTE: this module uses cfg.taddy_uuid (canonical) where it once used series_uuid.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from show_config import SHOWS as _ALL_SHOWS, ShowConfig  # noqa: E402
+from show_config import SHOWS as _ALL_SHOWS, ShowConfig, taddy_episode_url  # noqa: E402
 
 SHOWS: dict[str, ShowConfig] = {
     slug: cfg for slug, cfg in _ALL_SHOWS.items() if cfg.taddy_uuid
@@ -272,23 +272,38 @@ def get_show_id_by_slug(conn, slug: str) -> Optional[int]:
     return None
 
 
-def episode_url_key(episode: dict[str, Any]) -> str:
+def episode_url_key(episode: dict[str, Any], show_id: Optional[int] = None) -> str:
     """Stable, per-episode-unique URL key for dedup (episodes.url is UNIQUE).
 
     The Taddy episode uuid is always present and unique, so prefer it: some shows
     (e.g. Hard Fork) return a generic show-level websiteUrl for *every* episode,
     which would otherwise collapse them all onto one row via ON CONFLICT (url) and
     a global url lookup. Falls back to the old chain only if the uuid is absent.
+
+    Past that chain, the key is scoped to THIS show and THIS episode (title + publish
+    date) rather than one shared literal. The old `"unknown-episode"` fallback was the
+    same string for every malformed episode of every show, so the second one to arrive
+    silently collapsed onto the first one's row via that UNIQUE constraint — data loss
+    with no error. Title+date keeps it deterministic across re-imports (a re-run finds
+    and updates the same row instead of inserting a duplicate), which is what lets it
+    compose with find_existing_episode_id's own title+date safety net below.
+
+    `show_id` is optional so the key can still be computed without one; both callers
+    pass it, and it is what stops two shows' malformed episodes from colliding.
     """
     uuid = episode.get("uuid")
     if uuid:
-        return f"https://api.taddy.org/podcast-episode/{uuid}"
-    return (
-        episode.get("websiteUrl")
-        or episode.get("audioUrl")
-        or episode.get("guid")
-        or "unknown-episode"
-    )
+        return taddy_episode_url(uuid)
+    explicit = episode.get("websiteUrl") or episode.get("audioUrl") or episode.get("guid")
+    if explicit:
+        return explicit
+    name = (episode.get("name") or "untitled").strip().lower()
+    # The DATE, not the raw timestamp: a re-date within the same day (or an int-vs-string
+    # payload change) would otherwise fork the key and insert a duplicate row on the next
+    # import — and surviving a Taddy re-date is the whole point of the identity work this
+    # sits next to. It also makes the key match the publish_date actually stored on the row.
+    published = epoch_to_date(episode.get("datePublished")) or "no-date"
+    return f"taddy-unidentified:{show_id if show_id is not None else 'no-show'}:{published}:{name}"
 
 
 def upsert_episode(
@@ -298,7 +313,7 @@ def upsert_episode(
     series_uuid: str,
     episode: dict[str, Any],
 ) -> int:
-    episode_url = episode_url_key(episode)
+    episode_url = episode_url_key(episode, show_id)
     publish_date = epoch_to_date(episode.get("datePublished"))
     raw_payload = None
     if show_slug in RAW_CONTENT_SHOW_SLUGS:
@@ -404,7 +419,7 @@ def find_existing_episode_id(
     show_id: int,
     episode: dict[str, Any],
 ) -> Optional[int]:
-    episode_url = episode_url_key(episode)
+    episode_url = episode_url_key(episode, show_id)
     publish_date = epoch_to_date(episode.get("datePublished"))
     title = (episode.get("name") or "").strip() or "Untitled Episode"
 
@@ -547,15 +562,24 @@ def parse_args() -> argparse.Namespace:
 
 
 def run(args: argparse.Namespace) -> None:
+    # Both refusals below exit 2 = deterministic: the orchestrator must not retry them
+    # (see run_new_episodes.DETERMINISTIC_EXIT_CODE). Inline exits rather than a
+    # type-based handler because this file also raises RuntimeError for Taddy GraphQL
+    # errors and exhausted retries, which ARE transient and must stay retryable.
     user_id = (os.getenv("TADDY_USER_ID") or "").strip()
     api_key = (os.getenv("TADDY_API_KEY") or "").strip()
     if not user_id or not api_key:
-        raise RuntimeError("TADDY_USER_ID and TADDY_API_KEY are required")
+        print("TADDY_USER_ID and TADDY_API_KEY are required", file=sys.stderr)
+        sys.exit(2)
 
     requested = [s.strip() for s in args.shows.split(",") if s.strip()]
     unknown = [s for s in requested if s not in SHOWS]
     if unknown:
-        raise RuntimeError(f"Unknown show slugs: {unknown}. Known: {sorted(SHOWS.keys())}")
+        print(
+            f"Unknown show slugs: {unknown}. Known: {sorted(SHOWS.keys())}",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     conn = get_db_connection()
     try:
@@ -730,7 +754,7 @@ def run(args: argparse.Namespace) -> None:
                     elif ep.get("audioUrl"):
                         source_url = ep.get("audioUrl")
                     else:
-                        source_url = f"https://api.taddy.org/podcast-episode/{ep.get('uuid')}"
+                        source_url = taddy_episode_url(ep.get("uuid"))
 
                     upsert_episode_transcript(
                         conn,

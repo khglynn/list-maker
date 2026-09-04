@@ -1,6 +1,6 @@
 # NOW — list-maker
 
-**Last updated:** 2026-09-03 · **Mode:** live (routine cron-driven operation since 2026-06-07; hardening on top)
+**Last updated:** 2026-09-03 (late) · **Mode:** live (routine cron-driven operation since 2026-06-07; hardening on top)
 
 ## Right now
 - **The curated intake is live and has ingested its first batch.** Arc on `main` 2026-09-02 (PR #33); Kevin approved all 75 eval labels unchanged the same evening, so auto-ingest was flipped on (PR #38) and the per-post Notion sync batched into one pass per run (PR #39). The first live run (09-02, 18:17–18:45 CT) saved **49 posts** — 38 OpenAI, 8 Anthropic, 3 other — all 49 mirrored to Blog Posts, **481 mentions across 389 entities** into the Tech DB, 30 skipped, 0 failed. The sponsor retag was applied (230 mentions / 45 entities). Next scheduled intake: Monday 2026-09-07, 15:30 CT.
@@ -14,7 +14,11 @@
 3. **Dependabot #27–#29** still open.
 4. ~~Backfill (decision 6)~~ — **complete 2026-09-02 17:38 CT:** PCHH 2,073 mentions + Culture Gabfest 3,660, every media entity mirrored to Notion (the ten-minute sync steps timed out and resumed until done; the limit is parked in `BACKLOG.md`). Working tree back on `main`, worktrees and merged branches removed.
 
-## Next arc (agreed 2026-09-01, in progress since 2026-09-02) — "curated intake v2 + ads as data"
+## Built: Phase 4 (2026-09-03 evening) — health checks and data you can trust — **PR #45 to `main` is open**
+All four PRs are merged into `arc/phase-4` (#41 Worker run verification + `/health`; #42 feed check by episode identity; #43 transactional batch load + two run checks; #44 honest-data fixes: NULL confidence, exit 2 = deterministic, the pulse on identity, scoped zero-mention check, ids in every FAIL, a 25% missing-confidence ceiling on the eval). Each got a five-lens review with Opus refuters; 550 Python + 40 Worker tests green; production verified read-only (0 failures / 2 warnings / 15 checks). Story: `DEVLOG.md` 2026-09-03. Plan + the five readers' notes: `claude-plans/2026-09-03-phase-4/`.
+**Kevin's part, in order:** (1) merge #45 or say "you can merge"; (2) create the `DISPATCH_LOG` KV namespace on the trimm profile and paste its id into `cloudflare-trigger/wrangler.toml` — until then the Worker cannot deploy and the cron keeps running on the current one; (3) `wrangler deploy`, `curl …/health`; (4) merge + deploy the fleet-watchdog companion (self-hosted-mcps #1). Pastes: the plan's § Kevin's part. One data call: mention 1222 (AI Daily, 2025-10-25, "NA10") carries a 0.5 confidence that may be the model's real answer or the old sanitizer's guess; #44 leaves it untouched. Next phase: 5 (Spotify-path tests).
+
+## Done arc (2026-09-02) — "curated intake v2 + ads as data"
 **PR 1 of 3 (ads as data) is open as a draft against `arc/curated-intake-v2`.**
 Automated blog/article intake judged by an inexpensive classifier instead of a Notion checkbox; sponsor reads kept, tagged, and weight-capped. **Arc plan (design, schema, PR split): `claude-plans/2026-09-02-curated-intake-v2/PLAN.md`.** Spec, acceptance, and the kickoff paste: `claude-plans/2026-09-01-ground-it-cleanup-plan.md` → "Next arc". After it: plan Phases 4 (feed check by identity, run watchdog via `fleet-watchdog`, transactional load) and 5 (Spotify-path tests).
 

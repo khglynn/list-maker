@@ -574,15 +574,18 @@ def main() -> None:
     args = parse_args()
     load_environment()
 
+    # Both exit 2 = deterministic: a show without a Notion database and a missing token
+    # are config, not weather. The orchestrator reports them instead of retrying twice
+    # (see run_new_episodes.DETERMINISTIC_EXIT_CODE).
     show = get_show(args.show)
     if not show.notion_database_id:
         print(f"Error: show '{args.show}' has no Notion database configured.")
-        sys.exit(1)
+        sys.exit(2)
 
     token = os.getenv("NOTION_TOKEN")
     if not token:
         print("Error: NOTION_TOKEN env var is required.")
-        sys.exit(1)
+        sys.exit(2)
 
     conn = get_db_connection()
     try:

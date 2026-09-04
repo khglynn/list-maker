@@ -93,3 +93,52 @@ def test_feed_grace_matches_each_show_import_cadence() -> None:
     for slug in ("ai-daily-brief", "hard-fork", "pchh"):
         # Daily-imported shows: a grace longer than this would hide a real multi-day gap.
         assert SHOWS[slug].feed_grace_days <= 3, slug
+
+
+def test_episode_identity_names_the_writer_of_each_show_url() -> None:
+    """episode_identity says which identity a show's episodes.url carries, and the feed
+    check compares ids only where it is set. Getting it wrong is not a soft failure: a
+    show wrongly marked "taddy_uuid" reports its whole feed missing every day.
+
+    Pinned against what actually writes each row (verified against live Neon 2026-09-03):
+      - the four Taddy-imported shows, plus TAL, whose discovery step runs that same
+        importer (run_pipeline.discover_tal_episodes)
+      - culture-gabfest, written by import_gabfest with the Megaphone <guid>
+      - SOP: NOT identity-comparable. scrapers/sop/scrape.py writes
+        switchedonpop.com/episodes/... urls; only 2 of its 716 rows carry a Taddy url,
+        and 13 of the 15 episodes in its Taddy feed match nothing we hold.
+    """
+    identity_by_slug = {slug: cfg.episode_identity for slug, cfg in SHOWS.items()}
+
+    assert identity_by_slug == {
+        "sop": None,
+        "tal": "taddy_uuid",
+        "ai-daily-brief": "taddy_uuid",
+        "pchh": "taddy_uuid",
+        "hard-fork": "taddy_uuid",
+        "culture-gabfest": "rss_guid",
+        "openai-blog": None,
+        "anthropic-blog": None,
+        "saved-articles": None,
+        "agentic-research": None,
+        "saved-episodes": None,
+    }
+
+
+def test_episode_identity_values_are_backed_by_a_real_source() -> None:
+    """Each declared scheme needs the config the reader actually uses, or
+    feed_recent_episodes silently returns None and the show goes unverified forever."""
+    for slug, cfg in SHOWS.items():
+        if cfg.episode_identity == "taddy_uuid":
+            assert cfg.taddy_uuid, f"{slug}: declares taddy identity with no taddy_uuid"
+        elif cfg.episode_identity == "rss_guid":
+            assert "megaphone" in (cfg.fallback_website_url or ""), f"{slug}: no RSS feed url"
+        else:
+            assert cfg.episode_identity is None, f"{slug}: unknown scheme {cfg.episode_identity!r}"
+
+
+def test_curated_sources_have_no_episode_identity() -> None:
+    """Curated sources have no feed at all, so there is nothing to compare ids against —
+    the feed check skips them before either reader is asked."""
+    for slug in curated_show_slugs():
+        assert SHOWS[slug].episode_identity is None, f"{slug}: curated shows have no feed"

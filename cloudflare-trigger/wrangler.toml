@@ -31,3 +31,22 @@ account_id = "759a850a3af3e2fbf1ab036e7eb2f231"
 crons = [
   "30 20 * * *", # daily ~3:30pm CT — worker.js picks the day's dispatches
 ]
+
+# Where a dispatch is remembered long enough to ask what became of it. Two kinds of
+# key: `dispatch:<workflow>:<iso>` (one per successful dispatch, 3-day TTL, deleted
+# once judged) and `meta:last_fire` / `meta:last_verify` (what GET /health returns).
+# Small and short-lived by design — this is a receipt drawer, not a database.
+#
+# ⚠️ The id below is a PLACEHOLDER. Create the namespace once, on the personal
+# (trimm) account, and paste the id it prints:
+#     cd cloudflare-trigger
+#     npx wrangler whoami        # must say Kevin@trimm.co's Account — if Tecovas, STOP
+#     env -u CLOUDFLARE_API_TOKEN npx wrangler kv namespace create DISPATCH_LOG
+# The placeholder is not a valid namespace id, so a deploy before the paste is
+# expected to be rejected at upload rather than binding nothing. The Worker is
+# written to survive it either way: every KV touch is best-effort, dispatching
+# still happens, and /health then reports no last_fire — which is exactly the
+# staleness fleet-watchdog alarms on.
+[[kv_namespaces]]
+binding = "DISPATCH_LOG"
+id = "25cd703724ea440888f716e485cb6049"

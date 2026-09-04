@@ -50,6 +50,18 @@ RECENT_EPISODE_WINDOW_DAYS = 90
 # retry is safe and recovers transient API/network blips.
 MAX_STEP_RETRIES = 2
 
+# The exit code a step uses to say "this will fail identically next time." Retrying a
+# missing credential, an unknown show slug or an absent input file spends 15s of
+# backoff to relearn a fact that only a human or a config change can alter — and it
+# buries the real cause under two more identical stack traces in the log. Anything
+# else (including a timeout) stays retryable: a 429, a 5xx and a dropped connection
+# all look like exit 1, and those are exactly what the retry exists for.
+#
+# This is a PROCESS contract, not a Python one — the steps are subprocesses, so the
+# only thing crossing the boundary is the number. Producers grep as `sys.exit(2)`;
+# the convention is written up in pipeline/README.md.
+DETERMINISTIC_EXIT_CODE = 2
+
 # How long a transcript-based show waits for Taddy before giving up and mining the
 # show notes anyway. Taddy publishes ~24h after an episode, so a week is many times
 # the normal wait: past it, the transcript is not coming (rights pulled, a Taddy gap,
@@ -83,6 +95,8 @@ def run_script(script_path: str, args: list[str], dry_run: bool, label: str, tim
     failure. Pipeline steps are idempotent (Taddy upserts, A2 delete-then-insert
     load, incremental Notion sync), so a retry is safe and recovers transient
     API/network blips. Returns True on success.
+
+    A step that exits DETERMINISTIC_EXIT_CODE is not retried — see that constant.
     """
     cmd = [VENV_PYTHON, script_path] + args
     if dry_run:
@@ -108,6 +122,15 @@ def run_script(script_path: str, args: list[str], dry_run: bool, label: str, tim
             for line in result.stdout.strip().split("\n")[-5:]:
                 print(f"    {line}")
             return True
+        # `result is None` is the TimeoutExpired path, which must keep retrying — a
+        # timeout is the canonical transient failure, not a deterministic one.
+        if result is not None and result.returncode == DETERMINISTIC_EXIT_CODE:
+            log.error(
+                "step failed deterministically (exit %d), not retrying: %s — %s",
+                DETERMINISTIC_EXIT_CODE, label, tail,
+            )
+            print(f"  FAILED ({label}) — deterministic failure, not retried")
+            return False
         if attempt < attempts:
             backoff = 5 * (2 ** (attempt - 1))
             log.warning(

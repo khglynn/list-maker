@@ -34,12 +34,15 @@ from data_health import (
     DEFAULT_FEED_GRACE_DAYS,
     DEFAULT_STALENESS_MAX_DAYS,
     STALENESS_MAX_DAYS,
+    HeldEpisodes,
+    _held_episodes_by_show,
     _today,
     run_checks,
     split_missing_feed_dates,
+    split_missing_feed_episodes,
 )
-from feed_check import feed_recent_dates
-from show_config import SHOWS
+from feed_check import feed_recent_dates, feed_recent_episodes
+from show_config import SHOWS, curated_show_slugs
 
 HUB_URL = "https://www.notion.so/31c0501ef95080d1a3fde8fa8d5ce907"  # Pod Lists hub
 INTAKE_URL = "https://www.notion.so/37c0501ef9508139b52be5d5f7d71f53"  # the Blog Intake log
@@ -91,11 +94,33 @@ def gather(conn) -> tuple[list[dict], dict]:
         ORDER BY s.id
         """,
     )
-    # Second source: ask each show's real feed what the latest episode is.
+    # Second source: ask each show's real feed WHICH episodes it has, and compare that
+    # to what we hold — the same two comparisons, chosen the same way, as the daily
+    # check's check_import_caught_up. Before 2026-09-03 the pulse only ever compared
+    # dates, so the biweekly digest could still print the TAL false BEHIND (a re-dated
+    # episode we already held, read as brand new) hours after the daily check had
+    # correctly called that show caught up. Two answers to one question is worse than
+    # either answer; sharing the functions is what makes disagreement impossible.
+    #
+    # One extra query for the whole fleet (~4,300 rows), read on the same REPEATABLE
+    # READ snapshot as everything else in this digest.
+    held_by_show = _held_episodes_by_show(conn)
+    curated = curated_show_slugs()
     for s in shows:
         cfg = SHOWS.get(s["slug"])
         s["cfg"] = cfg
-        s["feed_dates"] = feed_recent_dates(cfg) if cfg else None
+        s["held"] = held_by_show.get(s["slug"])
+        s["feed_dates"] = None
+        s["feed_episodes"] = None
+        if cfg is None or s["slug"] in curated:
+            # No config, or a curated source with no feed at all — show_status renders
+            # those without ever reading a feed, so don't pay for the call. (Curated
+            # sources were being asked for a feed they don't have on every pulse.)
+            continue
+        if cfg.episode_identity:
+            s["feed_episodes"] = feed_recent_episodes(cfg)
+        else:
+            s["feed_dates"] = feed_recent_dates(cfg)
 
     totals = _rows(
         conn,
@@ -119,19 +144,35 @@ def show_status(s: dict, today: date | None = None) -> tuple[str, str]:
     their "latest" is just the last time something was saved by hand. Until 2026-09-01
     they rendered as "❓ feed unverified" — five alarms on every pulse for something that
     was working exactly as designed.
+
+    The caught-up question is answered by identity where the show declares one, and by
+    date only where it can't be (SOP, and any show row with no config) — the same fork
+    data_health.check_import_caught_up takes, on the same two functions, so the digest
+    and the daily check cannot reach different verdicts about the same show.
     """
     cfg = s.get("cfg")
     db_latest = s["latest"]
-    if cfg is not None and getattr(cfg, "medium", "podcast") != "podcast":
+    if cfg is not None and s["slug"] in curated_show_slugs():
         return f"📌 curated — {s['episodes']} item(s), last saved {db_latest}", "curated"
 
-    feed = s["feed_dates"]
-    if not feed:  # None — couldn't get a trustworthy answer from the feed
-        return f"❓ feed unverified — we have {db_latest}", "unverified"
-
-    feed_latest = feed[0]
     grace = getattr(cfg, "feed_grace_days", DEFAULT_FEED_GRACE_DAYS)
-    overdue, pending = split_missing_feed_dates(feed, db_latest, grace, today=today)
+    if getattr(cfg, "episode_identity", None):
+        feed_episodes = s.get("feed_episodes")
+        if not feed_episodes:  # None — no trustworthy answer from the feed
+            return f"❓ feed unverified — we have {db_latest}", "unverified"
+        feed_latest = feed_episodes[0].publish_date
+        held = s.get("held") or HeldEpisodes(urls=set(), title_dates=set())
+        # Membership, not recency: a hole in the middle of a series is visible, and an
+        # episode we hold that the feed re-dated is a non-event.
+        overdue, pending = split_missing_feed_episodes(
+            feed_episodes, held, grace, today=today
+        )
+    else:
+        feed = s.get("feed_dates")
+        if not feed:  # None — couldn't get a trustworthy answer from the feed
+            return f"❓ feed unverified — we have {db_latest}", "unverified"
+        feed_latest = feed[0]
+        overdue, pending = split_missing_feed_dates(feed, db_latest, grace, today=today)
     if overdue:
         return f"🚨 BEHIND {len(overdue)} — feed at {feed_latest}, we have {db_latest}", "behind"
     if pending:
