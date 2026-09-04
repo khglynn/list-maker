@@ -1,0 +1,13 @@
+{
+  "_fixture_note": "Real capture, trimmed. Source: https://www.thisamericanlife.org/746/this-is-just-some-songs (\"This Is Just Some Songs\", episode 746, published 2021-08-18, republished/re-fetchable 2026-08-07). Fetched read-only via Firecrawl markdown on 2026-09-04. This episode carries TWO '## Song:' sections in the two real formats parse_episode distinguishes: the first is the bracketed-link form (curly-quoted title inside a markdown link), the second is the plain-text form (curly-quoted title, no link) -- both curly-quoted in the source, which is what exercises clean_quotes() before each format's regex runs. Trimmed out: three of the five act sections and the page's trailing 'Staff Recommendations' images, none of which any parser under test reads. This key itself is not part of the real Firecrawl envelope -- parse_episode ignores unknown keys.",
+  "db_id": 9101,
+  "url": "https://www.thisamericanlife.org/746/this-is-just-some-songs",
+  "success": true,
+  "markdown": "## [Prologue](https://www.thisamericanlife.org/746/this-is-just-some-songs/prologue-2)\n\nSean Cole guest hosts. A mix tape’s not-so-hidden message gets lost to the machine. (10 minutes)\n\n## By\n\n[Sean Cole](https://www.thisamericanlife.org/archive?contributor=8616)\n\n## [Music is Easy](https://www.thisamericanlife.org/746/this-is-just-some-songs/track-two-7)\n\nSean Cole plays a minute of a tune he’s had stuck in his head. Happily. It’s a song about unburdening yourself through music. (2 minutes)\n\n## By\n\n[Sean Cole](https://www.thisamericanlife.org/archive?contributor=8616)\n\n## Song:\n\n[“Music is Easy” by Josephine Network](https://josephinenetwork.bandcamp.com/album/music-is-easy)\n\n## [The End of the Road](https://www.thisamericanlife.org/746/this-is-just-some-songs/track-three-7)\n\nProducer Chana Joffe-Walt really loves the slideshows that schools display at end-of-the-year parent assemblies. (12 minutes)\n\n## [I Talk in Tunes](https://www.thisamericanlife.org/746/this-is-just-some-songs/track-five-7)\n\nWe had a song made just for you.\n\n## Song:\n\n“I Talk in Tunes” by Chandler Travis\n\n## Related\n\nIf you enjoyed this episode, you may like these.\n",
+  "metadata": {
+    "og:title": "This Is Just Some Songs - This American Life",
+    "article:published_time": "2021-08-18T15:50:36-04:00",
+    "ogDescription": "We made you a mixtape. Don't make a big deal out of it or anything."
+  },
+  "fetched_at": "2026-09-04T00:00:00"
+}
