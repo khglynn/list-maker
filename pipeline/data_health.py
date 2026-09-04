@@ -105,8 +105,15 @@ def split_missing_feed_dates(
     OVERDUE — a real gap, worth waking someone — once it is older than the show's grace
     window (ShowConfig.feed_grace_days). Inside the window it is merely PENDING: the
     episode is out, but the scheduled import that normally fetches it hasn't had its
-    turn. The daily check and the pulse both use this, so they can't disagree about
-    what "behind" means.
+    turn.
+
+    Still live, still used, and NOT the whole story since 2026-09-03: this is the
+    comparison for shows with no comparable episode identity (SOP), and it is what
+    pulse_report still runs for every show. split_missing_feed_episodes is the
+    identity-based twin the daily check uses everywhere else. The two therefore CAN now
+    disagree on the identity shows — the pulse can report a BEHIND the daily check
+    doesn't, which is the TAL false positive surviving in the biweekly digest. Teaching
+    the pulse the identity comparison is the follow-up that closes it.
     """
     today = today or _today()
     cutoff = today - timedelta(days=grace_days)
@@ -638,17 +645,19 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             if not feed_episodes:
                 warnings.append(f"{slug}: feed UNVERIFIED — second source unreachable")
                 continue
+            # Pre-migration rows carry legacy url schemes (hard-fork's three 2022 rows,
+            # ai-daily-brief's pre-2026-05 ones), so only the title+date fallback inside
+            # _feed_episode_is_held can match them. Harmless at limit=15 — no show's
+            # cadence reaches back that far — but a future limit bump would lean on that
+            # fallback for older and older episodes, where a title has had more chances
+            # to be edited since we stored it. Raise the limit and you are trading a
+            # bigger window for a softer identity; do it deliberately or not at all.
             overdue_eps, pending_eps = split_missing_feed_episodes(
                 feed_episodes, held, cfg.feed_grace_days
             )
             overdue = [ep.publish_date for ep in overdue_eps]
             pending = [ep.publish_date for ep in pending_eps]
             feed_latest = feed_episodes[0].publish_date
-            # Pre-migration rows carry legacy url schemes (hard-fork's three 2022 rows,
-            # ai-daily-brief's pre-2026-05 ones), so they can only be matched by the
-            # title+date fallback. Harmless at limit=15 — no show's cadence reaches back
-            # that far — but a future limit bump would start leaning on that fallback for
-            # older and older episodes, where titles have had more chances to be edited.
             everything_missing = len(overdue) + len(pending) == len(feed_episodes)
         else:
             # No comparable identity (SOP: its scraper writes the urls, Taddy is only the
