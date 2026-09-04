@@ -13,12 +13,9 @@ Usage:
 """
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 
 # Import parser from parse.py (formerly tal_parse.py)
@@ -27,11 +24,16 @@ from parse import parse_episode
 
 
 def get_db_connection():
-    """Connect to Neon database."""
-    return psycopg2.connect(
-        os.getenv("DATABASE_URL"),
-        cursor_factory=RealDictCursor,
-    )
+    """Connect to Neon database (delegates to common.get_db_connection)."""
+    # This is a manual tool run by hand, not on the cron; its private copy had no connect
+    # timeout, keepalives or retry — exactly the hand-run that would rediscover the 08-31
+    # 41-minute hang. Lazy import so this file still runs as a script from its own directory.
+    pipeline_dir = str(Path(__file__).resolve().parents[2])
+    if pipeline_dir not in sys.path:
+        sys.path.insert(0, pipeline_dir)
+    from common import get_db_connection as shared_connection
+
+    return shared_connection()
 
 
 def cleanup_existing_songs(conn) -> int:
