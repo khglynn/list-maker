@@ -175,6 +175,34 @@ fabricated, and an episode the recovery loop would never revisit.
 `data_health.check_transcript_race_selfheal` is the backstop: it warns while the queue
 is draining and fails once an episode has sat unhealed for more than 3 days.
 
+#### Exit codes: which failures get retried
+
+`run_script` retries a failed step twice with 5s/10s backoff, because the steps are
+idempotent and most failures are weather — a 429, a 5xx, a dropped connection, a
+timeout. One exit code opts out:
+
+| Exit | Meaning | run_script |
+|---|---|---|
+| 0 | success | done |
+| 1 | something failed, possibly transiently | retry twice, then FAIL |
+| **2** | **deterministic — this will fail identically next time** | **FAIL immediately** |
+
+Exit 2 is not an invented number: argparse already exits 2 on a bad invocation, so
+"your inputs are wrong" was half this convention before it was written down. A step
+uses it for preconditions only — a missing credential, an unknown show slug, an input
+file that isn't there — never for anything a network or a database could have caused.
+The producers today (grep `sys.exit(2)`):
+
+- `scrapers/taddy/import_transcripts.py` — missing `TADDY_USER_ID`/`TADDY_API_KEY`, unknown show slug
+- `scrapers/ai_daily/extract_entities.py` — missing `OPENAI_API_KEY`, no episodes selected, any missing input file
+- `sync_notion.py` — show has no `notion_database_id`, missing `NOTION_TOKEN`
+- `sync_playlist.py` — unknown `--show-id`
+
+Note the shape: several of these are raised inline rather than through a shared
+`except SomeError` handler, because `RuntimeError` is *also* how the Taddy importer and
+the extractor report OpenAI/GraphQL HTTP failures — which are exactly the retryable
+case. Catching by type there would stop retrying real API blips.
+
 ---
 
 ## GitHub Actions Automation

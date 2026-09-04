@@ -436,3 +436,36 @@ def test_sponsor_source_is_written_as_an_empty_cell_not_the_string_none() -> Non
     kept = process_episode_mentions({"mentions": [_mention()]}, 1, tech)
     assert kept[0]["sponsor_source"] is None
     assert (kept[0].get("sponsor_source") or "") == ""
+
+
+# --- deterministic refusals (exit 2) ---
+# Both checks run before the first OpenAI call and reproduce identically on a retry.
+# Raised inline rather than through `except RuntimeError`, because this file also
+# raises RuntimeError for OpenAI HTTP failures — the retryable case.
+
+
+def test_missing_openai_key_exits_deterministically(monkeypatch) -> None:
+    from pipeline.scrapers.ai_daily import extract_entities as ee
+
+    monkeypatch.setattr("sys.argv", ["extract_entities.py"])
+    # Set rather than deleted: main() calls load_environment() first, and load_dotenv
+    # will not override a variable that is already present — so this holds on a
+    # machine with a real .env.local as well as on a bare CI runner.
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    with pytest.raises(SystemExit) as exc:
+        ee.main()
+    assert exc.value.code == 2
+
+
+def test_missing_input_files_are_deterministic(monkeypatch, tmp_path) -> None:
+    """A missing episodes CSV raises FileNotFoundError, which the __main__ block maps
+    to exit 2. Asserted at the raise, since the handler lives under `if __name__`."""
+    from pipeline.scrapers.ai_daily import extract_entities as ee
+
+    monkeypatch.setattr(
+        "sys.argv",
+        ["extract_entities.py", "--episodes-csv", str(tmp_path / "nope.csv")],
+    )
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    with pytest.raises(FileNotFoundError):
+        ee.main()

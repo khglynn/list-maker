@@ -5,7 +5,11 @@ Deduping on that url collapses all episodes onto one row, so the dedup key must
 prefer the always-unique Taddy episode uuid.
 """
 
-from pipeline.scrapers.taddy.import_transcripts import episode_url_key
+import argparse
+
+import pytest
+
+from pipeline.scrapers.taddy.import_transcripts import episode_url_key, run
 
 
 def test_episode_url_key_prefers_unique_uuid_over_generic_website_url() -> None:
@@ -100,3 +104,33 @@ def test_find_existing_episode_id_uses_title_date_fallback_for_old_url_rows() ->
         "datePublished": 1696000000,  # valid epoch → real publish_date
     }
     assert find_existing_episode_id(_Conn(), show_id=3, episode=episode) == 4242
+
+
+# --- deterministic refusals (exit 2) ---
+# Both checks run before any Taddy or DB call and reproduce identically on a retry, so
+# they exit 2 and run_new_episodes.run_script fails the step instead of burning two
+# retries and 15s of backoff on a config problem. Raised inline, not via
+# `except RuntimeError`, because this file also raises RuntimeError for Taddy GraphQL
+# errors and exhausted retries — the transient case the retry exists for.
+
+
+def _taddy_args(**overrides) -> argparse.Namespace:
+    base = {"shows": "ai-daily-brief", "dry_run": True}
+    base.update(overrides)
+    return argparse.Namespace(**base)
+
+
+def test_run_exits_deterministically_without_taddy_credentials(monkeypatch) -> None:
+    monkeypatch.setenv("TADDY_USER_ID", "")
+    monkeypatch.setenv("TADDY_API_KEY", "")
+    with pytest.raises(SystemExit) as exc:
+        run(_taddy_args())
+    assert exc.value.code == 2
+
+
+def test_run_exits_deterministically_on_unknown_show_slug(monkeypatch) -> None:
+    monkeypatch.setenv("TADDY_USER_ID", "u")
+    monkeypatch.setenv("TADDY_API_KEY", "k")
+    with pytest.raises(SystemExit) as exc:
+        run(_taddy_args(shows="not-a-real-show"))
+    assert exc.value.code == 2

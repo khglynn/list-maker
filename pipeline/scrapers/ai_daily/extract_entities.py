@@ -1161,7 +1161,12 @@ def main() -> None:
 
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is required")
+        # exit 2 = deterministic; the orchestrator must not retry it (see
+        # run_new_episodes.DETERMINISTIC_EXIT_CODE). Raised inline rather than as a
+        # RuntimeError because this file also raises RuntimeError for OpenAI HTTP
+        # errors, which ARE worth retrying — a type-based handler would conflate them.
+        print("OPENAI_API_KEY is required", file=sys.stderr)
+        sys.exit(2)
 
     explicit_ids: list[int] = []
     if args.episodes.strip():
@@ -1184,7 +1189,11 @@ def main() -> None:
         limit=args.limit,
     )
     if not episodes:
-        raise RuntimeError("No episodes selected")
+        # Deterministic (exit 2): the orchestrator hands this step an explicit episode
+        # list it just read from the DB, so an empty selection means the CSV and that
+        # list disagree — a mismatch the same command will reproduce forever.
+        print("No episodes selected", file=sys.stderr)
+        sys.exit(2)
 
     batch_name = args.batch_name.strip()
     if not batch_name:
@@ -1467,6 +1476,13 @@ if __name__ == "__main__":
     except requests.exceptions.RequestException as exc:
         print(f"Network error calling OpenAI API: {exc}", file=sys.stderr)
         sys.exit(1)
+    except FileNotFoundError as exc:
+        # A missing episodes CSV, transcripts dir, or per-episode transcript file is
+        # an input that will still be missing on the next attempt — deterministic
+        # (exit 2), so the orchestrator reports it instead of retrying twice. Safe as
+        # a type-based handler: FileNotFoundError has no other use in this file.
+        print(f"Missing input file: {exc}", file=sys.stderr)
+        sys.exit(2)
     except Exception as exc:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)
