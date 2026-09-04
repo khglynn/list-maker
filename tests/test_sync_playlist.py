@@ -193,6 +193,7 @@ def test_the_playlist_is_ordered_by_spotify_id_not_by_episode(monkeypatch) -> No
 
     sql = db.sql(0)
     assert "ORDER BY spotify_track_id" in sql
+    assert "DESC" not in sql  # ascending; a DESC append reshuffles the whole playlist
     assert "publish_date" not in sql
     assert "episode_number" not in sql
 
