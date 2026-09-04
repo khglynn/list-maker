@@ -170,7 +170,11 @@ function fakeKv(initial = {}) {
   const store = new Map(Object.entries(initial));
   return {
     store,
-    failOn: null, // "get" | "put" | "list" — simulates a broken namespace
+    failOn: null, // "get" | "put" | "list" — the whole namespace is broken
+    // ...and the more realistic one: a single key class failing while the rest of KV
+    // is fine. A total outage is self-announcing (/health goes stale); a selective
+    // failure is the one that can hide.
+    failPutPrefix: null,
     async get(name, opts) {
       if (this.failOn === "get") throw new Error("KV get exploded");
       const raw = store.get(name);
@@ -179,6 +183,9 @@ function fakeKv(initial = {}) {
     },
     async put(name, value) {
       if (this.failOn === "put") throw new Error("KV put exploded");
+      if (this.failPutPrefix && name.startsWith(this.failPutPrefix)) {
+        throw new Error(`KV put exploded for ${name}`);
+      }
       store.set(name, value);
     },
     async delete(name) {
@@ -328,7 +335,34 @@ test("a KV write failure never turns a successful dispatch into a failure alert"
     )
   );
   assert.deepEqual(dispatchedTo(impl), ["entities.yml/dispatches"]);
-  assert.deepEqual(slackTexts(impl), [], "the work started; nothing should claim otherwise");
+  // The invariant is about the RED line: the work started, so nothing may say it did
+  // not. A yellow "the receipt was not written" is honest and expected here — that is
+  // the whole point of the separate catch in dispatch().
+  const red = slackTexts(impl).filter((t) => t.includes("NOT started"));
+  assert.deepEqual(red, [], "the work started; nothing should claim otherwise");
+});
+
+test("a receipt that fails to write ALONE says so — the run would otherwise go unjudged", async () => {
+  // The dangerous case, and the one the total-outage test above cannot reach: only
+  // the dispatch: key fails, so meta:last_fire is written, /health stays green, and
+  // the next fire would find no receipt and judge nothing. Silence would then mean
+  // "not checked" while looking exactly like "checked and fine".
+  const kv = fakeKv();
+  kv.failPutPrefix = "dispatch:";
+  const impl = fakeFetch(okRoutes());
+  await withFetch(impl, () =>
+    runScheduled(
+      { GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv },
+      { when: "2026-09-05T20:30:00Z" }
+    )
+  );
+  assert.deepEqual(dispatchedTo(impl), ["entities.yml/dispatches"], "the work still started");
+  assert.ok(kv.store.has("meta:last_fire"), "and the heartbeat still landed — that is the trap");
+  const texts = slackTexts(impl);
+  assert.equal(texts.length, 1);
+  assert.match(texts[0], /receipt was not written/);
+  assert.ok(!texts[0].includes("NOT started"), "the dispatch succeeded; only the receipt failed");
+  assert.match(texts[0], /:warning:/, "yellow: the checker failed, not the pipeline");
 });
 
 test("last_fire is written before the PAT guard, so a dead PAT still leaves a heartbeat", async () => {

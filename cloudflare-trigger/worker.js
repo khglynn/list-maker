@@ -423,14 +423,35 @@ async function dispatch(env, workflow, inputs) {
   // the README's own deploy-verification step — gets checked too. Only successes
   // are recorded: a failed dispatch already alerted, and a record of it would
   // re-alert 24h later for the same root cause with nothing to correlate against.
+  //
+  // This one write does NOT go through withDispatchLog, and the difference matters.
+  // Everywhere else, a swallowed KV error is caught a layer out — /health goes stale
+  // and fleet-watchdog alarms. Not here: meta:last_fire is a separate put, so if only
+  // THIS one fails, /health stays green, no receipt exists, and the next fire judges
+  // nothing for a run that may well have been cancelled. That is the exact 2026-08-06
+  // blind spot this Worker was built to close, reopened by its own bookkeeping.
+  // So it gets its own catch and says so — in the yellow register, because the
+  // dispatch itself succeeded. (Checking withDispatchLog's return cannot work:
+  // kv.put resolves undefined on success and the helper returns null on failure, so
+  // success and failure are both falsy.)
   const dispatchedAt = new Date().toISOString();
-  await withDispatchLog(env, `record ${workflow}`, (kv) =>
-    kv.put(
+  if (!env.DISPATCH_LOG) {
+    console.error(`list-maker-cron: DISPATCH_LOG binding missing — skipped record ${workflow}`);
+    return;
+  }
+  try {
+    await env.DISPATCH_LOG.put(
       dispatchKey(workflow, dispatchedAt),
       JSON.stringify({ workflow, dispatchedAt, inputs: inputs || {} }),
       { expirationTtl: DISPATCH_TTL_SECONDS }
-    )
-  );
+    );
+  } catch (e) {
+    await postSlack(
+      env,
+      `:warning: *list-maker: ${workflow} was dispatched but its receipt was not written* — ` +
+        `the run started; it will NOT be verified on the next fire.\n${e.message}`
+    );
+  }
 }
 
 // GET /health — what an outside watcher reads. Two timestamps, no secrets, and it
