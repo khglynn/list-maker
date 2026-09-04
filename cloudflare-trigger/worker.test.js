@@ -321,6 +321,9 @@ test("last_fire is written before the PAT guard, so a dead PAT still leaves a he
   await withFetch(impl, () => runScheduled({ SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv }));
   assert.equal(JSON.parse(kv.store.get("meta:last_fire")).at, "2026-09-03T20:30:00.000Z");
   assert.match(slackTexts(impl)[0], /GH_PAT secret not set/);
+  assert.equal(slackTexts(impl).length, 1, "one root cause, one alarm");
+  // and /health must not read as "checked, all fine" for a check that never ran
+  assert.match(JSON.parse(kv.store.get("meta:last_verify")).skipped, /nothing was checked/);
 });
 
 // --- verifying -------------------------------------------------------------

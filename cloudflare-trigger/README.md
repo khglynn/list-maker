@@ -54,6 +54,10 @@ scheduled run plus a manual re-run — this really happened on 2026-09-02) the
   "last_verify": { "at": "…", "results": [ { "workflow": "…", "verdict": "success" } ] } }
 ```
 
+`last_verify` distinguishes *checked and fine* from *never checked*: with no
+`GH_PAT` it carries `"skipped"` instead of `"results"`, because an empty results
+array would read as a clean bill of health nothing ever gave.
+
 `last_fire` is written *before* every guard in `scheduled()`, so it survives an
 expired PAT, a drifted cron string and a dead Slack. That is deliberate: it is the
 one signal an outside watcher can use to tell "this Worker is alive" from "this

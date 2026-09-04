@@ -329,6 +329,20 @@ async function verifyPreviousDispatches(env, now) {
 // The verify pass as the cron calls it: it records what it saw, and it can never
 // take the dispatch down with it.
 async function runVerifyPass(env, now) {
+  if (!env.GH_PAT) {
+    // "Nothing to report" and "could not look" must not render identically. An
+    // empty results array on /health reads as a clean bill of health, and without
+    // a PAT no health was ever assessed — so say which it was. (No Slack line: the
+    // dispatch side already alerts on the missing PAT, and one root cause should
+    // cost one alarm.)
+    await withDispatchLog(env, "put meta:last_verify", (kv) =>
+      kv.put(
+        "meta:last_verify",
+        JSON.stringify({ at: now.toISOString(), skipped: "GH_PAT not set — nothing was checked" })
+      )
+    );
+    return;
+  }
   let results;
   try {
     results = await verifyPreviousDispatches(env, now);
