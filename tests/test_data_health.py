@@ -684,6 +684,11 @@ def test_feed_check_fails_loudly_on_an_unknown_show_slug(monkeypatch) -> None:
     assert result.status == "fail"
     assert any("unknown show slug(s) taal" in d for d in result.details), result.details
 
+    # `--shows " "` parses to an empty scope — the same silent green by another route.
+    empty = _feed_check(monkeypatch, rows=[], today=date(2026, 9, 1), slugs=[])
+    assert empty.status == "fail"
+    assert any("the scope given was empty" in d for d in empty.details), empty.details
+
 
 def test_feed_check_names_the_oldest_missing_episodes_first(monkeypatch) -> None:
     """The message says "oldest missing <date>" and then lists episodes; the list has to

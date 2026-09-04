@@ -648,6 +648,10 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
     # typo or a renamed show. pipeline.yml runs this --strict to prove the run it just
     # did discovered something, so a silent pass there is the exact failure this check
     # exists to prevent.
+    # An EMPTY scope is the same silent green by another route (`--shows " "` parses to
+    # nothing), so it is named too rather than reported as a clean run of zero shows.
+    if wanted is not None and not wanted:
+        failures.append("no show slugs to check — the scope given was empty")
     unknown = sorted(wanted - set(SHOWS)) if wanted else []
     if unknown:
         failures.append(
