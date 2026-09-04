@@ -869,6 +869,38 @@ def test_missing_mentions_csv_raises_before_the_database_is_touched(
         leb.main()
 
 
+def test_the_loader_process_really_exits_two(tmp_path) -> None:
+    """The end-to-end proof, matching extract_entities' own. The test above stops at
+    the raise, because __main__'s FileNotFoundError -> exit 2 mapping lives outside
+    anything an in-process test can reach — and the returncode is the only thing
+    run_new_episodes.run_script actually reads.
+
+    Hermetic: it fails on the absent manifest, before load_environment can matter and
+    long before a database connection."""
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    from pipeline.scrapers.ai_daily import load_entity_batch as leb
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(Path(leb.__file__).resolve()),
+            "--batch-dir",
+            str(tmp_path / "no-such-batch"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        env=os.environ.copy(),
+    )
+    assert result.returncode == 2, result.stderr[-500:]
+    assert "Missing input file" in result.stderr
+    assert "Missing batch manifest" in result.stderr
+
+
 def test_unknown_show_slug_exits_deterministically(monkeypatch, tmp_path) -> None:
     """A slug that isn't a show fails identically on every attempt — exit 2, refused
     before a single write."""
