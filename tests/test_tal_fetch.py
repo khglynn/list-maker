@@ -335,6 +335,18 @@ def test_a_taddy_url_is_never_a_page_url() -> None:
     assert is_tal_episode_page_url("https://thisamericanlife.org/blackjack")
 
 
+def test_a_lookalike_host_is_not_a_tal_page() -> None:
+    """The host match is on a domain boundary, not a string prefix. A bare startswith
+    would wave through the classic suffix trick, and this function's whole job is
+    deciding what is safe to hand to Firecrawl."""
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org.example.com/886/x")
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org.evil/x")
+    assert not is_tal_episode_page_url("https://notthisamericanlife.org/886/blackout")
+    assert not is_tal_episode_page_url("http://www.thisamericanlife.org/886/blackout"), (
+        "http is not the canonical scheme; only https urls are accepted"
+    )
+
+
 def test_a_feed_outage_degrades_to_slugs_instead_of_failing_the_run(monkeypatch) -> None:
     """A dead feed must not take out the Monday music run — the derived slug resolved
     22 of the 24 live backlog rows on 2026-09-04, so degrading still does real work."""

@@ -312,18 +312,23 @@ def tal_episode_page_url(title: Optional[str]) -> Optional[str]:
 def is_tal_episode_page_url(url: Optional[str]) -> bool:
     """True only for a url that is a fetchable TAL EPISODE page.
 
-    Guards the two ways the scrape has sent Firecrawl somewhere useless: an
-    api.taddy.org identity url (the 2026-08 regression this module's caller fixes), and
-    the bare site root, which is what TAL's own RSS <link> carries for its untitled
-    bonus items ("A Big Announcement" -> https://www.thisamericanlife.org, verified
-    2026-09-04). Both would return a 200 with no song credits on it.
+    Guards the three ways the scrape could send Firecrawl somewhere useless or unsafe:
+    an api.taddy.org identity url (the 2026-08 regression this module's caller fixes);
+    the bare site root, which is what TAL's own RSS <link> carries for its untitled bonus
+    items ("A Big Announcement" -> https://www.thisamericanlife.org, verified
+    2026-09-04); and a lookalike host.
+
+    The host match is on a DOMAIN BOUNDARY, not a string prefix. A bare startswith would
+    accept https://www.thisamericanlife.org.example.com/x — the classic prefix-match hole.
+    Nothing hostile is expected in TAL's own feed, but this function's entire job is
+    deciding what is safe to fetch, so it should not be the weak link.
     """
     if not url:
         return False
     if url.startswith(TADDY_EPISODE_URL_PREFIX):
         return False
     for root in (TAL_SITE_ROOT, TAL_SITE_ROOT.replace("://www.", "://")):
-        if url.startswith(root):
+        if url == root or url.startswith(root + "/"):
             return bool(url[len(root):].strip("/"))
     return False
 
