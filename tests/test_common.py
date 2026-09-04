@@ -142,16 +142,17 @@ def test_ensure_spotify_token_missing_interactive_passes(monkeypatch) -> None:
 
 
 def test_spotify_builders_share_canonical_scope() -> None:
-    """Three scripts share ONE token cache; per-script scopes mint tokens the
+    """These scripts share ONE token cache; per-script scopes mint tokens the
     others reject (the 2026-06-11 incident: a user-library-read re-auth broke
     the playlist sync). Source-shape guard: every SpotifyOAuth builder must use
-    common.SPOTIFY_SCOPE — a literal scope= string anywhere is the bug returning."""
+    common.SPOTIFY_SCOPE — a literal scope= string anywhere is the bug returning.
+    (A third builder, scrapers/tal/scoring_match.py, was deleted 2026-09-04 as an
+    unwired duplicate matcher — see PLAN.md PR 6.)"""
     from pathlib import Path
 
     builders = [
         "pipeline/sync_playlist.py",
         "pipeline/spotify_match.py",
-        "pipeline/scrapers/tal/scoring_match.py",
     ]
     for rel in builders:
         src = Path(rel).read_text()
@@ -255,6 +256,8 @@ SCHEDULED_PATH_MODULES = (
     "pipeline/scrapers/sop/scrape.py",
     "pipeline/scrapers/tal/scrape.py",
     "pipeline/scrapers/tal/fetch.py",
+    "pipeline/scrapers/tal/fill_songs.py",
+    "pipeline/scrapers/tal/repair_metadata.py",
     "pipeline/scrapers/gabfest/import_gabfest.py",
     "pipeline/scrapers/blog/import_blog.py",
 )

@@ -29,7 +29,6 @@ pipeline/
 │   │   ├── parse.py           # Parse episode pages
 │   │   ├── fill_songs.py      # Fill in song data
 │   │   ├── repair_metadata.py # Dry-run-first official metadata repair
-│   │   ├── scoring_match.py   # Match scoring tracks
 │   │   └── download_episode_art.py
 │   │
 │   ├── ai_daily/          # AI Daily Brief entity extraction
