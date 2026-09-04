@@ -7,6 +7,7 @@ duplicated elsewhere. tests/test_show_config.py guards against drift.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date
 from typing import Optional
@@ -261,6 +262,70 @@ def taddy_episode_url(uuid: str) -> str:
     tests/test_feed_check.py pins this against the importer so they cannot drift.
     """
     return f"{TADDY_EPISODE_URL_PREFIX}{uuid}"
+
+
+# TAL's own website, where the song credits live. The Taddy url above is TAL's IDENTITY
+# (episodes.url, what the feed check compares); this is the READABLE PAGE, derived at
+# scrape time and never stored. Keeping the two apart is the whole point: writing the
+# page url into episodes.url would break the Phase 4 identity check.
+TAL_SITE_ROOT = "https://www.thisamericanlife.org"
+
+_TAL_TITLE_NUMBER = re.compile(r"^\s*(\d+)\s*:\s*(.+)$")
+# Apostrophes vanish rather than becoming separators — TAL writes "I Couldn't Help but
+# Notice" as /894/i-couldnt-help-but-notice, not .../i-couldn-t-....
+_APOSTROPHES = dict.fromkeys(map(ord, "'‘’ʼ"), None)
+_NON_SLUG = re.compile(r"[^a-z0-9]+")
+
+
+def tal_episode_page_url(title: Optional[str]) -> Optional[str]:
+    """Best-effort thisamericanlife.org page URL derived from an episode title.
+
+    "896: I Know What You Need" -> https://www.thisamericanlife.org/896/i-know-what-you-need
+
+    LAST RESORT, and deliberately so. The authoritative page url is the RSS item's
+    <link> (scrapers/tal/fetch.fetch_feed_page_links); this exists only for an episode
+    that has rolled off the feed's 15-item window — measured at exactly 15 on
+    2026-09-04, so a backlog longer than about four months outruns it.
+
+    Returns None when the title carries no leading episode number, because there is then
+    nothing to guess from (live example: row 7422, "Ira (Reluctantly) Gives a Graduation
+    Speech", whose real page is /lifepartners — unguessable, and only the feed knows it).
+
+    A derived url can also simply be wrong: TAL's own numbering is not uniform. Verified
+    2026-09-04 — /885/bless-this-mess is a 404 while the canonical page is
+    /bless-this-mess, and the number-only /896 is a 404 too. That is survivable by
+    construction: a miss costs one Firecrawl call and scrapers/tal/parse.parse_episode
+    drops it on its is_404 branch. It never writes a wrong song.
+    """
+    if not title:
+        return None
+    match = _TAL_TITLE_NUMBER.match(title)
+    if not match:
+        return None
+    number, rest = match.group(1), match.group(2)
+    slug = _NON_SLUG.sub("-", rest.translate(_APOSTROPHES).lower()).strip("-")
+    if not slug:
+        return None
+    return f"{TAL_SITE_ROOT}/{number}/{slug}"
+
+
+def is_tal_episode_page_url(url: Optional[str]) -> bool:
+    """True only for a url that is a fetchable TAL EPISODE page.
+
+    Guards the two ways the scrape has sent Firecrawl somewhere useless: an
+    api.taddy.org identity url (the 2026-08 regression this module's caller fixes), and
+    the bare site root, which is what TAL's own RSS <link> carries for its untitled
+    bonus items ("A Big Announcement" -> https://www.thisamericanlife.org, verified
+    2026-09-04). Both would return a 200 with no song credits on it.
+    """
+    if not url:
+        return False
+    if url.startswith(TADDY_EPISODE_URL_PREFIX):
+        return False
+    for root in (TAL_SITE_ROOT, TAL_SITE_ROOT.replace("://www.", "://")):
+        if url.startswith(root):
+            return bool(url[len(root):].strip("/"))
+    return False
 
 
 def get_show(slug: str) -> ShowConfig:
