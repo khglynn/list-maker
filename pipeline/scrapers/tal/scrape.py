@@ -98,7 +98,10 @@ def scrape_new_episodes(
         # get_episodes_missing_songs is. Treating it as authority used to mean a bad JSON
         # (e.g. of an api.taddy.org url) excluded that episode from every later run on
         # this machine. Cost of not skipping: an episode whose page genuinely lists no
-        # songs is re-fetched each run — 2 of the 24 in the current queue.
+        # songs is re-fetched each run — 1 of the 24 in today's queue (row 8532,
+        # "206: Somewhere in the Arabian Sea", counted live 2026-09-04). It was 2 until
+        # /lifepartners was denylisted — row 7422 now resolves to no page and never costs
+        # a fetch.
         print(f"  ({len(already_fetched)} local JSON files cached from previous runs)")
     for ep in unresolved:
         summary["errors"].append(f"No page URL for {ep['id']}: {ep.get('title')!r}")

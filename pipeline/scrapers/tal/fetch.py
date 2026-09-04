@@ -76,8 +76,10 @@ TAL_SHOW_ID = 2
 # 2025: 4. In 2024: 2. Every one of those 24 pages was checked live on 2026-09-04 and 22
 # of them still list song credits today (886 "Blackout" -> "Range Mesi" by ONEDAM; 887 ->
 # "Only One and Only" by Gillian Welch). A 2026-06-01 floor would leave 13 of them dark
-# permanently. The cost of the wider floor is one-time: 24 Firecrawl calls on the first
-# run instead of 11, then ~1-3 a week in steady state.
+# permanently. The cost of the wider floor is one-time: 23 Firecrawl calls on the first
+# run instead of 11, then ~1-3 a week in steady state. (23, not 24: row 7422 resolves to
+# no page at all — its feed link is the /lifepartners paywall — so it is reported as
+# unresolved and never fetched.)
 DEFAULT_SONG_SCRAPE_FLOOR = date(2026, 1, 1)
 
 # =============================================================================
