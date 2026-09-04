@@ -26,6 +26,7 @@ from show_config import (
     TRANSCRIPT_NOTION_SHOWS,
     curated_show_slugs,
     ended_show_slugs,
+    shows_with_spotify,
 )
 
 
@@ -531,6 +532,218 @@ def check_episode_freshness(conn) -> CheckResult:
         else f"{len(failures)} show(s) stale (no recent episodes)."
     )
     return CheckResult("episode_freshness_by_show", status, summary, failures + details)
+
+
+# ── Music shows: has the show stopped ACQUIRING songs? ──────────────────────────────
+#
+# episode_freshness_by_show and import_caught_up_to_feed both watch EPISODES, and both
+# were green throughout the outage this check exists to catch: TAL's website scrape
+# stopped producing song rows in January 2026, every Monday run reported success, and
+# nobody found out for eight months (NOW.md's accepted gap, 2026-09-04). Episodes kept
+# arriving and kept being imported — the songs simply stopped, and nothing watched that.
+#
+# The signal is NOT "an episode with zero songs". Measured against live Neon 2026-09-04:
+# 213 of TAL's 904 episodes hold no songs and most are archive episodes with no music
+# credits at all, and SOP's recent songless rows are mostly DUPLICATE episode rows whose
+# twin carries the songs (id 3019 2026-02-10 has 0, id 2870 2026-02-12 has 17, same
+# title). One songless episode is normal. A show that has stopped acquiring songs while
+# episodes keep arriving is not.
+#
+# So the check anchors on the newest episode that HAS songs, and asks two questions that
+# must BOTH be true before it fires:
+#   - how long since then (days), and
+#   - how many episodes have arrived since then with none (the streak).
+# The episode count is what keeps a show merely ON BREAK from tripping this — no new
+# episodes means no streak, and "the show went quiet" is episode_freshness_by_show's
+# question, not this one. The day window is what keeps a BURST from tripping it — SOP
+# published three episodes in three days in June 2026.
+#
+# THRESHOLDS, measured 2026-09-04 by backtesting both rules over every SOP and TAL
+# episode in Neon. The honest era for this is "since the first song row was ever
+# written" (2025-12-19): every song predating that arrived in one December-2025
+# backfill, so the songless runs before it are backfill gaps, not live behaviour.
+#   - SOP's worst LIVE songless run: 3 episodes / 14 days (peaking 2026-02-10).
+#   - TAL pre-outage (2024-01-01 → 2025-12-31): longest run 1 episode. Its longest gap
+#     between song-bearing episodes was 42 days — a publishing break, streak 1.
+#   - FAIL (3 episodes AND 21 days) fires ZERO times on SOP's live era and zero times on
+#     TAL pre-2026. On TAL's real outage it first becomes true 2026-02-22 — six weeks in,
+#     instead of never.
+#   - WARN (2 episodes AND 14 days) fires ONCE on SOP's live era, on that same
+#     three-in-a-row — which is worth a glance, and a warn neither Slacks nor exits
+#     non-zero (only failures do, see main()).
+# BOTH axes are load-bearing, and each one is what stops the other's false positive:
+# SOP's Feb-2026 run met the episode threshold (3) but not the day one (14 < 21); TAL's
+# 42-day 2024 break met the day threshold but not the episode one.
+#
+# Deliberately NOT derived from STALENESS_MAX_DAYS or ShowConfig.feed_grace_days. Those
+# size "when should the next EPISODE have arrived"; this sizes "how long may a working
+# scraper go without producing a song", which is a different quantity that happens to be
+# in the same units. Coupling them would move this alarm silently the next time someone
+# tunes a staleness threshold.
+MUSIC_SILENCE_FAIL_EPISODES = 3
+MUSIC_SILENCE_FAIL_DAYS = 21
+MUSIC_SILENCE_WARN_EPISODES = 2
+MUSIC_SILENCE_WARN_DAYS = 14
+
+# The music shows are exactly the ones whose songs become a Spotify playlist. Derived
+# from show_config rather than listed here so onboarding a third music show cannot
+# silently leave it unwatched — and so this never hardcodes two playlist ids.
+MUSIC_SILENCE_SHOWS: tuple[str, ...] = tuple(
+    sorted(cfg.slug for cfg in shows_with_spotify())
+)
+
+# Per show: the newest episode we hold, the newest one that HAS songs, and when a song
+# row was last written at all. The last one is diagnostic, not a threshold: it separates
+# "the scraper writes nothing" (TAL — last song row 2026-01-13) from "the scraper writes,
+# but only for episodes we already had", which are different repairs.
+_MUSIC_SILENCE_AGGREGATE_SQL = """
+    SELECT s.slug,
+           MAX(e.publish_date)::date AS newest_episode,
+           MIN(e.publish_date)::date AS oldest_episode,
+           MAX(e.publish_date) FILTER (
+             WHERE EXISTS (SELECT 1 FROM songs g WHERE g.episode_id = e.id)
+           )::date AS newest_with_songs,
+           (SELECT MAX(g.created_at)::date
+              FROM songs g
+              JOIN episodes e2 ON e2.id = g.episode_id
+             WHERE e2.show_id = s.id) AS last_song_written
+    FROM shows s
+    JOIN episodes e ON e.show_id = s.id
+    WHERE s.slug = ANY(%s)
+      AND e.publish_date IS NOT NULL
+    GROUP BY s.id, s.slug
+    ORDER BY s.slug;
+"""
+
+# The episodes IN the streak, as rows rather than a count, so the FAIL can name them —
+# "13 episodes since" is not something a person can act on without first writing this
+# query themselves (the rule PR #44 set for every FAIL in this file).
+#
+# A show that has NEVER had a song has no anchor, so every dated episode counts. That is
+# the honest reading: a music show whose scraper has never produced a row is broken, and
+# it clears itself the moment one song lands.
+_MUSIC_SILENCE_STREAK_SQL = """
+    WITH anchor AS (
+      SELECT s.id AS show_id, s.slug,
+             MAX(e.publish_date) FILTER (
+               WHERE EXISTS (SELECT 1 FROM songs g WHERE g.episode_id = e.id)
+             ) AS newest_with_songs
+      FROM shows s
+      JOIN episodes e ON e.show_id = s.id
+      WHERE s.slug = ANY(%s)
+        AND e.publish_date IS NOT NULL
+      GROUP BY s.id, s.slug
+    )
+    SELECT a.slug, e.id, e.publish_date::date AS publish_date, e.title
+    FROM anchor a
+    JOIN episodes e ON e.show_id = a.show_id
+    WHERE e.publish_date IS NOT NULL
+      AND (a.newest_with_songs IS NULL OR e.publish_date > a.newest_with_songs)
+    ORDER BY a.slug, e.publish_date, e.id;
+"""
+
+
+def check_music_songs_still_arriving(conn) -> CheckResult:
+    """Is each music show still ACQUIRING songs, or has its scrape gone quiet?
+
+    The failure this catches is a music pipeline that runs, exits 0, and produces
+    nothing — which is indistinguishable from a quiet week unless something compares
+    songs against the episodes that kept arriving. See the block comment above for the
+    thresholds and the measurements behind them.
+    """
+    slugs = list(MUSIC_SILENCE_SHOWS)
+    aggregates = {row["slug"]: row for row in _rows(conn, _MUSIC_SILENCE_AGGREGATE_SQL, [slugs])}
+    streaks: dict[str, list[dict[str, Any]]] = {}
+    for row in _rows(conn, _MUSIC_SILENCE_STREAK_SQL, [slugs]):
+        streaks.setdefault(row["slug"], []).append(row)
+
+    today = _today()
+    ended = ended_show_slugs()
+    failures: list[str] = []
+    warnings: list[str] = []
+    details: list[str] = []
+
+    for slug in MUSIC_SILENCE_SHOWS:
+        if slug in ended:
+            # A concluded show can never acquire another song. Failing on it every run
+            # forever is how this alert stops meaning anything — same reasoning as
+            # check_episode_freshness, and stated here rather than filtered out of
+            # MUSIC_SILENCE_SHOWS so the report says WHY the show is not judged.
+            details.append(
+                f"{slug}: show ended {SHOWS[slug].ended_on} — song acquisition not "
+                "applicable (skipped)"
+            )
+            continue
+        row = aggregates.get(slug)
+        if row is None:
+            # No dated episodes at all: a newly configured show before its first import.
+            # Nothing to measure yet, and a check that fails on an empty show fails on
+            # the day it is onboarded.
+            details.append(f"{slug}: no dated episodes yet (skipped)")
+            continue
+
+        anchor = row["newest_with_songs"]
+        # No anchor = no song has ever landed, so the show's own oldest episode is the
+        # only honest "since". Both are dates from the same query, and the query cannot
+        # return a row without at least one non-null publish_date.
+        reference = anchor or row["oldest_episode"]
+        stalled = streaks.get(slug, [])
+        streak = len(stalled)
+        days = (today - reference).days if reference else None
+        written = row["last_song_written"]
+
+        if days is None:
+            details.append(f"{slug}: no dated episodes to measure against (skipped)")
+            continue
+
+        anchor_text = (
+            f"newest episode with songs {anchor}"
+            if anchor
+            else f"NO song has ever been acquired (oldest episode {row['oldest_episode']})"
+        )
+        written_text = f"last song row written {written}" if written else "no song rows at all"
+        named = _name_some(
+            [f"ep {r['id']} ({r['publish_date']})" for r in stalled]
+        )
+
+        if streak >= MUSIC_SILENCE_FAIL_EPISODES and days >= MUSIC_SILENCE_FAIL_DAYS:
+            failures.append(
+                f"{slug}: NO NEW SONGS in {days} days — {anchor_text}, "
+                f"{streak} episode(s) published since with none ({written_text})"
+                + named
+            )
+        elif streak >= MUSIC_SILENCE_WARN_EPISODES and days >= MUSIC_SILENCE_WARN_DAYS:
+            warnings.append(
+                f"{slug}: no new songs in {days} days — {anchor_text}, "
+                f"{streak} episode(s) published since with none ({written_text})"
+                + named
+            )
+        else:
+            details.append(
+                f"{slug}: songs current — {anchor_text} ({days}d ago), "
+                f"{streak} episode(s) since with none"
+            )
+
+    if failures:
+        status = "fail"
+        summary = (
+            f"{len(failures)} music show(s) have stopped acquiring songs: "
+            + ", ".join(f.split(":", 1)[0] for f in failures)
+            + "."
+        )
+    elif warnings:
+        status = "warn"
+        summary = (
+            f"{len(warnings)} music show(s) may have stopped acquiring songs: "
+            + ", ".join(w.split(":", 1)[0] for w in warnings)
+            + "."
+        )
+    else:
+        status = "pass"
+        summary = "Every music show is still acquiring songs."
+    return CheckResult(
+        "music_songs_still_arriving", status, summary, failures + warnings + details
+    )
 
 
 def check_notion_sync_freshness(conn) -> CheckResult:
@@ -1390,6 +1603,7 @@ def run_checks(conn, include_feed_check: bool = False) -> list[CheckResult]:
         check_duplicate_episodes(conn),
         check_transcript_coverage(conn),
         check_episode_freshness(conn),
+        check_music_songs_still_arriving(conn),
         check_notion_sync_freshness(conn),
         check_ai_daily_extraction(conn),
         check_ai_run_completeness(conn),

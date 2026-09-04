@@ -87,6 +87,7 @@ Current health policy:
 | Duplicates | Same show/title/date more than once | None |
 | Transcripts | AI Daily/PCHH must be complete; SOP/TAL latest transcript must stay fresh | Historic SOP/TAL transcript coverage can be partial |
 | AI Daily | Transcript without mentions, mention without transcript, completed run with zero mentions, a completed run holding fewer mentions than its CSV declared, a batch load abandoned in `loading` | Entity alias split candidates are warning-level until curated; a batch load in flight is a pass |
+| Music songs | A music show (any show with a Spotify playlist) that has published 3+ episodes over 21+ days without acquiring a single song — the show still runs, still exits 0, and produces nothing | One songless episode is normal (TAL reruns archive episodes with no music credits); the archive is out of scope entirely (only episodes newer than the last song-bearing one count); 2 episodes / 14 days is a warning; a show on break never trips it (no new episodes, no streak) and an ended show is skipped |
 
 Dry-run-first repair commands:
 
