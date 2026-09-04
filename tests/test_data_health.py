@@ -540,6 +540,97 @@ def test_extraction_integrity_ignores_declared_empty_episodes(monkeypatch) -> No
     assert any("declared empty" in d and "2" in d for d in result.details)
 
 
+# --- zero-mention runs: scoped and windowed (4a, 2026-09-03) -----------------------
+
+
+def _extraction_check(monkeypatch, *, zero_mention_count: int = 0):
+    """Drive check_ai_daily_extraction with every _one query stubbed, returning the
+    given count only for the zero-mention subquery. Returns (result, captured calls)."""
+    import pipeline.data_health as dh
+
+    calls: list[tuple[str, object]] = []
+
+    def fake_one(conn, sql, params=None):
+        flat = " ".join(sql.split())
+        calls.append((flat, params))
+        if "HAVING COUNT(m.id) = 0" in flat:
+            return {"count": zero_mention_count}
+        return {"transcripted_without_mentions": 0, "count": 0}
+
+    monkeypatch.setattr(dh, "_one", fake_one)
+    return dh.check_ai_daily_extraction(conn=None), calls
+
+
+def test_extraction_integrity_flags_recent_zero_mention_runs(monkeypatch) -> None:
+    """A completed run that loaded nothing is a real fault — it must still fail once
+    the query is scoped and windowed, or 4a would have traded a false positive for a
+    blind spot."""
+    result, _ = _extraction_check(monkeypatch, zero_mention_count=1)
+
+    assert result.status == "fail"
+    assert any("zero mentions" in d for d in result.details)
+
+
+def test_zero_mention_runs_is_scoped_to_a_show_and_a_window(monkeypatch) -> None:
+    """Unscoped and unwindowed, one anomaly from any show — or a legacy NULL-show_id
+    row — pinned a check named for AI Daily permanently red.
+
+    The shape is asserted through the PARAMS, not by grepping the SQL for the literals:
+    the whole point of 4a is that both values are constants a reader can change in one
+    line, so the test has to prove those constants reach the database.
+    """
+    from pipeline.data_health import (
+        ZERO_MENTION_RUN_SHOWS,
+        ZERO_MENTION_RUN_WINDOW_DAYS,
+    )
+
+    _, calls = _extraction_check(monkeypatch)
+    sql, params = next(c for c in calls if "HAVING COUNT(m.id) = 0" in c[0])
+
+    assert "JOIN shows s ON s.id = r.show_id" in sql
+    assert "s.slug = ANY(%s)" in sql
+    assert "r.created_at >= NOW() - make_interval(days => %s)" in sql
+    assert params == [list(ZERO_MENTION_RUN_SHOWS), ZERO_MENTION_RUN_WINDOW_DAYS]
+    assert ZERO_MENTION_RUN_SHOWS == ("ai-daily-brief",)  # Kevin's call, 2026-09-03
+
+
+# --- the null map is reported, not alerted on (4b, 2026-09-03) ---------------------
+
+
+def test_optional_null_map_is_not_in_the_alerting_list() -> None:
+    """It hardcodes status='pass', so it can never reach the fail/warn reduction that
+    drives the Slack alert or the pulse digest — it was only costing a per-show
+    COUNT(*) over the whole episodes table on every daily and biweekly run."""
+    import inspect
+
+    from pipeline import data_health
+
+    assert "check_optional_null_map" not in inspect.getsource(data_health.run_checks)
+
+
+def test_optional_null_map_still_reaches_the_cli_report() -> None:
+    """Dropped from run_checks but NOT from the human-readable output — the per-show
+    null map is exactly what a person reads the CLI report for."""
+    import inspect
+
+    from pipeline import data_health
+
+    assert "results.append(check_optional_null_map(conn))" in inspect.getsource(
+        data_health.main
+    )
+
+
+def test_optional_null_map_can_only_ever_pass(monkeypatch) -> None:
+    """The premise of both tests above. If this check ever grows a real verdict, it
+    belongs back in run_checks and these tests should fail to say so."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [
+        {"slug": "sop", "episodes": 10, "audio_url_nulls": 10},
+    ])
+    assert dh.check_optional_null_map(conn=None).status == "pass"
+
+
 # --- sponsor share (ads as data, 2026-09-02) ---------------------------------------
 
 

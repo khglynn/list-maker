@@ -108,12 +108,13 @@ def split_missing_feed_dates(
     turn.
 
     Still live, still used, and NOT the whole story since 2026-09-03: this is the
-    comparison for shows with no comparable episode identity (SOP), and it is what
-    pulse_report still runs for every show. split_missing_feed_episodes is the
-    identity-based twin the daily check uses everywhere else. The two therefore CAN now
-    disagree on the identity shows — the pulse can report a BEHIND the daily check
-    doesn't, which is the TAL false positive surviving in the biweekly digest. Teaching
-    the pulse the identity comparison is the follow-up that closes it.
+    comparison for shows with no comparable episode identity (SOP), and for any show
+    row with no config at all. split_missing_feed_episodes is the identity-based twin
+    used everywhere else. Both callers — the daily check here and pulse_report's digest
+    — take the same fork on the same two functions, so they cannot reach different
+    verdicts about the same show. (Between 2026-09-03's two PRs they briefly could: the
+    check compared identities while the pulse still compared dates, which left the TAL
+    false BEHIND alive in the biweekly digest. Do not reintroduce that split.)
     """
     today = today or _today()
     cutoff = today - timedelta(days=grace_days)
@@ -761,6 +762,27 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
     return CheckResult("import_caught_up_to_feed", status, summary, failures + warnings + details)
 
 
+# Which shows a zero-mention `completed` run is an ALARM for, and how far back to look.
+#
+# Scoped, because this check is named for AI Daily and `ai_runs` now carries every
+# entity/media show: unscoped, one anomaly from any of them — or a legacy row whose
+# show_id the FK set to NULL — pinned a check about AI Daily permanently red. Windowed
+# for the same reason in time: without one, a single old anomaly outlives every fix,
+# which is exactly the "silence you can't tell from fine" this phase exists to remove.
+# 30 days matches the sibling declared_empty_runs query in the same function.
+#
+# Kevin's call, 2026-09-03: ai-daily-brief only for now. Whether a zero-mention run on
+# Hard Fork / PCHH / Gabfest should also wake someone is a real product question, not
+# an implementer's, so widening is left as ONE LINE here rather than a rewrite. Rows
+# with a NULL show_id are deliberately out of scope — they cannot be attributed to any
+# show, so no show-scoped check can honestly claim them.
+#
+# Parameterized (unlike declared_empty_runs' literal INTERVAL two blocks down) for that
+# same reason: this one is expected to change, that one is not.
+ZERO_MENTION_RUN_SHOWS = ("ai-daily-brief",)
+ZERO_MENTION_RUN_WINDOW_DAYS = 30
+
+
 def check_ai_daily_extraction(conn) -> CheckResult:
     row = _one(
         conn,
@@ -831,12 +853,16 @@ def check_ai_daily_extraction(conn) -> CheckResult:
             FROM (
               SELECT r.id
               FROM ai_runs r
+              JOIN shows s ON s.id = r.show_id
               LEFT JOIN ai_mentions m ON m.run_id = r.id
               WHERE r.status = 'completed'
+                AND s.slug = ANY(%s)
+                AND r.created_at >= NOW() - make_interval(days => %s)
               GROUP BY r.id
               HAVING COUNT(m.id) = 0
             ) x;
             """,
+            [list(ZERO_MENTION_RUN_SHOWS), ZERO_MENTION_RUN_WINDOW_DAYS],
         ).get("count")
         or 0
     )
@@ -971,6 +997,14 @@ def check_ai_run_stuck_loading(conn) -> CheckResult:
     daily --strict run that Slacks. Asking whether the batch's episodes still lack
     mentions answers the question the alert actually claims to answer, and it clears
     itself the moment the work is done by any route.
+
+    If you ever test the CASE digit-guards here or in check_ai_run_completeness, drive
+    them from a column or a set-returning function, never from a literal. Postgres folds
+    constant expressions at PLAN time, so `CASE WHEN '9'x11 ~ ... THEN '9'x11::int END`
+    raises before the CASE can guard anything, and the guard looks broken when it is
+    not. Both real call sites are non-foldable — r.parameters is a column, and
+    declared.episode_id comes from an SRF in FROM — so the guard genuinely runs in
+    production (verified both shapes against Neon, 2026-09-03).
     """
     rows = _rows(
         conn,
@@ -1313,7 +1347,6 @@ def run_checks(conn, include_feed_check: bool = False) -> list[CheckResult]:
         check_ai_mention_fields(conn),
         check_sponsor_share(conn),
         check_possible_entity_alias_splits(conn),
-        check_optional_null_map(conn),
     ]
     if include_feed_check:
         # Opt-in: makes external Taddy/RSS calls. The CLI enables it (the daily alarm);
@@ -1377,6 +1410,14 @@ def main() -> None:
         else:
             # Daily CLI run includes the second-source feed check (the loud import-behind alarm).
             results = run_checks(conn, include_feed_check=True)
+            # Appended to the REPORT, never to run_checks(). check_optional_null_map
+            # hardcodes status="pass", so it can never appear in the fail/warn
+            # reduction that drives the Slack alert here or the pulse digest — it was
+            # paying for a per-show COUNT(*) over the whole episodes table on every
+            # daily AND biweekly run to contribute nothing to either. Its details (the
+            # per-show null map) are for a human reading the CLI output, so that is
+            # where it lives now.
+            results.append(check_optional_null_map(conn))
     finally:
         conn.close()
 
