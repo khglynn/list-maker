@@ -64,13 +64,20 @@ def scrape_new_episodes(
     """
     Fetch, parse, and insert songs for TAL episodes that don't have any yet.
 
-    Returns summary dict: {fetched, parsed, songs_inserted, unresolved, errors}
+    Returns summary dict: {fetched, parsed, songs_inserted, unresolved, failures, errors}
+
+    `failures` is the run-reddening one — see run_pipeline.STEP_FAILURE_KEY. It counts
+    RETRYABLE work that did not complete (a page Firecrawl could not return), and it is
+    deliberately NOT the same as `unresolved`: a row with no page url anywhere can never
+    succeed, so counting it would redden every Monday forever and train the reader to
+    ignore the alert. `errors` stays the human-readable log and holds both.
     """
     summary = {
         "fetched": 0,
         "parsed": 0,
         "songs_inserted": 0,
         "unresolved": 0,
+        "failures": 0,
         "errors": [],
     }
 
@@ -130,6 +137,11 @@ def scrape_new_episodes(
         result = asyncio.run(fetch_main(episodes=to_fetch, dry_run=False)) or {}
         summary["fetched"] = result.get("success", 0)
         if result.get("errors"):
+            # Counted, not raised. Raising here would throw away the pages that DID come
+            # back — they still deserve to be parsed, inserted, matched and synced. The
+            # count is what run_pipeline turns into a non-zero exit, so the run is both
+            # useful and honestly red.
+            summary["failures"] = result["errors"]
             summary["errors"].append(f"Firecrawl failed on {result['errors']} episode(s)")
 
     # Step 3: Parse all JSON files and find missing songs

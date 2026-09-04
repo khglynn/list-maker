@@ -30,7 +30,7 @@ import os
 import subprocess
 import sys
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -63,6 +63,55 @@ SHOWS = {
 # =============================================================================
 # Pipeline Steps
 # =============================================================================
+
+# The one key any step's summary uses to say "I attempted N units of work and could not
+# complete them." Raising is for "this step cannot proceed"; this is for partial loss —
+# the step did real work, the rest of the pipeline should still run on what came back,
+# and the run must still end RED so the failure Slack fires (pipeline.yml's notify step
+# is `if: failure()`, so exit 0 means silence).
+#
+# Without this, a Monday where Firecrawl failed on every page exited 0: scrape_new_episodes
+# returned a summary listing the failures, nothing raised, and the only signal was a line
+# in a log nobody reads. That is the same shape as the eight-month TAL outage this arc
+# exists to close — "found no work" and "could not do the work" reported identically.
+#
+# Any step can set it. The scrape does today (Firecrawl failures); a sync step reporting
+# partially-added playlist tracks would set the same key and need no change here.
+STEP_FAILURE_KEY = "failures"
+
+
+def _utc_now_iso() -> str:
+    """UTC timestamp, byte-identical to the datetime.utcnow().isoformat() it replaced.
+
+    Same naive-with-no-offset string, so the JSON summary pipeline.yml prints does not
+    change shape. utcnow() is deprecated in 3.12 and these three calls were the only
+    DeprecationWarnings in the suite once the run_pipeline tests below began exercising
+    this function — a clean run is worth keeping clean.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+
+
+def record_step_failures(summary: dict, step: str, result) -> None:
+    """Mark the run degraded when a step reports partial failures — WITHOUT aborting it.
+
+    Deliberately does not return early or raise: the episodes that did come back still
+    deserve to be parsed, inserted, matched and synced. Red and useful, not red instead
+    of useful.
+
+    A step that reports 0 (or omits the key) is untouched, which is what keeps a
+    permanently-unresolvable row — TAL's row 7422 has no page anywhere — from reddening
+    every run forever. Those are printed and counted separately as `unresolved`; an alert
+    that can never be cleared is noise, and noise is how a real alert gets ignored.
+    """
+    count = (result or {}).get(STEP_FAILURE_KEY) or 0
+    if not count:
+        return
+    summary["success"] = False
+    summary.setdefault("step_failures", []).append({"step": step, STEP_FAILURE_KEY: count})
+    if not summary.get("error"):
+        summary["error"] = f"{step}: {count} item(s) failed"
+    print(f"\n  ⚠ {step}: {count} item(s) failed — run will exit non-zero")
+
 
 def count_tal_episodes() -> int:
     """Row count for TAL, used to report how many episodes discovery actually added."""
@@ -194,7 +243,7 @@ def run_pipeline(
     if not show:
         raise ValueError(f"Unknown show_id: {show_id}. Valid: {list(SHOWS.keys())}")
 
-    started_at = datetime.utcnow().isoformat()
+    started_at = _utc_now_iso()
     print("\n" + "=" * 60)
     print(f"PIPELINE: {show['name']} (show_id={show_id})")
     print(f"Mode: {'DRY RUN' if dry_run else 'LIVE'}")
@@ -216,6 +265,7 @@ def run_pipeline(
         print(f"\n--- Step 1: Scrape new episodes ---")
         scrape_result = run_scrape(show_id, dry_run, yes)
         summary["steps"]["scrape"] = scrape_result
+        record_step_failures(summary, "scrape", scrape_result)
     except Exception as e:
         summary["steps"]["scrape"] = {"error": str(e)}
         summary["success"] = False
@@ -231,6 +281,7 @@ def run_pipeline(
             print(f"\n--- Step 2: Match songs to Spotify ---")
             match_result = run_match(show_id, dry_run, cache_path)
             summary["steps"]["match"] = match_result
+            record_step_failures(summary, "match", match_result)
         except Exception as e:
             summary["steps"]["match"] = {"error": str(e)}
             summary["success"] = False
@@ -244,6 +295,10 @@ def run_pipeline(
             print(f"\n--- Step 3: Sync Spotify playlist ---")
             sync_result = run_sync(show_id, dry_run, cache_path)
             summary["steps"]["sync"] = sync_result
+            # Wired now, unused now: sync reports no `failures` key today. A sibling PR
+            # that makes add_tracks_to_playlist' dropped batches visible only has to set
+            # it — no change needed here, which is the point of one shared key.
+            record_step_failures(summary, "sync", sync_result)
         except Exception as e:
             summary["steps"]["sync"] = {"error": str(e)}
             summary["success"] = False
@@ -252,7 +307,7 @@ def run_pipeline(
             traceback.print_exc()
             return summary
 
-    summary["completed_at"] = datetime.utcnow().isoformat()
+    summary["completed_at"] = _utc_now_iso()
 
     # Print final summary
     print("\n" + "=" * 60)
@@ -398,7 +453,7 @@ def main():
         output = {
             "summaries": all_summaries,
             "all_success": not any_failed,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utc_now_iso(),
         }
         print("\n--- JSON SUMMARY ---")
         print(json.dumps(output, indent=2))
