@@ -333,8 +333,14 @@ def main():
         sync_show(show_id=args.show_id, dry_run=args.dry_run)
     except ValueError as e:
         # The only ValueError raised in this file is sync_show's unknown --show-id,
-        # which the next attempt reproduces exactly: exit 2 = deterministic, so the
-        # orchestrator does not retry it (run_new_episodes.DETERMINISTIC_EXIT_CODE).
+        # which the next attempt reproduces exactly — so exit 2 = deterministic.
+        # Two orchestrators call this module, and only one of them ever sees that code:
+        #   * run_new_episodes.step_spotify_sync shells out to this script, and
+        #     run_script skips the retry on DETERMINISTIC_EXIT_CODE. That is this line.
+        #   * The live SOP/TAL cron does NOT come through here: pipeline.yml runs
+        #     run_pipeline.py, whose run_sync() imports sync_show and calls it in
+        #     process, so the ValueError is caught by its bare `except Exception`,
+        #     recorded as a failed step, and the run exits 1.
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(2)
 
