@@ -108,13 +108,18 @@ def test_taddy_discovered_episode_is_queued_for_the_website_scrape(monkeypatch) 
 
 def test_archive_episode_without_songs_is_not_queued(monkeypatch) -> None:
     """The 189-row guard: most pre-2026 TAL episodes have no music credits at all, and
-    'has no songs' would re-read every one of them on every run without a date floor."""
+    'has no songs' would re-read every one of them on every run without a date floor.
+
+    Honest about what this can prove: Postgres does the excluding, so a fake cursor
+    cannot demonstrate the row being dropped. What it pins is the clause and the bound
+    parameter that cause it — remove either and this fails.
+    """
     _queue(monkeypatch, [])
 
     fetch.get_episodes_missing_songs()
 
-    # The floor is in the SQL, not applied in Python after the fact — the DB must never
-    # hand back 200 archive rows for us to filter.
+    # In the SQL, not applied in Python after the fact — the DB must never hand back 200
+    # archive rows for us to filter.
     sql, params = fetch.get_db_connection().cursor().calls[0]
     assert "publish_date >= %s" in sql
     assert fetch.DEFAULT_SONG_SCRAPE_FLOOR in params
@@ -132,7 +137,11 @@ def test_date_floor_is_a_parameter_so_a_backfill_is_deliberate(monkeypatch) -> N
 
 def test_episode_with_songs_is_not_requeued(monkeypatch) -> None:
     """Rows leave the queue by acquiring songs — that is what makes a failed fetch
-    self-healing (retried next run) instead of marked-done by a side effect."""
+    self-healing (retried next run) instead of marked-done by a side effect.
+
+    Same caveat as the floor test: the subquery is what excludes, and Postgres runs it;
+    this pins the subquery's exact shape so it cannot be dropped or loosened silently.
+    """
     conn = _queue(monkeypatch, [])
 
     assert fetch.get_episodes_missing_songs() == []
