@@ -23,7 +23,42 @@ def test_episode_url_key_falls_back_without_uuid() -> None:
     assert episode_url_key({"websiteUrl": "https://x.com/ep1"}) == "https://x.com/ep1"
     assert episode_url_key({"audioUrl": "https://x.com/a.mp3"}) == "https://x.com/a.mp3"
     assert episode_url_key({"guid": "guid-1"}) == "guid-1"
-    assert episode_url_key({}) == "unknown-episode"
+    # Past that chain the key is scoped to the show and the episode, not one shared
+    # literal — see the collision test below for why.
+    assert episode_url_key({}, show_id=3).startswith("taddy-unidentified:3:")
+
+
+def test_episode_url_key_scopes_unidentified_fallback_by_show_and_episode() -> None:
+    """The old fallback was the literal "unknown-episode" for EVERY malformed episode of
+    EVERY show. episodes.url is UNIQUE, so the second such episode to arrive silently
+    collapsed onto the first one's row — data loss with no error. The replacement has to
+    be unique per episode AND stable across re-imports, or it trades data loss for
+    duplicate rows on every run."""
+    a = {"name": "Episode A", "datePublished": 1788105600}
+    b = {"name": "Episode B", "datePublished": 1788105600}
+
+    # Different episodes in one show no longer collide.
+    assert episode_url_key(a, 3) != episode_url_key(b, 3)
+    # The same episode in different shows no longer collides (the cross-show bug).
+    assert episode_url_key(a, 3) != episode_url_key(a, 11)
+    # Idempotent: a re-import finds and updates the same row instead of inserting one.
+    assert episode_url_key(a, 3) == episode_url_key(a, 3)
+    # Nothing at all is still deterministic rather than a crash.
+    assert episode_url_key({}, 3) == episode_url_key({}, 3)
+    assert episode_url_key({}) == "taddy-unidentified:no-show:no-date:untitled"
+
+
+def test_episode_url_key_fallback_survives_a_taddy_redate_within_the_day() -> None:
+    """The key uses the DATE, not the raw timestamp. Surviving a Taddy re-date is the
+    point of the identity work this sits beside; a key built on the raw epoch would fork
+    on a re-date and insert a duplicate row on the next import instead of updating."""
+    noon = {"name": "Ep", "datePublished": 1788105600}
+    an_hour_later = {"name": "Ep", "datePublished": 1788105600 + 3600}
+    as_a_string = {"name": "Ep", "datePublished": "1788105600"}
+
+    assert episode_url_key(noon, 3) == episode_url_key(an_hour_later, 3)
+    assert episode_url_key(noon, 3) == episode_url_key(as_a_string, 3)  # int/str payload
+    assert episode_url_key(noon, 3).endswith(":2026-08-30:ep")  # the stored publish_date
 
 
 def test_find_existing_episode_id_uses_title_date_fallback_for_old_url_rows() -> None:
