@@ -710,6 +710,212 @@ def test_feed_check_names_the_oldest_missing_episodes_first(monkeypatch) -> None
     assert "missing: 2026-08-22 'Ep 4'; 2026-08-24 'Ep 3'; 2026-08-26 'Ep 2'; +1 more" in detail
 
 
+# ---- an incomplete batch load is visible (2026-09-03) ----------------------------
+#
+# The loader now writes its run 'loading' first and flips it to 'completed' on the one
+# commit that also lands every mention. These two checks read the two states that leaves
+# behind: a completed run whose count disagrees with the CSV it declared, and a run that
+# never got to flip.
+
+
+def test_run_completeness_passes_when_every_run_matches_its_csv(monkeypatch) -> None:
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [])
+    result = dh.check_ai_run_completeness(conn=None)
+    assert result.status == "pass"
+
+
+def test_run_completeness_fails_and_names_the_short_run(monkeypatch) -> None:
+    """The alert has to be actionable: which run, which show, which batch, and by how
+    much — a bare count would send someone hunting through 600+ runs."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 641, "slug": "ai-daily-brief",
+        "batch_name": "incremental-8430-to-8434",
+        "expected_mentions": 20, "actual_mentions": 8,
+    }])
+
+    result = dh.check_ai_run_completeness(conn=None)
+    assert result.status == "fail"
+    assert result.details == [
+        "ai-daily-brief run 641 (incremental-8430-to-8434): expected 20, has 8"
+    ]
+
+
+def test_run_completeness_does_not_silently_drop_a_null_expectation() -> None:
+    """`WHERE actual <> expected` evaluates to NULL on a null expectation and drops the
+    row — the silent skip this check exists to prevent. IS DISTINCT FROM keeps it."""
+    import inspect
+
+    import pipeline.data_health as dh
+
+    source = inspect.getsource(dh.check_ai_run_completeness)
+    assert "IS DISTINCT FROM" in source
+    assert "actual_mentions <> expected_mentions" not in source
+
+
+def test_run_completeness_skips_runs_written_before_expected_mentions_existed() -> None:
+    """The one line between a clean rollout and every historical run flooding red: 628
+    runs (2026-09-03) predate expected_mentions and have no honest number to compare."""
+    import inspect
+
+    import pipeline.data_health as dh
+
+    source = inspect.getsource(dh.check_ai_run_completeness)
+    assert "r.parameters ? 'expected_mentions'" in source
+
+
+def test_run_completeness_explains_a_malformed_expectation(monkeypatch) -> None:
+    """The SQL nulls a non-numeric expected_mentions rather than letting ::int take the
+    whole health run down. The detail then has to say what happened — "expected None"
+    would leave the reader guessing at the one case IS DISTINCT FROM exists to catch."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 641, "slug": "ai-daily-brief", "batch_name": "b",
+        "expected_mentions": None, "actual_mentions": 8,
+    }])
+
+    result = dh.check_ai_run_completeness(conn=None)
+    assert result.status == "fail"
+    assert any("not a number (malformed run row); has 8" in d for d in result.details)
+    assert not any("expected None" in d for d in result.details)
+
+
+def test_run_completeness_only_casts_what_is_a_number() -> None:
+    """A bare ::int on a malformed jsonb value raises, and _rows has no try/except — one
+    bad row would abort every remaining check, not just this one."""
+    import inspect
+
+    import pipeline.data_health as dh
+
+    source = inspect.getsource(dh.check_ai_run_completeness)
+    assert "jsonb_typeof(r.parameters->'expected_mentions') = 'number'" in source
+    # Not redundant: 20.5 is a JSON 'number' and ::int still raises on it.
+    assert "r.parameters->>'expected_mentions' ~ '^[0-9]{1,9}$'" in source
+
+
+def test_run_stuck_loading_passes_when_nothing_is_loading(monkeypatch) -> None:
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [])
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "pass"
+
+
+def test_run_stuck_loading_stays_quiet_for_a_batch_in_flight(monkeypatch) -> None:
+    """A load running right now is the system working. Warning on it every time the
+    pulse overlaps the entities run is how an alert stops meaning anything."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 700, "slug": "ai-daily-brief", "batch_name": "b", "minutes_pending": 2,
+    }])
+
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "pass"
+    assert "in flight" in result.summary
+
+
+def test_run_stuck_loading_warns_past_one_load_attempt(monkeypatch) -> None:
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 700, "slug": "ai-daily-brief", "batch_name": "b", "minutes_pending": 15,
+    }])
+
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "warn"
+    assert dh.AI_RUN_LOADING_WARN_MINUTES < 15 <= dh.AI_RUN_LOADING_FAIL_MINUTES
+
+
+def test_run_stuck_loading_fails_once_the_load_cannot_still_be_running(monkeypatch) -> None:
+    """Each retry deletes and re-inserts the row, so a single 'loading' row can never
+    legitimately outlive one attempt of the load step (600s). 45m is abandoned."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [{
+        "run_id": 700, "slug": "ai-daily-brief",
+        "batch_name": "incremental-8430-to-8434", "minutes_pending": 45,
+    }])
+
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "fail"
+    assert any("run 700 (incremental-8430-to-8434): 45m" in d for d in result.details)
+
+
+def test_run_stuck_loading_ignores_a_batch_whose_work_is_already_done() -> None:
+    """The bug this clause exists for, pinned in SQL.
+
+    A retry deletes the previous attempt's row only when the batch name matches, and the
+    name comes from the current unextracted set. Crash on Monday, a new episode on
+    Tuesday, and Tuesday's load runs under a DIFFERENT name — it succeeds, Monday's row
+    is stranded forever, and an age-only check fails every day from then on, telling
+    Kevin to re-run episodes that already loaded. entities.yml runs --strict daily, so
+    that is a permanent red and a daily Slack. The check must ask whether the work is
+    still undone, not merely how old the row is.
+    """
+    import inspect
+
+    import pipeline.data_health as dh
+
+    source = inspect.getsource(dh.check_ai_run_stuck_loading)
+    assert "NOT EXISTS" in source
+    assert "jsonb_array_elements_text" in source
+    assert "JOIN ai_mentions m" in source
+
+
+def test_run_stuck_loading_cannot_be_aborted_by_one_malformed_run_row() -> None:
+    """Both guards are load-bearing and neither is obvious, so pin them.
+
+    jsonb_array_elements_text raises "cannot extract elements from a scalar" on a
+    present-but-null 'episodes' key, and COALESCE does NOT catch that — `->` returns
+    jsonb null, not SQL NULL (verified against Neon, 2026-09-03). _rows has no
+    try/except, so one such row would abort every remaining check in the run, not just
+    this one. Same for a non-integer element reaching ::int.
+    """
+    import inspect
+
+    import pipeline.data_health as dh
+
+    source = inspect.getsource(dh.check_ai_run_stuck_loading)
+    assert "jsonb_typeof(r.parameters->'episodes') = 'array'" in source
+    assert "COALESCE(r.parameters->'episodes'" not in source
+    # Bounded, not '+': an 11-digit element overflows int and raises.
+    assert "declared.episode_id ~ '^[0-9]{1,9}$'" in source
+
+
+def test_run_stuck_loading_fail_summary_agrees_with_its_detail_list(monkeypatch) -> None:
+    """Details list every loading row, so a bare count of the stuck ones would not add
+    up — a reader seeing "1 batch load(s)" above two lines distrusts the whole report."""
+    import pipeline.data_health as dh
+
+    monkeypatch.setattr(dh, "_rows", lambda *a, **k: [
+        {"run_id": 700, "slug": "ai-daily-brief", "batch_name": "old", "minutes_pending": 45},
+        {"run_id": 701, "slug": "ai-daily-brief", "batch_name": "new", "minutes_pending": 2},
+    ])
+
+    result = dh.check_ai_run_stuck_loading(conn=None)
+    assert result.status == "fail"
+    assert "1 of 2 batch load(s)" in result.summary
+    assert len(result.details) == 2
+
+
+def test_both_new_ai_run_checks_are_in_the_standard_check_set() -> None:
+    """A check nothing runs is a check that does not exist."""
+    import inspect
+
+    from pipeline import data_health
+
+    source = inspect.getsource(data_health.run_checks)
+    assert "check_ai_run_completeness(conn)" in source
+    assert "check_ai_run_stuck_loading(conn)" in source
+
+# ---- feed identity: the one documented re-date exception -------------------------
+
+
 def test_a_redated_legacy_row_is_reported_missing_on_purpose() -> None:
     """The re-date immunity has one documented exception, and it is a trade, not an
     oversight — pinned here so nobody "fixes" it into a title-only match.
