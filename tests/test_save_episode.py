@@ -228,6 +228,185 @@ def test_the_search_term_is_quote_free_and_capped_by_words(monkeypatch) -> None:
     assert len(term) > 120
 
 
+# ── taddy_search_term: Taddy's 8-word limit, which it enforces by REJECTION ──
+#
+# Probed against the live Taddy API on 2026-09-04, and the reason this PR exists:
+#
+#   8 words                            -> 3 hits
+#   9 words                            -> BAD_USER_INPUT (the whole query fails)
+#   8 words separated by DOUBLE spaces -> BAD_USER_INPUT (empty tokens count as words)
+#   one 300-character word             -> 3 hits         (no character limit)
+#   8 words totalling 167 characters   -> 1 hit          (no character limit)
+#
+# Because Taddy rejects rather than truncates, an over-long term returned NOTHING —
+# and try_taddy_full swallowed it, so 12 of the 31 saved episodes had never once
+# reached a transcript. Measured against live Neon the same day: 12/12 episodes whose
+# term exceeded 8 words were never upgraded, 19/19 at or under 8 words were.
+
+def test_a_title_of_exactly_eight_words_is_sent_whole() -> None:
+    """The inclusive side of the boundary: 8 is what Taddy accepts, so 8 survives
+    untouched. Cutting at 7 here would silently narrow every search we make."""
+    title = "The future of AI might look like Twitter"
+
+    assert taddy_search_term(title) == title
+    assert len(taddy_search_term(title).split()) == 8
+
+
+def test_a_ninth_word_is_dropped_rather_than_the_query_being_rejected() -> None:
+    """The exclusive side. The old code sent all 9 words (comfortably under its
+    120-character cut) and Taddy answered BAD_USER_INPUT, so the episode was never
+    found — a rejection is not a degraded search, it is no search at all."""
+    term = taddy_search_term("The future of AI might look a lot like Twitter")
+
+    assert term == "The future of AI might look a lot"
+    assert len(term.split()) == TADDY_SEARCH_TERM_MAX_WORDS
+
+
+def test_quote_stripping_no_longer_inflates_taddys_word_count() -> None:
+    """The subtle half of the bug. Quotes become spaces so a title cannot break out of
+    the GraphQL string literal — but Taddy splits on a literal space and COUNTS THE
+    EMPTY TOKENS, so `The "Real" Story` was five words to Taddy and three to us. Our
+    own escaping was pushing titles over the limit. Verified live: eight words
+    separated by double spaces is rejected."""
+    term = taddy_search_term('The "Real" Story')
+
+    assert term == "The Real Story"
+    assert "  " not in term
+
+
+@pytest.mark.parametrize("whitespace", ["\t", "\n", "   "])
+def test_any_run_of_whitespace_collapses_to_one_space(whitespace: str) -> None:
+    """Tabs and newlines reach us from scraped og:title values, and Taddy counts every
+    space-separated token including the empty ones."""
+    assert taddy_search_term(f"Beyonce{whitespace}country") == "Beyonce country"
+
+
+def test_the_term_is_no_longer_cut_at_a_character_count() -> None:
+    """The 120-character cut is gone on purpose: probing found no character limit at
+    Taddy (a 300-character single word and a 167-character 8-word term both returned
+    hits), so it protected nothing while being able to slice a word in half and blunt
+    the search. The word cap subsumes it."""
+    term = taddy_search_term(" ".join(["technologicalization"] * 8))
+
+    assert len(term) == 167
+    assert len(term.split()) == 8
+    assert not term.endswith("technologicalizatio")  # i.e. no mid-word slice
+
+
+def test_the_word_cap_is_where_the_module_says_it_is() -> None:
+    # Taddy's limit, not a knob of ours — raising it makes every long-titled search
+    # fail again, so it is asserted rather than left implicit.
+    assert TADDY_SEARCH_TERM_MAX_WORDS == 8
+
+
+def test_a_title_too_long_for_taddy_still_finds_its_episode(monkeypatch) -> None:
+    """End to end, on a real saved-episode title Taddy rejected outright until now.
+    The term is cut to 8 words, but every ratio is still computed against the FULL
+    title, so the match is unaffected — the truncation decides only what Taddy is
+    asked to retrieve, never what counts as a hit."""
+    sent: list = []
+    full_title = "The future of AI might look a lot like Twitter"
+    monkeypatch.setattr(save_episode, "taddy_query",
+                        _fake_search([_episode("found", full_title, "The Vergecast")], sent))
+
+    hit = taddy_find_episode(full_title, "The Vergecast", "u", "k")
+
+    assert hit["uuid"] == "found"
+    term = re.search(r'term:"([^"]*)"', sent[0][0]).group(1)
+    assert len(term.split()) == 8
+
+
+# ── taddy_input_was_rejected: our bug, or their outage? ──────────────────────
+
+class _FakeLog:
+    """Records warnings instead of writing them. `common.get_logger` sets
+    propagate=False, so pytest's caplog never sees these records — a recorder is both
+    simpler and independent of pytest's logging internals."""
+
+    def __init__(self) -> None:
+        self.warnings: list[str] = []
+
+    def warning(self, msg: str, *args) -> None:
+        self.warnings.append(msg % args if args else msg)
+
+
+class _HttpError(Exception):
+    """Stands in for requests.exceptions.HTTPError, which carries `.response`."""
+
+    def __init__(self, status: int) -> None:
+        super().__init__(f"{status} Client Error")
+        self.response = type("R", (), {"status_code": status})()
+
+
+def test_a_graphql_bad_user_input_is_recognised_as_our_bug() -> None:
+    exc = RuntimeError("Taddy GraphQL error: [{'message': 'term cannot contain more "
+                       "than 8 words', 'code': 'BAD_USER_INPUT'}]")
+
+    assert taddy_input_was_rejected(exc) is True
+
+
+@pytest.mark.parametrize("status", [400, 401, 403, 404, 422])
+def test_a_4xx_status_is_recognised_as_our_bug(status: int) -> None:
+    assert taddy_input_was_rejected(_HttpError(status)) is True
+
+
+def test_a_rate_limit_is_not_our_bug() -> None:
+    """429 sits in import_transcripts.RETRYABLE_STATUS_CODES because it is a
+    transient. Calling it "our bug, not an outage" would be wrong AND would train the
+    reader to ignore the line that matters."""
+    assert taddy_input_was_rejected(_HttpError(429)) is False
+
+
+@pytest.mark.parametrize("exc", [_HttpError(500), _HttpError(503),
+                                 ConnectionError("connection reset")])
+def test_a_taddy_side_failure_is_not_our_bug(exc: Exception) -> None:
+    assert taddy_input_was_rejected(exc) is False
+
+
+def test_a_rejected_search_logs_as_our_bug_with_the_term_and_still_degrades(monkeypatch) -> None:
+    """The visibility half of this PR. The degrade is unchanged — (None, None), so the
+    honest excerpt is still written — but the log now says the request was OURS to fix
+    and prints the term with its word count. Before this, a permanent self-inflicted
+    failure and a passing Taddy outage produced the same line, which is how 12
+    episodes went a year without anyone noticing."""
+    fake_log = _FakeLog()
+    monkeypatch.setattr(save_episode, "log", fake_log)
+
+    def boom(*_a, **_k):
+        raise RuntimeError("Taddy GraphQL error: [{'code': 'BAD_USER_INPUT'}]")
+
+    monkeypatch.setattr(save_episode, "taddy_find_episode", boom)
+
+    title = "The future of AI might look a lot like Twitter"  # 10 words
+
+    assert try_taddy_full(title, "The Vergecast", "u", "k") == (None, None)
+    assert len(fake_log.warnings) == 1
+    line = fake_log.warnings[0]
+    assert "our bug, not an outage" in line
+    # the TERM as actually sent — truncated — not the raw title, so the line shows
+    # what Taddy refused rather than what we started from
+    assert "term='The future of AI might look a lot'" in line
+    assert "(8 words)" in line
+
+
+def test_a_taddy_outage_still_logs_as_a_fallback_not_as_our_bug(monkeypatch) -> None:
+    """The other branch must stay silent about blame: nothing we can fix, so the line
+    reads as a fallback. If both branches said "our bug" the distinction would be
+    worthless."""
+    fake_log = _FakeLog()
+    monkeypatch.setattr(save_episode, "log", fake_log)
+
+    def boom(*_a, **_k):
+        raise _HttpError(503)
+
+    monkeypatch.setattr(save_episode, "taddy_find_episode", boom)
+
+    assert try_taddy_full("Beyonce country", "Today, Explained", "u", "k") == (None, None)
+    assert len(fake_log.warnings) == 1
+    assert "our bug" not in fake_log.warnings[0]
+    assert "falling back" in fake_log.warnings[0]
+
+
 # ── taddy_transcript_text: the stub gate ─────────────────────────────────────
 
 def test_a_transcript_at_the_boundary_counts_as_full(monkeypatch) -> None:
