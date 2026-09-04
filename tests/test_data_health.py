@@ -825,3 +825,46 @@ def test_both_new_ai_run_checks_are_in_the_standard_check_set() -> None:
     source = inspect.getsource(data_health.run_checks)
     assert "check_ai_run_completeness(conn)" in source
     assert "check_ai_run_stuck_loading(conn)" in source
+
+# ---- feed identity: the one documented re-date exception -------------------------
+
+
+def test_a_redated_legacy_row_is_reported_missing_on_purpose() -> None:
+    """The re-date immunity has one documented exception, and it is a trade, not an
+    oversight — pinned here so nobody "fixes" it into a title-only match.
+
+    A row still held under a LEGACY url matches only by title+date, so a Taddy re-date
+    makes it read as missing: a real FAIL on the daily unscoped --strict run. It clears
+    at the show's next import (the title+date lookup misses, the INSERT writes a
+    uuid-keyed row, identity takes over).
+
+    Dropping the date would be worse. TAL reruns archival episodes under their ORIGINAL
+    titles with NEW dates — 2 of its recent 15 feed rows are archival numbers — so a
+    title-only match would call those held while we do not have them: a false PASS on a
+    real gap, in the direction this check exists to prevent. A self-clearing false FAIL
+    is the defensible side of the trade.
+    """
+    from pipeline.data_health import _feed_episode_is_held, split_missing_feed_episodes
+
+    # A real one: held under its pre-migration url, so identity can never match it.
+    held = _held(("https://www.thisamericanlife.org/anon", "A Big Announcement", date(2024, 10, 16)))
+    same_date = FeedEpisode("taddy:uuid-not-in-db", date(2024, 10, 16), "A Big Announcement")
+    redated = FeedEpisode("taddy:uuid-not-in-db", date(2024, 10, 17), "A Big Announcement")
+
+    assert _feed_episode_is_held(same_date, held) is True
+    assert _feed_episode_is_held(redated, held) is False  # the documented exception
+    overdue, _ = split_missing_feed_episodes([redated], held, 2, today=date(2026, 9, 1))
+    assert [ep.publish_date for ep in overdue] == [date(2024, 10, 17)]
+
+    # The reason it stays date-keyed: an archival rerun is a DIFFERENT episode under the
+    # same title, and it must not be reported as held when we don't have it.
+    assert _feed_episode_is_held(
+        FeedEpisode("taddy:rerun", date(2026, 8, 24), "A Big Announcement"), held
+    ) is False
+
+    # And an episode that carries the identity url is immune either way — that is the
+    # asymmetry the docstring in _feed_episode_is_held spells out.
+    identity_held = _held(("taddy:uuid-1", "A Big Announcement", date(2024, 10, 16)))
+    assert _feed_episode_is_held(
+        FeedEpisode("taddy:uuid-1", date(2024, 10, 17), "A Big Announcement"), identity_held
+    ) is True

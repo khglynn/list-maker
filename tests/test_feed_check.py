@@ -229,3 +229,42 @@ def test_feed_recent_episodes_is_none_when_the_source_could_not_be_verified(monk
         lambda uuid, limit: [feed_check.FeedEpisode("a", tomorrow, "A")],
     )
     assert feed_check.feed_recent_episodes(cfg) is None
+
+
+def test_feed_recent_episodes_routes_the_real_gabfest_config_to_its_rss_feed(monkeypatch) -> None:
+    """The rss_guid arm runs --strict daily and no test reached it.
+
+    entities.yml runs `data_health.py --strict` unscoped every day, so this dispatch is
+    live for culture-gabfest on every run. A guard typo, a renamed attribute or a slipped
+    kwarg here returns None, which the check reports as an UNVERIFIED *warning* — and
+    warnings never trip --strict. The second source would degrade to a line in the
+    Actions log, CI would stay green, and nobody would be paged: the exact silent-green
+    this check exists to prevent. So drive the dispatch with the REAL config, not a
+    SimpleNamespace, and assert the identity is the one the importer writes.
+    """
+    from pipeline.scrapers.gabfest.import_gabfest import episode_url, parse_feed
+    from pipeline.show_config import SHOWS
+    from tests.test_import_gabfest import SAMPLE_FEED
+
+    asked: dict = {}
+
+    def fake_get(url, **kwargs):
+        asked["url"] = url
+        return _Resp(content=SAMPLE_FEED)
+
+    monkeypatch.setattr(feed_check.requests, "get", fake_get)
+
+    episodes = feed_check.feed_recent_episodes(SHOWS["culture-gabfest"])
+
+    assert asked, "the rss_guid arm never reached rss_recent_episodes"
+    assert asked["url"] == SHOWS["culture-gabfest"].fallback_website_url  # the Megaphone feed
+    expected = [
+        episode_url(it)
+        for it in parse_feed(SAMPLE_FEED)
+        if it["title"].startswith("Culture Gabfest")
+    ]
+    assert [ep.identity for ep in episodes] == expected  # the guid the importer stores
+    # The dispatch relies on rss_recent_episodes' DEFAULT title filter, unlike
+    # feed_recent_dates which passes one explicitly — so prove the filter still happens
+    # here: the ICYMI item is a different Slate show in the same feed.
+    assert all("ICYMI" not in ep.title for ep in episodes)

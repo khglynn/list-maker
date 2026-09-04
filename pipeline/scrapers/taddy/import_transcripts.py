@@ -745,7 +745,7 @@ def run(args: argparse.Namespace) -> None:
                     elif ep.get("audioUrl"):
                         source_url = ep.get("audioUrl")
                     else:
-                        source_url = f"https://api.taddy.org/podcast-episode/{ep.get('uuid')}"
+                        source_url = taddy_episode_url(ep.get("uuid"))
 
                     upsert_episode_transcript(
                         conn,
