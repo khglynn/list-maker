@@ -659,6 +659,14 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             pending = [ep.publish_date for ep in pending_eps]
             feed_latest = feed_episodes[0].publish_date
             everything_missing = len(overdue) + len(pending) == len(feed_episodes)
+            # Name the episodes, not just a count: identity comparison knows exactly
+            # WHICH ones are missing, and "BEHIND 3" alone leaves the reader to go find
+            # out. Capped at 3 so a scheme change can't dump 15 titles into Slack.
+            named_missing = "; ".join(
+                f"{ep.publish_date} {ep.title[:60]!r}" for ep in overdue_eps[:3]
+            )
+            if len(overdue_eps) > 3:
+                named_missing += f"; +{len(overdue_eps) - 3} more"
         else:
             # No comparable identity (SOP: its scraper writes the urls, Taddy is only the
             # second source). Dates are all we can honestly compare — see
@@ -670,6 +678,7 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             overdue, pending = split_missing_feed_dates(feed_dates, latest, cfg.feed_grace_days)
             feed_latest = feed_dates[0]
             everything_missing = False  # a date compare cannot tell this apart
+            named_missing = ""  # the feed's dates are all we have; no titles to name
         if overdue:
             # "Every one of them" is also the signature of an importer that changed its
             # url scheme, which would otherwise read as a catastrophic outage. Say both,
@@ -683,7 +692,9 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             failures.append(
                 f"{slug}: BEHIND {len(overdue)} — feed at {feed_latest}, we have {latest} "
                 f"(oldest missing {min(overdue)}, past the {cfg.feed_grace_days}-day import "
-                f"window){scheme_hint}"
+                f"window)"
+                + (f" — missing: {named_missing}" if named_missing else "")
+                + scheme_hint
             )
         elif pending:
             details.append(

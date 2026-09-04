@@ -439,6 +439,9 @@ def test_feed_check_catches_a_mid_series_hole_end_to_end(monkeypatch) -> None:
         d.startswith("ai-daily-brief: BEHIND 1") and "oldest missing 2026-08-25" in d
         for d in result.details
     ), result.details
+    # Actionable, not just a count: identity comparison knows exactly which episode is
+    # missing, so the alert names it rather than leaving the reader to go find out.
+    assert any("missing: 2026-08-25 'B'" in d for d in result.details), result.details
     # We hold the NEWEST episode, so the Slack line still reads "we have 2026-09-01" —
     # which is exactly why the date-only check called this show caught up.
     assert any("we have 2026-09-01" in d for d in result.details)
