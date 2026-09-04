@@ -903,9 +903,11 @@ def check_ai_run_completeness(conn) -> CheckResult:
                  -- process over one bad row; NULL here keeps the row visible (IS
                  -- DISTINCT FROM below flags it) and contains the damage to one detail
                  -- line. The regex is not redundant with jsonb_typeof: 20.5 is a JSON
-                 -- 'number' and ::int still raises on it.
+                 -- 'number' and ::int still raises on it. Bounded to 9 digits because
+                 -- '^[0-9]+$' alone still admits 99999999999, which overflows int and
+                 -- raises — the guard is only worth having if it is total.
                  CASE WHEN jsonb_typeof(r.parameters->'expected_mentions') = 'number'
-                       AND r.parameters->>'expected_mentions' ~ '^[0-9]+$'
+                       AND r.parameters->>'expected_mentions' ~ '^[0-9]{1,9}$'
                       THEN (r.parameters->>'expected_mentions')::int END
                    AS expected_mentions,
                  COUNT(m.id) AS actual_mentions
@@ -988,9 +990,11 @@ def check_ai_run_stuck_loading(conn) -> CheckResult:
           -- Both guards below exist so one malformed run row cannot abort the entire
           -- health run: jsonb_array_elements_text raises on a scalar, so a present-but-
           -- null 'episodes' would take down every remaining check, and COALESCE does
-          -- NOT catch that (-> returns jsonb null, not SQL NULL). A non-array or a
-          -- non-integer element is therefore read as "nothing loaded yet", which flags
-          -- the row for a human rather than hiding it or crashing.
+          -- NOT catch that (-> returns jsonb null, not SQL NULL). A non-array, or an
+          -- element that is not an int-sized integer, is therefore read as "nothing
+          -- loaded yet", which flags the row for a human rather than hiding it or
+          -- crashing. Nine digits, not '+', because an 11-digit element overflows int
+          -- and raises — no real episode id is anywhere near that.
           AND NOT EXISTS (
               SELECT 1
               FROM jsonb_array_elements_text(
@@ -999,7 +1003,7 @@ def check_ai_run_stuck_loading(conn) -> CheckResult:
                             ELSE '[]'::jsonb END
                    ) AS declared(episode_id)
               JOIN ai_mentions m
-                ON m.episode_id = CASE WHEN declared.episode_id ~ '^[0-9]+$'
+                ON m.episode_id = CASE WHEN declared.episode_id ~ '^[0-9]{1,9}$'
                                        THEN declared.episode_id::int END
           )
         ORDER BY r.started_at;

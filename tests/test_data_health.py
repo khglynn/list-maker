@@ -794,7 +794,7 @@ def test_run_completeness_only_casts_what_is_a_number() -> None:
     source = inspect.getsource(dh.check_ai_run_completeness)
     assert "jsonb_typeof(r.parameters->'expected_mentions') = 'number'" in source
     # Not redundant: 20.5 is a JSON 'number' and ::int still raises on it.
-    assert "r.parameters->>'expected_mentions' ~ '^[0-9]+$'" in source
+    assert "r.parameters->>'expected_mentions' ~ '^[0-9]{1,9}$'" in source
 
 
 def test_run_stuck_loading_passes_when_nothing_is_loading(monkeypatch) -> None:
@@ -883,7 +883,8 @@ def test_run_stuck_loading_cannot_be_aborted_by_one_malformed_run_row() -> None:
     source = inspect.getsource(dh.check_ai_run_stuck_loading)
     assert "jsonb_typeof(r.parameters->'episodes') = 'array'" in source
     assert "COALESCE(r.parameters->'episodes'" not in source
-    assert "declared.episode_id ~ '^[0-9]+$'" in source
+    # Bounded, not '+': an 11-digit element overflows int and raises.
+    assert "declared.episode_id ~ '^[0-9]{1,9}$'" in source
 
 
 def test_run_stuck_loading_fail_summary_agrees_with_its_detail_list(monkeypatch) -> None:
