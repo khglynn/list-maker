@@ -86,7 +86,7 @@ def test_discovery_failure_raises_instead_of_passing_silently(monkeypatch) -> No
 # the same shape as the outage this arc exists to close.
 # ---------------------------------------------------------------------------
 
-def _music_show(monkeypatch, scrape_result: dict) -> dict:
+def _music_show(monkeypatch, scrape_result: dict, sync_result: dict | None = None) -> dict:
     """Run the orchestrator for TAL with every step faked. No network, no DB."""
     ran: list[str] = []
 
@@ -100,7 +100,7 @@ def _music_show(monkeypatch, scrape_result: dict) -> dict:
 
     def _sync(show_id, dry_run, cache_path):
         ran.append("sync")
-        return {"added": 1}
+        return {"added": 1} if sync_result is None else sync_result
 
     monkeypatch.setattr(run_pipeline, "run_scrape", _scrape)
     monkeypatch.setattr(run_pipeline, "run_match", _match)
@@ -141,6 +141,84 @@ def test_unresolved_only_does_not_redden_the_run(monkeypatch) -> None:
 
     assert summary["success"] is True
     assert "step_failures" not in summary
+
+
+# --- a partial playlist sync is a failed run (Kevin's call, 2026-09-04) --------------
+
+
+_CLEAN_SCRAPE = {"fetched": 23, "failures": 0}
+
+
+def test_a_partial_playlist_sync_fails_the_run(monkeypatch) -> None:
+    """250 tracks in, 150 added, exit 0 was the old behaviour — the music twin of the
+    scrape case above. `failures` is the one key that turns a half-written sync into a
+    non-zero exit, which is what makes pipeline.yml's `if: failure()` Slack step fire."""
+    summary = _music_show(
+        monkeypatch,
+        _CLEAN_SCRAPE,
+        {"db_tracks": 250, "added": 150, "failed_tracks": 100, "failures": 1},
+    )
+
+    assert summary["success"] is False
+    assert summary["step_failures"] == [{"step": "sync", "failures": 1}]
+    assert "sync" in summary["error"]
+
+
+def test_a_truncated_playlist_read_fails_the_run(monkeypatch) -> None:
+    """The sync refuses to add anything on a partial diff and reports one failure. A
+    skipped sync that exits 0 would be the same silence in a new place."""
+    summary = _music_show(
+        monkeypatch,
+        _CLEAN_SCRAPE,
+        {"db_tracks": 102, "existing_tracks": 100, "added": 0, "failures": 1},
+    )
+
+    assert summary["success"] is False
+    assert summary["step_failures"] == [{"step": "sync", "failures": 1}]
+
+
+def test_a_clean_sync_still_passes(monkeypatch) -> None:
+    """The control. A sync that reports zero failures must stay green — otherwise the
+    alarm fires every Monday and stops meaning anything."""
+    summary = _music_show(
+        monkeypatch,
+        _CLEAN_SCRAPE,
+        {"db_tracks": 250, "added": 250, "failed_tracks": 0, "failures": 0},
+    )
+
+    assert summary["success"] is True
+    assert "step_failures" not in summary
+
+
+def test_a_failing_sync_does_not_throw_away_the_scrape_and_match(monkeypatch) -> None:
+    """Red AND useful, the same discipline the scrape path follows: the songs that were
+    scraped and matched are already in Neon, and the next run adds them to the playlist.
+    Failing the run must not mean discarding that."""
+    summary = _music_show(
+        monkeypatch,
+        _CLEAN_SCRAPE,
+        {"db_tracks": 250, "added": 150, "failed_tracks": 100, "failures": 1},
+    )
+
+    assert summary["_ran"] == ["scrape", "match", "sync"]
+    assert summary["steps"]["match"] == {"high": 1, "medium": 0, "low": 0, "not_found": 0}
+    assert summary["steps"]["sync"]["added"] == 150  # the good work is still reported
+
+
+def test_both_a_bad_scrape_and_a_bad_sync_are_each_recorded(monkeypatch) -> None:
+    """Two failing steps must both appear — a run that only ever reports the first
+    failure hides the second one behind it."""
+    summary = _music_show(
+        monkeypatch,
+        {"fetched": 20, "failures": 4, "errors": ["boom"]},
+        {"db_tracks": 250, "added": 150, "failed_tracks": 100, "failures": 1},
+    )
+
+    assert summary["success"] is False
+    assert summary["step_failures"] == [
+        {"step": "scrape", "failures": 4},
+        {"step": "sync", "failures": 1},
+    ]
 
 
 def test_a_clean_scrape_stays_green(monkeypatch) -> None:

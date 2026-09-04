@@ -8,11 +8,15 @@ things make that worth this much testing:
    already in a playlist, and nothing in this repo ever removes one. So if the "what's
    already there" read comes back short, the sync re-adds real tracks and the playlist
    grows duplicates that only a human can clean up.
-2. **A half-written sync still exits 0.** The read and the write both swallow their
-   failures — a truncated page and a dropped batch are printed, then reported as
-   success. The tests below pin that as *today's* behaviour, deliberately, so the
-   question ("should a partial sync fail loudly?") gets answered on purpose rather than
-   by accident.
+2. **A half-written sync used to exit 0.** The read and the write both swallowed their
+   failures — a truncated page and a dropped batch were printed, then reported as
+   success. PR #51 pinned that as *today's* behaviour so the question ("should a partial
+   sync fail loudly?") would be answered on purpose rather than by accident. Kevin
+   answered it on 2026-09-04: **yes**. So those pins are now inverted — a truncated read
+   refuses to sync at all, a dropped batch is counted, and either one sets `failures`,
+   which `run_pipeline.record_step_failures` turns into a non-zero exit and a Slack
+   alert. The tests that walked the old behaviour keep their scenarios and state the new
+   contract in their names.
 
 Scope: this module's own surface. `get_latest_episode` is dead code (called from
 nowhere) and is not tested here — see the PR body. `get_spotify_client` is real OAuth
@@ -160,6 +164,34 @@ def test_bad_show_id_argument_also_exits_two(monkeypatch) -> None:
     assert exc.value.code == 2
 
 
+def test_a_partial_sync_exits_one_so_the_shell_out_caller_sees_it(monkeypatch) -> None:
+    """`run_new_episodes.step_spotify_sync` shells out and reads ONLY the exit code, so
+    a dropped batch has to reach it as a non-zero status or the silence just moves.
+
+    One, not two: a dropped batch is transient and the next run adds what this one
+    missed, so run_script should retry it. Exit 2 stays reserved for the unknown
+    --show-id, which every attempt reproduces identically."""
+    monkeypatch.setattr("sys.argv", ["sync_playlist.py", "--show-id", "1"])
+    monkeypatch.setattr(
+        sync_playlist,
+        "sync_show",
+        lambda **kw: {"added": 150, "failures": 1, "error": "100 track(s) lost"},
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        sync_playlist.main()
+
+    assert exc.value.code == 1
+
+
+def test_a_clean_sync_exits_zero(monkeypatch) -> None:
+    """The control: a sync reporting no failures must not start failing the run."""
+    monkeypatch.setattr("sys.argv", ["sync_playlist.py", "--show-id", "1"])
+    monkeypatch.setattr(sync_playlist, "sync_show", lambda **kw: {"added": 3, "failures": 0})
+
+    sync_playlist.main()  # returns normally: no SystemExit at all
+
+
 # =============================================================================
 # What counts as a song: get_matched_track_ids / get_playlist_stats
 # =============================================================================
@@ -265,7 +297,9 @@ def test_the_playlist_read_walks_offsets_until_a_short_page(sleeps) -> None:
         playlist_pages=[playlist_page(*_many(100)), playlist_page("t0100")]
     )
 
-    assert len(sync_playlist.get_playlist_tracks(sp, "PL")) == 101
+    read = sync_playlist.get_playlist_tracks(sp, "PL")
+    assert len(read.track_ids) == 101
+    assert read.complete is True
 
     reads = sp.calls_to("playlist_tracks")
     assert [call.params["offset"] for call in reads] == [0, 100]
@@ -279,7 +313,9 @@ def test_an_exactly_full_last_page_costs_one_more_request() -> None:
     until an empty page comes back — so the read always ends on a wasted request."""
     sp = FakeSpotify(playlist_pages=[playlist_page(*_many(100))])
 
-    assert len(sync_playlist.get_playlist_tracks(sp, "PL")) == 100
+    read = sync_playlist.get_playlist_tracks(sp, "PL")
+    assert len(read.track_ids) == 100
+    assert read.complete is True  # a wasted request, but a finished read
 
     assert [c.params["offset"] for c in sp.calls_to("playlist_tracks")] == [0, 100]
 
@@ -298,14 +334,19 @@ def test_items_without_a_playable_track_are_skipped() -> None:
     }
     sp = FakeSpotify(playlist_pages=[page])
 
-    assert sync_playlist.get_playlist_tracks(sp, "PL") == {"t1"}
+    read = sync_playlist.get_playlist_tracks(sp, "PL")
+    assert read.track_ids == {"t1"}
+    assert read.complete is True  # skipped items are not a failed read
 
 
-def test_an_error_mid_pagination_returns_a_truncated_playlist(capsys) -> None:
-    """TODAY'S BEHAVIOUR, pinned not endorsed. One failed page ends the read, and the
-    caller gets the pages that did arrive with no exception and no flag — so a partly
-    read playlist is indistinguishable from a short one. The consequence is
-    `test_a_truncated_playlist_read_sends_tracks_spotify_already_has` below."""
+def test_an_error_mid_pagination_is_reported_as_an_incomplete_read(capsys) -> None:
+    """A failed page still ends the read — but the result now SAYS it is partial.
+
+    Until 2026-09-04 the caller got the pages that happened to arrive with no exception
+    and no flag, so a partly-read playlist was indistinguishable from a short one. That
+    is what let the diff re-add tracks Spotify already had; see
+    `test_a_truncated_playlist_read_refuses_to_sync_at_all` below.
+    """
     sp = FakeSpotify(
         playlist_pages=[
             playlist_page(*_many(100)),
@@ -314,9 +355,10 @@ def test_an_error_mid_pagination_returns_a_truncated_playlist(capsys) -> None:
         errors={"playlist_tracks": {3: spotify_error(500)}},
     )
 
-    found = sync_playlist.get_playlist_tracks(sp, "PL")
+    read = sync_playlist.get_playlist_tracks(sp, "PL")
 
-    assert len(found) == 200  # pages 1-2 only; page 3 onwards never read
+    assert len(read.track_ids) == 200  # pages 1-2 only; page 3 onwards never read
+    assert read.complete is False      # ...and the caller can no longer miss that
     assert len(sp.calls_to("playlist_tracks")) == 3
     assert "Error fetching playlist tracks" in capsys.readouterr().err
 
@@ -337,7 +379,7 @@ def test_tracks_go_out_in_batches_of_a_hundred_in_order(sleeps) -> None:
     sp = FakeSpotify()
     track_ids = _many(250)
 
-    assert sync_playlist.add_tracks_to_playlist(sp, "PL", track_ids) == 250
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", track_ids) == (250, 0, 0)
 
     assert [len(batch) for batch in _sent(sp)] == [100, 100, 50]
     assert [uri for batch in _sent(sp) for uri in batch] == [
@@ -352,7 +394,7 @@ def test_a_rate_limited_batch_is_retried_whole_after_the_header_delay(sleeps) ->
     Spotify rejected the batch outright, so no partial write has to be reasoned about."""
     sp = FakeSpotify(errors={"playlist_add_items": {1: rate_limited(2)}})
 
-    assert sync_playlist.add_tracks_to_playlist(sp, "PL", _many(150)) == 150
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", _many(150)) == (150, 0, 0)
 
     assert [len(batch) for batch in _sent(sp)] == [100, 100, 50]
     assert _sent(sp)[0] == _sent(sp)[1]  # the same batch, not the next one
@@ -364,38 +406,61 @@ def test_a_rate_limit_with_no_retry_after_header_waits_six_seconds(sleeps) -> No
     tight retry loop against a rate limiter is how a soft limit becomes a hard one."""
     sp = FakeSpotify(errors={"playlist_add_items": {1: rate_limited()}})
 
-    assert sync_playlist.add_tracks_to_playlist(sp, "PL", ["t1"]) == 1
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", ["t1"]) == (1, 0, 0)
 
     assert sleeps == [6, 0.5]
 
 
-def test_a_permanent_rate_limit_gives_up_after_three_attempts(sleeps) -> None:
-    """TODAY'S BEHAVIOUR, pinned not endorsed. The batch is abandoned after MAX_RETRIES
-    with no raise: `added` silently undercounts and the caller reports success."""
+def test_a_permanent_rate_limit_reports_the_batch_it_gave_up_on(sleeps, capsys) -> None:
+    """A 429 that outlasts MAX_RETRIES abandons the batch — and now SAYS so.
+
+    This is the quieter of the two drop paths: it exits the retry loop without ever
+    reaching the error branch, so before 2026-09-04 it reported nothing at all, not even
+    a stderr line. `added` simply came back short and the caller called it success.
+    """
     sp = FakeSpotify(errors={"playlist_add_items": rate_limited(2)})
 
-    assert sync_playlist.add_tracks_to_playlist(sp, "PL", _many(50)) == 0
+    outcome = sync_playlist.add_tracks_to_playlist(sp, "PL", _many(50))
 
+    assert outcome == (0, 50, 1)  # nothing added, 50 tracks lost, 1 batch dropped
     assert len(sp.calls_to("playlist_add_items")) == sync_playlist.MAX_RETRIES == 3
     assert sleeps == [3, 3, 3]  # it waits after the final attempt too, for nothing
+    assert "DROPPED" in capsys.readouterr().err
 
 
-def test_a_non_rate_limit_error_drops_that_batch_and_keeps_going(sleeps, capsys) -> None:
-    """TODAY'S BEHAVIOUR, pinned not endorsed. 100 of 250 tracks never reach the
-    playlist, `added` comes back 150, nothing raises, and the run exits 0. The only
-    evidence is a line on stderr in a log nobody reads on a green run."""
+def test_a_non_rate_limit_error_drops_that_batch_but_still_sends_the_rest(
+    sleeps, capsys
+) -> None:
+    """100 of 250 tracks never reach the playlist. The other 150 still do — losing good
+    work because one batch failed would be the worse outcome — but the drop is now
+    counted and returned instead of vanishing into a log nobody reads on a green run."""
     sp = FakeSpotify(errors={"playlist_add_items": {2: spotify_error(500)}})
 
-    assert sync_playlist.add_tracks_to_playlist(sp, "PL", _many(250)) == 150
+    outcome = sync_playlist.add_tracks_to_playlist(sp, "PL", _many(250))
 
+    assert outcome == (150, 100, 1)
+    assert outcome.added == 150 and outcome.failed_tracks == 100
+    # Batch 3 was attempted AFTER batch 2 failed: do not stop at the first failure.
     assert [len(batch) for batch in _sent(sp)] == [100, 100, 50]  # no retry of batch 2
-    assert "Error adding tracks" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "Error adding tracks" in err
+    assert "Batch 2 DROPPED: 100 track(s)" in err
+
+
+def test_every_batch_can_fail_and_each_one_is_counted(sleeps, capsys) -> None:
+    """Two dropped batches must count as two, not one — `failures` is what decides the
+    exit code, and a total outage has to read louder than a single blip."""
+    sp = FakeSpotify(errors={"playlist_add_items": spotify_error(500)})
+
+    outcome = sync_playlist.add_tracks_to_playlist(sp, "PL", _many(150))
+
+    assert outcome == (0, 150, 2)
 
 
 def test_an_empty_track_list_never_calls_spotify() -> None:
     sp = FakeSpotify()
 
-    assert sync_playlist.add_tracks_to_playlist(sp, "PL", []) == 0
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", []) == (0, 0, 0)
 
     assert sp.calls == []
 
@@ -502,6 +567,8 @@ def test_a_show_with_no_matched_tracks_never_builds_a_spotify_client(monkeypatch
         "existing_tracks": 0,
         "new_tracks": 0,
         "added": 0,
+        "failed_tracks": 0,
+        "failures": 0,  # a quiet week is not a failure
     }
 
 
@@ -513,7 +580,10 @@ def test_only_the_tracks_missing_from_the_playlist_are_added(monkeypatch) -> Non
 
     stats = sync_playlist.sync_show(show_id=1)
 
-    assert stats == {"db_tracks": 3, "existing_tracks": 2, "new_tracks": 2, "added": 2}
+    assert stats == {
+        "db_tracks": 3, "existing_tracks": 2, "new_tracks": 2, "added": 2,
+        "failed_tracks": 0, "failures": 0,
+    }
     add = sp.calls_to("playlist_add_items")[0]
     assert add.params["items"] == ["spotify:track:a", "spotify:track:c"]
     assert add.params["playlist_id"] == SOP_PLAYLIST
@@ -528,7 +598,10 @@ def test_a_playlist_with_nothing_in_common_receives_every_matched_track(monkeypa
 
     stats = sync_playlist.sync_show(show_id=1)
 
-    assert stats == {"db_tracks": 2, "existing_tracks": 2, "new_tracks": 2, "added": 2}
+    assert stats == {
+        "db_tracks": 2, "existing_tracks": 2, "new_tracks": 2, "added": 2,
+        "failed_tracks": 0, "failures": 0,
+    }
     assert sp.calls_to("playlist_add_items")[0].params["items"] == [
         "spotify:track:a",
         "spotify:track:b",
@@ -546,7 +619,10 @@ def test_a_playlist_already_holding_everything_still_gets_a_fresh_description(
 
     stats = sync_playlist.sync_show(show_id=1)
 
-    assert stats == {"db_tracks": 2, "existing_tracks": 3, "new_tracks": 0, "added": 0}
+    assert stats == {
+        "db_tracks": 2, "existing_tracks": 3, "new_tracks": 0, "added": 0,
+        "failed_tracks": 0, "failures": 0,
+    }
     assert sp.calls_to("playlist_add_items") == []
     assert len(sp.calls_to("playlist_change_details")) == 1
 
@@ -559,7 +635,10 @@ def test_a_dry_run_reads_the_playlist_and_writes_nothing(monkeypatch) -> None:
 
     stats = sync_playlist.sync_show(show_id=1, dry_run=True)
 
-    assert stats == {"db_tracks": 3, "existing_tracks": 1, "new_tracks": 2, "added": 0}
+    assert stats == {
+        "db_tracks": 3, "existing_tracks": 1, "new_tracks": 2, "added": 0,
+        "failed_tracks": 0, "failures": 0,  # a dry run is not a failed run
+    }
     assert sp.calls_to("playlist_tracks")
     assert sp.calls_to("playlist_add_items") == []
     assert sp.calls_to("playlist_change_details") == []
@@ -577,12 +656,18 @@ def test_a_dry_run_with_nothing_to_add_leaves_the_description_alone(monkeypatch)
     assert sp.calls_to("playlist_change_details") == []
 
 
-def test_a_truncated_playlist_read_sends_tracks_spotify_already_has(monkeypatch) -> None:
-    """TODAY'S BEHAVIOUR, pinned not endorsed — the duplicate-tracks incident, end to
-    end. The playlist really holds all 102 tracks, but page 2 of the read fails, so
-    `get_playlist_tracks` returns 100 and the diff calls the other two "new". They are
-    sent to a playlist that already contains them; Spotify accepts duplicates and
-    nothing in this repo ever removes one, so only a human can undo it."""
+def test_a_truncated_playlist_read_refuses_to_sync_at_all(monkeypatch, capsys) -> None:
+    """The duplicate-tracks incident, end to end — now prevented rather than pinned.
+
+    The playlist really holds all 102 tracks, but page 2 of the read fails. Before
+    2026-09-04 the diff called the missing two "new" and sent them to a playlist that
+    already contained them; Spotify accepts duplicates and nothing in this repo ever
+    removes one, so only a human could undo it.
+
+    Now a partial read stops the sync for this show BEFORE any add: skipping one run
+    costs nothing the next run does not fix, while a wrong picture of the playlist costs
+    a manual cleanup. The run still fails, so the skip cannot pass for success.
+    """
     already_there = _many(100, "p")
     unread_page_two = ["p0100", "p0101"]
     sp = FakeSpotify(
@@ -593,12 +678,49 @@ def test_a_truncated_playlist_read_sends_tracks_spotify_already_has(monkeypatch)
 
     stats = sync_playlist.sync_show(show_id=1)
 
-    assert stats["existing_tracks"] == 100  # the playlist actually holds 102
-    assert stats["new_tracks"] == 2
-    assert sp.calls_to("playlist_add_items")[0].params["items"] == [
-        "spotify:track:p0100",
-        "spotify:track:p0101",
+    assert stats["failures"] == 1
+    assert stats["added"] == 0
+    assert stats["existing_tracks"] == 100  # what it managed to read, reported honestly
+    # Nothing was written: not the tracks, and not the description either.
+    assert sp.calls_to("playlist_add_items") == []
+    assert sp.calls_to("playlist_change_details") == []
+    assert "TRUNCATED" in capsys.readouterr().err
+
+
+def test_a_dropped_batch_fails_the_sync_and_leaves_the_description_alone(
+    monkeypatch, capsys
+) -> None:
+    """250 in, 150 added used to be a success. It is now a failed step.
+
+    The description is deliberately NOT updated: it states how many songs the playlist
+    holds, and after a dropped batch it does not hold them — publishing that number
+    would put a untruth on the one part of this sync a listener actually reads.
+    """
+    sp = FakeSpotify(errors={"playlist_add_items": {2: spotify_error(500)}})
+    _wire_sync(monkeypatch, _many(250), sp, songs=250, episodes=20)
+
+    stats = sync_playlist.sync_show(show_id=1)
+
+    assert stats["added"] == 150
+    assert stats["failed_tracks"] == 100
+    assert stats["failures"] == 1
+    assert "100 of 250 track(s) never reached the playlist" in stats["error"]
+    assert sp.calls_to("playlist_change_details") == []
+    # The good work is kept: batches 1 and 3 still went out.
+    assert [len(c.params["items"]) for c in sp.calls_to("playlist_add_items")] == [
+        100, 100, 50,
     ]
+    assert "DROPPED" in capsys.readouterr().err
+
+
+def test_the_failure_key_is_the_one_run_pipeline_reads() -> None:
+    """`STEP_FAILURE_KEY` is spelled out in both modules because run_pipeline imports
+    sync_show from here, so importing it back would be circular. This is the drift guard
+    that keeps the two spellings identical — if they part, the run silently exits 0
+    again, which is the whole failure this change exists to end."""
+    from pipeline import run_pipeline
+
+    assert sync_playlist.STEP_FAILURE_KEY == run_pipeline.STEP_FAILURE_KEY == "failures"
 
 
 class _NoRemovalSpotify(FakeSpotify):
