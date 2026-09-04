@@ -391,7 +391,7 @@ def test_a_non_rate_limit_error_drops_that_batch_and_keeps_going(sleeps, capsys)
     assert "Error adding tracks" in capsys.readouterr().err
 
 
-def test_nothing_to_add_calls_spotify_not_at_all() -> None:
+def test_an_empty_track_list_never_calls_spotify() -> None:
     sp = FakeSpotify()
 
     assert sync_playlist.add_tracks_to_playlist(sp, "PL", []) == 0
@@ -519,8 +519,9 @@ def test_only_the_tracks_missing_from_the_playlist_are_added(monkeypatch) -> Non
 
 
 def test_a_playlist_with_nothing_in_common_receives_every_matched_track(monkeypatch) -> None:
-    """The disjoint case — a fresh playlist, or a playlist id that changed underneath
-    us. Everything goes, which is why the drift guard on the ids matters."""
+    """The disjoint case: the playlist holds two tracks the database has never heard
+    of. Everything matched goes in and the strangers are left alone — which is also
+    what a sync pointed at the WRONG playlist id looks like, hence the drift guard."""
     sp = FakeSpotify(playlist_pages=[playlist_page("y", "z")])
     _wire_sync(monkeypatch, ["a", "b"], sp, songs=2, episodes=1)
 
