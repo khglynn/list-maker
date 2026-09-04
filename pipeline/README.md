@@ -87,7 +87,7 @@ Current health policy:
 | Episodes | Missing show, title, URL, publish date | Optional episode fields may be null |
 | Duplicates | Same show/title/date more than once | None |
 | Transcripts | AI Daily/PCHH must be complete; SOP/TAL latest transcript must stay fresh | Historic SOP/TAL transcript coverage can be partial |
-| AI Daily | Transcript without mentions, mention without transcript, completed run with zero mentions | Entity alias split candidates are warning-level until curated |
+| AI Daily | Transcript without mentions, mention without transcript, completed run with zero mentions, a completed run holding fewer mentions than its CSV declared, a batch load abandoned in `loading` | Entity alias split candidates are warning-level until curated; a batch load in flight is a pass |
 
 Dry-run-first repair commands:
 

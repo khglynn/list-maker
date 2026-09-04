@@ -869,6 +869,190 @@ def check_ai_daily_extraction(conn) -> CheckResult:
     return CheckResult("ai_daily_extraction_integrity", status, summary, details)
 
 
+# A batch load is pure DB work over a few episodes' worth of CSV rows — seconds in the
+# healthy case. A single 'loading' row cannot legitimately be older than ONE attempt of
+# the load step (run_script's 600s timeout), because each retry re-runs
+# load_entity_batch with the same batch name and delete_existing_run wipes the previous
+# attempt's row before inserting a fresh one. So 10 minutes is the edge of "still in
+# flight" and 30 is three times past it: at that age the orchestrator process itself is
+# gone, not merely slow.
+AI_RUN_LOADING_WARN_MINUTES = 10
+AI_RUN_LOADING_FAIL_MINUTES = 30
+
+
+def check_ai_run_completeness(conn) -> CheckResult:
+    """Did every 'completed' run load as many mentions as its CSV actually had?
+
+    load_entity_batch records expected_mentions on the run row at load time, from the
+    same mentions.csv it is about to read — evidence and comparison from one file, read
+    once, in one process. A completed run whose live mention count disagrees with that
+    number is unambiguously wrong, so this is a fail with no warn tier; a batch that is
+    merely still in flight is 'loading', which the check below owns.
+
+    The `? 'expected_mentions'` guard is load-bearing: 628 runs predating this field
+    (2026-09-03) have no honest number to be judged against, and flagging them would
+    turn the check red on rollout day for data written under a different contract.
+    """
+    rows = _rows(
+        conn,
+        """
+        WITH run_counts AS (
+          SELECT r.id AS run_id, s.slug, r.batch_name,
+                 -- Cast only what is actually a whole number. A bare ::int on a
+                 -- malformed value raises, which would take down the whole data_health
+                 -- process over one bad row; NULL here keeps the row visible (IS
+                 -- DISTINCT FROM below flags it) and contains the damage to one detail
+                 -- line. The regex is not redundant with jsonb_typeof: 20.5 is a JSON
+                 -- 'number' and ::int still raises on it. Bounded to 9 digits because
+                 -- '^[0-9]+$' alone still admits 99999999999, which overflows int and
+                 -- raises — the guard is only worth having if it is total.
+                 CASE WHEN jsonb_typeof(r.parameters->'expected_mentions') = 'number'
+                       AND r.parameters->>'expected_mentions' ~ '^[0-9]{1,9}$'
+                      THEN (r.parameters->>'expected_mentions')::int END
+                   AS expected_mentions,
+                 COUNT(m.id) AS actual_mentions
+          FROM ai_runs r
+          JOIN shows s ON s.id = r.show_id
+          LEFT JOIN ai_mentions m ON m.run_id = r.id
+          WHERE r.status = 'completed'
+            AND r.parameters ? 'expected_mentions'
+          GROUP BY r.id, s.slug, r.batch_name, r.parameters
+        )
+        -- IS DISTINCT FROM, not <>: a row whose expected_mentions key exists but holds
+        -- null is malformed, and plain <> would evaluate to NULL and quietly drop it —
+        -- the silent-skip this check exists to prevent.
+        SELECT * FROM run_counts
+        WHERE actual_mentions IS DISTINCT FROM expected_mentions
+        ORDER BY run_id;
+        """,
+    )
+    if not rows:
+        return CheckResult(
+            "ai_run_completeness",
+            "pass",
+            "Every completed AI run loaded as many mentions as its CSV had.",
+            [],
+        )
+    details = [
+        f"{r['slug']} run {r['run_id']} ({r['batch_name']}): "
+        + (
+            f"expected {r['expected_mentions']}, has {r['actual_mentions']}"
+            if r["expected_mentions"] is not None
+            else f"expected_mentions is not a number (malformed run row); "
+                 f"has {r['actual_mentions']}"
+        )
+        for r in rows
+    ]
+    return CheckResult(
+        "ai_run_completeness",
+        "fail",
+        f"{len(rows)} completed AI run(s) loaded a different number of mentions "
+        "than their CSV had.",
+        details,
+    )
+
+
+def check_ai_run_stuck_loading(conn) -> CheckResult:
+    """Is a batch load stuck mid-transaction — a crash that never reached 'completed'?
+
+    Mirrors check_transcript_race_selfheal's warn-then-fail-by-age shape. A 'loading'
+    row seconds old is a batch in flight, which is the system working. One older than a
+    single load attempt could possibly run has been abandoned, and its episodes are
+    sitting with no mentions, waiting for the next run to re-extract them. started_at is
+    the only honest age signal here — a loading row deliberately carries no completed_at.
+
+    ONLY rows whose work is still undone count, and that clause is what keeps this check
+    honest rather than permanently red. A retry deletes the previous attempt's row only
+    when it re-runs under the SAME batch name, and the name is derived from the current
+    unextracted set (run_new_episodes: `incremental-{first}-to-{last}`). So a crash on
+    Monday followed by a new episode on Tuesday produces a DIFFERENT name: Tuesday's
+    load succeeds, Monday's row is stranded forever, and an age-only check would fail
+    every day after that — telling Kevin to re-run episodes that already loaded, on a
+    daily --strict run that Slacks. Asking whether the batch's episodes still lack
+    mentions answers the question the alert actually claims to answer, and it clears
+    itself the moment the work is done by any route.
+    """
+    rows = _rows(
+        conn,
+        """
+        SELECT r.id AS run_id, s.slug, r.batch_name,
+               EXTRACT(EPOCH FROM (NOW() - r.started_at)) / 60 AS minutes_pending
+        FROM ai_runs r
+        JOIN shows s ON s.id = r.show_id
+        WHERE r.status = 'loading'
+          -- Still undone: not ONE episode this batch declared has any mention yet.
+          -- All-undone rather than any-undone, deliberately: a batch that mixes loaded
+          -- and unloaded episodes is unreachable through either orchestrator path
+          -- (find_unextracted_episodes returns only mention-less episodes, and the
+          -- self-heal path's delete clears the whole batch), and any-undone would need
+          -- an extra clause to keep the empty-list case flagged.
+          --
+          -- Both guards below exist so one malformed run row cannot abort the entire
+          -- health run: jsonb_array_elements_text raises on a scalar, so a present-but-
+          -- null 'episodes' would take down every remaining check, and COALESCE does
+          -- NOT catch that (-> returns jsonb null, not SQL NULL). A non-array, or an
+          -- element that is not an int-sized integer, is therefore read as "nothing
+          -- loaded yet", which flags the row for a human rather than hiding it or
+          -- crashing. Nine digits, not '+', because an 11-digit element overflows int
+          -- and raises — no real episode id is anywhere near that.
+          AND NOT EXISTS (
+              SELECT 1
+              FROM jsonb_array_elements_text(
+                       CASE WHEN jsonb_typeof(r.parameters->'episodes') = 'array'
+                            THEN r.parameters->'episodes'
+                            ELSE '[]'::jsonb END
+                   ) AS declared(episode_id)
+              JOIN ai_mentions m
+                ON m.episode_id = CASE WHEN declared.episode_id ~ '^[0-9]{1,9}$'
+                                       THEN declared.episode_id::int END
+          )
+        ORDER BY r.started_at;
+        """,
+    )
+    if not rows:
+        return CheckResult(
+            "ai_run_stuck_loading",
+            "pass",
+            "No batch load is stuck mid-transaction.",
+            [],
+        )
+
+    details = [
+        f"{r['slug']} run {r['run_id']} ({r['batch_name']}): "
+        f"{float(r['minutes_pending'] or 0):.0f}m in 'loading'"
+        for r in rows
+    ]
+    oldest = max(float(r["minutes_pending"] or 0) for r in rows)
+    if oldest > AI_RUN_LOADING_FAIL_MINUTES:
+        stuck = [r for r in rows if float(r["minutes_pending"] or 0) > AI_RUN_LOADING_FAIL_MINUTES]
+        # "N of M": details list every loading row, so a bare N would not add up.
+        return CheckResult(
+            "ai_run_stuck_loading",
+            "fail",
+            f"{len(stuck)} of {len(rows)} batch load(s) in 'loading' started more than "
+            f"{AI_RUN_LOADING_FAIL_MINUTES} minutes ago — abandoned, not in progress; "
+            "their episodes still have no mentions and need a re-run.",
+            details,
+        )
+    if oldest > AI_RUN_LOADING_WARN_MINUTES:
+        return CheckResult(
+            "ai_run_stuck_loading",
+            "warn",
+            f"{len(rows)} batch load(s) in 'loading', the oldest {oldest:.0f}m in — "
+            "past a single load attempt's timeout, so probably not still running.",
+            details,
+        )
+    # A batch loading right now is the system working. Reporting it as a warning every
+    # time the pulse overlaps the entities run is how an alert stops meaning anything.
+    return CheckResult(
+        "ai_run_stuck_loading",
+        "pass",
+        f"{len(rows)} batch load(s) in flight; none older than "
+        f"{AI_RUN_LOADING_WARN_MINUTES} minutes.",
+        details,
+    )
+
+
 def check_transcript_race_selfheal(conn) -> CheckResult:
     """Is the transcript-race self-heal keeping up?
 
@@ -1123,6 +1307,8 @@ def run_checks(conn, include_feed_check: bool = False) -> list[CheckResult]:
         check_episode_freshness(conn),
         check_notion_sync_freshness(conn),
         check_ai_daily_extraction(conn),
+        check_ai_run_completeness(conn),
+        check_ai_run_stuck_loading(conn),
         check_transcript_race_selfheal(conn),
         check_ai_mention_fields(conn),
         check_sponsor_share(conn),

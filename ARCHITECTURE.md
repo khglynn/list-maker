@@ -44,7 +44,7 @@ Cascading source strategy (cheapest first): website show-notes → free transcri
 - `episodes` — per-show episodes (publish_date, url, title; `raw_content` for Taddy shows).
 - `episode_transcripts` — transcript text per episode. Generated `search_vector` (tsvector + GIN) powers FTS; `notion_transcript_page_id` tracks the Notion mirror (idempotent sync).
 - `songs` — music-show song rows (+ Spotify match state).
-- `ai_runs` / `ai_entities` / `ai_mentions` — entity-extraction store. `ai_mentions.run_id → ai_runs` (ON DELETE CASCADE); `ai_entities` deduped by (entity_type, normalized_name, platform); `ai_mentions.entity_id` ON DELETE SET NULL. `ai_mentions.sponsor_source` (`roster` | `phrase` | `model`; NULL = editorial) records why a mention counts as an ad — see **Ads are data** below.
+- `ai_runs` / `ai_entities` / `ai_mentions` — entity-extraction store. `ai_mentions.run_id → ai_runs` (ON DELETE CASCADE); `ai_entities` deduped by (entity_type, normalized_name, platform); `ai_mentions.entity_id` ON DELETE SET NULL. `ai_mentions.sponsor_source` (`roster` | `phrase` | `model`; NULL = editorial) records why a mention counts as an ad — see **Ads are data** below. `ai_runs.status` is a plain string with three values written by the loader: `loading` while a batch is in flight, `completed` once every mention has landed (both flip on one commit, so a crash can only leave `loading` with zero mentions), and `completed_empty` when extraction deliberately kept nothing. `parameters.expected_mentions` is what the batch's CSV said it would load, so `data_health` can tell a finished batch from a short one.
 
 ## Code map
 
