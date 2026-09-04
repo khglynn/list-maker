@@ -652,3 +652,141 @@ def test_load_batch_rows_leaves_nothing_committed_when_a_row_crashes() -> None:
     assert any("INSERT INTO ai_mentions" in sql for sql, _ in conn.cur.calls), (
         "the first row really did write — this is a mid-batch crash, not a pre-flight one"
     )
+
+
+# ---- the assembled main() path --------------------------------------------------
+#
+# load_batch_rows is tested in isolation above; these two run the whole loader with a
+# fake connection, because the property that matters is a property of the ASSEMBLY: how
+# many times the process commits, and in what order relative to the status flip.
+
+
+class _MainCursor:
+    """Answers every query main() makes, dispatching on the SQL."""
+
+    def __init__(self, raise_on_sql: str | None = None, nth: int = 1) -> None:
+        self.calls: list[tuple[str, tuple]] = []
+        self.rowcount = 1
+        self._last_sql = ""
+        self._raise_on_sql = raise_on_sql
+        self._nth = nth
+        self._seen = 0
+        self._entity_id = 100
+
+    def __enter__(self) -> "_MainCursor":
+        return self
+
+    def __exit__(self, *exc) -> bool:
+        return False
+
+    def execute(self, sql: str, params: tuple = ()) -> None:
+        self.calls.append((sql, tuple(params)))
+        self._last_sql = sql
+        if self._raise_on_sql and self._raise_on_sql in sql:
+            self._seen += 1
+            if self._seen >= self._nth:
+                raise RuntimeError("simulated crash mid-batch")
+
+    def fetchone(self):
+        if "FROM shows" in self._last_sql:
+            return {"id": 3}
+        if "INSERT INTO ai_runs" in self._last_sql:
+            return {"id": 77}
+        if "INSERT INTO ai_entities" in self._last_sql:
+            self._entity_id += 1
+            return {"id": self._entity_id}
+        return None  # entity lookup misses -> insert branch
+
+    def fetchall(self):
+        return []  # no transcripts, no publish dates
+
+
+class _MainConn:
+    def __init__(self, raise_on_sql: str | None = None, nth: int = 1) -> None:
+        self.cur = _MainCursor(raise_on_sql, nth)
+        self.commits = 0
+        self.rolled_back = False
+        self.closed = False
+        # SQL executed at the moment of each commit, so a test can ask what was durable.
+        self.committed_through: list[int] = []
+
+    def cursor(self) -> _MainCursor:
+        return self.cur
+
+    def commit(self) -> None:
+        self.commits += 1
+        self.committed_through.append(len(self.cur.calls))
+
+    def rollback(self) -> None:
+        self.rolled_back = True
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def _run_main(monkeypatch, tmp_path, conn) -> None:
+    import sys
+
+    from pipeline.scrapers.ai_daily import load_entity_batch as leb
+
+    (tmp_path / "batch_manifest.json").write_text(
+        json.dumps({"batch_name": "incremental-1-to-2", "model": "gpt-4.1-mini"}),
+        encoding="utf-8",
+    )
+    header = ",".join(_csv_row().keys())
+    rows = [_csv_row(canonical_name="Cursor"), _csv_row(canonical_name="Claude Code")]
+    body = "\n".join(",".join(r[k] for k in _csv_row()) for r in rows)
+    (tmp_path / "mentions.csv").write_text(f"{header}\n{body}\n", encoding="utf-8")
+
+    # Hermetic: the real load_environment reads ~/.env, outside the repo.
+    monkeypatch.setattr(leb, "load_environment", lambda repo_root: None)
+    monkeypatch.setattr(leb, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(
+        sys, "argv",
+        ["load_entity_batch.py", "--batch-dir", str(tmp_path), "--show-slug", "ai-daily-brief"],
+    )
+    leb.main()
+
+
+def test_main_commits_the_whole_batch_exactly_once(monkeypatch, tmp_path, capsys) -> None:
+    """Three commits and no more: the delete, the 'loading' run row, and then ONE that
+    carries every entity, every mention and the flip to 'completed' together."""
+    conn = _MainConn()
+    _run_main(monkeypatch, tmp_path, conn)
+
+    assert conn.commits == 3
+    executed = [sql for sql, _ in conn.cur.calls]
+    flip_at = next(i for i, s in enumerate(executed) if "SET status = 'completed'" in s)
+    first_mention_at = next(i for i, s in enumerate(executed) if "INSERT INTO ai_mentions" in s)
+    # Nothing was made durable between the first mention and the status flip.
+    assert not [c for c in conn.committed_through if first_mention_at < c <= flip_at]
+    assert conn.committed_through[-1] > flip_at
+    assert "Mentions inserted: 2" in capsys.readouterr().out
+
+
+def test_main_leaves_a_loading_row_and_no_mentions_when_a_row_crashes(
+    monkeypatch, tmp_path
+) -> None:
+    """The acceptance case. A crash mid-batch must leave the run at 'loading' with zero
+    durable mentions — never 'completed' with a partial count — so the next run sees
+    every episode of the batch as unextracted and delete_existing_run replaces the row.
+
+    It crashes on the SECOND mention, not the first, on purpose: row one has to have
+    fully written before the failure, or the test would pass just as happily against
+    the per-row-commit code this replaces.
+    """
+    import pytest
+
+    conn = _MainConn(raise_on_sql="INSERT INTO ai_mentions", nth=2)
+    with pytest.raises(RuntimeError, match="simulated crash mid-batch"):
+        _run_main(monkeypatch, tmp_path, conn)
+
+    run_sql, run_params = next(
+        (s, p) for s, p in conn.cur.calls if "INSERT INTO ai_runs" in s
+    )
+    assert run_params[5] == "loading" and run_params[6] is False
+    # Two commits only: the delete and the 'loading' row. Nothing after.
+    assert conn.commits == 2
+    assert conn.rolled_back is True
+    assert conn.closed is True
+    assert not any("SET status = 'completed'" in s for s, _ in conn.cur.calls)
