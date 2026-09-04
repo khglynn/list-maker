@@ -548,6 +548,27 @@ test("a pile-up of records is judged a batch at a time, never all at once", asyn
 
 // --- the invariant: checking never breaks starting ---------------------------
 
+test("a KV listing that fails is not reported as a clean pass", async () => {
+  // The trap: swallowing this returned [], which wrote meta:last_verify with an empty
+  // results array — indistinguishable from a day where everything was checked and
+  // fine. It must instead go stale and say so once.
+  const kv = fakeKv({
+    "meta:last_verify": JSON.stringify({ at: "2026-09-02T20:30:00Z", results: ["prior"] }),
+  });
+  kv.failOn = "list";
+  const impl = fakeFetch(okRoutes());
+  await withFetch(impl, () =>
+    runScheduled({ GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv })
+  );
+  assert.match(slackTexts(impl)[0], /run verifier crashed/);
+  assert.deepEqual(
+    JSON.parse(kv.store.get("meta:last_verify")).results,
+    ["prior"],
+    "last_verify must stay stale rather than claim a clean pass"
+  );
+  assert.deepEqual(dispatchedTo(impl), ["entities.yml/dispatches"], "dispatch untouched");
+});
+
 test("a verify pass that crashes outright still lets the day's dispatches fire", async () => {
   const kv = fakeKv();
   kv.list = async () => ({ keys: null }); // KV answers something unusable

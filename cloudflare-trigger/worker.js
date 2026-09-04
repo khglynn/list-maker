@@ -301,6 +301,15 @@ async function verifyPreviousDispatches(env, now) {
   // The missing-PAT case already alerts on the dispatch side; a second alarm for
   // one root cause is how a channel learns to ignore both.
   if (!env.GH_PAT) return [];
+  // A missing binding is already visible: /health says kv_error, and the
+  // meta:last_verify write below is skipped too, so nothing reads as checked.
+  if (!env.DISPATCH_LOG) return [];
+  // Deliberately NOT wrapped in withDispatchLog. Everywhere else a swallowed KV error
+  // is safe, but a failed LISTING means nothing was examined, and returning [] here
+  // would write meta:last_verify with an empty results array — byte-identical to a
+  // clean day. Letting it throw lands in runVerifyPass's catch, which posts the
+  // yellow line once and leaves meta:last_verify STALE, so /health shows the gap.
+  //
   // No pagination: the key set is bounded by (dispatches per day × the 3-day TTL) —
   // about a dozen, well under KV's 1000-key page. Note what that bound rests on: the
   // cron contributes at most 4 a day, but the manual ?token= trigger is unbounded, so
@@ -308,10 +317,7 @@ async function verifyPreviousDispatches(env, now) {
   // VERIFY_MAX_PER_PASS cap below, which only limits how many are JUDGED. Left as is
   // — the records still expire on their own, and the failure is self-inflicted and
   // has never happened. If it ever does, page the listing instead of widening the cap.
-  const listing = await withDispatchLog(env, "list dispatches", (kv) =>
-    kv.list({ prefix: "dispatch:" })
-  );
-  if (!listing) return [];
+  const listing = await env.DISPATCH_LOG.list({ prefix: "dispatch:" });
 
   const results = [];
   const problems = [];
