@@ -59,6 +59,10 @@ TADDY_TITLE_MIN_RATIO = 0.80
 # floor is never selected, however good its title. Sized against real data — the
 # measurements, and why 0.60 rather than something tighter, are in show_match_ratio.
 TADDY_SHOW_MIN_RATIO = 0.60
+# Words a CALLER's show name trails when it names a paid or ad-free feed rather than
+# a different show ("Amicus Plus", "The Vergecast: Ad-Free Edition"). Stripped from the
+# caller side only — see show_match_ratio for why the Taddy side is trimmed differently.
+FEED_VARIANT_WORDS = frozenset({"plus", "ad", "free", "adfree", "edition", "premium"})
 MIN_FULL_TRANSCRIPT_CHARS = 1000  # below this a "transcript" is a stub, not an upgrade
 
 log = get_logger("pipeline.save_episode")
@@ -100,6 +104,8 @@ def show_match_ratio(want_show: str, series_name: str) -> float:
         'Pop Culture Happy Hour Plus'    vs 'Pop Culture Happy Hour'           raw 0.898
         'The Indicator from Planet Money Plus'
                                          vs 'The Indicator from Planet Money'  raw 0.925
+        'Amicus Plus'                    vs 'Amicus With Dahlia Lithwick |
+                                             Law, justice, and the courts'     raw 0.308
 
     Every one of those is the same show and correct today (the first two are live
     rows). So a floor on the RAW ratio could not sit above 0.45 without destroying
@@ -109,6 +115,20 @@ def show_match_ratio(want_show: str, series_name: str) -> float:
     like. That case scores 1.0 here, which leaves the raw ratio responsible only for
     ordinary spelling variation ('Vergecast' vs 'The Vergecast' = 0.818).
 
+    Amicus is the pair that forced the two normalisations above it, and it was in this
+    docstring as evidence of a DIFFERENT show until review caught it (2026-09-04): it
+    is Kevin's row 4806, it is the same show, and at 0.308 the floor could never have
+    upgraded it. Neither name is a run of the other, because each side is decorated in
+    its own way — the caller trails a feed word ('Plus'), and Taddy leads with
+    '<Show> With <Host> | <tagline>'. Stripping a trailing feed word from the CALLER
+    and cutting the TADDY side at ' | ' and at ' with ' leaves 'Amicus' against
+    'Amicus', which is 1.0. 'Pivot' vs 'Pivot with Kara Swisher and Scott Galloway'
+    comes along for free, 0.213 -> 1.0.
+
+    The asymmetry is deliberate, not an oversight. A trailing 'Podcast' is NOT cut off
+    the Taddy side, because doing so turns 'Pivot' vs 'The Pivot Podcast' — two real
+    and different shows — from 0.455 into 0.714 and lands it above the floor.
+
     The >=2-word guard on containment stops a single common word matching everything.
     A garbled colon split really does put junk in the show slot — we hold a row whose
     show name came out as 'Fela Kuti: Fear No Man' — and 'Bonus' must not match
@@ -116,12 +136,12 @@ def show_match_ratio(want_show: str, series_name: str) -> float:
 
     WHY THE FLOOR IS 0.60. Scored this way, the same 2026-09-04 sweep separates
     cleanly: every correct pair lands at 1.000 except 'Vergecast' vs 'The Vergecast'
-    at 0.818, while the wrong pairs land at 0.267 ('Science Vs' vs 'Pivot'), 0.286
-    ('Science Vs' vs 'This American Life'), 0.308 ('Amicus Plus' vs Slate's full
-    Amicus name) and 0.508 — the last being a LIVE defect this floor fixes, where a
-    Pop Culture Happy Hour episode matched 'Neubauer Artists Happy Hour Show' on a
-    1.000 title. 0.60 sits in the empty band between 0.508 and 0.818, with room on
-    both sides rather than shaved to either.
+    at 0.818, while the wrong pairs land at 0.222 ('Incognito Mode' vs 'Search
+    Engine'), 0.267 ('Science Vs' vs 'Pivot'), 0.286 ('Science Vs' vs 'This American
+    Life'), 0.455 ('Pivot' vs 'The Pivot Podcast') and 0.481 — the last being a LIVE
+    defect this floor fixes, where a Pop Culture Happy Hour episode matched 'Neubauer
+    Artists Happy Hour Show' on a 1.000 title. 0.60 sits in the empty band between
+    0.481 and 0.818, with room on both sides rather than shaved to either.
 
     Two things it knowingly does NOT separate, so nobody reads more into it later:
     'The AI Daily Brief' vs 'The AI in Media Daily Brief' scores 0.800, and 'Decoder
@@ -134,7 +154,12 @@ def show_match_ratio(want_show: str, series_name: str) -> float:
     actually shows happening; raising it to 0.85 to catch that impostor would also
     reject 'Vergecast' vs 'The Vergecast' at 0.818 and buy nothing.
     """
-    want, series = _show_words(want_show), _show_words(series_name)
+    want = _show_words(want_show)
+    while len(want) > 1 and want[-1] in FEED_VARIANT_WORDS:
+        want.pop()  # 'Amicus Plus' -> 'Amicus'; never down to nothing
+    # Taddy carries the host and the tagline; the show name is what precedes them.
+    series_head = re.split(r"(?i)\bwith\b", re.split(r"\s*\|\s*", series_name or "")[0])[0]
+    series = _show_words(series_head)
     if not want or not series:
         return 0.0
     short, long_ = sorted((want, series), key=len)

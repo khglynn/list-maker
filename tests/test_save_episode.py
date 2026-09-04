@@ -301,6 +301,11 @@ def test_the_search_term_is_quote_free_and_capped(monkeypatch) -> None:
     ("Culture Gabfest", "Slate Culture Gabfest"),          # a network prefix, not a suffix
     ("This American Life", "This American Life Podcast"),  # the trailing "Podcast"
     ("Hard Fork", "Hard Fork | The New York Times"),
+    # the pair that forced the two normalisations: the caller trails a feed word and
+    # Taddy leads with "<Show> With <Host> | <tagline>", so neither name is a run of
+    # the other. Kevin's row 4806, scored 0.308 and rejected until review caught it.
+    ("Amicus Plus", "Amicus With Dahlia Lithwick | Law, justice, and the courts"),
+    ("Pivot", "Pivot with Kara Swisher and Scott Galloway"),
     ("Switched On Pop", "Switched on Pop"),                # case only
     ("Today, Explained", "Today Explained"),               # punctuation only
     # the one pair that does NOT reach 1.0: a dropped leading "The" leaves a
@@ -314,10 +319,10 @@ def test_a_show_named_two_ways_still_scores_as_one_show(caller: str, taddy: str)
 
 
 @pytest.mark.parametrize("caller, taddy, score", [
-    ("Pop Culture Happy Hour Plus", "Neubauer Artists Happy Hour Show", 0.508),
+    ("Pop Culture Happy Hour Plus", "Neubauer Artists Happy Hour Show", 0.481),
     ("Science Vs", "This American Life", 0.286),
     ("Science Vs", "Pivot", 0.267),
-    ("Amicus Plus", "Amicus With Dahlia Lithwick | Law, justice, and the courts", 0.308),
+    ("Incognito Mode", "Search Engine", 0.222),
 ])
 def test_a_genuinely_different_show_lands_below_the_floor(caller: str, taddy: str, score: float) -> None:
     """The first pair is the live defect: a real PCHH episode whose 1.000 title match
@@ -336,6 +341,29 @@ def test_one_word_is_never_enough_to_match_by_containment() -> None:
     assert show_match_ratio("Pivot", "The Pivot Podcast") < TADDY_SHOW_MIN_RATIO
     # …while an exact one-word name still matches itself on the ratio, no guard needed
     assert show_match_ratio("Pivot", "Pivot") == 1.0
+
+
+def test_a_trailing_podcast_is_not_cut_off_the_taddy_side() -> None:
+    """The asymmetry in the normalisation, pinned so nobody "tidies" it into symmetry.
+    Cutting ' | ' and ' with ' off the Taddy side is safe; cutting a trailing 'Podcast'
+    is not — it turns 'Pivot' vs 'The Pivot Podcast', two real and different shows,
+    from 0.455 into 0.714 and lands it above the floor."""
+    assert show_match_ratio("Pivot", "The Pivot Podcast") < TADDY_SHOW_MIN_RATIO
+
+
+def test_a_feed_word_is_never_stripped_down_to_nothing() -> None:
+    """The `len(want) > 1` guard. A show genuinely CALLED 'Plus' would otherwise
+    normalise to an empty word list and hard-reject against itself — the same broken
+    invariant the non-Latin fix removed."""
+    assert show_match_ratio("Plus", "Plus") == 1.0
+
+
+def test_feed_words_are_stripped_from_the_caller_not_from_taddy() -> None:
+    """Directional on purpose. The caller's name is what carries the feed variant
+    ('Amicus Plus' is how Castro labels the paid feed); Taddy carries the canonical
+    name. Stripping the Taddy side too would erase real distinctions."""
+    assert show_match_ratio("Amicus Plus", "Amicus") == 1.0
+    assert show_match_ratio("The Vergecast: Ad-Free Edition", "The Vergecast") == 1.0
 
 
 def test_containment_matches_a_word_run_anywhere_not_just_a_prefix() -> None:
