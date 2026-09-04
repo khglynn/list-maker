@@ -220,6 +220,26 @@ def _one(conn, sql: str, params: Iterable[Any] | None = None) -> dict[str, Any]:
         return dict(row) if row else {}
 
 
+def _name_some(labels: list[str], *, limit: int = 10) -> str:
+    """A ' — a, b, c, +N more' suffix naming the rows behind a count, or '' for none.
+
+    A bare count says something is wrong; it does not say where to look — and these
+    details land in a Slack message, where nobody can run a follow-up query against a
+    number. Phase 4's acceptance line is that every FAIL in the health run is
+    actionable, and naming rows is what makes it one.
+
+    Capped, because the counts that matter here are small when the pipeline is merely
+    broken and enormous when it is systemically broken (a url-scheme change, a schema
+    edit). The first ten ids identify either case; a thousand ids in Slack identify
+    neither.
+    """
+    if not labels:
+        return ""
+    shown = labels[:limit]
+    more = len(labels) - len(shown)
+    return " — " + ", ".join(shown) + (f", +{more} more" if more else "")
+
+
 def _status_from_count(count: int, *, warn_only: bool = False) -> str:
     if count == 0:
         return "pass"
@@ -542,19 +562,21 @@ def check_notion_sync_freshness(conn) -> CheckResult:
         # Watch BOTH full-text mirrors: the Transcripts DB and the Blog Posts DB.
         [list(TRANSCRIPT_NOTION_SHOWS + BLOG_NOTION_SHOWS), NOTION_SYNC_MAX_LAG_DAYS],
     )
-    stale_entities = int(
-        _one(
-            conn,
-            """
-            SELECT COUNT(*) AS count
-            FROM ai_entities
-            WHERE notion_page_id IS NOT NULL
-              AND notion_synced_at < updated_at - make_interval(days => %s);
-            """,
-            [NOTION_SYNC_MAX_LAG_DAYS],
-        ).get("count")
-        or 0
+    # Rows, so the FAIL can name the entities (4f) — "12 entity page(s) have Neon
+    # updates that never reached Notion" is not something a person can act on without
+    # first writing this query themselves.
+    stale_entity_rows = _rows(
+        conn,
+        """
+        SELECT id, canonical_name
+        FROM ai_entities
+        WHERE notion_page_id IS NOT NULL
+          AND notion_synced_at < updated_at - make_interval(days => %s)
+        ORDER BY id;
+        """,
+        [NOTION_SYNC_MAX_LAG_DAYS],
     )
+    stale_entities = len(stale_entity_rows)
     failed_entities = int(
         _one(
             conn,
@@ -574,6 +596,9 @@ def check_notion_sync_freshness(conn) -> CheckResult:
         failures.append(
             f"{stale_entities} entity page(s) have Neon updates >{NOTION_SYNC_MAX_LAG_DAYS}d "
             "old that never reached Notion"
+            + _name_some(
+                [f"{r['canonical_name']} ({r['id']})" for r in stale_entity_rows]
+            )
         )
     if failed_entities:
         warnings.append(f"{failed_entities} entity(ies) lingering in notion_sync_status='failed'")
@@ -784,18 +809,18 @@ ZERO_MENTION_RUN_WINDOW_DAYS = 30
 
 
 def check_ai_daily_extraction(conn) -> CheckResult:
-    row = _one(
+    # Rows, not a COUNT: the count is len(rows) and the ids come along for free, so the
+    # FAIL detail can name the episodes instead of only counting them (4f). The number
+    # is unchanged by construction — episode_transcripts.episode_id is UNIQUE, so this
+    # join could never return two rows for one episode and the old COUNT(*) FILTER was
+    # already counting distinct episodes (verified against Neon, 2026-09-03).
+    missing_rows = _rows(
         conn,
         """
         WITH ai_show AS (
           SELECT id FROM shows WHERE slug = 'ai-daily-brief'
         )
-        SELECT
-          COUNT(*) FILTER (
-            WHERE NOT EXISTS (
-              SELECT 1 FROM ai_mentions m WHERE m.episode_id = ep.id
-            )
-          ) AS transcripted_without_mentions
+        SELECT ep.id, ep.publish_date::date AS publish_date
         FROM episodes ep
         JOIN ai_show s ON s.id = ep.show_id
         JOIN episode_transcripts et ON et.episode_id = ep.id
@@ -812,10 +837,14 @@ def check_ai_daily_extraction(conn) -> CheckResult:
             SELECT 1 FROM ai_runs r
             WHERE r.status = 'completed_empty'
               AND r.parameters->'episodes' @> to_jsonb(ep.id)
-          );
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM ai_mentions m WHERE m.episode_id = ep.id
+          )
+        ORDER BY ep.id;
         """,
     )
-    missing_mentions = int(row.get("transcripted_without_mentions") or 0)
+    missing_mentions = len(missing_rows)
     declared_empty_runs = int(
         _one(
             conn,
@@ -833,52 +862,56 @@ def check_ai_daily_extraction(conn) -> CheckResult:
     # transcript — is the transcript race, and check_transcript_race_selfheal owns it. It
     # used to be counted here too, which meant one problem raised two alerts and neither
     # said whether the pipeline was already fixing it.
-    orphan_transcript_mentions = int(
-        _one(
-            conn,
-            """
-            SELECT COUNT(*) AS count
-            FROM ai_mentions m
-            WHERE m.transcript_id IS NOT NULL
-              AND NOT EXISTS (SELECT 1 FROM episode_transcripts et WHERE et.id = m.transcript_id);
-            """,
-        ).get("count")
-        or 0
+    orphan_rows = _rows(
+        conn,
+        """
+        SELECT m.id, m.episode_id, m.transcript_id
+        FROM ai_mentions m
+        WHERE m.transcript_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM episode_transcripts et WHERE et.id = m.transcript_id)
+        ORDER BY m.id;
+        """,
     )
-    zero_mention_runs = int(
-        _one(
-            conn,
-            """
-            SELECT COUNT(*) AS count
-            FROM (
-              SELECT r.id
-              FROM ai_runs r
-              JOIN shows s ON s.id = r.show_id
-              LEFT JOIN ai_mentions m ON m.run_id = r.id
-              WHERE r.status = 'completed'
-                AND s.slug = ANY(%s)
-                AND r.created_at >= NOW() - make_interval(days => %s)
-              GROUP BY r.id
-              HAVING COUNT(m.id) = 0
-            ) x;
-            """,
-            [list(ZERO_MENTION_RUN_SHOWS), ZERO_MENTION_RUN_WINDOW_DAYS],
-        ).get("count")
-        or 0
+    orphan_transcript_mentions = len(orphan_rows)
+    zero_mention_rows = _rows(
+        conn,
+        """
+        SELECT r.id, r.batch_name
+        FROM ai_runs r
+        JOIN shows s ON s.id = r.show_id
+        LEFT JOIN ai_mentions m ON m.run_id = r.id
+        WHERE r.status = 'completed'
+          AND s.slug = ANY(%s)
+          AND r.created_at >= NOW() - make_interval(days => %s)
+        GROUP BY r.id, r.batch_name
+        HAVING COUNT(m.id) = 0
+        ORDER BY r.id;
+        """,
+        [list(ZERO_MENTION_RUN_SHOWS), ZERO_MENTION_RUN_WINDOW_DAYS],
     )
+    zero_mention_runs = len(zero_mention_rows)
 
     issue_count = missing_mentions + orphan_transcript_mentions + zero_mention_runs
     details = []
     if missing_mentions:
         details.append(
             f"AI Daily episodes transcripted >6h ago without mentions: {missing_mentions}"
+            + _name_some([f"ep {r['id']} ({r['publish_date']})" for r in missing_rows])
         )
     if orphan_transcript_mentions:
         details.append(
             f"AI mentions pointing at a deleted transcript: {orphan_transcript_mentions}"
+            + _name_some(
+                [f"mention {r['id']} (ep {r['episode_id']})" for r in orphan_rows]
+            )
         )
     if zero_mention_runs:
-        details.append(f"completed AI runs with zero mentions: {zero_mention_runs}")
+        details.append(
+            f"completed AI runs with zero mentions: {zero_mention_runs}"
+            + _name_some(
+                [f"run {r['id']} ({r['batch_name']})" for r in zero_mention_rows]
+            )
+        )
     if declared_empty_runs:
         # Informational — a declared empty result is an answer, not an issue. Listed so
         # a sudden run of them (a broken prompt, a filter that eats everything) is
@@ -1148,25 +1181,43 @@ def check_transcript_race_selfheal(conn) -> CheckResult:
 
 
 def check_ai_mention_fields(conn) -> CheckResult:
-    row = _one(
+    # The offending rows themselves, not five counts: `bad_confidence=3` in a Slack
+    # message gives nobody a way to find those three mentions (4f). Same predicates as
+    # before, once per row instead of once per aggregate, so every count is unchanged —
+    # including a row with two problems counting toward both, which is how issue_count
+    # has always behaved. NULL confidence is still fine by design: only a present value
+    # outside [0,1] is a fault, which is what lets the extractor write an honest NULL.
+    bad_rows = _rows(
         conn,
         """
-        SELECT
-          COUNT(*) FILTER (WHERE mention_text IS NULL OR BTRIM(mention_text) = '') AS missing_mention_text,
-          COUNT(*) FILTER (WHERE canonical_name IS NULL OR BTRIM(canonical_name) = '') AS missing_canonical_name,
-          COUNT(*) FILTER (WHERE context_snippet IS NULL OR BTRIM(context_snippet) = '') AS missing_context,
-          COUNT(*) FILTER (WHERE confidence IS NOT NULL AND (confidence < 0 OR confidence > 1)) AS bad_confidence,
-          COUNT(*) FILTER (WHERE mention_count < 1) AS bad_mention_count
-        FROM ai_mentions;
+        SELECT id,
+               (mention_text IS NULL OR BTRIM(mention_text) = '') AS missing_mention_text,
+               (canonical_name IS NULL OR BTRIM(canonical_name) = '') AS missing_canonical_name,
+               (context_snippet IS NULL OR BTRIM(context_snippet) = '') AS missing_context,
+               (confidence IS NOT NULL AND (confidence < 0 OR confidence > 1)) AS bad_confidence,
+               (mention_count < 1) AS bad_mention_count
+        FROM ai_mentions
+        WHERE mention_text IS NULL OR BTRIM(mention_text) = ''
+           OR canonical_name IS NULL OR BTRIM(canonical_name) = ''
+           OR context_snippet IS NULL OR BTRIM(context_snippet) = ''
+           OR (confidence IS NOT NULL AND (confidence < 0 OR confidence > 1))
+           OR mention_count < 1
+        ORDER BY id;
         """,
     )
     details = []
     issue_count = 0
-    for key, value in row.items():
-        count = int(value or 0)
-        issue_count += count
-        if count:
-            details.append(f"{key}={count}")
+    for key in (
+        "missing_mention_text",
+        "missing_canonical_name",
+        "missing_context",
+        "bad_confidence",
+        "bad_mention_count",
+    ):
+        ids = [str(r["id"]) for r in bad_rows if r[key]]
+        issue_count += len(ids)
+        if ids:
+            details.append(f"{key}={len(ids)}" + _name_some(ids))
 
     status = _status_from_count(issue_count)
     summary = "AI mention required fields and numeric ranges are clean." if status == "pass" else (
