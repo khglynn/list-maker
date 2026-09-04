@@ -74,6 +74,14 @@ FLOORS = {
     "type_shift_max": 0.20,       # max per-type proportion move in the entity mix
     "gold_recall": 0.60,          # catch >=60% of hand-verified entities (raise after calibrating same-model gold)
     "gold_type_accuracy": 0.80,   # type matched entities right >=80% of the time
+    # A handful of mentions the model gave no confidence for is honesty, not a defect —
+    # that is the whole point of writing NULL instead of a fabricated 0.5 (2026-09-03).
+    # A QUARTER of a run missing it is a different animal: the model or prompt stopped
+    # emitting the field, every mention lands in needs_review, and without this ceiling
+    # the Monday eval passes green and pages nobody. Production had 0 missing in 21,426
+    # mentions on 2026-09-03, so the honest rate is ~0 and 0.25 is far above any noise
+    # floor while still catching a regime change.
+    "confidence_missing_ratio_max": 0.25,
 }
 
 
@@ -191,11 +199,14 @@ def build_report(args, results: list[dict], baseline_meta: dict, gold_meta: dict
     confs = [r["confidence"] for r in ok]
 
     conf_all_in_range = all(c["all_in_range"] for c in confs) if confs else True
-    # Out-of-range breaches the contract; missing does not (see confidence_report's
-    # docstring — a NULL confidence is the sanitizer being honest, not a defect).
-    # Both are reported, so a run that starts producing many NULLs is still visible.
+    # Out-of-range breaches the contract outright; missing is judged as a RATIO, so a
+    # few honest NULLs pass and "the model stopped emitting confidence" does not.
+    # The denominator travels with the count on purpose: "12 missing" cannot be read
+    # without it — 12 of 12 is a regression, 12 of 5,000 is a Tuesday.
     conf_out = sum(c["n_out_of_range"] for c in confs)
     conf_missing = sum(c["n_missing"] for c in confs)
+    conf_n = sum(c["n"] for c in confs)
+    conf_missing_ratio = round(conf_missing / conf_n, 4) if conf_n else None
 
     baseline_section = None
     if regs:
@@ -237,8 +248,10 @@ def build_report(args, results: list[dict], baseline_meta: dict, gold_meta: dict
         else None,
         "confidence": {
             "all_in_range": conf_all_in_range,
+            "n": conf_n,
             "n_out_of_range": conf_out,
             "n_missing": conf_missing,
+            "missing_ratio": conf_missing_ratio,
         },
         "failed_episodes": [{"episode_id": r["episode_id"], "error": r["error"]} for r in failed],
         "episodes": results,
@@ -257,9 +270,18 @@ def check_floors(report: dict) -> list[str]:
     breaches: list[str] = []
     if report["n_failed"]:
         breaches.append(f"{report['n_failed']} episode(s) failed to extract")
-    if not report["confidence"]["all_in_range"]:
+    conf = report["confidence"]
+    if not conf["all_in_range"]:
+        breaches.append(f"{conf['n_out_of_range']} confidence value(s) outside [0,1]")
+    # A missing confidence is honest; a run mostly missing it is a regression the model
+    # made silently. Gated as a ratio so the first case never fails and the second
+    # always does — see FLOORS["confidence_missing_ratio_max"].
+    missing_ratio = conf.get("missing_ratio")
+    if missing_ratio is not None and missing_ratio > FLOORS["confidence_missing_ratio_max"]:
         breaches.append(
-            f"{report['confidence']['n_out_of_range']} confidence value(s) outside [0,1]"
+            f"{conf['n_missing']}/{conf['n']} mentions ({missing_ratio:.0%}) have no "
+            f"confidence — over the {FLOORS['confidence_missing_ratio_max']:.0%} ceiling; "
+            "the model has likely stopped emitting the field"
         )
     base = report.get("baseline")
     if base:
@@ -308,9 +330,16 @@ def print_report(report: dict) -> None:
         print("\nCORRECTNESS: no gold_verified fixture for these episodes (baseline-only).", flush=True)
 
     c = report["confidence"]
+    missing_ratio = c.get("missing_ratio")
+    ratio_text = "n/a" if missing_ratio is None else f"{missing_ratio:.1%}"
     print(
         f"\nCONFIDENCE contract: {'PASS' if c['all_in_range'] else 'FAIL'}  "
-        f"({c['n_out_of_range']} outside [0,1], gated; {c['n_missing']} missing, reported)",
+        f"({c['n_out_of_range']} outside [0,1] — GATED)",
+        flush=True,
+    )
+    print(
+        f"  missing: {c['n_missing']}/{c['n']} ({ratio_text})   "
+        f"<- GATED above {FLOORS['confidence_missing_ratio_max']:.0%}",
         flush=True,
     )
 

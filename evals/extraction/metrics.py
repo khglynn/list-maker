@@ -209,13 +209,19 @@ def confidence_report(mentions: Iterable[dict[str, Any]]) -> dict[str, Any]:
     confidence the sanitizer doesn't catch, this fails loudly instead of trusting that
     the guard held.
 
-    A MISSING confidence is counted and reported but does not break the contract. Until
-    2026-09-03 the sanitizer fabricated 0.5 whenever the model omitted the field, so
-    n_missing was structurally always 0 and this branch was unreachable; now that the
-    sanitizer writes NULL (the honest answer), gating on n_missing would fail every run
-    for doing the right thing. The gate that ever caught a real sanitizer bug — a value
-    outside [0,1] — is unchanged. Missing values are surfaced the same way a degenerate
-    distribution is: visible, not fatal.
+    A MISSING confidence does not break THIS contract. Until 2026-09-03 the sanitizer
+    fabricated 0.5 whenever the model omitted the field, so n_missing was structurally
+    always 0 and gating on it here was unreachable; now that the sanitizer writes NULL
+    (the honest answer), failing an episode for it would fail every run for doing the
+    right thing. The gate that ever caught a real sanitizer bug — a value outside [0,1]
+    — is unchanged.
+
+    Missing is judged one level up instead, as a RATIO across the whole run
+    (run_eval.FLOORS["confidence_missing_ratio_max"]): a few honest NULLs pass, a model
+    that has stopped emitting the field does not. It belongs at the rollup because a
+    single episode with three mentions, one of them missing, is 33% and means nothing.
+    That is why `n` is returned alongside `n_missing` — the count is unreadable without
+    its denominator.
     """
     values = [_as_float(m.get("confidence"), None) for m in mentions]
     present = [v for v in values if v is not None]

@@ -193,13 +193,16 @@ def test_confidence_out_of_range_fails() -> None:
     assert r["n_out_of_range"] == 1
 
 
-def test_confidence_missing_value_is_reported_not_gated() -> None:
+def test_confidence_missing_value_does_not_break_the_episode_contract() -> None:
     """A NULL confidence is the sanitizer being honest (it stopped fabricating 0.5 on
-    2026-09-03), so it is counted and shown but does not breach the contract."""
+    2026-09-03), so it does not fail the per-episode contract. Whether a RUN has too
+    many of them is judged at the rollup as a ratio — see the check_floors tests."""
     r = confidence_report([{"confidence": 0.9}, {"sentiment_label": "positive"}])
     assert r["all_in_range"] is True
     assert r["n_missing"] == 1
     assert r["n_out_of_range"] == 0
+    # The denominator the rollup needs to turn this count into a ratio.
+    assert r["n"] == 2
 
 
 def test_confidence_out_of_range_and_missing_are_tracked_independently() -> None:
@@ -239,12 +242,24 @@ def test_aggregate_ignores_bools() -> None:
 # Imported inside each test so this module keeps its no-DB/no-network import surface.
 
 
+def _conf(n: int = 100, n_missing: int = 0, n_out_of_range: int = 0) -> dict:
+    """A rolled-up confidence section, with the ratio derived the way build_report
+    derives it — so a test can never state a ratio the real rollup wouldn't."""
+    return {
+        "all_in_range": not n_out_of_range,
+        "n": n,
+        "n_out_of_range": n_out_of_range,
+        "n_missing": n_missing,
+        "missing_ratio": round(n_missing / n, 4) if n else None,
+    }
+
+
 def _floor_report(**overrides) -> dict:
     """The smallest report check_floors will read: no failed episodes, a clean
     contract, and no baseline/gold section (both optional and separately gated)."""
     report = {
         "n_failed": 0,
-        "confidence": {"all_in_range": True, "n_out_of_range": 0, "n_missing": 0},
+        "confidence": _conf(),
         "baseline": None,
         "gold": None,
     }
@@ -252,23 +267,102 @@ def _floor_report(**overrides) -> dict:
     return report
 
 
-def test_check_floors_passes_when_confidences_are_only_missing() -> None:
+def test_check_floors_passes_when_a_few_confidences_are_missing() -> None:
+    """The PR's whole argument: a handful of honest NULLs is the sanitizer doing the
+    right thing and must never fail the weekly eval."""
     from evals.extraction.run_eval import check_floors
 
-    report = _floor_report(
-        confidence={"all_in_range": True, "n_out_of_range": 0, "n_missing": 12}
-    )
-    assert check_floors(report) == []
+    assert check_floors(_floor_report(confidence=_conf(n=30, n_missing=1))) == []
+
+
+def test_check_floors_breaches_when_the_model_stops_emitting_confidence() -> None:
+    """The other side of that argument, and the reason the ratio ceiling exists: with
+    no ceiling this run passes green and pages nobody, while every mention it produced
+    lands in needs_review."""
+    from evals.extraction.run_eval import check_floors, FLOORS
+
+    breaches = check_floors(_floor_report(confidence=_conf(n=30, n_missing=30)))
+
+    assert len(breaches) == 1
+    assert "30/30" in breaches[0] and "100%" in breaches[0]
+    assert FLOORS["confidence_missing_ratio_max"] == 0.25
+
+
+def test_check_floors_breaches_on_a_partial_swing_to_missing() -> None:
+    """8 of 30 is 27% — over the ceiling. Not every mention has to go missing before
+    this is a regression worth a human's attention."""
+    from evals.extraction.run_eval import check_floors
+
+    breaches = check_floors(_floor_report(confidence=_conf(n=30, n_missing=8)))
+
+    assert len(breaches) == 1
+    assert "8/30" in breaches[0]
+
+
+def test_check_floors_ratio_gate_reads_the_denominator_not_the_count() -> None:
+    """12 missing is a regression out of 12 and a Tuesday out of 5,000. The count alone
+    could not tell those apart, which is why the rollup carries `n`."""
+    from evals.extraction.run_eval import check_floors
+
+    assert check_floors(_floor_report(confidence=_conf(n=5000, n_missing=12))) == []
+    assert len(check_floors(_floor_report(confidence=_conf(n=12, n_missing=12)))) == 1
+
+
+def test_check_floors_survives_an_empty_run() -> None:
+    """No scored mentions at all -> missing_ratio is None, not a ZeroDivisionError and
+    not a breach. n_failed is what catches a run that produced nothing."""
+    from evals.extraction.run_eval import check_floors
+
+    assert check_floors(_floor_report(confidence=_conf(n=0))) == []
 
 
 def test_check_floors_still_breaches_on_out_of_range_confidence() -> None:
     from evals.extraction.run_eval import check_floors
 
-    report = _floor_report(
-        confidence={"all_in_range": False, "n_out_of_range": 3, "n_missing": 12}
+    breaches = check_floors(
+        _floor_report(confidence=_conf(n=100, n_missing=12, n_out_of_range=3))
     )
-    breaches = check_floors(report)
     assert len(breaches) == 1
-    # The count in the message is the gated one — the 12 missing must not inflate it.
+    # 12/100 is under the ceiling, so the only breach is the out-of-range one — and its
+    # count must not be inflated by the missing values.
     assert "3 confidence value(s) outside" in breaches[0]
     assert "missing" not in breaches[0]
+
+
+def test_out_of_range_and_a_missing_swing_are_reported_as_two_breaches() -> None:
+    """Independent gates, independently named — one message per real problem."""
+    from evals.extraction.run_eval import check_floors
+
+    breaches = check_floors(
+        _floor_report(confidence=_conf(n=40, n_missing=40, n_out_of_range=2))
+    )
+    assert len(breaches) == 2
+    assert any("outside [0,1]" in b for b in breaches)
+    assert any("40/40" in b for b in breaches)
+
+
+def test_the_real_rollup_produces_what_the_gate_reads(monkeypatch) -> None:
+    """The tests above hand-build the confidence section, so this one closes the loop:
+    real per-episode confidence_report -> real build_report -> real check_floors, with
+    a model that emitted no confidence at all. If the rollup ever stops carrying `n` or
+    `missing_ratio`, the hand-built fixture above would keep passing and only this
+    fails."""
+    from argparse import Namespace
+
+    from evals.extraction.run_eval import build_report, check_floors
+
+    mentions = [{"canonical_name": f"Tool {i}"} for i in range(30)]  # no confidence key
+    episodes = [
+        {"episode_id": 1, "confidence": confidence_report(mentions[:15])},
+        {"episode_id": 2, "confidence": confidence_report(mentions[15:])},
+    ]
+
+    report = build_report(
+        Namespace(model="gpt-4.1-mini"), episodes, {"model": "gpt-4.1-mini"}, {}
+    )
+
+    assert report["confidence"]["n"] == 30
+    assert report["confidence"]["n_missing"] == 30
+    assert report["confidence"]["missing_ratio"] == 1.0
+    breaches = check_floors(report)
+    assert any("30/30" in b for b in breaches)
