@@ -18,19 +18,19 @@ Usage:
 
 import asyncio
 import argparse
-import json
-import os
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Optional
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from dotenv import load_dotenv
-
 # Import sibling modules
 sys.path.insert(0, str(Path(__file__).parent))
-from fetch import main as fetch_main, get_unscraped_episodes, get_already_fetched, OUTPUT_DIR
+from fetch import (
+    main as fetch_main,
+    get_already_fetched,
+    plan_fetch,
+    OUTPUT_DIR,
+)
 from parse import parse_episode
 from fill_songs import (
     get_existing_songs,
@@ -39,9 +39,6 @@ from fill_songs import (
     check_duplicates,
     remove_duplicates,
 )
-
-
-SHOW_ID = 2  # TAL is show_id=2
 
 
 def get_db_connection():
@@ -62,40 +59,66 @@ def scrape_new_episodes(
     dry_run: bool = True,
     limit: Optional[int] = None,
     yes: bool = False,
+    published_since: Optional[date] = None,
 ) -> dict:
     """
-    Discover, fetch, parse, and insert new TAL episodes.
+    Fetch, parse, and insert songs for TAL episodes that don't have any yet.
 
-    Returns summary dict: {fetched, parsed, songs_inserted, errors}
+    Returns summary dict: {fetched, parsed, songs_inserted, unresolved, failures, errors}
+
+    `failures` is the run-reddening one — see run_pipeline.STEP_FAILURE_KEY. It counts
+    RETRYABLE work that did not complete (a page Firecrawl could not return), and it is
+    deliberately NOT the same as `unresolved`: a row with no page url anywhere can never
+    succeed, so counting it would redden every Monday forever and train the reader to
+    ignore the alert. `errors` stays the human-readable log and holds both.
     """
     summary = {
         "fetched": 0,
         "parsed": 0,
         "songs_inserted": 0,
+        "unresolved": 0,
+        "failures": 0,
         "errors": [],
     }
 
-    # Step 1: Find unscraped episodes
-    episodes = get_unscraped_episodes(limit)
-    already_fetched = get_already_fetched()
+    # Step 1: which episodes still need songs, and which page each one lives on.
+    # Resolved ONCE here and handed to the fetcher, so the preview and the fetch cannot
+    # disagree — and so the RSS is read once per run rather than once per caller.
+    to_fetch, unresolved = plan_fetch(limit, published_since)
+    # Intersected with the queue: get_already_fetched() returns every id in the cache
+    # directory, which after a local backfill can dwarf today's queue and make "of these"
+    # a lie.
+    already_fetched = get_already_fetched() & {ep["id"] for ep in to_fetch}
 
-    to_fetch = [e for e in episodes if e["id"] not in already_fetched]
-    print(f"TAL: {len(episodes)} unscraped in DB, {len(already_fetched)} already fetched locally")
-    print(f"  {len(to_fetch)} episodes need fetching")
+    print(f"TAL: {len(to_fetch) + len(unresolved)} episodes missing songs")
+    print(f"  {len(to_fetch)} with a page url, {len(unresolved)} without")
+    if already_fetched:
+        # Reported, never subtracted. The local JSON cache is git-ignored and empty on a
+        # CI runner, so it can't be the record of what has been read; the DB predicate in
+        # get_episodes_missing_songs is. Treating it as authority used to mean a bad JSON
+        # (e.g. of an api.taddy.org url) excluded that episode from every later run on
+        # this machine. Cost of not skipping: an episode whose page genuinely lists no
+        # songs is re-fetched each run — 1 of the 24 in today's queue (row 8532,
+        # "206: Somewhere in the Arabian Sea", counted live 2026-09-04). It was 2 until
+        # /lifepartners was denylisted — row 7422 now resolves to no page and never costs
+        # a fetch.
+        print(f"  ({len(already_fetched)} local JSON files cached from previous runs)")
+    for ep in unresolved:
+        summary["errors"].append(f"No page URL for {ep['id']}: {ep.get('title')!r}")
+        print(f"  NO PAGE URL for {ep['id']}: {ep.get('title')!r}")
+    summary["unresolved"] = len(unresolved)
 
     if dry_run:
         print(f"\n--- DRY RUN ---")
         if to_fetch:
             print(f"Would fetch {len(to_fetch)} episodes via Firecrawl")
             for ep in to_fetch[:5]:
-                print(f"  {ep['id']}: {ep['url']}")
+                print(f"  {ep['id']}: {ep['page_url']}")
             if len(to_fetch) > 5:
                 print(f"  ... and {len(to_fetch) - 5} more")
 
-        # Check for unfilled songs in existing JSON files
-        all_fetched = get_already_fetched()
-        if all_fetched:
-            print(f"\nWould parse {len(all_fetched)} cached JSON files for missing songs")
+        if already_fetched:
+            print(f"\nWould parse {len(already_fetched)} cached JSON files for missing songs")
 
         return summary
 
@@ -108,11 +131,21 @@ def scrape_new_episodes(
             print("\nAborted.")
             return summary
 
-    # Step 2: Fetch new episodes via Firecrawl
+    # Step 2: Fetch those pages via Firecrawl
     if to_fetch:
         print(f"\nFetching {len(to_fetch)} episodes...")
-        asyncio.run(fetch_main(limit=limit, dry_run=False))
-        summary["fetched"] = len(to_fetch)
+        # What came back, not what was attempted. Reporting len(to_fetch) here meant a run
+        # where every Firecrawl call failed still printed "Episodes scraped: 24" beside
+        # "Songs found: 0" — the reported-success-for-nothing shape this PR exists to kill.
+        result = asyncio.run(fetch_main(episodes=to_fetch, dry_run=False)) or {}
+        summary["fetched"] = result.get("success", 0)
+        if result.get("errors"):
+            # Counted, not raised. Raising here would throw away the pages that DID come
+            # back — they still deserve to be parsed, inserted, matched and synced. The
+            # count is what run_pipeline turns into a non-zero exit, so the run is both
+            # useful and honestly red.
+            summary["failures"] = result["errors"]
+            summary["errors"].append(f"Firecrawl failed on {result['errors']} episode(s)")
 
     # Step 3: Parse all JSON files and find missing songs
     fetched_dir = OUTPUT_DIR
@@ -206,23 +239,33 @@ def scrape_new_episodes(
 
 def main():
     """CLI entry point."""
-    script_dir = Path(__file__).parent
-    project_root = script_dir.parent.parent.parent
+    # The shared loader, same as fetch.py's. The hand-rolled pair this replaced read
+    # ~/.env and the repo's .env.local but not pipeline/.env.local, so a standalone run
+    # saw a different environment than the orchestrator that normally calls in.
+    from common import load_environment
 
-    load_dotenv(os.path.expanduser("~/.env"))
-    load_dotenv(project_root / ".env.local")
+    load_environment()
 
-    parser = argparse.ArgumentParser(description="Scrape new TAL episodes")
+    parser = argparse.ArgumentParser(description="Scrape songs for TAL episodes missing them")
     parser.add_argument("--dry-run", action="store_true", help="Preview only")
     parser.add_argument("--execute", action="store_true", help="Actually fetch and insert")
     parser.add_argument("--limit", type=int, help="Max episodes to fetch")
     parser.add_argument("--yes", action="store_true", help="Skip confirmation prompt")
+    parser.add_argument(
+        "--since",
+        type=date.fromisoformat,
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="Date floor for the queue (default fetch.DEFAULT_SONG_SCRAPE_FLOOR)",
+    )
     args = parser.parse_args()
 
     if not args.execute:
         args.dry_run = True
 
-    scrape_new_episodes(dry_run=args.dry_run, limit=args.limit, yes=args.yes)
+    scrape_new_episodes(
+        dry_run=args.dry_run, limit=args.limit, yes=args.yes, published_since=args.since
+    )
 
 
 if __name__ == "__main__":

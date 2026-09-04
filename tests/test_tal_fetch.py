@@ -1,0 +1,559 @@
+"""TAL's song scrape: what gets queued, and which page it reads.
+
+These pin a live incident. Between 2026-01 and 2026-09 not one TAL episode gained a
+song row, while the Monday cron reported success every week. Two independent faults,
+one test class each below:
+
+  1. THE QUEUE. `get_unscraped_episodes` selected `scraped_at IS NULL`. Nothing under
+     scrapers/tal/ writes `scraped_at` — the Taddy importer does, on the very INSERT
+     that creates the row (import_transcripts.py:397) and on its title+date dedup UPDATE
+     (:364). Once TAL discovery started running that importer (2026-08-02) the queue was
+     empty by construction: 0 rows matched on 2026-09-04.
+  2. THE URL. Even a queued row would have been handed to Firecrawl as
+     `episodes.url`, which for a Taddy-discovered episode is
+     https://api.taddy.org/podcast-episode/<uuid> — an identity key with no song
+     credits on it, so the parse found nothing and the run still exited 0.
+
+`test_taddy_discovered_episode_is_queued_for_the_website_scrape` is the regression pin
+for (1) and fails on the pre-fix code. `test_scrape_never_sends_firecrawl_at_a_taddy_url`
+is the pin for (2).
+
+Hermetic: no network, no database. The DB is a fake cursor in the house shape
+(tests/test_load_entity_batch.py), returning dict-like rows because this path uses
+common.get_db_connection's default RealDictCursor.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from datetime import date
+from pathlib import Path
+
+from pipeline.scrapers.tal import fetch
+from pipeline.scrapers.gabfest.import_gabfest import parse_feed
+from pipeline.show_config import (
+    TADDY_EPISODE_URL_PREFIX,
+    is_tal_episode_page_url,
+    tal_episode_page_url,
+)
+
+# ---------------------------------------------------------------- fakes
+
+class _FakeCursor:
+    def __init__(self, rows: list[dict]) -> None:
+        self.rows = rows
+        self.calls: list[tuple[str, list]] = []
+
+    def __enter__(self) -> "_FakeCursor":
+        return self
+
+    def __exit__(self, *exc) -> bool:
+        return False
+
+    def execute(self, sql: str, params=None) -> None:
+        self.calls.append((sql, list(params or [])))
+
+    def fetchall(self) -> list[dict]:
+        return self.rows
+
+
+class _FakeConn:
+    def __init__(self, rows: list[dict]) -> None:
+        self._cursor = _FakeCursor(rows)
+        self.closed = False
+
+    def cursor(self) -> _FakeCursor:
+        return self._cursor
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def _queue(monkeypatch, rows: list[dict]) -> _FakeConn:
+    conn = _FakeConn(rows)
+    monkeypatch.setattr(fetch, "get_db_connection", lambda: conn)
+    return conn
+
+
+def _taddy_row(**over) -> dict:
+    """A row exactly as TAL discovery leaves it: Taddy identity url, scraped_at stamped."""
+    row = {
+        "id": 8843,
+        "url": f"{TADDY_EPISODE_URL_PREFIX}e457f2c3-000d-47ac-a000-000000000000",
+        "title": "896: I Know What You Need",
+        "publish_date": date(2026, 8, 31),
+    }
+    row.update(over)
+    return row
+
+
+# ------------------------------------------------- 1. what gets queued
+
+def test_taddy_discovered_episode_is_queued_for_the_website_scrape(monkeypatch) -> None:
+    """THE REGRESSION PIN. Fails on the pre-fix code, which asked for scraped_at IS NULL.
+
+    A Taddy-discovered row has scraped_at set the moment it exists, so the old predicate
+    excluded every TAL episode published after 2026-08-02 — and, through the importer's
+    dedup UPDATE, retroactively excluded older website-url rows it had never read.
+    """
+    conn = _queue(monkeypatch, [_taddy_row()])
+
+    queued = fetch.get_episodes_missing_songs()
+
+    assert [row["id"] for row in queued] == [8843]
+    sql, params = conn.cursor().calls[0]
+    assert "scraped_at" not in sql, "scraped_at belongs to the Taddy importer, not to us"
+    assert "NOT EXISTS" in sql and "FROM songs" in sql
+    assert params[:2] == [fetch.TAL_SHOW_ID, fetch.DEFAULT_SONG_SCRAPE_FLOOR]
+
+
+def test_archive_episode_without_songs_is_not_queued(monkeypatch) -> None:
+    """The 189-row guard: most pre-2026 TAL episodes have no music credits at all, and
+    'has no songs' would re-read every one of them on every run without a date floor.
+
+    Honest about what this can prove: Postgres does the excluding, so a fake cursor
+    cannot demonstrate the row being dropped. What it pins is the clause and the bound
+    parameter that cause it — remove either and this fails.
+    """
+    _queue(monkeypatch, [])
+
+    fetch.get_episodes_missing_songs()
+
+    # In the SQL, not applied in Python after the fact — the DB must never hand back 200
+    # archive rows for us to filter.
+    sql, params = fetch.get_db_connection().cursor().calls[0]
+    assert "publish_date >= %s" in sql
+    assert fetch.DEFAULT_SONG_SCRAPE_FLOOR in params
+    assert fetch.DEFAULT_SONG_SCRAPE_FLOOR == date(2026, 1, 1)
+
+
+def test_date_floor_is_a_parameter_so_a_backfill_is_deliberate(monkeypatch) -> None:
+    conn = _queue(monkeypatch, [])
+
+    fetch.get_episodes_missing_songs(published_since=date(2011, 1, 1))
+
+    _, params = conn.cursor().calls[0]
+    assert params[1] == date(2011, 1, 1)
+
+
+def test_episode_with_songs_is_not_requeued(monkeypatch) -> None:
+    """Rows leave the queue by acquiring songs — that is what makes a failed fetch
+    self-healing (retried next run) instead of marked-done by a side effect.
+
+    Same caveat as the floor test: the subquery is what excludes, and Postgres runs it;
+    this pins the subquery's exact shape so it cannot be dropped or loosened silently.
+    """
+    conn = _queue(monkeypatch, [])
+
+    assert fetch.get_episodes_missing_songs() == []
+    sql, _ = conn.cursor().calls[0]
+    assert "NOT EXISTS (SELECT 1 FROM songs s WHERE s.episode_id = e.id)" in " ".join(sql.split())
+
+
+def test_limit_is_bound_not_interpolated(monkeypatch) -> None:
+    conn = _queue(monkeypatch, [])
+
+    fetch.get_episodes_missing_songs(limit=5)
+
+    sql, params = conn.cursor().calls[0]
+    assert "LIMIT %s" in sql and params[-1] == 5
+
+
+def test_limit_zero_means_zero_and_negative_is_refused(monkeypatch) -> None:
+    """`if limit:` made --limit 0 mean 'no limit' and fetch everything — the opposite of
+    what anyone typing 0 wants — and a negative reached Postgres as LIMIT -1."""
+    import pytest
+
+    conn = _queue(monkeypatch, [])
+    fetch.get_episodes_missing_songs(limit=0)
+    sql, params = conn.cursor().calls[0]
+    assert "LIMIT %s" in sql and params[-1] == 0
+
+    with pytest.raises(ValueError):
+        fetch.get_episodes_missing_songs(limit=-1)
+
+
+def test_the_queue_closes_its_connection(monkeypatch) -> None:
+    conn = _queue(monkeypatch, [_taddy_row()])
+
+    fetch.get_episodes_missing_songs()
+
+    assert conn.closed
+
+
+def test_local_json_cache_is_not_the_queue(monkeypatch, tmp_path) -> None:
+    """The cache is git-ignored and empty on a CI runner, so it cannot be the record of
+    what has been read — and when it is NOT empty, a JSON left by a bad fetch used to
+    exclude that episode from every later run on that machine, permanently."""
+    (tmp_path / "8843.json").write_text("{}")
+    monkeypatch.setattr(fetch, "OUTPUT_DIR", tmp_path)
+    _queue(monkeypatch, [_taddy_row()])
+    monkeypatch.setattr(fetch, "fetch_feed_page_links", lambda *a, **k: {})
+
+    resolved, unresolved = fetch.plan_fetch()
+
+    assert fetch.get_already_fetched() == {8843}, "still reported"
+    assert [row["id"] for row in resolved] == [8843], "but never subtracted"
+    assert unresolved == []
+
+
+# ------------------------------------------------- 2. which page it reads
+
+FEED = b"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+  <title>This American Life</title>
+  <item>
+    <title>896: I Know What You Need</title>
+    <link>https://www.thisamericanlife.org/896/i-know-what-you-need</link>
+    <pubDate>Sun, 30 Aug 2026 20:00:00 -0400</pubDate>
+  </item>
+  <item>
+    <title>889: There\xe2\x80\x99s Something About Hail Mary</title>
+    <link>https://www.thisamericanlife.org/889/theres-something-about-hail-mary</link>
+    <pubDate>Sun, 21 Jun 2026 20:00:00 -0400</pubDate>
+  </item>
+  <item>
+    <title>Ira (Reluctantly) Gives a Graduation Speech</title>
+    <link>https://www.thisamericanlife.org/lifepartners</link>
+    <pubDate>Fri, 01 May 2026 00:00:00 -0400</pubDate>
+  </item>
+  <item>
+    <title>A Big Announcement</title>
+    <link>https://www.thisamericanlife.org</link>
+    <pubDate>Wed, 16 Oct 2024 00:00:00 -0400</pubDate>
+  </item>
+</channel></rss>"""
+
+
+def test_page_url_comes_from_the_feed_link_when_the_title_matches() -> None:
+    links = fetch.page_links_from_feed_items(parse_feed(FEED))
+    row = _taddy_row()
+
+    assert fetch.resolve_page_url(row, links) == (
+        "https://www.thisamericanlife.org/896/i-know-what-you-need"
+    )
+
+
+def test_page_url_from_the_feed_survives_a_curly_apostrophe() -> None:
+    """The DB and the feed do not agree on quote characters episode to episode, and a
+    title-keyed lookup that cares would silently fall through to the slug."""
+    links = fetch.page_links_from_feed_items(parse_feed(FEED))
+    row = _taddy_row(id=7420, title="889: There's Something About Hail Mary")
+
+    assert fetch.resolve_page_url(row, links) == (
+        "https://www.thisamericanlife.org/889/theres-something-about-hail-mary"
+    )
+
+
+def test_a_promo_link_is_not_an_episode_page(monkeypatch) -> None:
+    """Row 7422 has NO readable page, and the honest answer is to say so.
+
+    TAL's feed points "Ira (Reluctantly) Gives a Graduation Speech" at /lifepartners.
+    That is not an episode — it is the Supercast subscription pitch, which 307s off-site
+    to thisamericanlife.supercast.com and carries zero song credits (verified live
+    2026-09-04). Accepting it would buy a Firecrawl call that can never return a song, on
+    a row that therefore never leaves the queue: a permanent weekly charge for nothing.
+    """
+    links = fetch.page_links_from_feed_items(parse_feed(FEED))
+    row = _taddy_row(id=7422, title="Ira (Reluctantly) Gives a Graduation Speech")
+
+    assert tal_episode_page_url(row["title"]) is None, "no episode number to derive from"
+    assert fetch.resolve_page_url(row, links) is None
+
+    _queue(monkeypatch, [row])
+    monkeypatch.setattr(fetch, "fetch_feed_page_links", lambda *a, **k: links)
+    resolved, unresolved = fetch.plan_fetch()
+
+    assert resolved == []
+    assert [r["id"] for r in unresolved] == [7422], "reported, not silently fetched"
+
+
+def test_the_feed_map_drops_links_that_are_not_episode_specific() -> None:
+    """Two shapes of non-episode link, both live in TAL's feed today.
+
+    The bare site root ("A Big Announcement") is caught by the url predicate. A link
+    SHARED by several items is caught by shape: a url that more than one episode points
+    at is a show-level page, the same failure this repo already documents for Hard Fork's
+    generic Taddy websiteUrl. Belt and braces — the denylist catches what we have seen,
+    this catches what we have not.
+    """
+    links = fetch.page_links_from_feed_items(parse_feed(FEED))
+
+    assert "a big announcement" not in links
+    assert "an update from ira" not in links
+    assert "ira (reluctantly) gives a graduation speech" not in links
+    assert set(links) == {
+        "896: i know what you need",
+        "889: there's something about hail mary",
+    }
+
+
+def test_a_shared_link_is_dropped_even_when_the_path_is_unknown() -> None:
+    """The shape rule standing alone: an invented promo path is not on any denylist, and
+    is still dropped because two episodes point at it."""
+    feed = b"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>TAL</title>
+  <item><title>900: Real One</title>
+    <link>https://www.thisamericanlife.org/900/real-one</link>
+    <pubDate>Sun, 30 Aug 2026 20:00:00 -0400</pubDate></item>
+  <item><title>Promo A</title>
+    <link>https://www.thisamericanlife.org/some-new-campaign</link>
+    <pubDate>Sun, 23 Aug 2026 20:00:00 -0400</pubDate></item>
+  <item><title>Promo B</title>
+    <link>https://www.thisamericanlife.org/some-new-campaign</link>
+    <pubDate>Sun, 16 Aug 2026 20:00:00 -0400</pubDate></item>
+</channel></rss>"""
+
+    links = fetch.page_links_from_feed_items(parse_feed(feed))
+
+    assert set(links) == {"900: real one"}
+
+
+def test_page_url_falls_back_to_the_slug_when_the_feed_has_rolled_over() -> None:
+    """The feed is a rolling 15-item window (counted 2026-09-04), so anything older than
+    roughly four months is only reachable by deriving the slug."""
+    assert tal_episode_page_url("896: I Know What You Need") == (
+        "https://www.thisamericanlife.org/896/i-know-what-you-need"
+    )
+    assert tal_episode_page_url("895: Label Maker!") == (
+        "https://www.thisamericanlife.org/895/label-maker"
+    )
+    assert tal_episode_page_url("887: Two Is One, One Is None!") == (
+        "https://www.thisamericanlife.org/887/two-is-one-one-is-none"
+    )
+    # Apostrophes vanish rather than becoming separators — TAL writes it this way.
+    assert tal_episode_page_url("894: I Couldn’t Help but Notice") == (
+        "https://www.thisamericanlife.org/894/i-couldnt-help-but-notice"
+    )
+    assert tal_episode_page_url("880: What Is Your Emergency?") == (
+        "https://www.thisamericanlife.org/880/what-is-your-emergency"
+    )
+
+
+def test_page_url_is_none_for_an_untitled_or_unnumbered_episode(monkeypatch) -> None:
+    """There is one such live row (7422). It must be REPORTED, not quietly dropped and
+    not fetched from a guessed url — 'nothing to do' and 'couldn't check' are different
+    outcomes and this pipeline has already paid once for conflating them."""
+    assert tal_episode_page_url(None) is None
+    assert tal_episode_page_url("") is None
+    assert tal_episode_page_url("An Update from Ira") is None
+    assert tal_episode_page_url("206:   ") is None
+
+    row = _taddy_row(id=7422, title="An Update from Ira", url=None)
+    _queue(monkeypatch, [row])
+    monkeypatch.setattr(fetch, "fetch_feed_page_links", lambda *a, **k: {})
+
+    resolved, unresolved = fetch.plan_fetch()
+
+    assert resolved == []
+    assert [r["id"] for r in unresolved] == [7422]
+
+
+def test_a_row_that_already_has_a_real_page_url_keeps_it() -> None:
+    """Website-discovered rows carry the true page, including the unnumbered ones the
+    slug could never reach: /885/bless-this-mess is a 404, /bless-this-mess is the page
+    (verified live 2026-09-04). The row's own url outranks anything derived."""
+    row = {
+        "id": 3025,
+        "url": "https://www.thisamericanlife.org/bless-this-mess",
+        "title": "885: Bless This Mess",
+        "publish_date": date(2026, 4, 12),
+    }
+
+    assert fetch.resolve_page_url(row, {}) == "https://www.thisamericanlife.org/bless-this-mess"
+
+
+def test_scrape_never_sends_firecrawl_at_a_taddy_url(monkeypatch) -> None:
+    """The second half of the bug, pinned at the boundary that spends money: the url
+    handed to the fetcher. A Taddy identity url has no '## Song:' section on it, so
+    fetching one is a paid request that can only ever parse to zero songs."""
+    row = _taddy_row()
+    _queue(monkeypatch, [row])
+    monkeypatch.setattr(fetch, "fetch_feed_page_links", lambda *a, **k: {})
+    resolved, unresolved = fetch.plan_fetch()
+
+    assert unresolved == []
+    assert not resolved[0]["page_url"].startswith(TADDY_EPISODE_URL_PREFIX)
+    assert resolved[0]["page_url"] == "https://www.thisamericanlife.org/896/i-know-what-you-need"
+    assert resolved[0]["url"] == row["url"], "episodes.url is the identity — left untouched"
+
+    # And the url that actually reaches the HTTP call is the page url, not the row's.
+    asked: list[str] = []
+
+    async def _fake_fetch(client, episode_id, url, semaphore):
+        asked.append(url)
+        return {"db_id": episode_id, "url": url, "success": True, "markdown": "", "metadata": {}}
+
+    monkeypatch.setattr(fetch, "fetch_episode", _fake_fetch)
+    monkeypatch.setattr(fetch, "save_result", lambda result: None)
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "test-key")
+    asyncio.run(fetch.main(episodes=resolved))
+
+    assert asked == ["https://www.thisamericanlife.org/896/i-know-what-you-need"]
+
+
+def test_a_taddy_url_is_never_a_page_url() -> None:
+    """The invariant on its own, so a future change to resolve_page_url's source order
+    cannot reintroduce the bug through a different door."""
+    assert not is_tal_episode_page_url(f"{TADDY_EPISODE_URL_PREFIX}abc-123")
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org")
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org/")
+    assert not is_tal_episode_page_url(None)
+    assert not is_tal_episode_page_url("")
+    assert is_tal_episode_page_url("https://www.thisamericanlife.org/886/blackout")
+    assert is_tal_episode_page_url("https://thisamericanlife.org/blackjack")
+
+
+def test_a_lookalike_host_is_not_a_tal_page() -> None:
+    """The host match is on a domain boundary, not a string prefix. A bare startswith
+    would wave through the classic suffix trick, and this function's whole job is
+    deciding what is safe to hand to Firecrawl."""
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org.example.com/886/x")
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org.evil/x")
+    assert not is_tal_episode_page_url("https://notthisamericanlife.org/886/blackout")
+    assert not is_tal_episode_page_url("http://www.thisamericanlife.org/886/blackout"), (
+        "http is not the canonical scheme; only https urls are accepted"
+    )
+
+
+def test_known_non_episode_pages_are_rejected() -> None:
+    """/lifepartners is the live one — TAL's feed hands it out as the <link> for promo
+    items and it already sits in episodes.url on row 3022. It 307s to
+    thisamericanlife.supercast.com and has no song credits.
+
+    Honest about the mechanism: nothing in a TAL url distinguishes an episode from a
+    marketing page — /blackjack IS episode 466 — so this is an observed denylist, not a
+    derivation, and the assertion below is what keeps it from silently shrinking.
+    """
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org/lifepartners")
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org/lifepartners/")
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org/about")
+    assert not is_tal_episode_page_url("https://www.thisamericanlife.org/archive")
+
+    # Bare slugs that ARE episodes must survive the same rule.
+    assert is_tal_episode_page_url("https://www.thisamericanlife.org/blackjack")
+    assert is_tal_episode_page_url("https://www.thisamericanlife.org/bless-this-mess")
+
+
+def test_the_slug_is_stable_across_unicode_forms() -> None:
+    """The same visible title must produce one url. Composed vs decomposed accents
+    otherwise yield /901/cafe-society and /901/caf-society from equal strings."""
+    nfc = "901: Café Society"
+    nfd = "901: Café Society"
+
+    assert nfc != nfd  # different bytes, same title to a reader
+    assert tal_episode_page_url(nfc) == tal_episode_page_url(nfd)
+    assert tal_episode_page_url(nfc) == "https://www.thisamericanlife.org/901/cafe-society"
+
+
+def test_a_feed_outage_degrades_to_slugs_instead_of_failing_the_run(monkeypatch) -> None:
+    """A dead feed must not take out the Monday music run — the derived slug resolved
+    22 of the 24 live backlog rows on 2026-09-04, so degrading still does real work."""
+    import requests
+
+    def _boom(*args, **kwargs):
+        raise requests.RequestException("feed down")
+
+    monkeypatch.setattr(requests, "get", _boom)
+
+    assert fetch.fetch_feed_page_links("https://example.invalid/rss.xml") == {}
+
+
+# ------------------------------------------------- 3. the orchestrator's entry point
+
+def test_dry_run_previews_the_page_url_and_never_fetches(monkeypatch, capsys) -> None:
+    """run_pipeline.run_scrape calls scrape_new_episodes — the one changed function with
+    a caller outside this PR. The dry run must show the url it WOULD read (the old one
+    printed episodes.url, i.e. the Taddy key) and must not touch Firecrawl."""
+    from pipeline.scrapers.tal import scrape
+
+    queued = [
+        {
+            "id": 8843,
+            "url": f"{TADDY_EPISODE_URL_PREFIX}e457f2c3",
+            "title": "896: I Know What You Need",
+            "publish_date": date(2026, 8, 31),
+            "page_url": "https://www.thisamericanlife.org/896/i-know-what-you-need",
+        }
+    ]
+    unresolved = [{"id": 7422, "title": "An Update from Ira"}]
+    monkeypatch.setattr(scrape, "plan_fetch", lambda *a, **k: (queued, unresolved))
+    monkeypatch.setattr(scrape, "get_already_fetched", lambda: set())
+
+    def _no_fetching(*args, **kwargs):
+        raise AssertionError("a dry run must not call Firecrawl")
+
+    monkeypatch.setattr(scrape, "fetch_main", _no_fetching)
+
+    summary = scrape.scrape_new_episodes(dry_run=True)
+
+    out = capsys.readouterr().out
+    assert "https://www.thisamericanlife.org/896/i-know-what-you-need" in out
+    assert TADDY_EPISODE_URL_PREFIX not in out
+    assert summary["unresolved"] == 1
+    assert summary["errors"] == ["No page URL for 7422: 'An Update from Ira'"]
+    assert summary["fetched"] == 0
+
+
+def test_the_scrape_hands_the_fetcher_the_queue_it_just_printed(monkeypatch) -> None:
+    """One queue per run. The old code queried in scrape_new_episodes and then again
+    inside fetch.main, so the preview and the fetch could disagree — and the RSS would
+    have been read twice."""
+    from pipeline.scrapers.tal import scrape
+
+    queued = [
+        {"id": 1, "url": None, "title": "x", "page_url": "https://www.thisamericanlife.org/1/x"}
+    ]
+    monkeypatch.setattr(scrape, "plan_fetch", lambda *a, **k: (queued, []))
+    monkeypatch.setattr(scrape, "get_already_fetched", lambda: set())
+    handed: list = []
+
+    async def _capture(**kwargs):
+        handed.append(kwargs)
+
+    monkeypatch.setattr(scrape, "fetch_main", _capture)
+
+    def _no_db():
+        raise RuntimeError("stop after the fetch step")
+
+    monkeypatch.setattr(scrape, "get_db_connection", _no_db)
+
+    try:
+        scrape.scrape_new_episodes(dry_run=False, yes=True)
+    except RuntimeError:
+        pass  # step 4 needs a DB; this test is only about steps 1-2
+
+    assert handed == [{"episodes": queued, "dry_run": False}]
+
+
+def test_a_run_where_every_fetch_failed_does_not_report_them_as_scraped(monkeypatch) -> None:
+    """Attempts are not results. `summary["fetched"] = len(to_fetch)` meant a run where
+    Firecrawl 402'd on all 24 still printed "Episodes scraped: 24" beside "Songs found:
+    0" — the same reported-success-for-nothing shape this whole PR removes, one layer up.
+    """
+    from pipeline.scrapers.tal import scrape
+
+    queued = [
+        {"id": i, "url": None, "title": "x", "page_url": f"https://www.thisamericanlife.org/{i}/x"}
+        for i in (1, 2, 3)
+    ]
+    monkeypatch.setattr(scrape, "plan_fetch", lambda *a, **k: (queued, []))
+    monkeypatch.setattr(scrape, "get_already_fetched", lambda: set())
+    # No cache dir -> step 3 returns before the DB, so this exercises steps 1-2 only.
+    monkeypatch.setattr(scrape, "OUTPUT_DIR", Path("/nonexistent-tal-cache"))
+
+    async def _all_ok(**kwargs):
+        return {"success": 3, "errors": 0}
+
+    monkeypatch.setattr(scrape, "fetch_main", _all_ok)
+    ok = scrape.scrape_new_episodes(dry_run=False, yes=True)
+    assert ok["fetched"] == 3
+    assert not [e for e in ok["errors"] if "Firecrawl failed" in e]
+
+    async def _all_failed(**kwargs):
+        return {"success": 0, "errors": 3}
+
+    monkeypatch.setattr(scrape, "fetch_main", _all_failed)
+    failed = scrape.scrape_new_episodes(dry_run=False, yes=True)
+    assert failed["fetched"] == 0, "zero successes must report as zero scraped"
+    assert any("Firecrawl failed on 3" in e for e in failed["errors"])

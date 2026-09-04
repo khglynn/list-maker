@@ -7,6 +7,8 @@ duplicated elsewhere. tests/test_show_config.py guards against drift.
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import date
 from typing import Optional
@@ -261,6 +263,120 @@ def taddy_episode_url(uuid: str) -> str:
     tests/test_feed_check.py pins this against the importer so they cannot drift.
     """
     return f"{TADDY_EPISODE_URL_PREFIX}{uuid}"
+
+
+# TAL's own website, where the song credits live. The Taddy url above is TAL's IDENTITY
+# (episodes.url, what the feed check compares); this is the READABLE PAGE, derived at
+# scrape time and never stored. Keeping the two apart is the whole point: writing the
+# page url into episodes.url would break the Phase 4 identity check.
+TAL_SITE_ROOT = "https://www.thisamericanlife.org"
+
+_TAL_TITLE_NUMBER = re.compile(r"^\s*(\d+)\s*:\s*(.+)$")
+# Apostrophes vanish rather than becoming separators — TAL writes "I Couldn't Help but
+# Notice" as /894/i-couldnt-help-but-notice, not .../i-couldn-t-....
+_APOSTROPHES = dict.fromkeys(map(ord, "'‘’ʼ"), None)
+_NON_SLUG = re.compile(r"[^a-z0-9]+")
+
+# TAL pages that are NOT episodes, by first path segment. OBSERVED, not derived, and
+# therefore not exhaustive — checked 2026-09-04.
+#
+# Nothing in a TAL url distinguishes an episode from a marketing page: /blackjack IS
+# episode 466, and /lifepartners is the Supercast subscription pitch — it 307s off-site
+# to thisamericanlife.supercast.com and carries no song credits. Both are bare slugs, so
+# a shape rule cannot separate them. A short denylist with a date on it is the honest
+# mechanism; a regex pretending to derive the answer would not be.
+#
+# /lifepartners earns its place twice over: TAL's RSS uses it as the <link> for promo
+# items ("An Update from Ira", "Ira (Reluctantly) Gives a Graduation Speech"), and it is
+# already sitting in episodes.url on row 3022. Getting one of these wrong costs a wasted
+# Firecrawl call once — but the episode can never gain songs, so it also becomes a
+# permanent queue resident, and that is the expensive half.
+_TAL_NON_EPISODE_PATHS = frozenset({
+    "lifepartners",
+    "about",
+    "archive",
+    "staff",
+    "contact",
+    "donate",
+    "shop",
+    "newsletter",
+    "search",
+})
+
+
+def tal_episode_page_url(title: Optional[str]) -> Optional[str]:
+    """Best-effort thisamericanlife.org page URL derived from an episode title.
+
+    "896: I Know What You Need" -> https://www.thisamericanlife.org/896/i-know-what-you-need
+
+    LAST RESORT, and deliberately so. The authoritative page url is the RSS item's
+    <link> (scrapers/tal/fetch.fetch_feed_page_links); this exists only for an episode
+    that has rolled off the feed's 15-item window — measured at exactly 15 on
+    2026-09-04, so a backlog longer than about four months outruns it.
+
+    Returns None when the title carries no leading episode number, because there is then
+    nothing to guess from. Live example: row 7422, "Ira (Reluctantly) Gives a Graduation
+    Speech". Its feed <link> is /lifepartners, which is NOT an episode page — it is the
+    Supercast subscription pitch (see _TAL_NON_EPISODE_PATHS), so that row has no readable
+    page anywhere and the honest answer for it is None all the way down.
+
+    A derived url can also simply be wrong: TAL's own numbering is not uniform. Verified
+    2026-09-04 — /885/bless-this-mess is a 404 while the canonical page is
+    /bless-this-mess, and the number-only /896 is a 404 too. That is survivable by
+    construction: a miss costs one Firecrawl call and scrapers/tal/parse.parse_episode
+    drops it on its is_404 branch. It never writes a wrong song.
+    """
+    if not title:
+        return None
+    match = _TAL_TITLE_NUMBER.match(title)
+    if not match:
+        return None
+    number, rest = match.group(1), match.group(2)
+    # NFKD first so an accented title slugs the same whether the source string arrived
+    # composed or decomposed — "Café" as NFC vs NFD otherwise yields /caf-society vs
+    # /cafe-society, i.e. the same title producing two different urls run to run.
+    rest = unicodedata.normalize("NFKD", rest)
+    slug = _NON_SLUG.sub("-", rest.translate(_APOSTROPHES).lower()).strip("-")
+    if not slug:
+        return None
+    return f"{TAL_SITE_ROOT}/{number}/{slug}"
+
+
+def is_tal_episode_page_url(url: Optional[str]) -> bool:
+    """Is this a TAL url worth spending a Firecrawl call on to look for songs?
+
+    Rejects the four ways the scrape has sent, or could send, Firecrawl somewhere useless
+    or unsafe (all verified live 2026-09-04):
+
+      1. An api.taddy.org identity url — the 2026-08 regression this module's caller
+         fixes. No song credits on it, ever.
+      2. The bare site root, which is what TAL's RSS carries as the <link> for its
+         untitled bonus items ("A Big Announcement" -> https://www.thisamericanlife.org).
+      3. A known non-episode page (_TAL_NON_EPISODE_PATHS) — notably /lifepartners, the
+         subscription pitch that TAL's feed hands out as the <link> for promo items.
+      4. A lookalike host. The host match is on a DOMAIN BOUNDARY, not a string prefix: a
+         bare startswith would accept https://www.thisamericanlife.org.example.com/x.
+         Nothing hostile is expected in TAL's own feed, but this function's whole job is
+         deciding what is safe to fetch, so it should not be the weak link.
+
+    WHAT IT CANNOT DO, stated plainly so the name does not over-promise: prove that a
+    given TAL page IS an episode. /blackjack and /lifepartners are the same shape and only
+    one is an episode, so the answer lives in the denylist above, which is observed rather
+    than derived. Something novel and non-episodic in TAL's feed would get through, cost
+    one Firecrawl call, and then sit in the queue — see fetch.get_episodes_missing_songs.
+    """
+    if not url:
+        return False
+    if url.startswith(TADDY_EPISODE_URL_PREFIX):
+        return False
+    for root in (TAL_SITE_ROOT, TAL_SITE_ROOT.replace("://www.", "://")):
+        if url == root or url.startswith(root + "/"):
+            path = url[len(root):].strip("/")
+            if not path:
+                return False
+            first_segment = path.split("/")[0].split("?")[0].split("#")[0].lower()
+            return first_segment not in _TAL_NON_EPISODE_PATHS
+    return False
 
 
 def get_show(slug: str) -> ShowConfig:
