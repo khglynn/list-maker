@@ -245,3 +245,75 @@ def test_playlist_ids_match_show_config() -> None:
     assert set(sync_playlist.SHOWS) == {
         cfg.show_id for cfg in show_config.shows_with_spotify()
     }
+
+
+# =============================================================================
+# Reading the playlist: get_playlist_tracks
+# =============================================================================
+
+
+def _many(count: int, prefix: str = "t", start: int = 0) -> List[str]:
+    return [f"{prefix}{i:04d}" for i in range(start, start + count)]
+
+
+def test_the_playlist_read_walks_offsets_until_a_short_page(sleeps) -> None:
+    """101 tracks is two requests: offset 0, then offset 100. The loop advances by how
+    many items came back, so a page Spotify trims for any reason still lines up."""
+    sp = FakeSpotify(
+        playlist_pages=[playlist_page(*_many(100)), playlist_page("t0100")]
+    )
+
+    assert len(sync_playlist.get_playlist_tracks(sp, "PL")) == 101
+
+    reads = sp.calls_to("playlist_tracks")
+    assert [call.params["offset"] for call in reads] == [0, 100]
+    assert {call.params["limit"] for call in reads} == {100}
+    assert {call.params["playlist_id"] for call in reads} == {"PL"}
+    assert sleeps == [0.2]  # a pause between pages, none after the last
+
+
+def test_an_exactly_full_last_page_costs_one_more_request() -> None:
+    """A playlist whose length is a multiple of 100 can't be recognised as finished
+    until an empty page comes back — so the read always ends on a wasted request."""
+    sp = FakeSpotify(playlist_pages=[playlist_page(*_many(100))])
+
+    assert len(sync_playlist.get_playlist_tracks(sp, "PL")) == 100
+
+    assert [c.params["offset"] for c in sp.calls_to("playlist_tracks")] == [0, 100]
+
+
+def test_items_without_a_playable_track_are_skipped() -> None:
+    """Removed tracks and local files come back as an item whose `track` is null (or
+    has no id). They are skipped, never crashed on — and they do not become playlist
+    members, so the diff will not try to "restore" them."""
+    page = {
+        "items": [
+            {"track": {"id": "t1"}},
+            {"track": None},
+            {"track": {}},
+            {"track": {"id": None}},
+        ]
+    }
+    sp = FakeSpotify(playlist_pages=[page])
+
+    assert sync_playlist.get_playlist_tracks(sp, "PL") == {"t1"}
+
+
+def test_an_error_mid_pagination_returns_a_truncated_playlist(capsys) -> None:
+    """TODAY'S BEHAVIOUR, pinned not endorsed. One failed page ends the read, and the
+    caller gets the pages that did arrive with no exception and no flag — so a partly
+    read playlist is indistinguishable from a short one. The consequence is
+    `test_a_truncated_playlist_read_sends_tracks_spotify_already_has` below."""
+    sp = FakeSpotify(
+        playlist_pages=[
+            playlist_page(*_many(100)),
+            playlist_page(*_many(100, start=100)),
+        ],
+        errors={"playlist_tracks": {3: spotify_error(500)}},
+    )
+
+    found = sync_playlist.get_playlist_tracks(sp, "PL")
+
+    assert len(found) == 200  # pages 1-2 only; page 3 onwards never read
+    assert len(sp.calls_to("playlist_tracks")) == 3
+    assert "Error fetching playlist tracks" in capsys.readouterr().err
