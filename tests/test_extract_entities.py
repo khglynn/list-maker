@@ -459,7 +459,7 @@ def test_missing_openai_key_exits_deterministically(monkeypatch) -> None:
 
 def test_missing_input_files_are_deterministic(monkeypatch, tmp_path) -> None:
     """A missing episodes CSV raises FileNotFoundError, which the __main__ block maps
-    to exit 2. Asserted at the raise, since the handler lives under `if __name__`."""
+    to exit 2. Asserted at the raise; the process-level proof is the next test."""
     from pipeline.scrapers.ai_daily import extract_entities as ee
 
     monkeypatch.setattr(
@@ -469,3 +469,31 @@ def test_missing_input_files_are_deterministic(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     with pytest.raises(FileNotFoundError):
         ee.main()
+
+
+def test_the_process_really_exits_two(tmp_path) -> None:
+    """The one end-to-end proof of the convention. Everything else asserts SystemExit
+    inside this process, but what run_new_episodes.run_script actually reads is a real
+    subprocess's returncode — including the __main__ handler, which no in-process test
+    can reach. Hermetic: it fails at the file check, before any OpenAI or DB call."""
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    from pipeline.scrapers.ai_daily import extract_entities as ee
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(Path(ee.__file__).resolve()),
+            "--episodes-csv",
+            str(tmp_path / "nope.csv"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        env={**os.environ, "OPENAI_API_KEY": "sk-test"},
+    )
+    assert result.returncode == 2, result.stderr[-500:]
+    assert "Missing input file" in result.stderr
