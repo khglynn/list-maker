@@ -1,16 +1,140 @@
-"""Spotify playlist sync — the failure paths the orchestrator reads.
+"""Spotify playlist sync — the diff that keeps a track from landing twice.
 
-Deliberately thin: the module's live surface (playlist diff, dedup, the Spotify
-client) has no coverage yet — that is Phase 5's job. What is pinned here is the exit
-code, because run_new_episodes.run_script branches on it and a silent drift back to
-exit 1 would put an unknown --show-id back into the retry loop.
+`pipeline/sync_playlist.py` is the last step of the music chain: it reads the matched
+tracks out of Neon, reads what the playlist already holds, and adds the difference. Two
+things make that worth this much testing:
+
+1. **The diff is the only dedup there is.** Spotify happily accepts a track that is
+   already in a playlist, and nothing in this repo ever removes one. So if the "what's
+   already there" read comes back short, the sync re-adds real tracks and the playlist
+   grows duplicates that only a human can clean up.
+2. **A half-written sync still exits 0.** The read and the write both swallow their
+   failures — a truncated page and a dropped batch are printed, then reported as
+   success. The tests below pin that as *today's* behaviour, deliberately, so the
+   question ("should a partial sync fail loudly?") gets answered on purpose rather than
+   by accident.
+
+Scope: this module's own surface. `get_latest_episode` is dead code (called from
+nowhere) and is not tested here — see the PR body. `get_spotify_client` is real OAuth
+and is never exercised.
+
+Hermetic: the Spotify boundary is `tests/spotify_fakes.FakeSpotify`, the database
+boundary is the two fakes below, and `time.sleep` is patched for the whole module (the
+pagination loop pauses 0.2s per page and the batch loop 0.5s per batch) — a test that
+cares about the waiting asks for the `sleeps` fixture and reads the recorded seconds.
 """
 
 from __future__ import annotations
 
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
 import pytest
 
-from pipeline import sync_playlist
+from pipeline import show_config, sync_playlist
+from tests.spotify_fakes import (
+    FakeSpotify,
+    playlist_page,
+    rate_limited,
+    spotify_error,
+)
+
+# =============================================================================
+# The database boundary
+# =============================================================================
+
+
+class _FakeCursor:
+    """Answers `fetchall`/`fetchone` from a queue of canned results in execute order,
+    and keeps every `(sql, params)` pair for assertions."""
+
+    def __init__(self, results: Sequence[Any]) -> None:
+        self.calls: List[Tuple[str, Any]] = []
+        self._results: List[Any] = list(results)
+
+    def __enter__(self) -> "_FakeCursor":
+        return self
+
+    def __exit__(self, *exc: Any) -> bool:
+        return False
+
+    def execute(self, sql: str, params: Any = ()) -> None:
+        self.calls.append((sql, params))
+
+    def _next(self) -> Any:
+        return self._results.pop(0) if self._results else None
+
+    def fetchall(self) -> List[Any]:
+        return list(self._next() or [])
+
+    def fetchone(self) -> Any:
+        return self._next()
+
+
+class _FakeConn:
+    def __init__(self, cursor: _FakeCursor) -> None:
+        self._cursor = cursor
+        self.closed = False
+
+    def cursor(self, cursor_factory: Any = None) -> _FakeCursor:
+        # Production leaves the factory alone here — common.get_db_connection already
+        # hands back a RealDictCursor connection, which is why the canned rows below are
+        # dicts. The kwarg is accepted anyway so the fake survives a caller adding one.
+        return self._cursor
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class _FakeDB:
+    """Callable stand-in for the module-level `sync_playlist.get_db_connection`.
+
+    Every database function in this module opens its own connection and closes it in a
+    `finally`, so the fake hands out a fresh connection per call while keeping ONE
+    shared result queue. A test that drives a whole sync (matched tracks, then the two
+    stats counts) therefore reads as a single ordered list of answers.
+    """
+
+    def __init__(self, *results: Any) -> None:
+        self.cursor = _FakeCursor(results)
+        self.connections: List[_FakeConn] = []
+
+    def __call__(self) -> _FakeConn:
+        conn = _FakeConn(self.cursor)
+        self.connections.append(conn)
+        return conn
+
+    @property
+    def executed(self) -> List[Tuple[str, Any]]:
+        return self.cursor.calls
+
+    def sql(self, index: int = 0) -> str:
+        return self.executed[index][0]
+
+
+def _rows(*track_ids: str) -> List[Dict[str, str]]:
+    """`get_matched_track_ids` reads `row["spotify_track_id"]` off a RealDictCursor."""
+    return [{"spotify_track_id": tid} for tid in track_ids]
+
+
+def _explode(*_args: Any, **_kwargs: Any) -> Any:
+    """A collaborator that must not be reached. Fails the test loudly if it is."""
+    raise AssertionError("sync_show reached a collaborator it was supposed to skip")
+
+
+@pytest.fixture(autouse=True)
+def sleeps(monkeypatch) -> List[float]:
+    """No test may actually wait. Autouse so a test that forgets can't slow the suite;
+    returned so a test that cares can assert on how long production meant to wait."""
+    recorded: List[float] = []
+    monkeypatch.setattr(sync_playlist.time, "sleep", recorded.append)
+    return recorded
+
+
+# =============================================================================
+# The CLI contract (from PR #44 — unchanged)
+# =============================================================================
 
 
 def test_unknown_show_id_exits_deterministically(monkeypatch) -> None:
@@ -34,3 +158,502 @@ def test_bad_show_id_argument_also_exits_two(monkeypatch) -> None:
     with pytest.raises(SystemExit) as exc:
         sync_playlist.main()
     assert exc.value.code == 2
+
+
+# =============================================================================
+# What counts as a song: get_matched_track_ids / get_playlist_stats
+# =============================================================================
+
+
+def test_the_playlist_only_ever_gets_reviewed_matches(monkeypatch) -> None:
+    """The confidence filter is the whole gate. Drop `MANUAL` from it by accident and
+    every song Kevin reviewed by hand disappears from the playlist on the next run —
+    silently, because a smaller result set is not an error anywhere downstream."""
+    db = _FakeDB(_rows("t1", "t2"))
+    monkeypatch.setattr(sync_playlist, "get_db_connection", db)
+
+    assert sync_playlist.get_matched_track_ids(1) == ["t1", "t2"]
+
+    sql, params = db.executed[0]
+    assert "spotify_match_confidence IN ('HIGH', 'MEDIUM', 'MANUAL')" in sql
+    assert "spotify_track_id IS NOT NULL" in sql
+    assert "LOW" not in sql  # LOW and NOT_FOUND never reach a public playlist
+    assert params == (1,)  # bound, never interpolated into the SQL
+    assert db.connections[0].closed
+
+
+def test_the_playlist_is_ordered_by_spotify_id_not_by_episode(monkeypatch) -> None:
+    """Surprising and worth pinning: tracks are added in ascending Spotify-id order,
+    which is effectively random to a listener. It is NOT episode or release order, and
+    a future change that "fixes" the ordering would reshuffle a 4,586-track playlist."""
+    db = _FakeDB(_rows("t1"))
+    monkeypatch.setattr(sync_playlist, "get_db_connection", db)
+
+    sync_playlist.get_matched_track_ids(1)
+
+    sql = db.sql(0)
+    assert "ORDER BY spotify_track_id" in sql
+    assert "DESC" not in sql  # ascending; a DESC append reshuffles the whole playlist
+    assert "publish_date" not in sql
+    assert "episode_number" not in sql
+
+
+def test_the_description_counts_exactly_the_songs_the_sync_uploads(monkeypatch) -> None:
+    """Drift guard. The song count in the public playlist description comes from a
+    second, independently written query. If the two confidence filters ever diverge the
+    description lies to everyone who opens the playlist, and nothing else notices."""
+    db = _FakeDB(_rows("t1"), {"songs": 1}, {"episodes": 1})
+    monkeypatch.setattr(sync_playlist, "get_db_connection", db)
+
+    sync_playlist.get_matched_track_ids(1)
+    sync_playlist.get_playlist_stats(1)
+
+    synced_sql, described_sql = db.sql(0), db.sql(1)
+    for clause in (
+        "spotify_track_id IS NOT NULL",
+        "spotify_match_confidence IN ('HIGH', 'MEDIUM', 'MANUAL')",
+    ):
+        assert clause in synced_sql, clause
+        assert clause in described_sql, clause
+
+
+def test_the_episode_count_includes_episodes_with_no_songs(monkeypatch) -> None:
+    """The other half of the description. "N episodes" means "episodes we have read",
+    not "episodes that contributed a song" — an archive episode with no music credits
+    still counts, and so does a duplicate row. Pinned because the number is public."""
+    db = _FakeDB({"songs": 4586}, {"episodes": 812})
+    monkeypatch.setattr(sync_playlist, "get_db_connection", db)
+
+    assert sync_playlist.get_playlist_stats(1) == {"songs": 4586, "episodes": 812}
+
+    songs_sql, episodes_sql = db.sql(0), db.sql(1)
+    assert "COUNT(DISTINCT spotify_track_id)" in songs_sql
+    assert "scraped_at IS NOT NULL" in episodes_sql
+    assert "songs" not in episodes_sql.lower()  # no join, no confidence filter
+    assert db.executed[0][1] == (1,) and db.executed[1][1] == (1,)
+
+
+def test_playlist_ids_match_show_config() -> None:
+    """`sync_playlist.SHOWS` is a third copy of metadata `show_config` calls the single
+    source of truth. They agree today by hand, not by construction — so a playlist id
+    changed in one place would send this sync at a stale playlist with no error
+    anywhere. This test is the moment-of-drift alarm until the copies are merged."""
+    for show_id, slug in ((1, "sop"), (2, "tal")):
+        cfg = show_config.SHOWS[slug]
+        assert cfg.show_id == show_id
+        assert sync_playlist.SHOWS[show_id]["playlist_id"] == cfg.spotify_playlist_id
+        assert sync_playlist.SHOWS[show_id]["name"] == cfg.spotify_playlist_name
+
+    assert set(sync_playlist.SHOWS) == {
+        cfg.show_id for cfg in show_config.shows_with_spotify()
+    }
+
+
+# =============================================================================
+# Reading the playlist: get_playlist_tracks
+# =============================================================================
+
+
+def _many(count: int, prefix: str = "t", start: int = 0) -> List[str]:
+    return [f"{prefix}{i:04d}" for i in range(start, start + count)]
+
+
+def test_the_playlist_read_walks_offsets_until_a_short_page(sleeps) -> None:
+    """101 tracks is two requests: offset 0, then offset 100. The loop advances by how
+    many items came back, so a page Spotify trims for any reason still lines up."""
+    sp = FakeSpotify(
+        playlist_pages=[playlist_page(*_many(100)), playlist_page("t0100")]
+    )
+
+    assert len(sync_playlist.get_playlist_tracks(sp, "PL")) == 101
+
+    reads = sp.calls_to("playlist_tracks")
+    assert [call.params["offset"] for call in reads] == [0, 100]
+    assert {call.params["limit"] for call in reads} == {100}
+    assert {call.params["playlist_id"] for call in reads} == {"PL"}
+    assert sleeps == [0.2]  # a pause between pages, none after the last
+
+
+def test_an_exactly_full_last_page_costs_one_more_request() -> None:
+    """A playlist whose length is a multiple of 100 can't be recognised as finished
+    until an empty page comes back — so the read always ends on a wasted request."""
+    sp = FakeSpotify(playlist_pages=[playlist_page(*_many(100))])
+
+    assert len(sync_playlist.get_playlist_tracks(sp, "PL")) == 100
+
+    assert [c.params["offset"] for c in sp.calls_to("playlist_tracks")] == [0, 100]
+
+
+def test_items_without_a_playable_track_are_skipped() -> None:
+    """Removed tracks and local files come back as an item whose `track` is null (or
+    has no id). They are skipped, never crashed on — and they do not become playlist
+    members, so the diff will not try to "restore" them."""
+    page = {
+        "items": [
+            {"track": {"id": "t1"}},
+            {"track": None},
+            {"track": {}},
+            {"track": {"id": None}},
+        ]
+    }
+    sp = FakeSpotify(playlist_pages=[page])
+
+    assert sync_playlist.get_playlist_tracks(sp, "PL") == {"t1"}
+
+
+def test_an_error_mid_pagination_returns_a_truncated_playlist(capsys) -> None:
+    """TODAY'S BEHAVIOUR, pinned not endorsed. One failed page ends the read, and the
+    caller gets the pages that did arrive with no exception and no flag — so a partly
+    read playlist is indistinguishable from a short one. The consequence is
+    `test_a_truncated_playlist_read_sends_tracks_spotify_already_has` below."""
+    sp = FakeSpotify(
+        playlist_pages=[
+            playlist_page(*_many(100)),
+            playlist_page(*_many(100, start=100)),
+        ],
+        errors={"playlist_tracks": {3: spotify_error(500)}},
+    )
+
+    found = sync_playlist.get_playlist_tracks(sp, "PL")
+
+    assert len(found) == 200  # pages 1-2 only; page 3 onwards never read
+    assert len(sp.calls_to("playlist_tracks")) == 3
+    assert "Error fetching playlist tracks" in capsys.readouterr().err
+
+
+# =============================================================================
+# Writing to the playlist: add_tracks_to_playlist
+# =============================================================================
+
+
+def _sent(sp: FakeSpotify) -> List[List[str]]:
+    """The uri lists handed to Spotify, one entry per API call."""
+    return [call.params["items"] for call in sp.calls_to("playlist_add_items")]
+
+
+def test_tracks_go_out_in_batches_of_a_hundred_in_order(sleeps) -> None:
+    """Spotify's add endpoint caps at 100 uris, so 250 tracks is 100 / 100 / 50 — and
+    every id is sent exactly once, in the order the query returned them."""
+    sp = FakeSpotify()
+    track_ids = _many(250)
+
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", track_ids) == 250
+
+    assert [len(batch) for batch in _sent(sp)] == [100, 100, 50]
+    assert [uri for batch in _sent(sp) for uri in batch] == [
+        f"spotify:track:{tid}" for tid in track_ids
+    ]
+    assert {c.params["playlist_id"] for c in sp.calls_to("playlist_add_items")} == {"PL"}
+    assert sleeps == [0.5, 0.5, 0.5]  # API_DELAY after each accepted batch
+
+
+def test_a_rate_limited_batch_is_retried_whole_after_the_header_delay(sleeps) -> None:
+    """429 is the one error worth waiting on. The retry re-sends the SAME 100 uris —
+    Spotify rejected the batch outright, so no partial write has to be reasoned about."""
+    sp = FakeSpotify(errors={"playlist_add_items": {1: rate_limited(2)}})
+
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", _many(150)) == 150
+
+    assert [len(batch) for batch in _sent(sp)] == [100, 100, 50]
+    assert _sent(sp)[0] == _sent(sp)[1]  # the same batch, not the next one
+    assert sleeps == [3, 0.5, 0.5]  # Retry-After 2, plus the one second production adds
+
+
+def test_a_rate_limit_with_no_retry_after_header_waits_six_seconds(sleeps) -> None:
+    """Spotify does not always send the header. The fallback is 5 + 1, not zero — a
+    tight retry loop against a rate limiter is how a soft limit becomes a hard one."""
+    sp = FakeSpotify(errors={"playlist_add_items": {1: rate_limited()}})
+
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", ["t1"]) == 1
+
+    assert sleeps == [6, 0.5]
+
+
+def test_a_permanent_rate_limit_gives_up_after_three_attempts(sleeps) -> None:
+    """TODAY'S BEHAVIOUR, pinned not endorsed. The batch is abandoned after MAX_RETRIES
+    with no raise: `added` silently undercounts and the caller reports success."""
+    sp = FakeSpotify(errors={"playlist_add_items": rate_limited(2)})
+
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", _many(50)) == 0
+
+    assert len(sp.calls_to("playlist_add_items")) == sync_playlist.MAX_RETRIES == 3
+    assert sleeps == [3, 3, 3]  # it waits after the final attempt too, for nothing
+
+
+def test_a_non_rate_limit_error_drops_that_batch_and_keeps_going(sleeps, capsys) -> None:
+    """TODAY'S BEHAVIOUR, pinned not endorsed. 100 of 250 tracks never reach the
+    playlist, `added` comes back 150, nothing raises, and the run exits 0. The only
+    evidence is a line on stderr in a log nobody reads on a green run."""
+    sp = FakeSpotify(errors={"playlist_add_items": {2: spotify_error(500)}})
+
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", _many(250)) == 150
+
+    assert [len(batch) for batch in _sent(sp)] == [100, 100, 50]  # no retry of batch 2
+    assert "Error adding tracks" in capsys.readouterr().err
+
+
+def test_an_empty_track_list_never_calls_spotify() -> None:
+    sp = FakeSpotify()
+
+    assert sync_playlist.add_tracks_to_playlist(sp, "PL", []) == 0
+
+    assert sp.calls == []
+
+
+# =============================================================================
+# The public blurb: update_playlist_description
+# =============================================================================
+
+
+def _description(sp: FakeSpotify) -> Optional[str]:
+    calls = sp.calls_to("playlist_change_details")
+    return calls[-1].params["description"] if calls else None
+
+
+def test_the_public_description_is_the_template_filled_in(monkeypatch) -> None:
+    """This string is the only thing a stranger opening the playlist reads, so it is
+    written out in full here rather than rebuilt from the template — a test that
+    reuses DESCRIPTION_TEMPLATE would pass no matter what the template said.
+
+    `datetime` is imported *inside* the function, so it cannot be monkeypatched; the
+    expected month is computed the same way instead."""
+    db = _FakeDB({"songs": 4586}, {"episodes": 812})
+    monkeypatch.setattr(sync_playlist, "get_db_connection", db)
+    sp = FakeSpotify()
+
+    sync_playlist.update_playlist_description(sp, "PL", 1)
+
+    assert sp.calls_to("playlist_change_details")[0].params["playlist_id"] == "PL"
+    assert _description(sp) == (
+        "4,586 songs across 812 SOP episodes. "
+        f"Last updated {datetime.now().strftime('%m/%y')}. "
+        "Support: buymeacoffee.com/kevinhg. Requests: hi@kevinhg.com."
+    )
+
+
+def test_the_description_names_the_show_it_belongs_to(monkeypatch) -> None:
+    """Two playlists share one template, so the acronym is the only thing separating
+    them. Getting it from the wrong show would publish TAL's blurb on SOP's playlist."""
+    db = _FakeDB({"songs": 837}, {"episodes": 401})
+    monkeypatch.setattr(sync_playlist, "get_db_connection", db)
+    sp = FakeSpotify()
+
+    sync_playlist.update_playlist_description(sp, "PL", 2)
+
+    assert _description(sp).startswith("837 songs across 401 TAL episodes.")
+
+
+def test_a_failed_description_update_only_warns(monkeypatch, capsys) -> None:
+    """Deliberate: the description is cosmetic and the tracks are already added by the
+    time it runs, so a failure here must not fail a sync that worked. Pinned so a
+    future refactor doesn't quietly make the cosmetic step fatal."""
+    db = _FakeDB({"songs": 1}, {"episodes": 1})
+    monkeypatch.setattr(sync_playlist, "get_db_connection", db)
+    sp = FakeSpotify(errors={"playlist_change_details": spotify_error(403)})
+
+    sync_playlist.update_playlist_description(sp, "PL", 1)  # must not raise
+
+    assert "Could not update description" in capsys.readouterr().err
+
+
+# =============================================================================
+# The whole sync: sync_show
+# =============================================================================
+
+SOP_PLAYLIST = sync_playlist.SHOWS[1]["playlist_id"]
+
+
+def _wire_sync(
+    monkeypatch,
+    db_tracks: Sequence[str],
+    sp: FakeSpotify,
+    songs: int = 0,
+    episodes: int = 0,
+) -> _FakeDB:
+    """Point `sync_show` at fakes: the matched-track query, the two description counts,
+    and the Spotify client it would otherwise build with real OAuth."""
+    db = _FakeDB(_rows(*db_tracks), {"songs": songs}, {"episodes": episodes})
+    monkeypatch.setattr(sync_playlist, "get_db_connection", db)
+    monkeypatch.setattr(sync_playlist, "get_spotify_client", lambda cache_path=None: sp)
+    return db
+
+
+def test_an_unknown_show_is_refused_before_any_database_or_spotify_call(monkeypatch) -> None:
+    """The guard is the first statement in the function, which is what makes the CLI's
+    exit 2 honest: an unknown show can't have half-run before it fails."""
+    monkeypatch.setattr(sync_playlist, "get_db_connection", _explode)
+    monkeypatch.setattr(sync_playlist, "get_spotify_client", _explode)
+
+    with pytest.raises(ValueError) as exc:
+        sync_playlist.sync_show(show_id=9999)
+
+    assert "9999" in str(exc.value)
+
+
+def test_a_show_with_no_matched_tracks_never_builds_a_spotify_client(monkeypatch) -> None:
+    """Nothing to sync means no OAuth, no API call, and a zeroed stats dict — which is
+    what lets the orchestrator run this step for a show that had a quiet week."""
+    db = _FakeDB(_rows())
+    monkeypatch.setattr(sync_playlist, "get_db_connection", db)
+    monkeypatch.setattr(sync_playlist, "get_spotify_client", _explode)
+
+    assert sync_playlist.sync_show(show_id=1) == {
+        "db_tracks": 0,
+        "existing_tracks": 0,
+        "new_tracks": 0,
+        "added": 0,
+    }
+
+
+def test_only_the_tracks_missing_from_the_playlist_are_added(monkeypatch) -> None:
+    """The overlapping case — the one that runs every week. `b` is already there and is
+    not sent again; this single list comprehension is the entire dedup."""
+    sp = FakeSpotify(playlist_pages=[playlist_page("b", "z")])
+    _wire_sync(monkeypatch, ["a", "b", "c"], sp, songs=3, episodes=2)
+
+    stats = sync_playlist.sync_show(show_id=1)
+
+    assert stats == {"db_tracks": 3, "existing_tracks": 2, "new_tracks": 2, "added": 2}
+    add = sp.calls_to("playlist_add_items")[0]
+    assert add.params["items"] == ["spotify:track:a", "spotify:track:c"]
+    assert add.params["playlist_id"] == SOP_PLAYLIST
+
+
+def test_a_playlist_with_nothing_in_common_receives_every_matched_track(monkeypatch) -> None:
+    """The disjoint case: the playlist holds two tracks the database has never heard
+    of. Everything matched goes in and the strangers are left alone — which is also
+    what a sync pointed at the WRONG playlist id looks like, hence the drift guard."""
+    sp = FakeSpotify(playlist_pages=[playlist_page("y", "z")])
+    _wire_sync(monkeypatch, ["a", "b"], sp, songs=2, episodes=1)
+
+    stats = sync_playlist.sync_show(show_id=1)
+
+    assert stats == {"db_tracks": 2, "existing_tracks": 2, "new_tracks": 2, "added": 2}
+    assert sp.calls_to("playlist_add_items")[0].params["items"] == [
+        "spotify:track:a",
+        "spotify:track:b",
+    ]
+
+
+def test_a_playlist_already_holding_everything_still_gets_a_fresh_description(
+    monkeypatch,
+) -> None:
+    """The contained case, and a deliberate asymmetry: with nothing to add the sync
+    returns early — but it updates the description on the way out, because the date in
+    that string is the only public evidence the automation is still alive."""
+    sp = FakeSpotify(playlist_pages=[playlist_page("a", "b", "extra")])
+    _wire_sync(monkeypatch, ["a", "b"], sp, songs=2, episodes=1)
+
+    stats = sync_playlist.sync_show(show_id=1)
+
+    assert stats == {"db_tracks": 2, "existing_tracks": 3, "new_tracks": 0, "added": 0}
+    assert sp.calls_to("playlist_add_items") == []
+    assert len(sp.calls_to("playlist_change_details")) == 1
+
+
+def test_a_dry_run_reads_the_playlist_and_writes_nothing(monkeypatch) -> None:
+    """--dry-run is the safe way to ask "what would this do?", so it must reach the
+    diff (a read) and stop before both writes."""
+    sp = FakeSpotify(playlist_pages=[playlist_page("b")])
+    _wire_sync(monkeypatch, ["a", "b", "c"], sp)
+
+    stats = sync_playlist.sync_show(show_id=1, dry_run=True)
+
+    assert stats == {"db_tracks": 3, "existing_tracks": 1, "new_tracks": 2, "added": 0}
+    assert sp.calls_to("playlist_tracks")
+    assert sp.calls_to("playlist_add_items") == []
+    assert sp.calls_to("playlist_change_details") == []
+
+
+def test_a_dry_run_with_nothing_to_add_leaves_the_description_alone(monkeypatch) -> None:
+    """The other side of the asymmetry above: the early-return branch checks dry_run
+    before touching the description, so a dry run is read-only on both paths."""
+    sp = FakeSpotify(playlist_pages=[playlist_page("a", "b")])
+    _wire_sync(monkeypatch, ["a", "b"], sp)
+
+    stats = sync_playlist.sync_show(show_id=1, dry_run=True)
+
+    assert stats["new_tracks"] == 0
+    assert sp.calls_to("playlist_change_details") == []
+
+
+def test_a_truncated_playlist_read_sends_tracks_spotify_already_has(monkeypatch) -> None:
+    """TODAY'S BEHAVIOUR, pinned not endorsed — the duplicate-tracks incident, end to
+    end. The playlist really holds all 102 tracks, but page 2 of the read fails, so
+    `get_playlist_tracks` returns 100 and the diff calls the other two "new". They are
+    sent to a playlist that already contains them; Spotify accepts duplicates and
+    nothing in this repo ever removes one, so only a human can undo it."""
+    already_there = _many(100, "p")
+    unread_page_two = ["p0100", "p0101"]
+    sp = FakeSpotify(
+        playlist_pages=[playlist_page(*already_there)],
+        errors={"playlist_tracks": {2: spotify_error(500)}},
+    )
+    _wire_sync(monkeypatch, already_there + unread_page_two, sp, songs=102, episodes=9)
+
+    stats = sync_playlist.sync_show(show_id=1)
+
+    assert stats["existing_tracks"] == 100  # the playlist actually holds 102
+    assert stats["new_tracks"] == 2
+    assert sp.calls_to("playlist_add_items")[0].params["items"] == [
+        "spotify:track:p0100",
+        "spotify:track:p0101",
+    ]
+
+
+class _NoRemovalSpotify(FakeSpotify):
+    """FakeSpotify with a tripwire: reaching for any method it does not define — every
+    `playlist_remove_*` / `playlist_replace_*` / reorder call included — raises instead
+    of quietly succeeding. `sync_playlist` only ever catches `SpotifyException`, so an
+    AttributeError from here surfaces as a failed test rather than a swallowed one."""
+
+    def __getattr__(self, name: str) -> Any:
+        raise AttributeError(
+            f"sync_playlist called sp.{name}() — this sync is append-only: "
+            "playlist_add_items and playlist_change_details, never remove or replace"
+        )
+
+
+def test_the_sync_never_removes_or_replaces_tracks(monkeypatch) -> None:
+    """The invariant that makes a bad run recoverable: a wrong diff can only ever add
+    too much, never wipe a 4,586-track playlist. True today by absence — worth a test
+    so it stays true by intent."""
+    sp = _NoRemovalSpotify(playlist_pages=[playlist_page("b")])
+    _wire_sync(monkeypatch, ["a", "b", "c"], sp, songs=3, episodes=1)
+
+    assert sync_playlist.sync_show(show_id=1)["added"] == 2
+
+    assert {call.method for call in sp.calls} == {
+        "playlist_tracks",
+        "playlist_add_items",
+        "playlist_change_details",
+    }
+
+
+def test_no_pipeline_code_can_remove_a_track_from_a_playlist() -> None:
+    """The same invariant one level up: nothing anywhere in `pipeline/` calls a
+    destructive Spotify playlist method. If a future feature needs one, this test is
+    where the conversation about backups and dry-runs starts."""
+    pipeline_dir = Path(sync_playlist.__file__).resolve().parent
+    scanned = [
+        path
+        for path in pipeline_dir.rglob("*.py")
+        # A local venv lives at pipeline/venv/ and carries spotipy's own client, which
+        # of course defines the removal methods. CI has no venv; both cases are excluded
+        # by name so this never depends on which machine runs it.
+        if not any("venv" in part or part == "site-packages" for part in path.parts)
+    ]
+    # Guard against the guard passing because it read nothing (a moved file, an empty
+    # checkout): spotipy's own client lives under venv/ and is deliberately excluded.
+    assert any(path.name == "sync_playlist.py" for path in scanned)
+
+    offenders = sorted(
+        str(path.relative_to(pipeline_dir))
+        for path in scanned
+        if any(
+            marker in path.read_text(encoding="utf-8", errors="ignore")
+            for marker in ("playlist_remove", "playlist_replace", "playlist_reorder")
+        )
+    )
+
+    assert offenders == [], f"destructive playlist call in {offenders}"
