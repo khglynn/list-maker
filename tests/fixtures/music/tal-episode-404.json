@@ -1,0 +1,12 @@
+{
+  "_fixture_note": "Real capture. The markdown body is the actual thisamericanlife.org 404 page, fetched read-only via Firecrawl on 2026-09-04 by requesting a deliberately invalid episode URL. The db_id and url wrapper fields are constructed to look like a plausible not-yet-published TAL discovery row (fetch.py's own envelope shape: db_id/url/success/markdown/metadata/fetched_at) since a real 404 row is not something the live pipeline has sitting in its fetched/ cache to copy verbatim -- only the markdown content, which is what parse_episode actually reads, is unmodified real text. This key itself is ignored by parse_episode.",
+  "db_id": 9102,
+  "url": "https://www.thisamericanlife.org/897/a-slug-that-never-shipped",
+  "success": true,
+  "markdown": "We use cookies and other tracking technologies to enhance your browsing experience. If you continue to use our site, you agree to the use of such cookies. For more info, see our [privacy policy](https://www.thisamericanlife.org/page/privacy-policy). [learn more about cookies](https://www.thisamericanlife.org/page/privacy-policy)\n\n[Skip to main content](https://www.thisamericanlife.org/897/a-slug-that-never-shipped#content)\n\nThe requested page \"/897/a-slug-that-never-shipped\" could not be found.",
+  "metadata": {
+    "title": "Page not found - This American Life",
+    "statusCode": 404
+  },
+  "fetched_at": "2026-09-04T00:00:00"
+}
