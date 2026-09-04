@@ -332,9 +332,20 @@ async function verifyPreviousDispatches(env, now) {
       );
       break;
     }
-    const record = await withDispatchLog(env, `get ${key.name}`, (kv) =>
-      kv.get(key.name, { type: "json" })
-    );
+    // A throw and a null mean opposite things here, so they cannot share a path.
+    // A null is benign — the key was listed and its TTL expired before the read —
+    // and must stay silent. A throw (a per-key KV error, or stored JSON that will
+    // not parse) means this dispatch went unexamined, which belongs in the same
+    // yellow bucket as a GitHub 502 below. env.DISPATCH_LOG is guaranteed here: a
+    // missing binding already returned above.
+    let record;
+    try {
+      record = await env.DISPATCH_LOG.get(key.name, { type: "json" });
+    } catch (e) {
+      console.error(`list-maker-cron: KV get ${key.name} failed — ${e.message}`);
+      problems.push(`${key.name}: KV read failed — ${e.message}`);
+      continue; // left in place; the TTL bounds the retries
+    }
     if (!record) continue;
     const age = now.getTime() - new Date(record.dispatchedAt).getTime();
     if (!Number.isFinite(age)) {

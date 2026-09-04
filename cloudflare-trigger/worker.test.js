@@ -548,6 +548,35 @@ test("a pile-up of records is judged a batch at a time, never all at once", asyn
 
 // --- the invariant: checking never breaks starting ---------------------------
 
+test("a receipt that cannot be read is reported, and kept for the next fire", async () => {
+  const kv = fakeKv(yesterdayRecord());
+  kv.failOn = "get";
+  const impl = fakeFetch(okRoutes([run("2026-09-02T20:30:37Z")]));
+  await withFetch(impl, () =>
+    runScheduled({ GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv })
+  );
+  const texts = slackTexts(impl);
+  assert.equal(texts.length, 1);
+  assert.match(texts[0], /could not be checked/, "the checker failed, not the pipeline");
+  assert.ok(
+    kv.store.has(dispatchKey("entities.yml", YESTERDAY)),
+    "an unread receipt is not a judged one — keep it"
+  );
+});
+
+test("a receipt whose key vanished between list and read stays silent", async () => {
+  // The benign twin of the test above: the key was listed, then its TTL expired
+  // before the read. Nothing went unexamined, so nothing should be said.
+  const kv = fakeKv(yesterdayRecord());
+  const realGet = kv.get.bind(kv);
+  kv.get = async (name, opts) => (name.startsWith("dispatch:") ? null : realGet(name, opts));
+  const impl = fakeFetch(okRoutes([run("2026-09-02T20:30:37Z")]));
+  await withFetch(impl, () =>
+    runScheduled({ GH_PAT: "pat", SLACK_WEBHOOK_URL: SLACK, DISPATCH_LOG: kv })
+  );
+  assert.deepEqual(slackTexts(impl), []);
+});
+
 test("a KV listing that fails is not reported as a clean pass", async () => {
   // The trap: swallowing this returned [], which wrote meta:last_verify with an empty
   // results array — indistinguishable from a day where everything was checked and
