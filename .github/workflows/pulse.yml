@@ -3,8 +3,14 @@ name: Pulse Report (health heartbeat)
 # A POSITIVE heartbeat to Slack: per-show freshness, library counts, any actionable
 # failures, and an "all systems firing" confirmation. Complements the push failure-alerts
 # (which only fire FROM a run) by covering the one blind spot — if the pulse stops
-# arriving, the trigger itself is down. For an ACTIVE dead-trigger alert, pair with a
-# Sentry Cron Monitor check-in in the Cloudflare Worker.
+# arriving, the trigger itself is down. But a heartbeat you have to NOTICE is missing is
+# a weak alarm, and this one only beats twice a month.
+#
+# The ACTIVE dead-trigger alert this comment used to call for (a Sentry Cron Monitor
+# check-in) exists as of 2026-09-03 without a new vendor: the Cloudflare Worker records
+# every fire and serves it at GET /health, and fleet-watchdog — a Worker in
+# khglynn/self-hosted-mcps that already polls Kevin's other services — alerts when that
+# timestamp goes stale. See cloudflare-trigger/README.md § "Did the work actually run?".
 #
 # No schedule: — the Cloudflare Worker drives the cadence (1st + 15th), same as the rest
 # of the pipeline, so there's no GitHub 60-day-disable. Since 2026-09-01 the Worker asks
