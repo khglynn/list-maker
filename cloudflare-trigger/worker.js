@@ -121,6 +121,18 @@ export function dispatchKey(workflow, dispatchedAtIso) {
 // The tolerance absorbs clock skew only; observed lag from dispatch to created_at
 // is under a second (2026-09-03: cron 20:30:00 → created_at 20:30:37, which is
 // when the POST actually landed).
+//
+// KNOWN EDGE, accepted: two dispatches through this Worker inside the tolerance
+// window — a manual ?token= trigger fired minutes BEFORE the cron — give the
+// cron's record the manual run to read, because that run is the earliest one
+// after (dispatchedAt - tolerance). Usually harmless: both dispatches ask for the
+// same work, the second queues behind the first, and the verdict answers "did a
+// run succeed", which is the question worth asking. The residue is that a failure
+// of the LATER run could go unreported, so every alert carries the run's URL and
+// meta:last_verify records run_url for every verdict — the reader can always see
+// which run was judged. If that ever bites, the fix is to let a run be claimed by
+// only one record per verify pass (records sort oldest-first on the key), not to
+// shrink the tolerance.
 export function correlateRun(runs, dispatchedAtIso, toleranceMs = 5 * 60 * 1000) {
   const floor = new Date(dispatchedAtIso).getTime() - toleranceMs;
   if (!Number.isFinite(floor)) return null;
