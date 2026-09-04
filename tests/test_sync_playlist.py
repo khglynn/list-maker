@@ -634,7 +634,12 @@ def test_no_pipeline_code_can_remove_a_track_from_a_playlist() -> None:
     where the conversation about backups and dry-runs starts."""
     pipeline_dir = Path(sync_playlist.__file__).resolve().parent
     scanned = [
-        path for path in pipeline_dir.rglob("*.py") if "venv" not in path.parts
+        path
+        for path in pipeline_dir.rglob("*.py")
+        # A local venv lives at pipeline/venv/ and carries spotipy's own client, which
+        # of course defines the removal methods. CI has no venv; both cases are excluded
+        # by name so this never depends on which machine runs it.
+        if not any("venv" in part or part == "site-packages" for part in path.parts)
     ]
     # Guard against the guard passing because it read nothing (a moved file, an empty
     # checkout): spotipy's own client lives under venv/ and is deliberately excluded.
