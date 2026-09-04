@@ -744,6 +744,18 @@ def test_run_completeness_fails_and_names_the_short_run(monkeypatch) -> None:
     ]
 
 
+def test_run_completeness_does_not_silently_drop_a_null_expectation() -> None:
+    """`WHERE actual <> expected` evaluates to NULL on a null expectation and drops the
+    row — the silent skip this check exists to prevent. IS DISTINCT FROM keeps it."""
+    import inspect
+
+    import pipeline.data_health as dh
+
+    source = inspect.getsource(dh.check_ai_run_completeness)
+    assert "IS DISTINCT FROM" in source
+    assert "actual_mentions <> expected_mentions" not in source
+
+
 def test_run_completeness_skips_runs_written_before_expected_mentions_existed() -> None:
     """The one line between a clean rollout and every historical run flooding red: 628
     runs (2026-09-03) predate expected_mentions and have no honest number to compare."""

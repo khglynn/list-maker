@@ -891,8 +891,11 @@ def check_ai_run_completeness(conn) -> CheckResult:
             AND r.parameters ? 'expected_mentions'
           GROUP BY r.id, s.slug, r.batch_name, r.parameters
         )
+        -- IS DISTINCT FROM, not <>: a row whose expected_mentions key exists but holds
+        -- null is malformed, and plain <> would evaluate to NULL and quietly drop it —
+        -- the silent-skip this check exists to prevent.
         SELECT * FROM run_counts
-        WHERE actual_mentions <> expected_mentions
+        WHERE actual_mentions IS DISTINCT FROM expected_mentions
         ORDER BY run_id;
         """,
     )
