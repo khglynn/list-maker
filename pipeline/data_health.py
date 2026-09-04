@@ -19,7 +19,7 @@ from typing import Any, Iterable
 # Allow running as `python pipeline/data_health.py` from the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import get_db_connection, load_environment, post_slack
-from feed_check import feed_recent_dates
+from feed_check import FeedEpisode, feed_recent_dates, feed_recent_episodes
 from show_config import (
     BLOG_NOTION_SHOWS,
     SHOWS,
@@ -112,6 +112,66 @@ def split_missing_feed_dates(
     cutoff = today - timedelta(days=grace_days)
     missing = [d for d in feed if db_latest is None or d > db_latest]
     return [d for d in missing if d <= cutoff], [d for d in missing if d > cutoff]
+
+
+@dataclass
+class HeldEpisodes:
+    """What we hold for one show, in the two forms the importer itself uses for dedup.
+
+    `urls` is `episodes.url` — the identity. `title_dates` is (lower(title),
+    publish_date), the fallback the Taddy importer tries FIRST when deciding whether an
+    episode is already present (import_transcripts.upsert_episode). Keeping both here is
+    what makes "do we hold this feed episode?" answer the same question the importer
+    would: if the importer would consider it present, no future import can ever create
+    it, so calling it missing would be an alarm nothing can clear.
+    """
+
+    urls: set[str]
+    title_dates: set[tuple[str, date]]
+    latest: date | None = None
+
+
+def _feed_episode_is_held(episode: FeedEpisode, held: HeldEpisodes) -> bool:
+    """Do we already hold this feed episode?
+
+    Identity first: `episodes.url` is UNIQUE and stable across a re-date (both upsert
+    paths are ON CONFLICT (url) with COALESCE on publish_date), so a Taddy re-dating
+    cannot make a held episode look missing.
+
+    Then title+date, for rows written before a show's importer changed hands — they hold
+    the same episode under an older url scheme. Measured against live Neon 2026-09-03:
+    3 of TAL's 15 recent feed episodes are exactly this (old bonus episodes Taddy still
+    returns in its "latest 15", stored under thisamericanlife.org urls), and without this
+    fallback TAL would report BEHIND 3 forever.
+    """
+    if episode.identity in held.urls:
+        return True
+    title = episode.title.strip().lower()
+    return bool(title) and (title, episode.publish_date) in held.title_dates
+
+
+def split_missing_feed_episodes(
+    feed: Iterable[FeedEpisode], held: HeldEpisodes, grace_days: int, today: date | None = None
+) -> tuple[list[FeedEpisode], list[FeedEpisode]]:
+    """Identity-based twin of split_missing_feed_dates: (overdue, pending).
+
+    A feed episode is MISSING when we do not hold it — a set question, not a date one.
+    That is the whole fix: split_missing_feed_dates asks "is this newer than our newest?",
+    so an episode we never imported sitting BEHIND our newest was structurally invisible
+    no matter how missing it was, and a re-dated episode we do hold read as brand new.
+    Here a hole in the middle of a series is just another set-difference entry.
+
+    Grading is unchanged — each missing episode's OWN date against the show's
+    feed_grace_days cutoff, so "published but not imported yet" is still pending, not an
+    alarm. The grace-window contract is identical; only membership changed.
+    """
+    today = today or _today()
+    cutoff = today - timedelta(days=grace_days)
+    missing = [ep for ep in feed if not _feed_episode_is_held(ep, held)]
+    return (
+        [ep for ep in missing if ep.publish_date <= cutoff],
+        [ep for ep in missing if ep.publish_date > cutoff],
+    )
 
 
 def _rows(conn, sql: str, params: Iterable[Any] | None = None) -> list[dict[str, Any]]:
@@ -494,14 +554,56 @@ def check_notion_sync_freshness(conn) -> CheckResult:
     return CheckResult("notion_sync_freshness", status, summary, failures + warnings)
 
 
+def _held_episodes_by_show(conn) -> dict[str, HeldEpisodes]:
+    """Every episode we hold, per show, in the forms the feed check compares against.
+
+    One round trip, deliberately UNBOUNDED (~4,300 rows fleet-wide on 2026-09-03). A
+    rolling date window is the obvious optimisation and it is a trap: Culture Gabfest
+    ended 2026-07-01 and its RSS still serves 15 pre-July episodes, so any window that
+    eventually excludes them would report the entire show as missing. If this table ever
+    gets big enough to matter, scope it by show_id per iteration — never by date.
+
+    LEFT JOIN, and no `url IS NOT NULL` filter, so `latest` stays exactly the
+    MAX(publish_date) the old query returned (a show with no episodes still gets an
+    entry, and a row with a NULL url still counts toward the date shown in Slack).
+    """
+    rows = _rows(
+        conn,
+        """
+        SELECT s.slug, e.url, e.title, e.publish_date::date AS publish_date
+        FROM shows s LEFT JOIN episodes e ON e.show_id = s.id
+        """,
+    )
+    held: dict[str, HeldEpisodes] = {}
+    for row in rows:
+        entry = held.setdefault(row["slug"], HeldEpisodes(urls=set(), title_dates=set()))
+        url, title, published = row.get("url"), row.get("title"), row.get("publish_date")
+        if url:
+            entry.urls.add(url)
+        if title and published:
+            entry.title_dates.add((title.strip().lower(), published))
+        if published and (entry.latest is None or published > entry.latest):
+            entry.latest = published
+    return held
+
+
 def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckResult:
     """SECOND-SOURCE freshness: is our import behind each show's REAL feed?
 
     episode_freshness_by_show only knows "days since OUR latest", which can't tell a show
     on break from an import that silently broke. This asks each feed (Taddy / Megaphone
-    RSS via feed_check) what the latest episode is — if the feed is ahead of us, we're
-    behind and missing episodes. A feed we can't reach is reported, not failed (don't cry
-    wolf on a flaky feed); a confirmed BEHIND is a real, actionable failure.
+    RSS via feed_check) which episodes it has, and compares that to what we hold. A feed
+    we can't reach is reported, not failed (don't cry wolf on a flaky feed); a confirmed
+    BEHIND is a real, actionable failure.
+
+    Two comparisons, chosen per show by ShowConfig.episode_identity:
+      - BY IDENTITY where the feed's episode ids are the ids we store (every show but
+        SOP). A set difference, so it sees a hole in the MIDDLE of a series — which
+        MAX(publish_date) never could — and a re-dated episode we hold is a non-event,
+        because identity doesn't move when a date does (the TAL false BEHIND, DEVLOG
+        2026-09-01).
+      - BY DATE for SOP, whose rows come from its website scraper while Taddy is only its
+        second source, so there is no id to compare. Unchanged from before.
 
     `slugs` narrows the check to specific shows. The music workflow passes the one show
     it just ran, so a single Taddy call proves that run actually discovered something,
@@ -513,15 +615,7 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
     episode simply hadn't met its Wednesday import yet.
     """
     wanted = set(slugs) if slugs is not None else None
-    rows = _rows(
-        conn,
-        """
-        SELECT s.slug, MAX(e.publish_date)::date AS db_latest
-        FROM shows s LEFT JOIN episodes e ON e.show_id = s.id
-        GROUP BY s.slug
-        """,
-    )
-    db_latest = {r["slug"]: r["db_latest"] for r in rows}
+    held_by_show = _held_episodes_by_show(conn)
     failures: list[str] = []
     warnings: list[str] = []
     details: list[str] = []
@@ -533,24 +627,59 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             # No feed to verify against — skipping avoids a permanent UNVERIFIED warn.
             details.append(f"{slug}: curated source — no feed second-source (skipped)")
             continue
-        latest = db_latest.get(slug)
-        feed = feed_recent_dates(cfg)
-        if not feed:
-            # None = couldn't get a trustworthy answer (unreachable / error / empty). A
-            # persistent one means the second source itself is broken — surface it as a
-            # WARN so it can't hide as a silent pass, without crying wolf on a flaky run.
-            warnings.append(f"{slug}: feed UNVERIFIED — second source unreachable")
-            continue
-        overdue, pending = split_missing_feed_dates(feed, latest, cfg.feed_grace_days)
+        held = held_by_show.get(slug) or HeldEpisodes(urls=set(), title_dates=set())
+        latest = held.latest
+        # UNVERIFIED = None from either reader: couldn't get a trustworthy answer
+        # (unreachable / error / empty). A persistent one means the second source itself
+        # is broken — surface it as a WARN so it can't hide as a silent pass, without
+        # crying wolf on a flaky run.
+        if cfg.episode_identity:
+            feed_episodes = feed_recent_episodes(cfg)
+            if not feed_episodes:
+                warnings.append(f"{slug}: feed UNVERIFIED — second source unreachable")
+                continue
+            overdue_eps, pending_eps = split_missing_feed_episodes(
+                feed_episodes, held, cfg.feed_grace_days
+            )
+            overdue = [ep.publish_date for ep in overdue_eps]
+            pending = [ep.publish_date for ep in pending_eps]
+            feed_latest = feed_episodes[0].publish_date
+            # Pre-migration rows carry legacy url schemes (hard-fork's three 2022 rows,
+            # ai-daily-brief's pre-2026-05 ones), so they can only be matched by the
+            # title+date fallback. Harmless at limit=15 — no show's cadence reaches back
+            # that far — but a future limit bump would start leaning on that fallback for
+            # older and older episodes, where titles have had more chances to be edited.
+            everything_missing = len(overdue) + len(pending) == len(feed_episodes)
+        else:
+            # No comparable identity (SOP: its scraper writes the urls, Taddy is only the
+            # second source). Dates are all we can honestly compare — see
+            # ShowConfig.episode_identity.
+            feed_dates = feed_recent_dates(cfg)
+            if not feed_dates:
+                warnings.append(f"{slug}: feed UNVERIFIED — second source unreachable")
+                continue
+            overdue, pending = split_missing_feed_dates(feed_dates, latest, cfg.feed_grace_days)
+            feed_latest = feed_dates[0]
+            everything_missing = False  # a date compare cannot tell this apart
         if overdue:
+            # "Every one of them" is also the signature of an importer that changed its
+            # url scheme, which would otherwise read as a catastrophic outage. Say both,
+            # so the alert names what to check instead of just a number.
+            scheme_hint = (
+                " — EVERY recent feed episode is missing; check the importer, and whether"
+                " the url scheme it writes still matches ShowConfig.episode_identity"
+                if everything_missing
+                else ""
+            )
             failures.append(
-                f"{slug}: BEHIND {len(overdue)} — feed at {feed[0]}, we have {latest} "
-                f"(oldest missing {min(overdue)}, past the {cfg.feed_grace_days}-day import window)"
+                f"{slug}: BEHIND {len(overdue)} — feed at {feed_latest}, we have {latest} "
+                f"(oldest missing {min(overdue)}, past the {cfg.feed_grace_days}-day import "
+                f"window){scheme_hint}"
             )
         elif pending:
             details.append(
-                f"{slug}: caught up ({latest}) — {len(pending)} newer feed episode(s) pending "
-                f"inside the {cfg.feed_grace_days}-day import window (feed at {feed[0]})"
+                f"{slug}: caught up ({latest}) — {len(pending)} feed episode(s) pending "
+                f"inside the {cfg.feed_grace_days}-day import window (feed at {feed_latest})"
             )
         else:
             details.append(f"{slug}: caught up ({latest})")
