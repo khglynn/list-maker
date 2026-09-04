@@ -289,13 +289,34 @@ def test_a_hit_without_a_full_transcript_keeps_the_hit(monkeypatch) -> None:
 
 
 def test_no_hit_never_asks_for_a_transcript(monkeypatch) -> None:
-    def _never(*_a, **_k):
-        raise AssertionError("no uuid to fetch a transcript for")
+    """No hit means no uuid, so the transcript call must be short-circuited rather
+    than attempted and rescued.
 
+    Getting this test to bite took two passes, both worth recording.
+
+    A canary that RAISES is invisible here: try_taddy_full wraps both calls in one
+    `except Exception` and returns exactly (None, None) — the value this test
+    asserts — so deleting the `if hit else None` at save_episode.py:102 left all 39
+    tests green.
+
+    A canary that RECORDS is not enough either, and that is the subtle half:
+    without the short-circuit, `hit["uuid"]` raises TypeError while evaluating the
+    ARGUMENT, before taddy_transcript_text is ever called. The recorder stays empty
+    and the test still passes.
+
+    So the assertion that actually distinguishes the two worlds is that nothing was
+    RESCUED: on the no-hit path the except branch must never run. Both checks are
+    kept — the recorder says "not called", the warning says "not swallowed"."""
+    calls: list = []
+    warnings: list = []
     monkeypatch.setattr(save_episode, "taddy_find_episode", lambda *a, **k: None)
-    monkeypatch.setattr(save_episode, "taddy_transcript_text", _never)
+    monkeypatch.setattr(save_episode, "taddy_transcript_text",
+                        lambda *a, **k: calls.append(a) or "a transcript we never asked for")
+    monkeypatch.setattr(save_episode.log, "warning", lambda *a, **k: warnings.append(a))
 
     assert try_taddy_full("Election Night", "Science Vs", "u", "k") == (None, None)
+    assert calls == []
+    assert warnings == []  # (None, None) by short-circuit, not by rescue
 
 
 # ── parse_og ─────────────────────────────────────────────────────────────────
@@ -359,18 +380,23 @@ def test_a_non_castro_page_reports_no_show_and_falls_back_to_the_title_tag(monke
 
 def test_firecrawl_is_preferred_when_a_key_is_present(monkeypatch) -> None:
     """castro.fm TLS-resets repeated raw hits, so the proxy goes first; when it
-    answers, no raw request is made at all."""
-    def _never(*_a, **_k):
-        raise AssertionError("raw httpx must not run when Firecrawl answered")
+    answers, no raw request is made at all.
 
+    Recording rather than raising, for the reason spelled out in
+    test_no_hit_never_asks_for_a_transcript: this module rescues broadly, and a
+    canary that raises can be swallowed into a passing assertion."""
+    raw: list = []
     monkeypatch.setenv("FIRECRAWL_API_KEY", "fc-test")
     monkeypatch.setattr(import_blog, "scrape_post", lambda url, key: {
         "metadata": {"ogTitle": "Science Vs: Are Ghosts Real? (51m)", "ogDescription": "spooky"}})
-    monkeypatch.setattr(save_episode.httpx, "get", _never)
+    monkeypatch.setattr(save_episode.httpx, "get",
+                        lambda *a, **k: raw.append(a) or _FakeResponse(
+                            '<meta property="og:title" content="A raw fetch we never asked for">'))
 
     meta = scrape_link_meta("https://castro.fm/episode/abc123")
 
     assert (meta["show"], meta["title"], meta["notes"]) == ("Science Vs", "Are Ghosts Real?", "spooky")
+    assert raw == []
 
 
 def test_a_firecrawl_failure_falls_back_to_the_raw_fetch(monkeypatch) -> None:

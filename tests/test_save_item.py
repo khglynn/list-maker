@@ -77,8 +77,10 @@ class _Result:
         self.returncode = returncode
 
 
-def _no_db(*_a, **_k):
-    raise AssertionError("get_db_connection must not be called on this path")
+# Canaries in this file RECORD rather than raise. save_item.main and save_episode
+# rescue broadly (`except Exception`), so a canary that raises can be swallowed into
+# a passing assertion — a green test that cannot fail. Asserting on a recorder
+# depends on the guard under test, not on an exception surviving the call stack.
 
 
 # ── show resolution ──────────────────────────────────────────────────────────
@@ -227,14 +229,13 @@ def test_a_pathless_pdf_url_gets_a_default_filename(monkeypatch, tmp_path) -> No
 def test_a_missing_research_folder_fails_loudly_and_never_downloads(monkeypatch, tmp_path) -> None:
     """PDF saves are a local-only action (the vault lives on Kevin's Mac). On a machine
     without it — CI — this must raise, not quietly write somewhere else."""
-    def _never(*_a, **_k):
-        raise AssertionError("no download may start when the folder is missing")
-
+    downloads: list = []
     monkeypatch.setenv("RESEARCH_DOCS_DIR", str(tmp_path / "nope" / "Documents"))
-    monkeypatch.setattr(httpx, "stream", _never)
+    monkeypatch.setattr(httpx, "stream", _FakeStream([b"x"], downloads))
 
     with pytest.raises(SystemExit):
         save_pdf("https://example.com/paper.pdf")
+    assert downloads == []  # the guard ran BEFORE the network, not after
 
 
 # ── save_url: the composed flow ──────────────────────────────────────────────
@@ -271,20 +272,22 @@ def wired(monkeypatch):
     return seen
 
 
-def test_a_pdf_url_never_opens_a_database_connection(monkeypatch, wired) -> None:
-    monkeypatch.setattr(save_item, "get_db_connection", _no_db)
-
+def test_a_pdf_url_never_opens_a_database_connection(wired) -> None:
+    # The fixture's connection factory records every connection it hands out, so an
+    # empty list is positive evidence the DB was never reached — stronger than a
+    # canary that raises, which only works if the exception survives the call stack.
     assert save_url("https://example.com/reports/paper.pdf", None) is True
     assert wired["pdf"] == ["https://example.com/reports/paper.pdf"]
+    assert wired["conns"] == []
     assert wired["ingest"] == [] and wired["extract"] == [] and wired["sync"] == []
 
 
 def test_a_missing_firecrawl_key_fails_before_the_database(monkeypatch, wired) -> None:
     monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
-    monkeypatch.setattr(save_item, "get_db_connection", _no_db)
 
     with pytest.raises(SystemExit):
         save_url("https://www.anthropic.com/news/x", None)
+    assert wired["conns"] == []
 
 
 def test_a_saved_url_is_stored_extracted_and_synced(wired) -> None:
