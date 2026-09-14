@@ -25,6 +25,21 @@ updates:
     groups:
       pip-minor-and-patch:
         update-types: [minor, patch]
+  # The Cloudflare Worker that receives GitHub webhooks and starts pipeline runs. It has its
+  # own package.json (wrangler + a tiny test), so it needs its own Dependabot entry —
+  # nothing above watches it. Added 2026-09-14 after bin/enroll in repo-standards flagged it.
+  - package-ecosystem: npm
+    directory: /cloudflare-trigger
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      cf-trigger-minor-and-patch:
+        update-types: [minor, patch]
+    labels:
+      - dependencies
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
