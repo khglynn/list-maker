@@ -610,7 +610,14 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
                  ok, failed, len(unknown), store.TABLE)
         if ok and not sync_ingested():
             failed += 1
-        posted = post_slack(weekly_line(store.weekly_counts(conn, started), [], [],
+        # This conn has sat idle across the overrides pass, so Neon may have dropped it;
+        # read the report counts on a guaranteed-fresh connection rather than the stale one.
+        report_conn = get_db_connection()
+        try:
+            counts = store.weekly_counts(report_conn, started)
+        finally:
+            report_conn.close()
+        posted = post_slack(weekly_line(counts, [], [],
                                         auto_ingest=AUTO_INGEST,
                                         unknown_overrides=len(unknown),
                                         sources_label="overrides only"))
@@ -723,14 +730,24 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
     # lives, but the Slack post is the only thing that reaches Kevin unprompted. A post
     # that didn't land is a week he never heard about, so it fails the run and
     # blogs.yml's notify fires. Same call the pulse already makes for its heartbeat.
-    if not post_slack(weekly_line(
-        store.weekly_counts(conn, started),
+    # This conn has sat idle across the run's long Notion/Firecrawl/LLM spans, so Neon
+    # may have dropped it; the weekly line is the deliverable, so read the report counts
+    # on a guaranteed-fresh connection rather than the stale long-held one.
+    report_conn = get_db_connection()
+    try:
+        counts = store.weekly_counts(report_conn, started)
         # Follows the mode: once AUTO_INGEST is on, a save is ingested in the same
         # loop iteration and no row is left at `judged` at report time, so querying
         # that status would print an empty "Saved:" list on the very week it matters.
-        store.titles(conn, started,
-                     store.STATUS_SAVED if AUTO_INGEST else store.STATUS_JUDGED),
-        store.titles(conn, started, store.STATUS_HELD),
+        saved = store.titles(report_conn, started,
+                             store.STATUS_SAVED if AUTO_INGEST else store.STATUS_JUDGED)
+        held = store.titles(report_conn, started, store.STATUS_HELD)
+    finally:
+        report_conn.close()
+    if not post_slack(weekly_line(
+        counts,
+        saved,
+        held,
         auto_ingest=AUTO_INGEST, backlog=backlog, unknown_overrides=len(unknown),
         sources_label=args.sources, ingest_backlog=ingest_backlog,
     )):

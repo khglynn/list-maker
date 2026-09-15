@@ -32,6 +32,10 @@ def _shadow_unless_marked_live(request, monkeypatch):
     # The end-of-run Notion pass shells out to two sync scripts; a test that wants to
     # count it replaces this stub.
     monkeypatch.setattr(R, "sync_ingested", lambda: True)
+    # The report block opens a FRESH connection for its reads (the long-held one has sat
+    # idle across the run and Neon may have dropped it). Stub it so a full run() never
+    # reaches the real Neon helper; the report queries themselves are stubbed per test.
+    monkeypatch.setattr(R, "get_db_connection", lambda: _closable())
 
 
 def _candidate(url: str, source: str = "openai-rss", title: str = "T") -> Candidate:
