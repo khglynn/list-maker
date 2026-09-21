@@ -3,5 +3,5 @@ spotipy>=2.26.0
 python-dotenv>=1.2.3
 Pillow>=12.3.0
 numpy>=2.5.3
-tqdm>=4.70.0
+tqdm>=4.70.1
 psycopg2-binary>=2.9.13  # Optional: only needed for --from-db mode
