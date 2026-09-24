@@ -879,16 +879,25 @@ def check_notion_sync_freshness(conn) -> CheckResult:
     # that rejects every new page would be silent run after run (review finding
     # 2026-09-23 — its per-run >10% warning used to post directly and now rides along).
     # The sync retries creates every day, so a one-off API blip clears itself next run.
-    failed_create_rows = _rows(
-        conn,
-        """
-        SELECT id, canonical_name, notion_sync_attempt_at::date AS last_try
-        FROM ai_entities
-        WHERE notion_page_id IS NULL
-          AND notion_sync_status = 'failed'
-        ORDER BY id;
-        """,
-    )
+    # Only a RECENT failed attempt counts: an entity that lost the mentions making it
+    # eligible is never selected again, keeps its old 'failed' mark, and would otherwise
+    # fail this check forever (review 2026-09-24). A sync that stops running altogether
+    # is the stale-page and transcript arms' job, not this one.
+    failed_create_rows = [
+        r for r in _rows(
+            conn,
+            """
+            SELECT id, canonical_name, notion_sync_attempt_at::date AS last_try,
+                   now() - notion_sync_attempt_at AS since_try
+            FROM ai_entities
+            WHERE notion_page_id IS NULL
+              AND notion_sync_status = 'failed'
+            ORDER BY id;
+            """,
+        )
+        if r.get("since_try") is not None
+        and r["since_try"] <= timedelta(days=NOTION_SYNC_MAX_LAG_DAYS)
+    ]
     failed_entities = int(
         _one(
             conn,

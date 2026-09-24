@@ -270,8 +270,10 @@ def test_notion_pages_that_cannot_be_created_fail_the_check(monkeypatch) -> None
 
     _patch_notion_freshness(
         monkeypatch, transcript_rows=[], stale_entity_rows=[], failed_entities=2,
-        failed_create_rows=[{"id": 5, "canonical_name": "Cursor", "last_try": _date(2026, 9, 22)},
-                            {"id": 6, "canonical_name": "Warp", "last_try": _date(2026, 9, 23)}],
+        failed_create_rows=[{"id": 5, "canonical_name": "Cursor", "last_try": _date(2026, 9, 22),
+                             "since_try": timedelta(hours=30)},
+                            {"id": 6, "canonical_name": "Warp", "last_try": _date(2026, 9, 23),
+                             "since_try": timedelta(hours=6)}],
     )
     result = check_notion_sync_freshness(conn=None)
     assert result.status == "fail"
@@ -1774,7 +1776,6 @@ def test_music_silence_is_in_the_standard_check_set() -> None:
     )
 
 
-@pytest.mark.xfail(strict=True, reason="Codex R8: a failed create the sync no longer retries can never recover")
 def test_r4_8_a_failed_create_the_sync_stopped_trying_does_not_fail_forever(monkeypatch) -> None:
     """If an entity loses the mentions that made it eligible, sync_notion stops selecting
     it, so its 'failed' mark would fail this check forever. Only a recent attempt counts."""
