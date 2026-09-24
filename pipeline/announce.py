@@ -8,39 +8,43 @@ the condition held. From June 8 to August 26 the channel carried the same data-h
 line almost daily for eleven weeks. A check that talks that much trains its reader to
 ignore it, which is worse than no check (Kevin's legibility standard).
 
-THE RULE (Kevin, 2026-09-23): say it when it starts or when the set of failing things
-changes; again every 7 days while it is still unfixed ("still failing since Sep 22 (8
-days)"); once on recovery; never daily. It matches fleet-release-watch.yml in
-khglynn/google_workspace_mcp (once, then weekly). In practice:
+THE RULE (Kevin, 2026-09-23): say it when a check starts failing (or the set of failing
+checks changes); again every 7 days while it is unfixed; once on recovery; never daily.
+It matches fleet-release-watch.yml in khglynn/google_workspace_mcp (once, then weekly).
 
-  - something starts failing        → one Slack message, and an issue of its own
-  - a new show fails an open check  → one message ("now also failing for tal")
-  - still failing, said <7 days ago → quiet; the issue body is refreshed silently
-  - still failing, said ≥7 days ago → a reminder, naming any flapping
-                                      ("on and off: failed 3 of the last 7 runs")
-  - passes, and has held            → one "recovered" message; the issue closes
-  - fails again within 7 days of a  → the SAME issue reopens, quietly: a check that
-    "recovered" message               flips back and forth is one problem, and the
-                                      weekly reminder is the next thing said about it
+ONE INVARIANT carries that rule, per key (a data_health check, or a tracked step, in one
+workflow — or one music show's runs). A post about a key is one of:
+  1. its first failure                  → "N new problem(s)", and an issue of its own
+  2. a weekly word, ≥7 days since the   → "still failing since Sep 22 (8 days)", or
+     key's last post                      "failing again" (it relapsed after "recovered"),
+                                          or "couldn't check today" when this run didn't
+                                          evaluate it (a skipped step, a feed that didn't
+                                          answer) — an open problem never goes silent
+  3. a verified recovery, and only if   → "recovered", and the issue closes
+     the last thing said was "failing"
+Nothing else posts. So a check that flaps is one problem said at most weekly (plus one
+"recovered" per announced failure); a relapse soon after "recovered" reopens the same
+issue quietly and is said at the next weekly word.
 
-"Has held" means the last failing run was at least RECOVERY_HOLD_DAYS (2) days ago: a
-daily check needs two green days in a row, and a check that only runs weekly (or Wed and
-Fri) recovers on its first green run. Without a hold, a check hovering at its threshold
-(AI Daily's 2-day feed window) posted "new problem" and "recovered" on alternate days
-and scattered one problem across a new issue every flip.
+"Verified" means consecutive passing evaluations: 2 for the daily entities run (one
+green day proves little for a check hovering at its threshold), 1 for the weekly and
+twice-weekly workflows. A run that didn't evaluate the key doesn't count either way.
 
-One Slack message per run at most, covering every change, each item in plain words with
-its usual cause, what to check first (alert_guides.py), and links to the issue and run.
-Something this run did NOT evaluate (a step skipped because the database was
-unreachable, a feed that didn't answer) is never counted as a recovery — but an open
-alert that can't be checked still gets its weekly reminder, saying so.
+WHAT WAS REMOVED ON 2026-09-24, deliberately. Three review rounds kept finding holes
+where features met: a hand-off that let the entities run defer a music show's feed alert
+to pipeline.yml (it could silence checks), "now also failing for <show>" news inside an
+open check (Kevin's rule is per failing check; the weekly word lists the shows), and a
+time-based recovery hold. The model above has fewer states and says the same things.
+The price: one music show's feed gap can have two threads (pipeline.yml's and the
+entities backstop's), each posting at most weekly.
 
 WHY THE ISSUES ARE THE STATE. They already existed as the failure thread, persist with no
-infrastructure, and a person can read them. Each carries a hidden JSON marker (key, first
-failed, last posted, the shows involved, the last 14 results). An orphan state branch
-(fleet-release-watch's store) would have meant `contents: write` on workflows that hold
-every pipeline secret. Closing an issue by hand says "I think it's fixed": it is not
-reopened, and if the problem is still there the next run opens a fresh one.
+infrastructure, and a person can read them. Each carries a hidden JSON marker (key,
+first failed, last posted, what was last said, green streak, the last 14 results, the
+failing shows). An orphan state branch would have meant `contents: write` on workflows
+that hold every pipeline secret. A recovery writes the marker and closes the issue in one
+edit, so the two can't disagree. Closing an issue by hand means "I think it's fixed": it
+is never reopened, and if the problem is still there the next run opens a fresh one.
 
 Standard library only, so it still runs when the dependency install is what failed.
 """
@@ -61,18 +65,15 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-# Guarded: if either import breaks (a later edit to show_config, say), main() still posts
+# Guarded: if an import breaks (a later edit to alert_guides, say), main() still posts
 # "the alert step itself crashed" instead of dying with a traceback nobody sees.
 try:
     from alert_guides import CHECK_GUIDES, RUN_GUIDE, STEP_GUIDES, Guide, fallback_guide  # noqa: E402
-    from show_config import shows_with_spotify  # noqa: E402 — stdlib-only, like this file
     _IMPORT_ERROR: Optional[str] = None
 except Exception:  # noqa: BLE001
     _IMPORT_ERROR = traceback.format_exc()
 
 REMIND_AFTER_DAYS = 7
-RECOVERY_HOLD_DAYS = 2
-REOPEN_WITHIN_DAYS = 7
 HISTORY_LEN = 14
 MARKER = "list-maker-alert"
 _MARKER_RE = re.compile(r"<!--\s*" + MARKER + r"\s+(\{.*?\})\s*-->", re.S)
@@ -82,46 +83,43 @@ _MARKER_RE = re.compile(r"<!--\s*" + MARKER + r"\s+(\{.*?\})\s*-->", re.S)
 LEGACY_BEFORE = datetime(2026, 9, 24, tzinfo=timezone.utc)
 
 # Per workflow: the step ids this announcer tracks (each workflow file gives these ids),
-# which of them writes data_health results, and the issue label.
+# which of them writes data_health results, the issue label, and how many consecutive
+# passing evaluations make a recovery (the daily run needs two; the others run weekly or
+# twice a week, so their first green run is already days after the failure).
 WORKFLOWS: dict[str, dict[str, Any]] = {
     "entities": {
         "steps": ("preflight", "import", "notion", "health"),
         "health_step": "health",
         "label": "entities",
+        "green_to_recover": 2,
     },
     "music": {
         "steps": ("preflight", "spotify_cache", "pipeline", "feed_check"),
         "health_step": "feed_check",
         "label": "music",
+        "green_to_recover": 1,
     },
     "intake": {
         "steps": ("preflight", "log_schema", "intake"),
         "health_step": None,
         "label": "intake",
+        "green_to_recover": 1,
     },
 }
 
 # pipeline.yml's show_id → the show a music run evaluates. Only the scheduled ones (the
-# Worker dispatches 1 on Wed/Fri and 2 on Mondays) are TRACKED: a run can only recover what
-# a later run re-checks, and nothing re-checks "all" or "3", so an issue opened by one of
-# those manual runs would never be reminded or closed. They post, and keep no memory.
+# Worker dispatches 1 on Wed/Fri and 2 on Mondays) are TRACKED: nothing re-checks "all"
+# or "3", so an issue opened by one of those manual runs would never be reminded or
+# closed. They post, and keep no memory.
 MUSIC_SHOWS = {"1": ("sop", "SOP"), "2": ("tal", "TAL"), "3": ("ai-daily-brief", "AI Daily"),
                "all": ("all", "all-shows")}
 TRACKED_MUSIC_SHOW_IDS = frozenset({"1", "2"})
 
-# A check whose "warn" means "couldn't find out" rather than "a milder problem". The feed
-# check warns when a show's feed didn't answer (UNVERIFIED). Those shows are unknown this
-# run, on a fail day as much as a warn day: never a recovery, never forgotten. Every
-# other check's warn is a real, milder state (some stand every day), so it ends a failure.
+# A check whose "warn" can mean "couldn't find out" rather than "a milder problem": the
+# feed check warns when a show's feed didn't answer (UNVERIFIED). If a show the open
+# issue is failing for is among them, this run didn't evaluate the key. Every other
+# check's warn is a real, milder state (some stand every day), so it counts as a pass.
 UNVERIFIED_WHEN_WARN = frozenset({"import_caught_up_to_feed"})
-
-# The only check the daily entities run shares with the music workflow: pipeline.yml runs
-# `data_health.py --feed-check-only` and nothing else, so it is the only check the entities
-# run may leave to it (the songs, freshness and transcript checks exist only here).
-HANDOFF_CHECK = "import_caught_up_to_feed"
-# How recently the music workflow must have spoken about a show for the entities run to
-# leave that show's feed check to it: its weekly cadence plus the gap between its runs.
-OWNER_ACTIVE_DAYS = REMIND_AFTER_DAYS + 3
 
 _SUBJECT_RE = re.compile(r"^([a-z0-9][a-z0-9-]*):\s")
 
@@ -189,9 +187,8 @@ def collect_findings(
     nothing about themselves, so an unreachable database can't "recover" a check that
     never ran. When the health step reported, each data_health check is its own finding
     and the step's own finding only fails if it broke without a failing check to explain
-    it. A run that failed or was CANCELLED without any tracked failure is itself a failing
-    finding: a job cut off by its time limit ends "cancelled", and that is the shape that
-    hid the May–June 2026 playlist outage.
+    it. A cancelled run is always a failing `run` finding: a job cut off by its time limit
+    ends "cancelled", the shape that hid the May–June 2026 playlist outage.
     """
     spec = WORKFLOWS[ctx.workflow]
     findings: dict[str, Finding] = {}
@@ -229,15 +226,20 @@ def collect_findings(
             details = [line for line in preflight_detail.splitlines() if line.strip()]
         add(f"step:{step_id}", guide, outcome == "failure", details=details)
 
+    # The `run` key: did the run itself end the way a run should? A cancel is always a
+    # failure of its own (review R3, 2026-09-24: hidden behind an import failure that was
+    # already open, a timeout said nothing for up to a week). A failure no tracked step
+    # explains is one too. A failure a tracked step explains is that step's news, so the
+    # run itself counts as having ended normally.
     tracked_failure = any(f.failing for f in findings.values())
-    if job_status == "success":
-        add("run", RUN_GUIDE, False)
-    elif job_status == "failure" and not tracked_failure:
-        add("run", RUN_GUIDE, True, "The run failed, but in none of the steps this alert tracks.")
-    elif job_status == "cancelled" and not tracked_failure:
+    if job_status == "cancelled":
         add("run", RUN_GUIDE, True,
             "The run was cancelled before it finished — usually a time limit. If someone "
             "stopped it by hand, the next run clears this.")
+    elif job_status == "failure" and not tracked_failure:
+        add("run", RUN_GUIDE, True, "The run failed, but in none of the steps this alert tracks.")
+    elif job_status in ("success", "failure"):
+        add("run", RUN_GUIDE, False)
     return findings
 
 
@@ -256,28 +258,24 @@ def reported_check_names(ctx: RunContext, steps: dict[str, dict],
 # ── the memory: issues ──────────────────────────────────────────────────────────────────
 
 @dataclass
-class OpenAlert:
+class Alert:
+    """A key's memory, read from an issue's hidden marker."""
+
     number: int
     url: str
     key: str
-    since: date
-    last_posted: Optional[date]
-    runs: int
-    subjects: list[str] = field(default_factory=list)
-    seen: list[str] = field(default_factory=list)  # every show this alert has failed for
-    history: str = ""  # the last HISTORY_LEN evaluations, oldest first: F(ail) / P(ass)
-    last_failed: Optional[date] = None
-    recovered_posted: Optional[date] = None  # "recovered" said; closing may still be due
-    created: Optional[datetime] = None
+    since: date  # first failure of this thread
+    last_posted: Optional[date]  # the last time Slack heard about this key
+    said: str  # what Slack was last told: "failing" or "recovered"
+    green: int  # consecutive passing evaluations
+    history: str  # the last HISTORY_LEN evaluations, oldest first: F(ail) / P(ass)
+    subjects: list[str]  # the shows it was failing for at its last failing run
+    runs: int  # failing evaluations in this thread
     closed: bool = False
 
     @property
     def name(self) -> str:
         return self.key.split(":", 1)[1] if ":" in self.key else self.key
-
-
-def _date(value: Any) -> Optional[date]:
-    return date.fromisoformat(value) if value else None
 
 
 def _created(issue: dict) -> Optional[datetime]:
@@ -290,27 +288,24 @@ def _created(issue: dict) -> Optional[datetime]:
         return None
 
 
-def parse_alert(issue: dict) -> Optional[OpenAlert]:
+def parse_alert(issue: dict) -> Optional[Alert]:
     """The alert state carried by an issue's hidden marker, or None for any other issue."""
     match = _MARKER_RE.search(issue.get("body") or "")
     if not match:
         return None
     try:
         state = json.loads(match.group(1))
-        subjects = [str(x) for x in state.get("subjects") or []]
-        return OpenAlert(
+        return Alert(
             number=int(issue["number"]),
             url=str(issue.get("html_url") or ""),
             key=str(state["key"]),
             since=date.fromisoformat(state["since"]),
-            last_posted=_date(state.get("last_posted")),
-            runs=int(state.get("runs") or 1),
-            subjects=subjects,
-            seen=[str(x) for x in state.get("seen") or subjects],
+            last_posted=date.fromisoformat(state["last_posted"]) if state.get("last_posted") else None,
+            said=str(state.get("said") or "failing"),
+            green=int(state.get("green") or 0),
             history=str(state.get("history") or ""),
-            last_failed=_date(state.get("last_failed")),
-            recovered_posted=_date(state.get("recovered_posted")),
-            created=_created(issue),
+            subjects=[str(x) for x in state.get("subjects") or []],
+            runs=int(state.get("runs") or 1),
             closed=issue.get("state") == "closed",
         )
     except (ValueError, KeyError, TypeError):
@@ -329,92 +324,77 @@ def is_legacy_issue(issue: dict, label: str) -> bool:
 
 # ── the decision ────────────────────────────────────────────────────────────────────────
 
+# What happens to one key this run. Posting kinds: new, remind, again, unchecked, recovered.
+POSTING = ("new", "remind", "again", "unchecked", "recovered")
+
+
 @dataclass
-class Plan:
-    new: list[Finding] = field(default_factory=list)
-    # A recently recovered issue failing again: (finding, alert, shows it never failed for).
-    reopened: list[tuple[Finding, OpenAlert, list[str]]] = field(default_factory=list)
-    # Open, and now failing for a show it never failed for: (finding, alert, those shows).
-    changed: list[tuple[Finding, OpenAlert, list[str]]] = field(default_factory=list)
-    remind: list[tuple[Finding, OpenAlert]] = field(default_factory=list)
-    ongoing: list[tuple[Finding, OpenAlert]] = field(default_factory=list)
-    recovering: list[tuple[Finding, OpenAlert]] = field(default_factory=list)
-    recovered: list[tuple[Finding, OpenAlert]] = field(default_factory=list)
-    close_quietly: list[tuple[Finding, OpenAlert]] = field(default_factory=list)
-    unknown_remind: list[tuple[Finding, OpenAlert]] = field(default_factory=list)
-    fallback: bool = False  # the memory couldn't be read
-
-    @property
-    def speaking_reopens(self) -> list[tuple[Finding, OpenAlert, list[str]]]:
-        return [r for r in self.reopened if r[2]]
-
-    @property
-    def should_post(self) -> bool:
-        return bool(self.new or self.changed or self.speaking_reopens or self.remind
-                    or self.recovered or self.unknown_remind)
+class Item:
+    kind: str  # new | remind | again | unchecked | recovered | quiet_fail | quiet_pass | quiet_close
+    finding: Finding  # today's finding (or a stand-in for a key this run didn't reach)
+    alert: Optional[Alert] = None
+    reason: str = ""  # for "unchecked": why it couldn't be checked
 
 
 def _due(last_posted: Optional[date], today: date) -> bool:
     return last_posted is None or (today - last_posted).days >= REMIND_AFTER_DAYS
 
 
-def _held(alert: OpenAlert, today: date) -> bool:
-    last_failed = alert.last_failed or alert.last_posted or alert.since
-    return (today - last_failed).days >= RECOVERY_HOLD_DAYS
+def evaluation(finding: Optional[Finding], alert: Optional[Alert]) -> Optional[str]:
+    """This run's result for a key: "F", "P", or None when it wasn't evaluated — no
+    finding at all, or a feed check that couldn't see a show the open issue is about."""
+    if finding is None:
+        return None
+    if finding.failing:
+        return "F"
+    unknown = set(finding.unknown_subjects)
+    if unknown and alert is not None and (not alert.subjects or unknown & set(alert.subjects)):
+        return None
+    return "P"
 
 
-def remembered_subjects(finding: Finding, alert: Optional[OpenAlert]) -> list[str]:
-    """The shows to remember as failing: today's, plus any the alert already had that
-    couldn't be checked today — so a one-day feed outage can't make a show look new."""
-    keep = set(alert.subjects) & set(finding.unknown_subjects) if alert else set()
-    return sorted(set(finding.subjects) | keep)
+def _guide_for(ctx: "RunContext", name: str) -> Guide:
+    if name == "run":
+        return RUN_GUIDE
+    if name.startswith("step:"):
+        return STEP_GUIDES.get(f"{ctx.workflow}:{name[5:]}") or fallback_guide(name)
+    return CHECK_GUIDES.get(name) or fallback_guide(name)
 
 
-def decide(findings: dict[str, Finding], open_alerts: dict[str, OpenAlert], today: date,
-           recent_closed: Optional[dict[str, OpenAlert]] = None) -> Plan:
-    plan = Plan()
-    recent_closed = recent_closed or {}
-    for key in sorted(findings):
-        finding = findings[key]
-        alert = open_alerts.get(key)
-        if finding.failing:
+def decide(ctx: "RunContext", findings: dict[str, Finding], memory: dict[str, Alert],
+           today: date) -> list[Item]:
+    """One item per key that has a finding or a memory. `memory` holds the open issues and
+    the issues closed after an announced recovery whose last post is under a week old."""
+    need = WORKFLOWS[ctx.workflow]["green_to_recover"]
+    items: list[Item] = []
+    for key in sorted(set(findings) | set(memory)):
+        finding, alert = findings.get(key), memory.get(key)
+        result = evaluation(finding, alert)
+        if result == "F":
             if alert is None:
-                previous = recent_closed.get(key)
-                if previous is None:
-                    plan.new.append(finding)
-                else:
-                    added = sorted(set(finding.subjects) - set(previous.seen))
-                    plan.reopened.append((finding, previous, added))
-                continue
-            if alert.recovered_posted:
-                # "Recovered" was said but the close didn't land, and it's failing again:
-                # the same as a reopen.
-                added = sorted(set(finding.subjects) - set(alert.seen))
-                plan.reopened.append((finding, alert, added))
-                continue
-            added = sorted(set(finding.subjects) - set(alert.seen))
-            if added:
-                plan.changed.append((finding, alert, added))
+                items.append(Item("new", finding))
             elif _due(alert.last_posted, today):
-                # last_posted None: the issue exists but its message never landed.
-                plan.remind.append((finding, alert))
+                items.append(Item("again" if alert.said == "recovered" else "remind", finding, alert))
             else:
-                plan.ongoing.append((finding, alert))
-        elif alert is not None:
-            unknown = set(finding.unknown_subjects)
-            if unknown and (not alert.subjects or unknown & set(alert.subjects)):
-                # The show it was failing for couldn't be checked today: never a recovery,
-                # but the weekly reminder still comes, saying so.
-                if _due(alert.last_posted, today):
-                    plan.unknown_remind.append((finding, alert))
+                items.append(Item("quiet_fail", finding, alert))
+        elif result == "P":
+            if alert is None or alert.closed:
                 continue
-            if alert.recovered_posted:
-                plan.close_quietly.append((finding, alert))
-            elif _held(alert, today):
-                plan.recovered.append((finding, alert))
+            if alert.green + 1 >= need:
+                items.append(Item("recovered" if alert.said == "failing" else "quiet_close", finding, alert))
             else:
-                plan.recovering.append((finding, alert))
-    return plan
+                items.append(Item("quiet_pass", finding, alert))
+        else:  # not evaluated
+            if alert is None or alert.closed or alert.said != "failing" or not _due(alert.last_posted, today):
+                continue
+            if finding is not None:
+                shows = sorted(set(finding.unknown_subjects) & set(alert.subjects)) or finding.unknown_subjects
+                reason = f"the feed for {', '.join(shows)} didn't answer"
+            else:
+                finding = Finding(key, alert.name, _guide_for(ctx, alert.name), True)
+                reason = "this run didn't get to it (an earlier step failed or was skipped)"
+            items.append(Item("unchecked", finding, alert, reason))
+    return items
 
 
 # ── what gets said ──────────────────────────────────────────────────────────────────────
@@ -461,80 +441,70 @@ def _flapping(history: str) -> str:
     return f" — on and off: failed {recent.count('F')} of the last {len(recent)} runs"
 
 
-def render_slack(
-    ctx: RunContext,
-    plan: Plan,
-    today: date,
-    run_url: str,
-    new_issues: dict[str, tuple[Optional[int], str]],
-    notes: list[str] = (),
-    state_note: str = "",
-) -> str:
-    news = len(plan.new) + len(plan.changed) + len(plan.speaking_reopens)
-    if plan.fallback:
+def render_slack(ctx: "RunContext", items: list[Item], today: date, run_url: str,
+                 new_issues: dict[str, tuple[Optional[int], str]], notes: list[str] = (),
+                 state_note: str = "", fallback: bool = False) -> str:
+    kinds = [i.kind for i in items]
+    news = kinds.count("new")
+    if fallback:
         head = (f":rotating_light: *list-maker · {ctx.label}* — failing "
                 "(alert history unavailable, so this may be a repeat)")
     elif news:
         head = f":rotating_light: *list-maker · {ctx.label}* — {news} new problem{'s' if news > 1 else ''}"
-    elif plan.remind or plan.unknown_remind:
+    elif "again" in kinds:
+        head = f":rotating_light: *list-maker · {ctx.label}* — failing again"
+    elif "remind" in kinds or "unchecked" in kinds:
         head = f":hourglass_flowing_sand: *list-maker · {ctx.label}* — still failing"
     else:
         head = f":white_check_mark: *list-maker · {ctx.label}* — recovered"
     lines = [head]
 
-    def new_style(finding: Finding, link: str, note: str = "") -> None:
+    def full(item: Item, link: str, note: str = "") -> None:
+        f = item.finding
         lines.append("")
-        lines.append(f"*{finding.guide.title}* (`{finding.name}`) · {link}{note}")
-        lines.extend(_detail_block(finding, DETAIL_LINES_IN_SLACK))
-        lines.append(f"_Usually:_ {finding.guide.usually}")
-        lines.append(f"_Check first:_ {finding.guide.check_first}")
+        lines.append(f"*{f.guide.title}* (`{f.name}`) · {link}{note}")
+        lines.extend(_detail_block(f, DETAIL_LINES_IN_SLACK))
+        lines.append(f"_Usually:_ {f.guide.usually}")
+        lines.append(f"_Check first:_ {f.guide.check_first}")
 
-    for finding in plan.new:
-        new_style(finding, _issue_link(*new_issues.get(finding.key, (None, ""))))
-    for finding, alert, added in plan.changed + plan.speaking_reopens:
-        lines.append("")
-        lines.append(
-            f"*{finding.guide.title}* (`{finding.name}`) — now also failing for "
-            f"{', '.join(added)} · {_issue_link(alert.number, alert.url)} "
-            f"(first failed {_day(alert.since)})"
-        )
-        lines.extend(_detail_block(finding, DETAIL_LINES_IN_SLACK))
-        lines.append(f"_Check first:_ {finding.guide.check_first}")
-    for finding, alert in plan.remind:
-        if alert.last_posted is None:
-            # Its first message never landed: say it the way a new problem is said.
-            new_style(finding, _issue_link(alert.number, alert.url),
-                      f" (first announced today; failing since {_day(alert.since)})")
-            continue
-        lines.append("")
-        lines.append(
-            f"*Still failing since {_day(alert.since)}* ({_days((today - alert.since).days)})"
-            f"{_flapping(alert.history + 'F')}: {finding.guide.title} (`{finding.name}`) · "
-            f"{_issue_link(alert.number, alert.url)}"
-        )
-        lines.extend(_detail_block(finding, DETAIL_LINES_IN_SLACK))
-        lines.append(f"_Check first:_ {finding.guide.check_first}")
-    for finding, alert in plan.unknown_remind:
-        unknown = ", ".join(sorted(set(finding.unknown_subjects) & set(alert.subjects))
-                            or finding.unknown_subjects)
-        seen = f"; last seen failing {_day(alert.last_failed)}" if alert.last_failed else ""
-        lines.append("")
-        lines.append(
-            f"*Still open since {_day(alert.since)}* ({_days((today - alert.since).days)}): "
-            f"{finding.guide.title} (`{finding.name}`) · {_issue_link(alert.number, alert.url)}"
-        )
-        lines.append(f"> Couldn't check today: the feed for {unknown} didn't answer{seen}.")
-    for finding, alert in plan.recovered:
-        lines.append("")
-        lines.append(
-            f"*Recovered:* {finding.guide.title} — failing since "
-            f"{_day(alert.since)} · {_issue_link(alert.number, alert.url)} (closed)"
-        )
-    quiet = [(f, a) for f, a in plan.ongoing] + [(f, a) for f, a, added in plan.reopened if not added]
-    if quiet:
+    for item in items:
+        f, a = item.finding, item.alert
+        if item.kind == "new":
+            full(item, _issue_link(*new_issues.get(f.key, (None, ""))))
+        elif item.kind == "again":
+            full(item, _issue_link(a.number, a.url),
+                 f" — *failing again* after it was said to have recovered on {_day(a.last_posted)}"
+                 f" (first failed {_day(a.since)}){_flapping(a.history + 'F')}")
+        elif item.kind == "remind":
+            if a.last_posted is None:
+                # Its first message never landed: say it the way a new problem is said.
+                full(item, _issue_link(a.number, a.url),
+                     f" (first announced today; failing since {_day(a.since)})")
+                continue
+            lines.append("")
+            lines.append(
+                f"*Still failing since {_day(a.since)}* ({_days((today - a.since).days)})"
+                f"{_flapping(a.history + 'F')}: {f.guide.title} (`{f.name}`) · "
+                f"{_issue_link(a.number, a.url)}"
+            )
+            lines.extend(_detail_block(f, DETAIL_LINES_IN_SLACK))
+            lines.append(f"_Check first:_ {f.guide.check_first}")
+        elif item.kind == "unchecked":
+            lines.append("")
+            lines.append(
+                f"*Still open since {_day(a.since)}* ({_days((today - a.since).days)}): "
+                f"{f.guide.title} (`{f.name}`) · {_issue_link(a.number, a.url)}"
+            )
+            lines.append(f"> Couldn't check today: {item.reason}. Last known: failing.")
+        elif item.kind == "recovered":
+            lines.append("")
+            lines.append(f"*Recovered:* {f.guide.title} — failing since {_day(a.since)} · "
+                         f"{_issue_link(a.number, a.url)} (closed)")
+    quiet = [i for i in items if i.kind == "quiet_fail"]
+    if quiet and any(i.kind in POSTING for i in items):
         lines.append("")
         lines.append("_Also still failing, already reported:_ " + ", ".join(
-            f"{f.guide.title} ({_issue_link(a.number, a.url)})" for f, a in quiet))
+            f"{i.finding.guide.title} ({_issue_link(i.alert.number, i.alert.url)})" for i in quiet))
     if notes:
         lines.append("")
         lines.append("_Notes from this run:_ " + " · ".join(_escape(_clip(n, 200)) for n in notes))
@@ -546,37 +516,29 @@ def render_slack(
     return "\n".join(lines)
 
 
-def issue_title(ctx: RunContext, finding: Finding, since: date) -> str:
+def issue_title(ctx: "RunContext", finding: Finding, since: date) -> str:
     return f"{ctx.label[0].upper()}{ctx.label[1:]}: {finding.guide.title} (since {since.isoformat()})"
 
 
-def next_state(finding: Finding, alert: Optional[OpenAlert], today: date, *,
-               result: Optional[str], announced: bool,
-               subjects: Optional[list[str]] = None, seen: Optional[list[str]] = None,
-               recovered_posted: Optional[date] = None) -> dict:
+def next_state(finding: Finding, alert: Optional[Alert], today: date, *, result: Optional[str],
+               said: Optional[str] = None, posted: bool = False) -> dict:
     """The marker to write back. `result` is this run's F/P (None: not evaluated)."""
-    history = (alert.history if alert else "") + (result or "")
-    failing = result == "F"
-    if subjects is None:
-        subjects = remembered_subjects(finding, alert) if failing else (alert.subjects if alert else [])
-    if seen is None:
-        seen = sorted(set(alert.seen if alert else []) | set(subjects))
-    last_posted = today if announced else (alert.last_posted if alert else None)
-    last_failed = today if failing else (alert.last_failed if alert else None)
+    history = ((alert.history if alert else "") + (result or ""))[-HISTORY_LEN:]
+    green = 0 if result == "F" else (alert.green if alert else 0) + (1 if result == "P" else 0)
+    last_posted = today if posted else (alert.last_posted if alert else None)
     return {
         "key": finding.key,
         "since": (alert.since if alert else today).isoformat(),
         "last_posted": last_posted.isoformat() if last_posted else None,
-        "runs": (alert.runs if alert else 0) + (1 if failing else 0),
-        "subjects": subjects,
-        "seen": seen,
-        "history": history[-HISTORY_LEN:],
-        "last_failed": last_failed.isoformat() if last_failed else None,
-        "recovered_posted": recovered_posted.isoformat() if recovered_posted else None,
+        "said": said or (alert.said if alert else "failing"),
+        "green": green,
+        "history": history,
+        "subjects": finding.subjects if result == "F" else (alert.subjects if alert else []),
+        "runs": (alert.runs if alert else 0) + (1 if result == "F" else 0),
     }
 
 
-def issue_body(ctx: RunContext, finding: Finding, state: dict, today: date, run_url: str) -> str:
+def issue_body(ctx: "RunContext", finding: Finding, state: dict, today: date, run_url: str) -> str:
     details = "\n".join(f"- {_clip(d, 600)}" for d in finding.details[:DETAIL_LINES_IN_ISSUE])
     if len(finding.details) > DETAIL_LINES_IN_ISSUE:
         details += f"\n- … +{len(finding.details) - DETAIL_LINES_IN_ISSUE} more in the run log"
@@ -595,10 +557,10 @@ def issue_body(ctx: RunContext, finding: Finding, state: dict, today: date, run_
         f"**recent runs (oldest first, F = failed):** `{state['history'] or '-'}`{shows} · "
         f"**latest run:** {run_url}",
         "",
-        "_Kept by `pipeline/announce.py`. Slack hears about this when it starts, again every "
-        f"{REMIND_AFTER_DAYS} days while it lasts, and once when it has recovered and held "
-        f"({RECOVERY_HOLD_DAYS} days) — this issue then closes itself, and reopens if it "
-        f"fails again within {REOPEN_WITHIN_DAYS} days. A hidden comment at the top of this "
+        "_Kept by `pipeline/announce.py`. Slack hears about this when it starts, at most once "
+        f"every {REMIND_AFTER_DAYS} days while it lasts (even on days it can't be checked), "
+        "and once when it has recovered — this issue then closes itself, and reopens if it "
+        f"fails again within {REMIND_AFTER_DAYS} days. A hidden comment at the top of this "
         "description is the alert's memory (edit view shows it); leave it in place._",
     ])
 
@@ -673,61 +635,11 @@ def post_slack(text: str, webhook: Optional[str] = None) -> bool:
 class Outcome:
     """What announce() did, for the step summary and the tests."""
 
-    plan: Plan
+    items: list[Item]
     message: Optional[str]
     posted: bool
     actions: list[str]
     notes: list[str] = field(default_factory=list)
-
-
-def _hand_off_feed_backstop(
-    ctx: RunContext, findings: dict[str, Finding], other_open: dict[str, OpenAlert],
-    today: date, actions: list[str],
-) -> tuple[dict[str, Finding], dict[str, OpenAlert]]:
-    """Leave a music show's feed-behind to the music workflow while it is reporting it.
-
-    The daily entities run backstops the music shows a week past their feed window. When
-    pipeline.yml has an ACTIVE alert for that show's own feed check (announced within
-    OWNER_ACTIVE_DAYS, or opened within the last day and not yet announced — the two
-    workflows run at the same minute), a second thread about one outage is noise: the
-    show is dropped from the entities finding, and a finding left with nothing of its
-    own is set aside. Returns (findings, owner alert per fully handed-off key), so the
-    caller can close the entities thread with a pointer instead of leaving it silent.
-
-    Deliberately narrow (review, 2026-09-23): only import_caught_up_to_feed, and only to
-    the owner's same check. The music workflow runs nothing else; muting songs-still-
-    arriving or freshness here would silence the checks built for the July TAL outage.
-    """
-    if ctx.workflow != "entities":
-        return findings, {}
-    music = {cfg.slug for cfg in shows_with_spotify()}
-
-    def owner(slug: str) -> Optional[OpenAlert]:
-        alert = other_open.get(f"music-{slug}:{HANDOFF_CHECK}")
-        if alert is None:
-            return None
-        if alert.last_posted is not None:
-            return alert if (today - alert.last_posted).days <= OWNER_ACTIVE_DAYS else None
-        fresh = alert.created is not None and (today - alert.created.date()).days <= 1
-        return alert if fresh else None
-
-    key = f"{ctx.prefix}:{HANDOFF_CHECK}"
-    finding = findings.get(key)
-    if finding is None or not (finding.failing and finding.subjects):
-        return findings, {}
-    owners = {s: owner(s) for s in finding.subjects if s in music}
-    owned = {s: a for s, a in owners.items() if a is not None}
-    if not owned:
-        return findings, {}
-    out = dict(findings)
-    remaining = [s for s in finding.subjects if s not in owned]
-    actions.append(f"left {', '.join(sorted(owned))} in {key} to the music workflow's open alert")
-    if remaining:
-        out[key] = Finding(finding.key, finding.name, finding.guide, True, finding.summary,
-                           finding.details, remaining, finding.unknown_subjects)
-        return out, {}
-    del out[key]
-    return out, {key: next(iter(owned.values()))}
 
 
 def announce(
@@ -747,22 +659,25 @@ def announce(
     label = WORKFLOWS[ctx.workflow]["label"]
 
     def write(desc: str, fn: Callable[[], Any]) -> bool:
-        """One GitHub write, logged; in a dry run, only logged. A failed write is reported
-        and skipped — it must not cost the Slack message. True if it happened."""
+        """One GitHub write, retried once; in a dry run, only logged. A failed write is
+        reported and skipped — it must not cost the Slack message."""
         actions.append(("would " if dry_run else "") + desc)
         if dry_run:
             return False
-        try:
-            fn()
-            return True
-        except Exception as exc:  # noqa: BLE001
-            actions.append(f"  FAILED: {exc}")
-            return False
+        for attempt in (1, 2):
+            try:
+                fn()
+                return True
+            except Exception as exc:  # noqa: BLE001
+                if attempt == 2:
+                    actions.append(f"  FAILED: {exc}")
+        return False
 
-    def say(plan: Plan, new_issues=None, state_note: str = "") -> tuple[Optional[str], bool]:
-        if not plan.should_post:
+    def say(items: list[Item], new_issues=None, state_note: str = "",
+            fallback: bool = False) -> tuple[Optional[str], bool]:
+        if not any(i.kind in POSTING for i in items):
             return None, False
-        message = render_slack(ctx, plan, today, run_url, new_issues or {}, notes, state_note)
+        message = render_slack(ctx, items, today, run_url, new_issues or {}, notes, state_note, fallback)
         posted = False if dry_run else post(message)
         actions.append(("would post" if dry_run else ("posted" if posted else "Slack post FAILED"))
                        + " one Slack message")
@@ -771,17 +686,16 @@ def announce(
     # 0. A manual scope no schedule re-checks (pipeline.yml show_id all or 3): say what
     #    failed, remember nothing, since nothing would ever remind or close it.
     if ctx.stateless:
-        plan = Plan(new=[f for f in findings.values() if f.failing])
-        message, posted = say(plan, state_note="A manual run for a scope no schedule re-checks, "
-                                               "so it is not tracked: no issue, no reminders.")
-        return Outcome(plan, message, posted, actions, notes)
+        items = [Item("new", f) for f in findings.values() if f.failing]
+        message, posted = say(items, state_note="A manual run for a scope no schedule re-checks, "
+                                                 "so it is not tracked: no issue, no reminders.")
+        return Outcome(items, message, posted, actions, notes)
 
-    # 1. The memory. If GitHub can't be read, nothing can be deduplicated: say every current
-    #    failure (loud beats silent), headlined as possibly a repeat, and change nothing.
-    open_alerts: dict[str, OpenAlert] = {}
-    other_open: dict[str, OpenAlert] = {}
-    recent_closed: dict[str, OpenAlert] = {}
-    duplicates: list[tuple[OpenAlert, OpenAlert]] = []
+    # 1. The memory: open issues for this run's keys, plus issues closed after an announced
+    #    recovery whose last post is under a week old (a relapse reopens those). If GitHub
+    #    can't be read, say every current failure (loud beats silent) and change nothing.
+    memory: dict[str, Alert] = {}
+    duplicates: list[tuple[Alert, Alert]] = []
     legacy: list[dict] = []
     try:
         if gh is None:
@@ -789,149 +703,119 @@ def announce(
         for issue in sorted(gh.open_issues(), key=lambda i: int(i.get("number") or 0)):
             alert = parse_alert(issue)
             if alert and alert.key.startswith(f"{ctx.prefix}:"):
-                if alert.key in open_alerts:  # two threads for one key: keep the older
-                    duplicates.append((alert, open_alerts[alert.key]))
+                if alert.key in memory:  # two threads for one key: keep the older
+                    duplicates.append((alert, memory[alert.key]))
                 else:
-                    open_alerts[alert.key] = alert
-            elif alert:
-                other_open[alert.key] = alert
-            elif is_legacy_issue(issue, label):
+                    memory[alert.key] = alert
+            elif alert is None and is_legacy_issue(issue, label):
                 legacy.append(issue)
-        window = today - timedelta(days=REOPEN_WITHIN_DAYS + 1)
-        for issue in sorted(gh.recently_closed(window), key=lambda i: int(i.get("number") or 0)):
+        since = today - timedelta(days=REMIND_AFTER_DAYS + 1)
+        for issue in sorted(gh.recently_closed(since), key=lambda i: int(i.get("number") or 0)):
             alert = parse_alert(issue)
-            # Only issues this announcer closed after saying "recovered"; one closed by hand
+            # Only issues this announcer closed after saying "recovered". One closed by hand
             # means "I think it's fixed" and is never reopened.
-            if (alert and alert.key.startswith(f"{ctx.prefix}:") and alert.recovered_posted
-                    and (today - alert.recovered_posted).days <= REOPEN_WITHIN_DAYS
-                    and alert.key not in open_alerts):
-                recent_closed[alert.key] = alert
+            if (alert and alert.closed and alert.key.startswith(f"{ctx.prefix}:")
+                    and alert.said == "recovered" and alert.key not in memory
+                    and alert.last_posted and (today - alert.last_posted).days <= REMIND_AFTER_DAYS):
+                memory[alert.key] = alert
     except Exception as exc:  # noqa: BLE001
-        plan = Plan(new=[f for f in findings.values() if f.failing], fallback=True)
-        message, posted = say(plan, state_note=f"Couldn't read the alert memory (GitHub issues: "
-                                               f"{exc}), so this may repeat tomorrow.")
-        if not plan.should_post:
-            actions.append(f"could not read alert state ({exc}); nothing failing, so quiet")
-        else:
-            actions.append(f"could not read alert state: {exc}")
-        return Outcome(plan, message, posted, actions, notes)
+        items = [Item("new", f) for f in findings.values() if f.failing]
+        message, posted = say(items, state_note=f"Couldn't read the alert memory (GitHub issues: "
+                                                f"{exc}), so this may repeat tomorrow.", fallback=True)
+        actions.append(f"could not read alert state: {exc}")
+        return Outcome(items, message, posted, actions, notes)
 
-    # 2. Checks that no longer exist: their issues would otherwise never close.
+    # 2. Checks that no longer exist: their issues would otherwise remind forever.
     orphans = []
     if reported_checks is not None:
-        for key, alert in list(open_alerts.items()):
+        for key, alert in list(memory.items()):
             name = alert.name
-            if not name.startswith("step:") and name != "run" and name not in reported_checks:
-                orphans.append(open_alerts.pop(key))
+            if (not alert.closed and not name.startswith("step:") and name != "run"
+                    and name not in reported_checks):
+                orphans.append(memory.pop(key))
 
-    # 3. The feed backstop's hand-off to the music workflow.
-    findings, handed_off = _hand_off_feed_backstop(ctx, findings, other_open, today, actions)
-    handoffs = [(open_alerts.pop(k), owner) for k, owner in handed_off.items() if k in open_alerts]
+    items = decide(ctx, findings, memory, today)
 
-    plan = decide(findings, open_alerts, today, recent_closed)
-
-    # 4. Open an issue for each new failure first, so the message can link it. last_posted
+    # 3. Open an issue for each new failure first, so the message can link it. last_posted
     #    stays empty until the message is known to have landed.
     new_issues: dict[str, tuple[Optional[int], str]] = {}
-    for finding in plan.new:
-        created: dict = {}
-        write(f"open issue for {finding.key}", lambda f=finding, c=created: c.update(gh.create_issue(
-            issue_title(ctx, f, today),
-            issue_body(ctx, f, next_state(f, None, today, result="F", announced=False), today, run_url),
-            ["pipeline-failure", label],
-        ) or {}))
-        if created:
-            new_issues[finding.key] = (created.get("number"), created.get("html_url", ""))
-
-    # 5. At most one Slack message for the whole run.
-    message, posted = say(plan, new_issues)
-
-    # 6. Bring each issue's memory up to date. Anything that was meant to be said but
-    #    didn't land keeps its old memory, so the next run says it again.
-    def body(f: Finding, state: dict) -> str:
-        return issue_body(ctx, f, state, today, run_url)
-
-    for finding in plan.new:
-        number = new_issues.get(finding.key, (None, ""))[0]
-        if number and posted:
-            write(f"mark #{number} as announced", lambda f=finding, n=number: gh.edit_issue(
-                n, body=body(f, next_state(f, None, today, result="F", announced=True))))
-    for finding, alert, added in plan.reopened:
-        spoke = bool(added) and posted
-        state = next_state(finding, alert, today, result="F", announced=spoke,
-                           seen=None if (spoke or not added) else alert.seen)
-        write(f"reopen #{alert.number} (failing again)", lambda f=finding, a=alert, s=state: gh.edit_issue(
-            a.number, state="open", body=body(f, s)))
-        when = alert.recovered_posted or today
-        write(f"comment on #{alert.number} (failing again)", lambda a=alert, w=when, sp=spoke: gh.comment(
-            a.number,
-            f"Failing again on {today.isoformat()}, {_days((today - w).days)} after it was "
-            f"announced recovered. Treated as the same problem"
-            + (": Slack was told about the new show." if sp else
-               f"; the next Slack word on it is the weekly reminder.")
-            + f" Latest run: {run_url}"))
-    for finding, alert, added in plan.changed:
-        state = next_state(finding, alert, today, result="F", announced=posted,
-                           subjects=None if posted else alert.subjects,
-                           seen=None if posted else alert.seen)
-        write(f"refresh #{alert.number} (now also {', '.join(added)})",
-              lambda f=finding, a=alert, s=state: gh.edit_issue(a.number, body=body(f, s)))
-        if posted:
-            write(f"comment on #{alert.number}", lambda a=alert, ad=added: gh.comment(
-                a.number, f"Now also failing for {', '.join(ad)} on {today.isoformat()}. "
-                          f"Slack was told. Latest run: {run_url}"))
-    for finding, alert in plan.remind:
-        write(f"refresh #{alert.number} (reminder{' posted' if posted else ' not posted'})",
-              lambda f=finding, a=alert: gh.edit_issue(a.number, body=body(
-                  f, next_state(f, a, today, result="F", announced=posted))))
-        if posted:
-            write(f"comment on #{alert.number}", lambda a=alert: gh.comment(
-                a.number, f"Still failing on {today.isoformat()} — {_days((today - a.since).days)} "
-                          f"since {a.since.isoformat()}. Slack was reminded. Latest run: {run_url}"))
-    for finding, alert in plan.ongoing:
-        write(f"refresh #{alert.number} quietly", lambda f=finding, a=alert: gh.edit_issue(
-            a.number, body=body(f, next_state(f, a, today, result="F", announced=False))))
-    for finding, alert in plan.unknown_remind:
-        if posted:
-            write(f"refresh #{alert.number} (reminder: couldn't check)", lambda f=finding, a=alert:
-                  gh.edit_issue(a.number, body=body(f, next_state(f, a, today, result=None, announced=True))))
-            write(f"comment on #{alert.number}", lambda a=alert: gh.comment(
-                a.number, f"Still open on {today.isoformat()}; couldn't check today (the feed "
-                          f"didn't answer). Slack was reminded. Latest run: {run_url}"))
-    for finding, alert in plan.recovering:
-        write(f"refresh #{alert.number} (passing; recovery not held yet)", lambda f=finding, a=alert:
-              gh.edit_issue(a.number, body=body(f, next_state(f, a, today, result="P", announced=False))))
-    for finding, alert in plan.recovered:
-        if not posted:
-            # Say it before closing: a closed issue can't be announced as recovered later.
-            write(f"keep #{alert.number} open until 'recovered' is posted", lambda f=finding, a=alert:
-                  gh.edit_issue(a.number, body=body(f, next_state(f, a, today, result="P", announced=False))))
+    for item in items:
+        if item.kind != "new":
             continue
-        # Memory first, so a failed close is finished quietly next run (not re-announced).
-        write(f"mark #{alert.number} recovered", lambda f=finding, a=alert: gh.edit_issue(
-            a.number, body=body(f, next_state(f, a, today, result="P", announced=True,
-                                              recovered_posted=today))))
-        write(f"comment on #{alert.number} (recovered)", lambda a=alert: gh.comment(
-            a.number, f"Recovered on {today.isoformat()}: passing since the last failure on "
-                      f"{(a.last_failed or a.since).isoformat()}. It had been failing since "
-                      f"{a.since.isoformat()}. {run_url}"))
-        write(f"close #{alert.number} as recovered", lambda a=alert: gh.edit_issue(
-            a.number, state="closed", state_reason="completed"))
-    for finding, alert in plan.close_quietly:
-        write(f"close #{alert.number} (recovery already announced)", lambda a=alert: gh.edit_issue(
-            a.number, state="closed", state_reason="completed"))
+        created: dict = {}
+        write(f"open issue for {item.finding.key}", lambda f=item.finding, c=created: c.update(
+            gh.create_issue(issue_title(ctx, f, today),
+                            issue_body(ctx, f, next_state(f, None, today, result="F"), today, run_url),
+                            ["pipeline-failure", label]) or {}))
+        if created:
+            new_issues[item.finding.key] = (created.get("number"), created.get("html_url", ""))
 
-    # 7. Housekeeping, never news.
+    # 4. At most one Slack message for the whole run.
+    message, posted = say(items, new_issues)
+
+    # 5. Bring each issue's memory up to date. Anything meant to be said that didn't land
+    #    keeps its old memory, so the next run says it again. Each issue gets ONE edit, so
+    #    its marker and its open/closed state can never disagree.
+    def edit(item: Item, marker: dict, desc: str, **fields: Any) -> None:
+        a = item.alert
+        write(desc, lambda: gh.edit_issue(
+            a.number, body=issue_body(ctx, item.finding, marker, today, run_url), **fields))
+
+    for item in items:
+        f, a, k = item.finding, item.alert, item.kind
+        if k == "new":
+            number = new_issues.get(f.key, (None, ""))[0]
+            if number and posted:
+                write(f"mark #{number} as announced", lambda f=f, n=number: gh.edit_issue(
+                    n, body=issue_body(ctx, f, next_state(f, None, today, result="F", posted=True),
+                                       today, run_url)))
+        elif k in ("remind", "again", "quiet_fail"):
+            speak = k != "quiet_fail" and posted
+            marker = next_state(f, a, today, result="F", posted=speak,
+                                said="failing" if speak else None)
+            reopen = {"state": "open"} if a.closed else {}
+            edit(item, marker, f"{'reopen' if a.closed else 'refresh'} #{a.number} ({k})", **reopen)
+            if a.closed:
+                write(f"comment on #{a.number} (failing again)", lambda a=a, s=speak: gh.comment(
+                    a.number, f"Failing again on {today.isoformat()}, after it was said to have "
+                              f"recovered on {a.last_posted.isoformat()}. Treated as the same problem"
+                              + (": Slack was told." if s else
+                                 "; the next Slack word on it is the weekly one.")
+                              + f" Latest run: {run_url}"))
+            elif speak:
+                write(f"comment on #{a.number}", lambda a=a: gh.comment(
+                    a.number, f"Still failing on {today.isoformat()} — {_days((today - a.since).days)} "
+                              f"since {a.since.isoformat()}. Slack was reminded. Latest run: {run_url}"))
+        elif k == "unchecked":
+            if posted:
+                edit(item, next_state(f, a, today, result=None, posted=True),
+                     f"refresh #{a.number} (reminder: couldn't check)")
+                write(f"comment on #{a.number}", lambda a=a, r=item.reason: gh.comment(
+                    a.number, f"Still open on {today.isoformat()}; couldn't check today ({r}). "
+                              f"Slack was reminded. Latest run: {run_url}"))
+        elif k == "quiet_pass":
+            edit(item, next_state(f, a, today, result="P"), f"refresh #{a.number} (passing)")
+        elif k == "quiet_close":
+            edit(item, next_state(f, a, today, result="P"),
+                 f"close #{a.number} (recovered again; already said)", state="closed",
+                 state_reason="completed")
+        elif k == "recovered":
+            if not posted:
+                # A closed issue can't be announced as recovered later: stay open, retry.
+                edit(item, next_state(f, a, today, result="P"),
+                     f"keep #{a.number} open until 'recovered' is posted")
+                continue
+            edit(item, next_state(f, a, today, result="P", said="recovered", posted=True),
+                 f"close #{a.number} as recovered", state="closed", state_reason="completed")
+            write(f"comment on #{a.number} (recovered)", lambda a=a: gh.comment(
+                a.number, f"Recovered on {today.isoformat()}. It had been failing since "
+                          f"{a.since.isoformat()}. {run_url}"))
+
+    # 6. Housekeeping, never news.
     for alert in orphans:
         write(f"close #{alert.number}: `{alert.name}` is no longer checked", lambda a=alert: (
             gh.comment(a.number, f"Closing: the check `{a.name}` is no longer part of the health "
                                  f"report (renamed or removed), so nothing will re-check this. {run_url}"),
-            gh.edit_issue(a.number, state="closed", state_reason="not_planned"),
-        ))
-    for alert, owner in handoffs:
-        write(f"close #{alert.number}: now tracked in #{owner.number}", lambda a=alert, o=owner: (
-            gh.comment(a.number, f"The music workflow is reporting this show's feed now "
-                                 f"(#{o.number}); closing this thread so one outage has one thread."),
             gh.edit_issue(a.number, state="closed", state_reason="not_planned"),
         ))
     for dup, keep in duplicates:
@@ -939,21 +823,21 @@ def announce(
             gh.comment(d.number, f"Closing: #{k.number} already tracks `{d.key}`."),
             gh.edit_issue(d.number, state="closed", state_reason="not_planned"),
         ))
-    still = [(f.guide.title, a.number) for f, a in plan.remind + plan.ongoing]
-    still += [(f.guide.title, a.number) for f, a, _ in plan.changed + plan.reopened]
-    still += [(f.guide.title, new_issues.get(f.key, (None, ""))[0]) for f in plan.new]
-    now = ("Everything this run checks is passing." if not still else
-           "Failing now, each in its own issue: "
-           + ", ".join(f"{t} (#{n})" if n else t for t, n in still) + ".")
+    failing = [i for i in items if i.kind in ("new", "remind", "again", "quiet_fail")]
+    now = ("Everything this run checks is passing." if not failing else
+           "Failing now, each in its own issue: " + ", ".join(
+               f"{i.finding.guide.title} (#{i.alert.number if i.alert else new_issues.get(i.finding.key, (None, ''))[0]})"
+               for i in failing) + ".")
     for issue in legacy:
         write(f"comment on legacy #{issue['number']}", lambda i=issue: gh.comment(
             i["number"],
             "Retiring this thread. Failures now get one issue per failing check, opened when "
-            "it starts, reminded weekly while it lasts, and closed with a 'recovered' comment "
-            f"once it has held (pipeline/announce.py). {now} Run {today.isoformat()}: {run_url}"))
+            "it starts, reminded at most weekly while it lasts, and closed with a 'recovered' "
+            f"comment when it recovers (pipeline/announce.py). {now} Run {today.isoformat()}: "
+            f"{run_url}"))
         write(f"retire legacy #{issue['number']}", lambda i=issue: gh.edit_issue(
             i["number"], state="closed", state_reason="completed"))
-    return Outcome(plan, message, posted, actions, notes)
+    return Outcome(items, message, posted, actions, notes)
 
 
 def _read_details(details_dir: Optional[str]) -> tuple[Optional[list[dict]], Optional[str], list[str]]:
@@ -976,20 +860,17 @@ def _read_details(details_dir: Optional[str]) -> tuple[Optional[list[dict]], Opt
 
 
 def _summarize(outcome: Outcome) -> str:
-    plan = outcome.plan
+    headings = {
+        "new": "New", "again": "Failing again (said)", "remind": "Reminded (7+ days)",
+        "unchecked": "Reminded, couldn't check today", "recovered": "Recovered",
+        "quiet_fail": "Still failing (quiet)", "quiet_pass": "Passing, not yet a verified recovery (quiet)",
+        "quiet_close": "Closed quietly (recovery already said)",
+    }
     lines = ["## Alerts", ""]
-    for heading, items in (
-        ("New", [f.key for f in plan.new]),
-        ("Now failing for more shows", [f"{f.key} (+{', '.join(a)})" for f, _, a in plan.changed]),
-        ("Failing again (reopened)", [f.key for f, _, _ in plan.reopened]),
-        ("Reminded (7+ days)", [f.key for f, _ in plan.remind]),
-        ("Reminded, couldn't check today", [f.key for f, _ in plan.unknown_remind]),
-        ("Still failing (quiet)", [f.key for f, _ in plan.ongoing]),
-        ("Passing, recovery not held yet (quiet)", [f.key for f, _ in plan.recovering]),
-        ("Recovered", [f.key for f, _ in plan.recovered]),
-    ):
-        if items:
-            lines.append(f"- **{heading}:** " + ", ".join(f"`{k}`" for k in items))
+    for kind, heading in headings.items():
+        keys = [i.finding.key for i in outcome.items if i.kind == kind]
+        if keys:
+            lines.append(f"- **{heading}:** " + ", ".join(f"`{k}`" for k in keys))
     if len(lines) == 2:
         lines.append("- Nothing failing, nothing recovered: no message.")
     if outcome.notes:

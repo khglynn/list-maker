@@ -18,8 +18,8 @@ from pipeline import announce
 from pipeline.alert_guides import CHECK_GUIDES, STEP_GUIDES
 from pipeline.announce import (
     REMIND_AFTER_DAYS,
+    Alert,
     Finding,
-    OpenAlert,
     RunContext,
     announce as run_announce,
     collect_findings,
@@ -102,7 +102,7 @@ class FakeGitHub:
         self.comments.append((number, body))
         self.writes.append(f"comment #{number}")
 
-    def alert(self, key: str) -> OpenAlert | None:
+    def alert(self, key: str) -> Alert | None:
         for issue in self.issues.values():
             a = parse_alert(issue)
             if a and a.key == key and issue.get("state", "open") == "open":
@@ -131,7 +131,7 @@ def test_a_failing_check_is_its_own_finding_and_the_health_step_is_not_blamed():
     assert findings["entities:import_caught_up_to_feed"].failing
     assert not findings["entities:notion_sync_freshness"].failing
     assert not findings["entities:step:health"].failing  # it reported; the check failed
-    assert "entities:run" not in findings  # the failure is already explained
+    assert not findings["entities:run"].failing  # the failure is explained by a check
 
 
 def test_a_health_step_that_crashed_before_reporting_is_the_failure():
@@ -146,7 +146,8 @@ def test_steps_that_did_not_run_are_not_evaluated():
     day the check never ran."""
     steps = _steps(preflight="failure", **{"import": "skipped"}, notion="skipped", health="skipped")
     findings = _entities(None, steps=steps, preflight="host `ep-x` · addresses `1.2.3.4`\n`timeout`")
-    assert set(findings) == {"entities:step:preflight"}
+    assert set(findings) == {"entities:step:preflight", "entities:run"}
+    assert not findings["entities:run"].failing  # explained by the preflight
     assert findings["entities:step:preflight"].failing
     assert findings["entities:step:preflight"].details == ["host `ep-x` · addresses `1.2.3.4`", "`timeout`"]
 
@@ -177,38 +178,54 @@ def test_music_keys_are_scoped_to_the_show_that_ran():
     findings = collect_findings(ctx, _steps(preflight="success", spotify_cache="success",
                                             pipeline="failure", feed_check="skipped"), "failure")
     assert set(findings) == {"music-tal:step:preflight", "music-tal:step:spotify_cache",
-                             "music-tal:step:pipeline"}
+                             "music-tal:step:pipeline", "music-tal:run"}
 
 
 # ── the decision ────────────────────────────────────────────────────────────────────────
 
-def _alert(key, *, since=SEP22, last_posted=SEP22, number=70) -> OpenAlert:
-    return OpenAlert(number, f"https://x/{number}", key, since, last_posted, 1)
+def _alert(key, *, since=SEP22, last_posted=SEP22, number=70, said="failing", green=0,
+           closed=False) -> Alert:
+    return Alert(number, f"https://x/{number}", key, since, last_posted, said, green, "F", [], 1, closed)
+
+
+def _kinds(items) -> dict[str, str]:
+    return {i.finding.key: i.kind for i in items}
 
 
 def test_decide_covers_every_transition():
-    failing_a = Finding("entities:a", "a", CHECK_GUIDES["sponsor_share"], True)
-    failing_b = Finding("entities:b", "b", CHECK_GUIDES["sponsor_share"], True)
-    passing_c = Finding("entities:c", "c", CHECK_GUIDES["sponsor_share"], False)
-    open_alerts = {"entities:a": _alert("entities:a"), "entities:c": _alert("entities:c", number=71),
-                   "entities:unchecked": _alert("entities:unchecked", number=72)}
-    findings = {f.key: f for f in (failing_a, failing_b, passing_c)}
-
-    plan = decide(findings, open_alerts, SEP22 + timedelta(days=3))
-    assert [f.key for f in plan.new] == ["entities:b"]           # started failing
-    assert [f.key for f, _ in plan.ongoing] == ["entities:a"]    # same, said 3 days ago: quiet
-    assert [f.key for f, _ in plan.recovered] == ["entities:c"]  # passed with its issue open
-    assert plan.remind == []                                     # "unchecked" untouched
-
-    plan = decide(findings, open_alerts, SEP22 + timedelta(days=REMIND_AFTER_DAYS))
-    assert [f.key for f, _ in plan.remind] == ["entities:a"]     # a week on: say it again
+    """The whole state machine on one page: each key's kind for two dates."""
+    f = lambda key, failing: Finding(key, key.split(":")[1], CHECK_GUIDES["sponsor_share"], failing)  # noqa: E731
+    findings = {k: f(k, failing) for k, failing in [
+        ("entities:new", True), ("entities:open", True), ("entities:relapse", True),
+        ("entities:green1", False), ("entities:green2", False), ("entities:healed_again", False)]}
+    memory = {
+        "entities:open": _alert("entities:open"),
+        "entities:relapse": _alert("entities:relapse", said="recovered", closed=True),
+        "entities:green1": _alert("entities:green1"),
+        "entities:green2": _alert("entities:green2", green=1),
+        "entities:healed_again": _alert("entities:healed_again", said="recovered", green=1),
+        "entities:unreached": _alert("entities:unreached"),
+    }
+    assert _kinds(decide(ENTITIES, findings, memory, SEP22 + timedelta(days=3))) == {
+        "entities:new": "new",                   # first failure: said at once
+        "entities:open": "quiet_fail",           # said 3 days ago: quiet
+        "entities:relapse": "quiet_fail",        # relapse within a week: reopened quietly
+        "entities:green1": "quiet_pass",         # one green day is not yet a recovery
+        "entities:green2": "recovered",          # second green day in a row: said
+        "entities:healed_again": "quiet_close",  # "recovered" was already the last word
+        # entities:unreached: not due yet, so nothing
+    }
+    week = _kinds(decide(ENTITIES, findings, memory, SEP22 + timedelta(days=REMIND_AFTER_DAYS)))
+    assert week["entities:open"] == "remind"
+    assert week["entities:relapse"] == "again"
+    assert week["entities:unreached"] == "unchecked"  # not evaluated, and due: still said
 
 
 def test_an_issue_whose_message_never_landed_is_reminded_next_run():
     finding = Finding("entities:a", "a", CHECK_GUIDES["sponsor_share"], True)
-    plan = decide({finding.key: finding}, {finding.key: _alert(finding.key, last_posted=None)},
-                  SEP22 + timedelta(days=1))
-    assert [f.key for f, _ in plan.remind] == ["entities:a"]
+    items = decide(ENTITIES, {finding.key: finding}, {finding.key: _alert(finding.key, last_posted=None)},
+                   SEP22 + timedelta(days=1))
+    assert _kinds(items) == {"entities:a": "remind"}
 
 
 # ── the whole loop, replayed ────────────────────────────────────────────────────────────
@@ -325,33 +342,33 @@ def _feed_failing(*slugs: str) -> dict:
             "details": lines, "failures": lines}
 
 
-def test_a_second_show_failing_an_open_check_is_news():
-    """Reviewer finding (2026-09-23): with one alert per check, TAL falling behind while
-    AI Daily's BEHIND was already open would have waited up to a week to be said."""
+def test_a_second_show_failing_an_open_check_is_said_in_its_weekly_word():
+    """Kevin's rule is per failing CHECK. A second show failing a check that is already
+    open is part of that problem: the issue body shows it at once, and the next weekly
+    word lists it. (Show-level "now also failing" news was removed 2026-09-24: it was
+    one of the features whose interactions kept producing holes.)"""
     gh, slack = FakeGitHub(), FakeSlack()
     _run(gh, slack, _entities([_feed_failing("ai-daily-brief")]), SEP22)
     _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), SEP22 + timedelta(days=1))
+    assert len(slack.messages) == 1
+    assert "shows:** ai-daily-brief, tal" in gh.issues[101]["body"]
+    _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), SEP22 + timedelta(days=7))
+    assert len(slack.messages) == 2 and "tal: BEHIND 1" in slack.messages[1]
 
-    assert len(slack.messages) == 2
-    assert "now also failing for tal" in slack.messages[1]
-    assert "1 new problem" in slack.messages[1]
-    assert any("Now also failing for tal" in body for _, body in gh.comments)
-    alert = gh.alert("entities:import_caught_up_to_feed")
-    assert alert.subjects == ["ai-daily-brief", "tal"] and alert.since == SEP22
-    assert len([i for i in gh.issues.values() if i["state"] == "open"]) == 1  # same thread
 
-    # Same two shows next day: quiet. One of them catches up: still quiet (partial).
-    _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), SEP22 + timedelta(days=2))
-    _run(gh, slack, _entities([_feed_failing("tal")]), SEP22 + timedelta(days=3))
-    assert len(slack.messages) == 2
-    assert gh.alert("entities:import_caught_up_to_feed").subjects == ["tal"]
-
-    # A show that already failed in this thread flapping back is not news (it shows up in
-    # the weekly reminder); a show it never failed for is.
-    _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), SEP22 + timedelta(days=4))
-    assert len(slack.messages) == 2
-    _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal", "pchh")]), SEP22 + timedelta(days=5))
-    assert len(slack.messages) == 3 and "now also failing for pchh" in slack.messages[2]
+def test_one_music_show_can_have_two_threads_each_said_at_most_weekly():
+    """The accepted price of dropping the entities -> music hand-off (2026-09-24): a real
+    SOP feed gap is reported by pipeline.yml after its imports and, a week past SOP's
+    window, by the entities backstop too. Two threads, each weekly — never a silenced one."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    sop_red = collect_findings(SOP, _steps(preflight="success", spotify_cache="success",
+                                           pipeline="success", feed_check="failure"), "failure",
+                               [_feed_failing("sop")])
+    run_announce(SOP, sop_red, gh=gh, post=slack, today=SEP22, run_url=RUN)
+    for n in range(8, 16):
+        _run(gh, slack, _entities([_feed_failing("sop")]), SEP22 + timedelta(days=n))
+    assert len(gh.issues) == 2
+    assert len(slack.messages) == 3  # SOP's, the backstop's first (day 8), its weekly word (day 15)
 
 
 def test_an_unverified_feed_neither_fails_nor_recovers():
@@ -385,17 +402,6 @@ def test_a_different_shows_unreachable_feed_does_not_freeze_a_recovery():
     assert "recovered" in slack.messages[-1] and gh.issues[101]["state"] == "closed"
 
 
-def test_a_lost_changed_message_is_retried_next_run():
-    gh = FakeGitHub()
-    _run(gh, FakeSlack(), _entities([_feed_failing("ai-daily-brief")]), SEP22)
-    _run(gh, FakeSlack(ok=False), _entities([_feed_failing("ai-daily-brief", "tal")]),
-         SEP22 + timedelta(days=1))
-    assert gh.alert("entities:import_caught_up_to_feed").subjects == ["ai-daily-brief"]
-    slack = FakeSlack()
-    _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), SEP22 + timedelta(days=2))
-    assert len(slack.messages) == 1 and "now also failing for tal" in slack.messages[0]
-
-
 SOP = RunContext.build("music", "1")
 TAL = RunContext.build("music", "2")
 
@@ -409,31 +415,6 @@ def _music_feed_red(ctx: RunContext, slug: str) -> dict:
 def _music_step_red(ctx: RunContext) -> dict:
     return collect_findings(ctx, _steps(preflight="success", spotify_cache="success",
                                         pipeline="failure", feed_check="skipped"), "failure")
-
-
-def test_the_entities_backstop_leaves_a_show_its_owner_is_already_reporting():
-    """A real SOP outage opens music-sop's own feed alert; a week later the entities
-    backstop would open a second thread for the same outage."""
-    gh, slack = FakeGitHub(), FakeSlack()
-    run_announce(SOP, _music_feed_red(SOP, "sop"), gh=gh, post=slack, today=SEP22, run_url=RUN)
-    out = _run(gh, slack, _entities([_feed_failing("sop")]), SEP22 + timedelta(days=8))
-    assert len(slack.messages) == 1  # only the owner's
-    assert gh.alert("entities:import_caught_up_to_feed") is None
-    assert any("to the music workflow" in a for a in out.actions)
-
-    # A show nobody else is reporting still gets through.
-    _run(gh, slack, _entities([_feed_failing("sop", "tal")]), SEP22 + timedelta(days=9))
-    assert len(slack.messages) == 2
-    assert gh.alert("entities:import_caught_up_to_feed").subjects == ["tal"]
-
-
-def test_only_the_owners_own_feed_alert_counts_as_reporting_it():
-    """Review C1/C7/C10: the owner must be reporting the same check. A music-sop step
-    failure is a different fact (and it skips the owner's feed check altogether)."""
-    gh, slack = FakeGitHub(), FakeSlack()
-    run_announce(SOP, _music_step_red(SOP), gh=gh, post=slack, today=SEP22, run_url=RUN)
-    _run(gh, slack, _entities([_feed_failing("sop")]), SEP22 + timedelta(days=8))
-    assert len(slack.messages) == 2 and gh.alert("entities:import_caught_up_to_feed")
 
 
 def test_no_music_alert_ever_mutes_the_songs_check():
@@ -450,54 +431,6 @@ def test_no_music_alert_ever_mutes_the_songs_check():
         assert len(slack.messages) == 2 and "stopped getting songs" in slack.messages[1]
         assert gh.alert("entities:music_songs_still_arriving")
         assert not any("to the music workflow" in a for a in out.actions)
-
-
-def test_a_fully_handed_off_entities_thread_is_closed_with_a_pointer():
-    """Review L16: the backstop opened first, then the owner started reporting the same
-    show. The entities thread must not linger open and silent."""
-    gh, slack = FakeGitHub(), FakeSlack()
-    _run(gh, slack, _entities([_feed_failing("sop")]), SEP22)  # the backstop speaks first
-    run_announce(SOP, _music_feed_red(SOP, "sop"), gh=gh, post=slack,
-                 today=SEP22 + timedelta(days=1), run_url=RUN)
-    _run(gh, slack, _entities([_feed_failing("sop")]), SEP22 + timedelta(days=2))
-    assert gh.issues[101]["state"] == "closed"
-    assert any(n == 101 and "(#102)" in b for n, b in gh.comments)
-    assert len(slack.messages) == 2  # the handover itself is not news
-
-
-def test_an_owner_alert_opened_moments_ago_counts_as_reporting():
-    """Review L7: both workflows run at the same minute; the music issue exists before its
-    message is marked as posted. Opened within a day counts as active."""
-    gh, slack = FakeGitHub(), FakeSlack(ok=False)
-    run_announce(SOP, _music_feed_red(SOP, "sop"), gh=gh, post=slack, today=SEP22, run_url=RUN)
-    assert gh.alert("music-sop:import_caught_up_to_feed").last_posted is None
-    out = _run(gh, FakeSlack(), _entities([_feed_failing("sop")]), SEP22)
-    assert any("to the music workflow" in a for a in out.actions)
-
-
-def test_a_manual_ai_daily_music_run_never_mutes_the_entities_runs_own_show():
-    """Review finding W1: pipeline.yml's manual show_id=3 writes music-ai-daily-brief keys
-    no scheduled run re-evaluates. Deferring to it would silence AI Daily forever."""
-    gh, slack = FakeGitHub(), FakeSlack()
-    manual = RunContext.build("music", "3")
-    red = collect_findings(manual, _steps(preflight="success", spotify_cache="success",
-                                          pipeline="failure", feed_check="skipped"), "failure")
-    run_announce(manual, red, gh=gh, post=slack, today=SEP22, run_url=RUN)
-    _run(gh, slack, _entities([_feed_failing("ai-daily-brief")]), SEP22 + timedelta(days=1))
-    assert len(slack.messages) == 2 and gh.alert("entities:import_caught_up_to_feed")
-
-
-def test_the_backstop_takes_over_when_the_owner_has_gone_quiet():
-    """If pipeline.yml stops being dispatched with its alert open (July 2026), that alert
-    stops being reminded. A stale owner thread must not mute the backstop."""
-    gh, slack = FakeGitHub(), FakeSlack()
-    sop = RunContext.build("music", "1")
-    red = collect_findings(sop, _steps(preflight="success", spotify_cache="success",
-                                       pipeline="failure", feed_check="skipped"), "failure")
-    run_announce(sop, red, gh=gh, post=slack, today=SEP22, run_url=RUN)
-    _run(gh, slack, _entities([_feed_failing("sop")]), SEP22 + timedelta(days=11))
-    assert len(slack.messages) == 2
-    assert gh.alert("entities:import_caught_up_to_feed").subjects == ["sop"]
 
 
 def test_a_failed_recovery_comment_still_closes_the_issue():
@@ -630,7 +563,7 @@ def test_a_failed_github_write_does_not_cost_the_message():
 def test_detail_text_cannot_break_slack_markup():
     finding = Finding("entities:x", "x", CHECK_GUIDES["sponsor_share"], True, "a < b & c > d",
                       ["<!channel> & friends"])
-    msg = render_slack(ENTITIES, decide({finding.key: finding}, {}, SEP22), SEP22, RUN, {})
+    msg = render_slack(ENTITIES, decide(ENTITIES, {finding.key: finding}, {}, SEP22), SEP22, RUN, {})
     assert "a &lt; b &amp; c &gt; d" in msg and "&lt;!channel&gt; &amp; friends" in msg
 
 
@@ -774,7 +707,8 @@ def test_a_failure_soon_after_a_recovery_reopens_the_same_issue_quietly():
     assert any(n == 101 and "Failing again on 2026-09-26" in b for n, b in gh.comments)
 
     _run(gh, slack, red, _day_after(9))  # 7 days after the "recovered" post
-    assert len(slack.messages) == 3 and "Still failing since Sep 22" in slack.messages[2]
+    assert len(slack.messages) == 3 and "failing again" in slack.messages[2]
+    assert "first failed Sep 22" in slack.messages[2]
 
 
 def test_an_issue_closed_by_hand_is_not_reopened():
@@ -816,10 +750,10 @@ def test_a_failed_close_after_recovered_finishes_quietly():
     _run(gh, slack, _entities([AI_DAILY_BEHIND]), _day_after(0))
     green = _green("import_caught_up_to_feed")
     _run(gh, slack, green, _day_after(1))
-    _run(gh, slack, green, _day_after(2))
-    assert gh.issues[101]["state"] == "open" and "recovered" in slack.messages[-1]
+    _run(gh, slack, green, _day_after(2))  # the close fails once and is retried in the same run
+    assert gh.issues[101]["state"] == "closed" and "recovered" in slack.messages[-1]
     _run(gh, slack, green, _day_after(3))
-    assert gh.issues[101]["state"] == "closed" and len(slack.messages) == 2
+    assert len(slack.messages) == 2
 
 
 def test_an_unreachable_feed_still_gets_its_weekly_reminder():
@@ -843,7 +777,6 @@ def test_an_unreachable_show_on_a_fail_day_is_not_forgotten():
     blip = _feed_failing("tal")
     blip["details"] = blip["details"] + ["ai-daily-brief: feed UNVERIFIED — second source unreachable"]
     _run(gh, slack, _entities([blip]), _day_after(1))
-    assert gh.alert("entities:import_caught_up_to_feed").subjects == ["ai-daily-brief", "tal"]
     _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), _day_after(2))
     assert len(slack.messages) == 1
 
@@ -920,7 +853,6 @@ def _intake(outcome: str):
     return ctx, collect_findings(ctx, _steps(preflight="success", log_schema="success", intake=outcome), job)
 
 
-@pytest.mark.xfail(strict=True, reason="Codex R1: the music hand-off closes a thread that still has an unverified show")
 def test_r4_1_a_thread_is_never_closed_while_one_of_its_shows_is_unverified():
     gh, slack = FakeGitHub(), FakeSlack()
     _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), _day_after(0))
@@ -937,17 +869,15 @@ def test_r4_1_a_thread_is_never_closed_while_one_of_its_shows_is_unverified():
     assert len(slack.messages) == before + 1 and "#101" in slack.messages[-1]
 
 
-@pytest.mark.xfail(strict=True, reason="Codex R2: a weekly relapse reopens quietly and is never said")
 def test_r4_2_a_weekly_check_that_relapses_says_so():
     gh, slack = FakeGitHub(), FakeSlack()
     for n, outcome in enumerate(["failure", "success", "failure", "success", "failure"]):
         ctx, findings = _intake(outcome)
         run_announce(ctx, findings, gh=gh, post=slack, today=_day_after(7 * n), run_url=RUN)
     assert len(slack.messages) == 5  # failing, recovered, failing again, recovered, failing again
-    assert "recovered" not in slack.messages[2] and "intake" in slack.messages[2].lower()
+    assert slack.messages[2].startswith(":rotating_light: *list-maker · weekly curated intake* — failing again")
 
 
-@pytest.mark.xfail(strict=True, reason="Codex R3: a cancel hidden behind a known failure is silent")
 def test_r4_3_a_cancel_is_said_even_when_another_failure_is_already_open():
     gh, slack = FakeGitHub(), FakeSlack()
     red = collect_findings(ENTITIES, _steps(preflight="success", **{"import": "failure"},
@@ -960,7 +890,6 @@ def test_r4_3_a_cancel_is_said_even_when_another_failure_is_already_open():
     assert len(slack.messages) == 2 and "cancelled" in slack.messages[1]
 
 
-@pytest.mark.xfail(strict=True, reason="Codex R4: an open alert the run can't reach goes silent")
 def test_r4_4_an_open_alert_the_run_never_reaches_still_gets_its_weekly_reminder():
     gh, slack = FakeGitHub(), FakeSlack()
     _run(gh, slack, _entities([NOTION_DRIFT]), _day_after(0))
@@ -971,7 +900,6 @@ def test_r4_4_an_open_alert_the_run_never_reaches_still_gets_its_weekly_reminder
     assert any("Notion is behind Neon" in m and "couldn't check" in m.lower() for m in slack.messages[1:])
 
 
-@pytest.mark.xfail(strict=True, reason="Codex R5: fail/pass/pass daily repeats 'recovered' every 3 days")
 def test_r4_5_a_fail_pass_pass_cycle_is_not_announced_every_few_days():
     gh, slack = FakeGitHub(), FakeSlack()
     red, green = _entities([AI_DAILY_BEHIND]), _green("import_caught_up_to_feed")
@@ -979,12 +907,11 @@ def test_r4_5_a_fail_pass_pass_cycle_is_not_announced_every_few_days():
     for n in range(15):
         before = len(slack.messages)
         _run(gh, slack, red if n % 3 == 0 else green, _day_after(n))
-        if len(slack.messages) > before and "recovered" in slack.messages[-1]:
+        if len(slack.messages) > before and slack.messages[-1].startswith(":white_check_mark:"):
             days_recovered.append(n)
     assert all(b - a >= 7 for a, b in zip(days_recovered, days_recovered[1:])), days_recovered
 
 
-@pytest.mark.xfail(strict=True, reason="Codex R6: fail, unverified, one green is called a recovery")
 def test_r4_6_an_unverified_day_does_not_count_toward_a_daily_recovery():
     gh, slack = FakeGitHub(), FakeSlack()
     _run(gh, slack, _entities([_feed_failing("ai-daily-brief")]), _day_after(0))
@@ -997,7 +924,6 @@ def test_r4_6_an_unverified_day_does_not_count_toward_a_daily_recovery():
     assert "recovered" in slack.messages[-1]
 
 
-@pytest.mark.xfail(strict=True, reason="Codex R7: memory lost when the recovery marker write fails but the close lands")
 def test_r4_7_a_relapse_after_a_half_saved_recovery_is_not_a_new_problem():
     class FlakyBodies(FakeGitHub):
         fail_body_only = False
