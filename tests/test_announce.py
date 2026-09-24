@@ -954,3 +954,97 @@ def test_a_problem_never_announced_recovers_quietly():
     for n in (1, 2):
         _run(gh, slack, _green("import_caught_up_to_feed"), _day_after(n))
     assert slack.messages == [] and gh.issues[101]["state"] == "closed"
+
+
+# ── round 5: Codex on the simplified announcer (c547144), reproduced before fixing ─────
+
+def _unverified_feed(failing: tuple[str, ...], unverified: tuple[str, ...]) -> dict:
+    fail_lines = [f"{s}: BEHIND 1 — feed at 2026-09-19 (past the window)" for s in failing]
+    unv_lines = [f"{s}: feed UNVERIFIED — second source unreachable" for s in unverified]
+    return {"name": "import_caught_up_to_feed", "status": "fail" if failing else "warn",
+            "summary": "x", "details": fail_lines + unv_lines + ["tal: caught up (2026-09-21)"],
+            "failures": fail_lines}
+
+
+def _preflight_down():
+    return collect_findings(ENTITIES, _steps(preflight="failure", **{"import": "skipped"},
+                                             notion="skipped", health="skipped"), "failure")
+
+
+@pytest.mark.xfail(strict=True, reason="Codex P1: an unverified show is forgotten, then a false recovery")
+def test_r5_1_a_show_that_is_still_unverified_blocks_recovery():
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, _entities([_unverified_feed(("ai-daily-brief", "tal"), ())]), _day_after(0))
+    _run(gh, slack, _entities([_unverified_feed(("tal",), ("ai-daily-brief",))]), _day_after(1))
+    for n in (2, 3):
+        _run(gh, slack, collect_findings(ENTITIES, GREEN_STEPS, "success",
+                                         [_unverified_feed((), ("ai-daily-brief",))]), _day_after(n))
+    assert len(slack.messages) == 1 and gh.issues[101]["state"] == "open"
+
+
+@pytest.mark.xfail(strict=True, reason="Codex P1: a quiet relapse stays silent while unchecked")
+def test_r5_2_a_quiet_relapse_is_said_weekly_even_while_unchecked():
+    gh, slack = FakeGitHub(), FakeSlack()
+    red, green = _entities([AI_DAILY_BEHIND]), _green("import_caught_up_to_feed")
+    for n, findings in enumerate([red, green, green, red]):  # recovered on day 2, relapse day 3
+        _run(gh, slack, findings, _day_after(n))
+    for n in range(4, 17):
+        _run(gh, slack, _preflight_down(), _day_after(n))
+    feed_words = [m for m in slack.messages[2:] if "A show is behind its podcast feed" in m]
+    assert len(feed_words) >= 2  # weekly, from day 9
+
+
+@pytest.mark.xfail(strict=True, reason="Codex P1: a lost save lets a stale green streak confirm a recovery")
+def test_r5_3_a_lost_save_restarts_the_green_streak():
+    class DownOnDay2(FakeGitHub):
+        down = False
+
+        def edit_issue(self, number, **fields):
+            if self.down:
+                raise RuntimeError("HTTP 502")
+            super().edit_issue(number, **fields)
+
+    gh, slack = DownOnDay2(), FakeSlack()
+    red, green = _entities([AI_DAILY_BEHIND]), _green("import_caught_up_to_feed")
+    _run(gh, slack, red, _day_after(0))
+    _run(gh, slack, green, _day_after(1))  # green 1 saved
+    gh.down = True
+    _run(gh, slack, red, _day_after(2))  # a failure nobody could save
+    gh.down = False
+    _run(gh, slack, green, _day_after(3))  # one green after that failure: not a recovery
+    assert not any(m.startswith(":white_check_mark:") for m in slack.messages)
+
+
+@pytest.mark.xfail(strict=True, reason="Codex P2: another check's failure is repeated in unrelated news")
+def test_r5_5_unrelated_news_does_not_repeat_a_quiet_failure():
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), _day_after(0))
+    _run(gh, slack, _entities([AI_DAILY_BEHIND, NOTION_DRIFT]), _day_after(1))
+    assert len(slack.messages) == 2
+    assert "A show is behind its podcast feed" not in slack.messages[1]
+
+
+@pytest.mark.xfail(strict=True, reason="Codex P2: an overdue weekly word is skipped on a passing day")
+def test_r5_6_the_weekly_word_comes_on_a_passing_day_too():
+    gh, slack = FakeGitHub(), FakeSlack()
+    red, green = _entities([AI_DAILY_BEHIND]), _green("import_caught_up_to_feed")
+    days_posted = []
+    for n in range(15):  # F P F P ... never two greens in a row
+        before = len(slack.messages)
+        _run(gh, slack, red if n % 2 == 0 else green, _day_after(n))
+        if len(slack.messages) > before:
+            days_posted.append(n)
+    assert days_posted == [0, 7, 14]
+    assert "confirming recovery" in slack.messages[1]
+
+
+@pytest.mark.xfail(strict=True, reason="Codex P2: a failed closed-issue lookup throws away the open state")
+def test_r5_7_a_failed_closed_lookup_keeps_the_open_state():
+    class NoHistory(FakeGitHub):
+        def recently_closed(self, since):
+            raise RuntimeError("HTTP 502")
+
+    gh, slack = NoHistory(), FakeSlack()
+    for n in range(3):
+        _run(gh, slack, _entities([AI_DAILY_BEHIND]), _day_after(n))
+    assert len(slack.messages) == 1
