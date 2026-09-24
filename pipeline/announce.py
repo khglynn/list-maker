@@ -116,6 +116,8 @@ class Finding:
     details: list[str] = field(default_factory=list)
     # Which shows (or "general") a per-show check is failing for; empty for steps.
     subjects: list[str] = field(default_factory=list)
+    # Shows this check couldn't find out about this run (a feed that didn't answer).
+    unknown_subjects: list[str] = field(default_factory=list)
 
 
 def failure_subjects(failure_lines: list[str]) -> list[str]:
@@ -163,10 +165,10 @@ def collect_findings(
     findings: dict[str, Finding] = {}
 
     def add(name: str, guide: Guide, failing: bool, summary: str = "", details=None,
-            subjects=None) -> None:
+            subjects=None, unknown=None) -> None:
         key = f"{ctx.prefix}:{name}"
         findings[key] = Finding(key, name, guide, failing, summary, list(details or []),
-                                list(subjects or []))
+                                list(subjects or []), list(unknown or []))
 
     for step_id in spec["steps"]:
         outcome = (steps.get(step_id) or {}).get("outcome")
@@ -178,13 +180,17 @@ def collect_findings(
             for result in health:
                 name = str(result.get("name"))
                 status = result.get("status")
-                if status == "warn" and name in UNVERIFIED_WHEN_WARN:
-                    continue  # couldn't find out: neither a failure nor a recovery
                 failing = status == "fail"
                 any_check_failed |= failing
+                unknown = []
+                if status == "warn" and name in UNVERIFIED_WHEN_WARN:
+                    # Not a failure; a recovery only for shows it could actually see.
+                    unknown = failure_subjects(
+                        [d for d in result.get("details") or [] if "UNVERIFIED" in str(d)]
+                    )
                 add(name, CHECK_GUIDES.get(name) or fallback_guide(name), failing,
                     str(result.get("summary") or ""), result.get("details") or [],
-                    failure_subjects(result.get("failures") or []) if failing else [])
+                    failure_subjects(result.get("failures") or []) if failing else [], unknown)
             add(f"step:{step_id}", guide, outcome == "failure" and not any_check_failed)
             continue
         details = []
@@ -272,6 +278,9 @@ def decide(findings: dict[str, Finding], open_alerts: dict[str, OpenAlert], toda
             else:
                 plan.ongoing.append((finding, alert))
         elif alert is not None:
+            unknown = set(finding.unknown_subjects)
+            if unknown and (not alert.subjects or unknown & set(alert.subjects)):
+                continue  # the show it was failing for couldn't be checked today: leave it
             plan.recovered.append((finding, alert))
     return plan
 
@@ -378,13 +387,14 @@ def issue_title(ctx: RunContext, finding: Finding, since: date) -> str:
 
 
 def issue_body(ctx: RunContext, finding: Finding, *, since: date, last_posted: Optional[date],
-               runs: int, today: date, run_url: str) -> str:
+               runs: int, today: date, run_url: str, subjects: Optional[list[str]] = None) -> str:
     state = {
         "key": finding.key,
         "since": since.isoformat(),
         "last_posted": last_posted.isoformat() if last_posted else None,
         "runs": runs,
-        "subjects": finding.subjects,
+        # Remembered only once announced, so a lost message is retried next run.
+        "subjects": finding.subjects if subjects is None else subjects,
     }
     details = "\n".join(f"- {_clip(d, 600)}" for d in finding.details[:DETAIL_LINES_IN_ISSUE])
     if len(finding.details) > DETAIL_LINES_IN_ISSUE:
@@ -469,6 +479,34 @@ def post_slack(text: str, webhook: Optional[str] = None) -> bool:
 
 # ── doing it ────────────────────────────────────────────────────────────────────────────
 
+def _leave_owned_shows_to_their_owner(
+    ctx: RunContext, findings: dict[str, Finding], other_open: dict[str, OpenAlert],
+    actions: list[str],
+) -> dict[str, Finding]:
+    """The daily entities run backstops the music shows a week past their window. If the
+    music workflow already has an open alert for that show (any of its checks or steps),
+    the owner is reporting it; a second thread about the same outage is noise. The show
+    is dropped from the entities finding, and a finding left with no show of its own is
+    set aside as not evaluated (neither new nor a recovery)."""
+    if ctx.workflow != "entities":
+        return findings
+    out = dict(findings)
+    for key, finding in findings.items():
+        if not (finding.failing and finding.subjects):
+            continue
+        owned = {s for s in finding.subjects if any(k.startswith(f"music-{s}:") for k in other_open)}
+        if not owned:
+            continue
+        remaining = [s for s in finding.subjects if s not in owned]
+        actions.append(f"left {', '.join(sorted(owned))} in {key} to the music workflow's open alert")
+        if remaining:
+            out[key] = Finding(finding.key, finding.name, finding.guide, True, finding.summary,
+                               finding.details, remaining, finding.unknown_subjects)
+        else:
+            del out[key]
+    return out
+
+
 @dataclass
 class Outcome:
     """What announce() did, for the step summary and the tests."""
@@ -509,15 +547,22 @@ def announce(
     # 1. The memory. If GitHub can't be read, nothing can be deduplicated: say every
     #    current failure (loud beats silent) and change nothing.
     open_alerts: dict[str, OpenAlert] = {}
+    other_open: dict[str, OpenAlert] = {}  # other workflows' alerts, for owner coverage
+    duplicates: list[tuple[OpenAlert, OpenAlert]] = []
     legacy: list[dict] = []
     state_note = ""
     try:
         if gh is None:
             raise RuntimeError("no GITHUB_TOKEN/GITHUB_REPOSITORY")
-        for issue in gh.open_issues():
+        for issue in sorted(gh.open_issues(), key=lambda i: int(i.get("number") or 0)):
             alert = parse_alert(issue)
             if alert and alert.key.startswith(f"{ctx.prefix}:"):
-                open_alerts[alert.key] = alert
+                if alert.key in open_alerts:  # two threads for one key: keep the older
+                    duplicates.append((alert, open_alerts[alert.key]))
+                else:
+                    open_alerts[alert.key] = alert
+            elif alert:
+                other_open[alert.key] = alert
             elif is_legacy_issue(issue, label):
                 legacy.append(issue)
     except Exception as exc:  # noqa: BLE001
@@ -531,6 +576,7 @@ def announce(
         posted = False if dry_run else post(message)
         return Outcome(plan, message, posted, [f"could not read alert state: {exc}"], list(notes))
 
+    findings = _leave_owned_shows_to_their_owner(ctx, findings, other_open, actions)
     plan = decide(findings, open_alerts, today)
 
     # 2. Open an issue for each new failure first, so the Slack message can link it.
@@ -568,7 +614,8 @@ def announce(
         write(f"refresh #{alert.number} (now also {', '.join(added)})",
               lambda f=finding, a=alert: gh.edit_issue(a.number, body=issue_body(
                   ctx, f, since=a.since, last_posted=today if posted else a.last_posted,
-                  runs=a.runs + 1, today=today, run_url=run_url)))
+                  runs=a.runs + 1, today=today, run_url=run_url,
+                  subjects=None if posted else a.subjects)))
         if posted:
             write(f"comment on #{alert.number}", lambda a=alert, ad=added: gh.comment(
                 a.number, f"Now also failing for {', '.join(ad)} on {today.isoformat()}. "
@@ -588,10 +635,17 @@ def announce(
             a.number, body=issue_body(ctx, f, since=a.since, last_posted=a.last_posted,
                                       runs=a.runs + 1, today=today, run_url=run_url)))
     for finding, alert in plan.recovered:
-        write(f"close #{alert.number} as recovered", lambda a=alert: (
-            gh.comment(a.number, f"Recovered on {today.isoformat()}: this run passed. "
-                                 f"It had been failing since {a.since.isoformat()}. {run_url}"),
-            gh.edit_issue(a.number, state="closed", state_reason="completed"),
+        # Two writes, not one: a failed comment must not leave the issue open, or the
+        # next green run would announce the same recovery again.
+        write(f"comment on #{alert.number} (recovered)", lambda a=alert: gh.comment(
+            a.number, f"Recovered on {today.isoformat()}: this run passed. "
+                      f"It had been failing since {a.since.isoformat()}. {run_url}"))
+        write(f"close #{alert.number} as recovered", lambda a=alert: gh.edit_issue(
+            a.number, state="closed", state_reason="completed"))
+    for dup, keep in duplicates:
+        write(f"close #{dup.number} as a duplicate of #{keep.number}", lambda d=dup, k=keep: (
+            gh.comment(d.number, f"Closing: #{k.number} already tracks `{d.key}`."),
+            gh.edit_issue(d.number, state="closed", state_reason="not_planned"),
         ))
 
     # 5. Retire the pre-announcer thread(s) through the same path.
@@ -602,14 +656,14 @@ def announce(
            "Failing now, each in its own issue: "
            + ", ".join(f"{t} (#{n})" if n else t for t, n in still) + ".")
     for issue in legacy:
-        write(f"retire legacy #{issue['number']}", lambda i=issue: (
-            gh.comment(i["number"],
-                       "Retiring this thread. Failures now get one issue per failing check, "
-                       "opened when it starts, commented weekly while it lasts, and closed "
-                       f"with a 'recovered' comment when it passes (pipeline/announce.py). "
-                       f"{now} Run {today.isoformat()}: {run_url}"),
-            gh.edit_issue(i["number"], state="closed", state_reason="completed"),
-        ))
+        write(f"comment on legacy #{issue['number']}", lambda i=issue: gh.comment(
+            i["number"],
+            "Retiring this thread. Failures now get one issue per failing check, opened when "
+            "it starts, commented weekly while it lasts, and closed with a 'recovered' "
+            f"comment when it passes (pipeline/announce.py). {now} Run {today.isoformat()}: "
+            f"{run_url}"))
+        write(f"retire legacy #{issue['number']}", lambda i=issue: gh.edit_issue(
+            i["number"], state="closed", state_reason="completed"))
     return Outcome(plan, message, posted, actions, list(notes))
 
 

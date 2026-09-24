@@ -135,6 +135,15 @@ jobs:
         # python3, standard library only: this must still run when setup or the
         # dependency install is what failed.
         run: |
+          if [ ! -f pipeline/announce.py ]; then
+            # Checkout itself failed, so the announcer isn't on disk. Say that much
+            # rather than nothing (the one case the announcer can't cover).
+            if [ "$JOB_STATUS" != "success" ] && [ -n "$SLACK_WEBHOOK_URL" ]; then
+              curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' \
+                --data "{\"text\": \":rotating_light: *list-maker · $GITHUB_WORKFLOW* failed before its code was checked out, so it could not say why. <${RUN_URL}|View the run>\"}"
+            fi
+            exit 0
+          fi
           ARGS=(--workflow intake)
           [ "$DRY_RUN_INPUT" = "true" ] && ARGS+=(--dry-run)
           python3 pipeline/announce.py "${ARGS[@]}"

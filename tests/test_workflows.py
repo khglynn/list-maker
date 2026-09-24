@@ -84,9 +84,12 @@ def test_each_scheduled_workflow_speaks_through_the_announce_step_only():
         assert re.search(r"^\s+if: always\(\)\s*$", step, re.M), name
         assert f"ARGS=(--workflow {workflow}" in step, name
         assert "python3 pipeline/announce.py" in step, name
-        for leftover in ("Notify Slack (failure)", "Create issue on failure", "hooks.slack.com",
-                         'curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL"'):
+        for leftover in ("Notify Slack (failure)", "Create issue on failure", "hooks.slack.com"):
             assert leftover not in text, f"{name} still has {leftover!r}"
+        # The only direct post left is the announce step's fallback for a run whose
+        # checkout failed (so announce.py isn't on disk).
+        assert text.count('-X POST "$SLACK_WEBHOOK_URL"') == 1, name
+        assert step.index("if [ ! -f pipeline/announce.py ]") < step.index('-X POST "$SLACK_WEBHOOK_URL"'), name
         assert re.search(r"^  issues: write$", text, re.M), f"{name} needs issues: write"
         assert "ALERT_DETAILS_DIR: ${{ github.workspace }}/.alert-details" in text, name
 

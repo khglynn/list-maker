@@ -332,9 +332,77 @@ def test_an_unverified_feed_neither_fails_nor_recovers():
                   "details": ["ai-daily-brief: feed UNVERIFIED — second source unreachable"],
                   "failures": []}
     findings = collect_findings(ENTITIES, GREEN_STEPS, "success", [unverified])
-    assert "entities:import_caught_up_to_feed" not in findings
+    assert findings["entities:import_caught_up_to_feed"].unknown_subjects == ["ai-daily-brief"]
     _run(gh, slack, findings, SEP22 + timedelta(days=1))
     assert len(slack.messages) == 1 and gh.issues[101]["state"] == "open"
+
+
+def test_a_different_shows_unreachable_feed_does_not_freeze_a_recovery():
+    """Reviewer finding: if one feed stayed UNVERIFIED for weeks, every non-failing day
+    would be a warn, and an open alert for ANOTHER show could never close."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, _entities([_feed_failing("hard-fork")]), SEP22)
+    gabfest_down = {"name": "import_caught_up_to_feed", "status": "warn", "summary": "unverified",
+                    "details": ["culture-gabfest: feed UNVERIFIED — second source unreachable",
+                                "hard-fork: caught up (2026-09-22)"],
+                    "failures": []}
+    _run(gh, slack, collect_findings(ENTITIES, GREEN_STEPS, "success", [gabfest_down]),
+         SEP22 + timedelta(days=1))
+    assert "recovered" in slack.messages[-1] and gh.issues[101]["state"] == "closed"
+
+
+def test_a_lost_changed_message_is_retried_next_run():
+    gh = FakeGitHub()
+    _run(gh, FakeSlack(), _entities([_feed_failing("ai-daily-brief")]), SEP22)
+    _run(gh, FakeSlack(ok=False), _entities([_feed_failing("ai-daily-brief", "tal")]),
+         SEP22 + timedelta(days=1))
+    assert gh.alert("entities:import_caught_up_to_feed").subjects == ["ai-daily-brief"]
+    slack = FakeSlack()
+    _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), SEP22 + timedelta(days=2))
+    assert len(slack.messages) == 1 and "now also failing for tal" in slack.messages[0]
+
+
+def test_the_entities_backstop_leaves_a_show_its_owner_is_already_reporting():
+    """Reviewer finding: a real SOP outage opens music-sop issues from pipeline.yml; a
+    week later the entities backstop would open a second thread for the same outage."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    sop = RunContext.build("music", "1")
+    red = collect_findings(sop, _steps(preflight="success", spotify_cache="success",
+                                       pipeline="failure", feed_check="skipped"), "failure")
+    run_announce(sop, red, gh=gh, post=slack, today=SEP22, run_url=RUN)
+    out = _run(gh, slack, _entities([_feed_failing("sop")]), SEP22 + timedelta(days=8))
+    assert len(slack.messages) == 1  # only the owner's
+    assert gh.alert("entities:import_caught_up_to_feed") is None
+    assert any("to the music workflow" in a for a in out.actions)
+
+    # A show nobody else is reporting still gets through.
+    _run(gh, slack, _entities([_feed_failing("sop", "tal")]), SEP22 + timedelta(days=9))
+    assert len(slack.messages) == 2
+    assert gh.alert("entities:import_caught_up_to_feed").subjects == ["tal"]
+
+
+def test_a_failed_recovery_comment_still_closes_the_issue():
+    class NoComments(FakeGitHub):
+        def comment(self, number, body):
+            raise RuntimeError("HTTP 502")
+
+    gh, slack = NoComments(), FakeSlack()
+    _run(gh, slack, _entities([SOP_BEHIND]), SEP22)
+    green = collect_findings(ENTITIES, GREEN_STEPS, "success", [_passing("import_caught_up_to_feed")])
+    _run(gh, slack, green, SEP22 + timedelta(days=1))
+    _run(gh, slack, green, SEP22 + timedelta(days=2))
+    assert gh.issues[101]["state"] == "closed"
+    assert sum("recovered" in m for m in slack.messages) == 1
+
+
+def test_two_threads_for_one_key_are_merged_into_the_older():
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, _entities([SOP_BEHIND]), SEP22)
+    twin = dict(gh.issues[101], number=150, html_url="https://x/150")
+    gh.issues[150] = twin
+    _run(gh, slack, _entities([SOP_BEHIND]), SEP22 + timedelta(days=1))
+    assert gh.issues[150]["state"] == "closed" and gh.issues[101]["state"] == "open"
+    assert any(n == 150 and "#101 already tracks" in b for n, b in gh.comments)
 
 
 def test_a_milder_warning_does_end_a_failure():
