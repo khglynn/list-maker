@@ -111,3 +111,13 @@ def test_every_health_check_run_hands_its_results_to_the_announcer():
         assert runs, name
         for line in runs:
             assert '--results-file "$ALERT_DETAILS_DIR/health.json"' in line, (name, line)
+
+
+def test_announce_is_the_last_step_of_its_job():
+    """It judges the whole run from the steps before it; a step added after it would be
+    invisible to the alerts (never failed, never recovered)."""
+    for name in ANNOUNCED:
+        text = _read(name)
+        after = text[text.index("- name: Announce (Slack + failure issues"):]
+        later_steps = re.findall(r"^      - (?:name|uses|run):", after, re.M)
+        assert later_steps == [], f"{name}: a step follows Announce"

@@ -498,10 +498,11 @@ def test_sop_friday_episode_waiting_for_wednesday_is_pending_not_behind(monkeypa
 ENTITY_RUN_SHOWS = ["ai-daily-brief", "hard-fork", "pchh", "culture-gabfest"]
 
 
-def test_entities_run_leaves_a_music_shows_normal_wait_to_its_own_workflow(monkeypatch) -> None:
-    """The 2026-09-22 "entity pipeline FAILED": a music-show wait judged by the run that
-    doesn't import it. Even past SOP's own window, the entities run only notes it —
-    pipeline.yml's post-import check is where SOP goes red."""
+def test_entities_run_leaves_a_music_show_to_its_owner_until_the_backstop(monkeypatch) -> None:
+    """The 2026-09-22 "entity pipeline FAILED": a music show judged by the run that
+    doesn't import it. Past SOP's own window but inside the backstop, the entities run
+    only notes it — pipeline.yml's post-import check is where SOP goes red (at its next
+    import after the window, about a week in; see FEED_BACKSTOP_EXTRA_DAYS)."""
     result = _feed_check(
         monkeypatch,
         rows=[_held_row("sop", "https://switchedonpop.com/episodes/x", "X", date(2026, 9, 15))],

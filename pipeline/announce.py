@@ -57,6 +57,7 @@ from typing import Any, Callable, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from alert_guides import CHECK_GUIDES, RUN_GUIDE, STEP_GUIDES, Guide, fallback_guide  # noqa: E402
+from show_config import shows_with_spotify  # noqa: E402 — stdlib-only, like this file
 
 REMIND_AFTER_DAYS = 7
 MARKER = "list-maker-alert"
@@ -479,22 +480,43 @@ def post_slack(text: str, webhook: Optional[str] = None) -> bool:
 
 # ── doing it ────────────────────────────────────────────────────────────────────────────
 
+# How recently the music workflow must have spoken about a show for the entities run to
+# leave that show to it: its weekly reminder cadence plus the gap between its runs.
+OWNER_ACTIVE_DAYS = REMIND_AFTER_DAYS + 3
+
+
 def _leave_owned_shows_to_their_owner(
     ctx: RunContext, findings: dict[str, Finding], other_open: dict[str, OpenAlert],
-    actions: list[str],
+    actions: list[str], today: date,
 ) -> dict[str, Finding]:
     """The daily entities run backstops the music shows a week past their window. If the
-    music workflow already has an open alert for that show (any of its checks or steps),
-    the owner is reporting it; a second thread about the same outage is noise. The show
-    is dropped from the entities finding, and a finding left with no show of its own is
-    set aside as not evaluated (neither new nor a recovery)."""
+    music workflow is ACTIVELY reporting that show (an open alert it announced within
+    OWNER_ACTIVE_DAYS), a second thread about the same outage is noise: the show is
+    dropped from the entities finding, and a finding left with no show of its own is set
+    aside as not evaluated (neither new nor a recovery).
+
+    Two limits, both from review (2026-09-23). Only real music shows are deferred —
+    pipeline.yml's manual show_id=3 writes `music-ai-daily-brief:` keys that no
+    scheduled run re-evaluates, and those must never mute the entities run's own show.
+    And only an owner that is still speaking: if pipeline.yml stops being dispatched
+    with an alert open (the July 2026 failure), its reminders stop too, and the
+    backstop has to take over rather than defer to a thread nobody updates."""
     if ctx.workflow != "entities":
         return findings
+    music = {cfg.slug for cfg in shows_with_spotify()}
+
+    def owner_active(slug: str) -> bool:
+        return any(
+            k.startswith(f"music-{slug}:") and a.last_posted is not None
+            and (today - a.last_posted).days <= OWNER_ACTIVE_DAYS
+            for k, a in other_open.items()
+        )
+
     out = dict(findings)
     for key, finding in findings.items():
         if not (finding.failing and finding.subjects):
             continue
-        owned = {s for s in finding.subjects if any(k.startswith(f"music-{s}:") for k in other_open)}
+        owned = {s for s in finding.subjects if s in music and owner_active(s)}
         if not owned:
             continue
         remaining = [s for s in finding.subjects if s not in owned]
@@ -576,7 +598,7 @@ def announce(
         posted = False if dry_run else post(message)
         return Outcome(plan, message, posted, [f"could not read alert state: {exc}"], list(notes))
 
-    findings = _leave_owned_shows_to_their_owner(ctx, findings, other_open, actions)
+    findings = _leave_owned_shows_to_their_owner(ctx, findings, other_open, actions, today)
     plan = decide(findings, open_alerts, today)
 
     # 2. Open an issue for each new failure first, so the Slack message can link it.

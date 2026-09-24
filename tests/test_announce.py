@@ -32,7 +32,7 @@ RUN = "https://github.com/khglynn/list-maker/actions/runs/1"
 SEP22 = date(2026, 9, 22)
 ENTITIES = RunContext.build("entities")
 
-SOP_BEHIND = {
+AI_DAILY_BEHIND = {
     "name": "import_caught_up_to_feed",
     "status": "fail",
     "summary": "1 show(s) behind their feed (missing episodes).",
@@ -123,7 +123,7 @@ def _run(gh, slack, findings, today, **kw):
 # ── what counts as evaluated ────────────────────────────────────────────────────────────
 
 def test_a_failing_check_is_its_own_finding_and_the_health_step_is_not_blamed():
-    findings = _entities([SOP_BEHIND, _passing("notion_sync_freshness")])
+    findings = _entities([AI_DAILY_BEHIND, _passing("notion_sync_freshness")])
     assert findings["entities:import_caught_up_to_feed"].failing
     assert not findings["entities:notion_sync_freshness"].failing
     assert not findings["entities:step:health"].failing  # it reported; the check failed
@@ -205,7 +205,7 @@ def test_an_issue_whose_message_never_landed_is_reminded_next_run():
 
 def test_a_new_failure_is_one_message_with_plain_words_and_its_own_issue():
     gh, slack = FakeGitHub(), FakeSlack()
-    out = _run(gh, slack, _entities([SOP_BEHIND, _passing("notion_sync_freshness")]), SEP22)
+    out = _run(gh, slack, _entities([AI_DAILY_BEHIND, _passing("notion_sync_freshness")]), SEP22)
 
     assert len(slack.messages) == 1  # was two pings a second apart, every red day
     msg = slack.messages[0]
@@ -222,8 +222,8 @@ def test_a_new_failure_is_one_message_with_plain_words_and_its_own_issue():
 
 def test_the_same_failure_the_next_day_is_quiet_and_the_issue_updates_silently():
     gh, slack = FakeGitHub(), FakeSlack()
-    _run(gh, slack, _entities([SOP_BEHIND]), SEP22)
-    _run(gh, slack, _entities([SOP_BEHIND]), SEP22 + timedelta(days=1))
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22)
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22 + timedelta(days=1))
 
     assert len(slack.messages) == 1
     assert gh.comments == []  # a comment notifies; a body edit doesn't
@@ -232,12 +232,12 @@ def test_the_same_failure_the_next_day_is_quiet_and_the_issue_updates_silently()
 
 def test_a_week_later_it_is_said_again_with_how_long_it_has_been_true():
     gh, slack = FakeGitHub(), FakeSlack()
-    _run(gh, slack, _entities([SOP_BEHIND]), SEP22)
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22)
     for day in range(1, REMIND_AFTER_DAYS):
-        _run(gh, slack, _entities([SOP_BEHIND]), SEP22 + timedelta(days=day))
+        _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22 + timedelta(days=day))
     assert len(slack.messages) == 1
 
-    _run(gh, slack, _entities([SOP_BEHIND]), SEP22 + timedelta(days=REMIND_AFTER_DAYS))
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22 + timedelta(days=REMIND_AFTER_DAYS))
     assert len(slack.messages) == 2
     assert "Still failing since Sep 22* (7 days)" in slack.messages[1]
     assert gh.comments and "7 days since 2026-09-22" in gh.comments[-1][1]
@@ -245,13 +245,13 @@ def test_a_week_later_it_is_said_again_with_how_long_it_has_been_true():
     assert alert.since == SEP22 and alert.last_posted == SEP22 + timedelta(days=7)
 
     # ...and then quiet for another week.
-    _run(gh, slack, _entities([SOP_BEHIND]), SEP22 + timedelta(days=8))
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22 + timedelta(days=8))
     assert len(slack.messages) == 2
 
 
 def test_the_first_green_run_says_recovered_and_closes_the_issue():
     gh, slack = FakeGitHub(), FakeSlack()
-    _run(gh, slack, _entities([SOP_BEHIND]), SEP22)
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22)
     green = collect_findings(ENTITIES, GREEN_STEPS, "success", [_passing("import_caught_up_to_feed")])
     _run(gh, slack, green, SEP22 + timedelta(days=1))
 
@@ -269,7 +269,7 @@ def test_unrelated_failures_get_separate_issues_and_each_recovers_on_its_own():
     """#64 put the 09-14 Notion race and the 09-22 SOP lag in one thread."""
     gh, slack = FakeGitHub(), FakeSlack()
     _run(gh, slack, _entities([NOTION_DRIFT, _passing("import_caught_up_to_feed")]), date(2026, 9, 21))
-    _run(gh, slack, _entities([_passing("notion_sync_freshness"), SOP_BEHIND]), SEP22)
+    _run(gh, slack, _entities([_passing("notion_sync_freshness"), AI_DAILY_BEHIND]), SEP22)
 
     assert len(slack.messages) == 2
     second = slack.messages[1]
@@ -282,7 +282,7 @@ def test_unrelated_failures_get_separate_issues_and_each_recovers_on_its_own():
 def test_a_failure_joining_one_already_reported_is_new_and_names_the_other():
     gh, slack = FakeGitHub(), FakeSlack()
     _run(gh, slack, _entities([NOTION_DRIFT]), date(2026, 9, 21))
-    _run(gh, slack, _entities([NOTION_DRIFT, SOP_BEHIND]), SEP22)
+    _run(gh, slack, _entities([NOTION_DRIFT, AI_DAILY_BEHIND]), SEP22)
     assert len(slack.messages) == 2
     assert "Also still failing, already reported" in slack.messages[1]
     assert "Notion is behind Neon" in slack.messages[1]
@@ -381,13 +381,38 @@ def test_the_entities_backstop_leaves_a_show_its_owner_is_already_reporting():
     assert gh.alert("entities:import_caught_up_to_feed").subjects == ["tal"]
 
 
+def test_a_manual_ai_daily_music_run_never_mutes_the_entities_runs_own_show():
+    """Review finding W1: pipeline.yml's manual show_id=3 writes music-ai-daily-brief keys
+    no scheduled run re-evaluates. Deferring to it would silence AI Daily forever."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    manual = RunContext.build("music", "3")
+    red = collect_findings(manual, _steps(preflight="success", spotify_cache="success",
+                                          pipeline="failure", feed_check="skipped"), "failure")
+    run_announce(manual, red, gh=gh, post=slack, today=SEP22, run_url=RUN)
+    _run(gh, slack, _entities([_feed_failing("ai-daily-brief")]), SEP22 + timedelta(days=1))
+    assert len(slack.messages) == 2 and gh.alert("entities:import_caught_up_to_feed")
+
+
+def test_the_backstop_takes_over_when_the_owner_has_gone_quiet():
+    """If pipeline.yml stops being dispatched with its alert open (July 2026), that alert
+    stops being reminded. A stale owner thread must not mute the backstop."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    sop = RunContext.build("music", "1")
+    red = collect_findings(sop, _steps(preflight="success", spotify_cache="success",
+                                       pipeline="failure", feed_check="skipped"), "failure")
+    run_announce(sop, red, gh=gh, post=slack, today=SEP22, run_url=RUN)
+    _run(gh, slack, _entities([_feed_failing("sop")]), SEP22 + timedelta(days=11))
+    assert len(slack.messages) == 2
+    assert gh.alert("entities:import_caught_up_to_feed").subjects == ["sop"]
+
+
 def test_a_failed_recovery_comment_still_closes_the_issue():
     class NoComments(FakeGitHub):
         def comment(self, number, body):
             raise RuntimeError("HTTP 502")
 
     gh, slack = NoComments(), FakeSlack()
-    _run(gh, slack, _entities([SOP_BEHIND]), SEP22)
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22)
     green = collect_findings(ENTITIES, GREEN_STEPS, "success", [_passing("import_caught_up_to_feed")])
     _run(gh, slack, green, SEP22 + timedelta(days=1))
     _run(gh, slack, green, SEP22 + timedelta(days=2))
@@ -397,10 +422,10 @@ def test_a_failed_recovery_comment_still_closes_the_issue():
 
 def test_two_threads_for_one_key_are_merged_into_the_older():
     gh, slack = FakeGitHub(), FakeSlack()
-    _run(gh, slack, _entities([SOP_BEHIND]), SEP22)
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22)
     twin = dict(gh.issues[101], number=150, html_url="https://x/150")
     gh.issues[150] = twin
-    _run(gh, slack, _entities([SOP_BEHIND]), SEP22 + timedelta(days=1))
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22 + timedelta(days=1))
     assert gh.issues[150]["state"] == "closed" and gh.issues[101]["state"] == "open"
     assert any(n == 150 and "#101 already tracks" in b for n, b in gh.comments)
 
@@ -445,18 +470,18 @@ def test_a_music_run_cannot_recover_another_shows_failure():
 
 def test_a_message_that_did_not_land_is_retried_the_next_day():
     gh = FakeGitHub()
-    _run(gh, FakeSlack(ok=False), _entities([SOP_BEHIND]), SEP22)
+    _run(gh, FakeSlack(ok=False), _entities([AI_DAILY_BEHIND]), SEP22)
     assert gh.alert("entities:import_caught_up_to_feed").last_posted is None
 
     slack = FakeSlack()
-    _run(gh, slack, _entities([SOP_BEHIND]), SEP22 + timedelta(days=1))
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22 + timedelta(days=1))
     assert len(slack.messages) == 1 and "Still failing since Sep 22" in slack.messages[0]
     assert gh.alert("entities:import_caught_up_to_feed").last_posted == SEP22 + timedelta(days=1)
 
 
 def test_a_dry_run_reads_but_writes_nothing():
     gh, slack = FakeGitHub(), FakeSlack()
-    out = _run(gh, slack, _entities([SOP_BEHIND]), SEP22, dry_run=True)
+    out = _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22, dry_run=True)
     assert slack.messages == [] and gh.writes == []
     assert out.message and "1 new problem" in out.message
     assert any(a.startswith("would open issue") for a in out.actions)
@@ -481,7 +506,7 @@ def test_the_old_failure_thread_is_retired_on_the_first_run():
 
 def test_when_the_memory_cannot_be_read_failures_are_still_said():
     slack = FakeSlack()
-    out = _run(FakeGitHub(fail_reads=True), slack, _entities([SOP_BEHIND]), SEP22)
+    out = _run(FakeGitHub(fail_reads=True), slack, _entities([AI_DAILY_BEHIND]), SEP22)
     assert len(slack.messages) == 1 and "may repeat tomorrow" in slack.messages[0]
     assert out.posted
 
@@ -497,7 +522,7 @@ def test_a_failed_github_write_does_not_cost_the_message():
             raise RuntimeError("HTTP 403")
 
     slack = FakeSlack()
-    out = _run(BrokenWrites(), slack, _entities([SOP_BEHIND]), SEP22)
+    out = _run(BrokenWrites(), slack, _entities([AI_DAILY_BEHIND]), SEP22)
     assert len(slack.messages) == 1 and "(issue not created)" in slack.messages[0]
     assert any("FAILED: HTTP 403" in a for a in out.actions)
 
@@ -586,7 +611,7 @@ def test_alert_note_rides_with_the_announcer_when_there_is_one(monkeypatch, tmp_
 
 
 def test_main_reads_what_the_steps_left_and_summarizes(monkeypatch, tmp_path, capsys):
-    (tmp_path / "health.json").write_text(json.dumps([SOP_BEHIND]))
+    (tmp_path / "health.json").write_text(json.dumps([AI_DAILY_BEHIND]))
     (tmp_path / "notes.txt").write_text("Notion sync — 1/40 failed\n")
     monkeypatch.setenv("ALERT_DETAILS_DIR", str(tmp_path))
     monkeypatch.setenv("STEPS_JSON", json.dumps(RED_HEALTH_STEPS))

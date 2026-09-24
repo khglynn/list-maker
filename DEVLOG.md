@@ -4,6 +4,30 @@ Chronological session journal. Most recent at top. Never delete entries.
 
 ---
 
+## 2026-09-23 — The Slack channel says each thing once, weekly while it's true, and "recovered" when it's fixed (PR #67)
+
+**Trigger:** Kevin, in an open-loops sweep: "all the slack errors I've been getting is a big reason for this chat. errors and noise", with two #list-maker screenshots ("data health — import_caught_up_to_feed: 1 show(s) behind their feed" and "entity pipeline FAILED"). Diagnosis: `hg-agents/claude-plans/2026-09-22-state-sweep/diag-list-maker.md`.
+
+**What the pings actually were.** None of the red entities runs since 09-14 was a data problem. Every red day sent two lines a second apart (data_health's own post, then the workflow's) plus a "Failed again" comment on #64, which never closed and so merged unrelated streaks. The channel history is worse: June 8 to August 26 carried the same data-health line nearly every day. Four causes:
+1. **09-22 "1 show behind":** SOP's Friday episode, which the Friday scrape couldn't see yet, waiting for Wednesday's import. SOP's 4-day window assumed Tuesday-only publishing; Neon since March holds SOP episodes on five weekdays. Sized by the repo's own rule it is 6. And the entities run, which doesn't import SOP, was judging it at all.
+2. **09-14 and 09-21 Notion drift:** the check compared an entity's last sync to its update and never asked how long the update had waited; the Monday intake updates entities the same minute the check runs. They reached Notion 30 minutes later.
+3. **09-15 (silent):** the pulse, called from entities.yml, took its caller's concurrency group and GitHub cancelled it as a deadlock. No heartbeat since 09-01; 10-01 would have repeated it.
+4. **Mondays "curated intake FAILED" (09-07, 09-14, 09-21):** Neon ends a session idle *in a transaction* after 5 minutes (`idle_in_transaction_session_timeout`, read 2026-09-23); psycopg2 opens one on the first SELECT; the intake's connection sat in it through the 7-9 minute Notion sync and died at the final report, after all the work was done.
+
+**Fixed (one commit each):** a literal concurrency group for pulse.yml; the drift check measures the update's wait (computed in SQL — `updated_at` has no time zone, and comparing it in Python would have crashed the whole health run the first day anything was pending); SOP window 6, TAL checked and kept at 2; the entities run judges only its own shows and backstops music shows a week past their window (kept, not dropped, because July's TAL outage was pipeline.yml never running — no post-import check sees that); the intake connection runs in autocommit and the report reconnects once if the connection is lost anyway.
+
+**The new rule for alerts** (`pipeline/announce.py`, the last step of entities/pipeline/blogs): one message per run at most, only when something starts failing, the set of failures changes, a failure has been true another 7 days (Kevin's addition: "if a real error only posts once I won't really know if it's not fixed"), or something recovers. Each failing check or step gets its own issue, which closes itself on recovery; #64 is retired on the first run. Every message says what failed, why it usually happens and what to check first (`pipeline/alert_guides.py`). Which message means what: CLAUDE.md § Alerts.
+
+**Verified:** 807 → 870 tests; actionlint finds nothing new against main; the announce step dry-run against the real issues (a green run says nothing and would retire #64); the drift predicate and the scoped feed check run live, read-only. The Monday failure reproduced live, read-only: two connections, one SELECT each, 330 s idle — the default one failed with the exact "SSL connection has been closed unexpectedly", the autocommit one answered.
+
+**Reviewed:** an independent Opus review found 10 real problems in the first cut, all fixed before hand-off — among them: a second show failing an already-open check would have waited a week to be said; a day of Taddy downtime would have announced a false "recovered"; an entity mentioned daily whose Notion sync kept failing would never have tripped the new drift rule; and the entities run's hand-off to the music workflow could have muted AI Daily's own alarms behind a stale manual-run alert.
+
+**A trade Kevin should know about:** music-show misses now surface at the show's *next* import after its window (about a week), not in 2–4 days as the noisy daily check did; the entities backstop follows a few days after that if pipeline.yml has gone quiet. A tighter window for the post-import check (only the source's own lag) would bring it back to a day or two once there's SOP website-lag data (CLAUDE.md § Alerts).
+
+**Left open:** `eval.yml` still double-posts on a breach (its script and its workflow both post) and isn't on the announce step yet; the 09-14 intake ran 60m04s against a 60-minute step timeout because it judged 60 and ingested ~50 candidates at about a minute each — a volume question for the intake's per-run limit, not a connection one.
+
+---
+
 ## 2026-09-04 — Phase 5 built in a day: the music path covered, and a scrape that had been dead since January fixed (arc branch; PR to main open)
 
 **Trigger:** Kevin's "why not do these here?" at 01:50 CT, on a Phase 5 map written overnight (five Sonnet readers, Opus synthesis, `claude-plans/2026-09-04-phase-5/`) that was supposed to be about test coverage and turned out to be about an outage: **no This American Life episode since January 2026 had a single song row**, and the Monday cron reported success every week. The Taddy discovery importer stamps `scraped_at` on every TAL row it re-sees (`import_transcripts.py:364`), the website scraper queued only unstamped rows, and a Taddy API url would have been the wrong page anyway. The parser was fine; the pages were never fetched.

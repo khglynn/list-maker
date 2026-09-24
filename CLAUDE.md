@@ -136,6 +136,10 @@ See `pipeline/README.md` for orchestrator docs, `evals/README.md` for the eval h
 
 **A feed check that couldn't reach a feed** ("feed UNVERIFIED") neither fails nor recovers anything: an open "behind" issue stays open until the feed answers.
 
+**How fast a music-show gap is caught (a known trade, 2026-09-23):** `pipeline.yml` judges SOP and TAL right after each import, but a missed episode only counts once it is older than the show's window (SOP 6 days, TAL 2), so a real miss usually surfaces at the show's *next* import, about a week in; the entities backstop follows a few days later if `pipeline.yml` has gone quiet. Before this, the daily entities run caught misses in 2–4 days but also cried wolf. A tighter window for the check that runs straight after an import (only the source's own lag) would bring this back to a day or two; it needs a few weeks of SOP website-lag data first.
+
+**The Worker's own Slack secret is unset on purpose-ish:** if it is ever set, its next-day line (`list-maker: entities.yml failed …`) fires for every red day, outside the once-then-weekly rule.
+
 **Where to change it:** thresholds live with each check in `pipeline/data_health.py`; words in `pipeline/alert_guides.py` (a test fails if a check has none); the once / weekly / recovered logic in `pipeline/announce.py`. The music shows are judged by `pipeline.yml` right after each import; the daily entities run checks them only as a backstop a week past their window (`FEED_BACKSTOP_EXTRA_DAYS`). A workflow's `dry_run` input runs the announce step read-only and prints what it would have said.
 
 ## AI Daily Pipeline
