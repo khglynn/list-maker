@@ -1777,19 +1777,19 @@ def test_music_silence_is_in_the_standard_check_set() -> None:
 
 
 def test_r4_8_a_failed_create_the_sync_stopped_trying_does_not_fail_forever(monkeypatch) -> None:
-    """If an entity loses the mentions that made it eligible, sync_notion stops selecting
-    it, so its 'failed' mark would fail this check forever. Only a recent attempt counts."""
+    """If an entity loses every mention (a replaced batch), sync_notion never selects it
+    again, so its 'failed' mark would fail this check forever. An entity with no mentions
+    is explicitly ineligible and doesn't count (round 5 replaced the age gate with this)."""
     from datetime import date as _date
 
     _patch_notion_freshness(
         monkeypatch, transcript_rows=[], stale_entity_rows=[], failed_entities=1,
         failed_create_rows=[{"id": 5, "canonical_name": "Cursor", "last_try": _date(2026, 9, 12),
-                             "since_try": timedelta(days=10)}],
+                             "has_mentions": False}],
     )
     assert check_notion_sync_freshness(conn=None).status != "fail"
 
 
-@pytest.mark.xfail(strict=True, reason="Codex P1: an unresolved Notion create ages into a pass")
 def test_r5_4_a_failed_create_still_eligible_stays_a_failure_however_old(monkeypatch) -> None:
     from datetime import date as _date
 
