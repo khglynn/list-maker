@@ -79,6 +79,9 @@ class FakeGitHub:
             raise RuntimeError("HTTP 502")
         return [i for i in self.issues.values() if i.get("state", "open") == "open"]
 
+    def recently_closed(self, since):
+        return [i for i in self.issues.values() if i.get("state") == "closed"]
+
     def create_issue(self, title, body, labels):
         number = self._next
         self._next += 1
@@ -86,6 +89,7 @@ class FakeGitHub:
             "number": number, "title": title, "body": body, "state": "open",
             "labels": [{"name": n} for n in labels],
             "html_url": f"https://github.com/khglynn/list-maker/issues/{number}",
+            "created_at": "2026-09-22T20:40:00Z",
         }
         self.writes.append(f"create #{number}")
         return self.issues[number]
@@ -154,11 +158,17 @@ def test_a_red_run_with_no_tracked_failure_is_still_announced():
     assert findings["entities:run"].failing
 
 
-def test_a_cancelled_run_says_nothing():
-    steps = _steps(preflight="success", **{"import": "cancelled"})
+def test_a_cancelled_run_is_a_failure_not_silence():
+    """Review finding C6: a job cut off by its time limit ends "cancelled". Staying quiet
+    about that is the shape that hid the May-June 2026 playlist outage."""
+    steps = _steps(preflight="success", **{"import": "success"}, notion="cancelled", health="skipped")
     findings = collect_findings(ENTITIES, steps, "cancelled")
-    assert all(not f.failing for f in findings.values())
-    assert "entities:run" not in findings
+    run = findings["entities:run"]
+    assert run.failing and "cancelled before it finished" in run.summary
+    assert not findings["entities:step:import"].failing  # what did run still counts
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, findings, SEP22)
+    assert len(slack.messages) == 1 and "Something outside the main steps failed" in slack.messages[0]
 
 
 def test_music_keys_are_scoped_to_the_show_that_ran():
@@ -249,20 +259,37 @@ def test_a_week_later_it_is_said_again_with_how_long_it_has_been_true():
     assert len(slack.messages) == 2
 
 
-def test_the_first_green_run_says_recovered_and_closes_the_issue():
+def _green(*names: str):
+    return collect_findings(ENTITIES, GREEN_STEPS, "success", [_passing(n) for n in names])
+
+
+def test_recovery_is_said_once_it_has_held_and_the_issue_closes():
+    """A daily check says "recovered" on its second green day in a row (RECOVERY_HOLD_DAYS),
+    not its first: a check hovering at a threshold otherwise posts every day."""
     gh, slack = FakeGitHub(), FakeSlack()
     _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22)
-    green = collect_findings(ENTITIES, GREEN_STEPS, "success", [_passing("import_caught_up_to_feed")])
-    _run(gh, slack, green, SEP22 + timedelta(days=1))
+    _run(gh, slack, _green("import_caught_up_to_feed"), SEP22 + timedelta(days=1))
+    assert len(slack.messages) == 1 and gh.issues[101]["state"] == "open"  # not held yet
 
+    _run(gh, slack, _green("import_caught_up_to_feed"), SEP22 + timedelta(days=2))
     assert len(slack.messages) == 2
     assert "recovered" in slack.messages[1] and "failing since Sep 22" in slack.messages[1]
     assert gh.issues[101]["state"] == "closed"
-    assert any("Recovered on 2026-09-23" in body for _, body in gh.comments)
+    assert any("Recovered on 2026-09-24" in body for _, body in gh.comments)
 
-    # A second green run has nothing to say.
-    _run(gh, slack, green, SEP22 + timedelta(days=2))
+    # A further green run has nothing to say.
+    _run(gh, slack, _green("import_caught_up_to_feed"), SEP22 + timedelta(days=3))
     assert len(slack.messages) == 2
+
+
+def test_a_weekly_check_recovers_on_its_first_green_run():
+    gh, slack = FakeGitHub(), FakeSlack()
+    intake = RunContext.build("intake")
+    red = collect_findings(intake, _steps(preflight="success", log_schema="success", intake="failure"), "failure")
+    run_announce(intake, red, gh=gh, post=slack, today=SEP22, run_url=RUN)
+    green = collect_findings(intake, _steps(preflight="success", log_schema="success", intake="success"), "success")
+    run_announce(intake, green, gh=gh, post=slack, today=SEP22 + timedelta(days=7), run_url=RUN)
+    assert len(slack.messages) == 2 and "recovered" in slack.messages[1]
 
 
 def test_unrelated_failures_get_separate_issues_and_each_recovers_on_its_own():
@@ -271,12 +298,15 @@ def test_unrelated_failures_get_separate_issues_and_each_recovers_on_its_own():
     _run(gh, slack, _entities([NOTION_DRIFT, _passing("import_caught_up_to_feed")]), date(2026, 9, 21))
     _run(gh, slack, _entities([_passing("notion_sync_freshness"), AI_DAILY_BEHIND]), SEP22)
 
-    assert len(slack.messages) == 2
-    second = slack.messages[1]
-    assert "1 new problem" in second and "Recovered:" in second  # one message, both changes
+    assert len(slack.messages) == 2 and "1 new problem" in slack.messages[1]
     notion_issue, feed_issue = gh.issues[101], gh.issues[102]
-    assert notion_issue["state"] == "closed" and feed_issue["state"] == "open"
     assert "Notion" in notion_issue["title"] and "podcast feed" in feed_issue["title"]
+    assert notion_issue["state"] == "open"  # one green day: not held yet
+
+    _run(gh, slack, _entities([_passing("notion_sync_freshness"), AI_DAILY_BEHIND]),
+         SEP22 + timedelta(days=1))
+    assert len(slack.messages) == 3 and "Recovered:" in slack.messages[2]
+    assert notion_issue["state"] == "closed" and feed_issue["state"] == "open"
 
 
 def test_a_failure_joining_one_already_reported_is_new_and_names_the_other():
@@ -316,9 +346,12 @@ def test_a_second_show_failing_an_open_check_is_news():
     assert len(slack.messages) == 2
     assert gh.alert("entities:import_caught_up_to_feed").subjects == ["tal"]
 
-    # ...and if it falls behind again, that is news again.
+    # A show that already failed in this thread flapping back is not news (it shows up in
+    # the weekly reminder); a show it never failed for is.
     _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), SEP22 + timedelta(days=4))
-    assert len(slack.messages) == 3 and "now also failing for ai-daily-brief" in slack.messages[2]
+    assert len(slack.messages) == 2
+    _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal", "pchh")]), SEP22 + timedelta(days=5))
+    assert len(slack.messages) == 3 and "now also failing for pchh" in slack.messages[2]
 
 
 def test_an_unverified_feed_neither_fails_nor_recovers():
@@ -346,8 +379,9 @@ def test_a_different_shows_unreachable_feed_does_not_freeze_a_recovery():
                     "details": ["culture-gabfest: feed UNVERIFIED — second source unreachable",
                                 "hard-fork: caught up (2026-09-22)"],
                     "failures": []}
-    _run(gh, slack, collect_findings(ENTITIES, GREEN_STEPS, "success", [gabfest_down]),
-         SEP22 + timedelta(days=1))
+    for day in (1, 2):  # held on the second green day
+        _run(gh, slack, collect_findings(ENTITIES, GREEN_STEPS, "success", [gabfest_down]),
+             SEP22 + timedelta(days=day))
     assert "recovered" in slack.messages[-1] and gh.issues[101]["state"] == "closed"
 
 
@@ -362,14 +396,26 @@ def test_a_lost_changed_message_is_retried_next_run():
     assert len(slack.messages) == 1 and "now also failing for tal" in slack.messages[0]
 
 
+SOP = RunContext.build("music", "1")
+TAL = RunContext.build("music", "2")
+
+
+def _music_feed_red(ctx: RunContext, slug: str) -> dict:
+    return collect_findings(ctx, _steps(preflight="success", spotify_cache="success",
+                                        pipeline="success", feed_check="failure"), "failure",
+                            [_feed_failing(slug)])
+
+
+def _music_step_red(ctx: RunContext) -> dict:
+    return collect_findings(ctx, _steps(preflight="success", spotify_cache="success",
+                                        pipeline="failure", feed_check="skipped"), "failure")
+
+
 def test_the_entities_backstop_leaves_a_show_its_owner_is_already_reporting():
-    """Reviewer finding: a real SOP outage opens music-sop issues from pipeline.yml; a
-    week later the entities backstop would open a second thread for the same outage."""
+    """A real SOP outage opens music-sop's own feed alert; a week later the entities
+    backstop would open a second thread for the same outage."""
     gh, slack = FakeGitHub(), FakeSlack()
-    sop = RunContext.build("music", "1")
-    red = collect_findings(sop, _steps(preflight="success", spotify_cache="success",
-                                       pipeline="failure", feed_check="skipped"), "failure")
-    run_announce(sop, red, gh=gh, post=slack, today=SEP22, run_url=RUN)
+    run_announce(SOP, _music_feed_red(SOP, "sop"), gh=gh, post=slack, today=SEP22, run_url=RUN)
     out = _run(gh, slack, _entities([_feed_failing("sop")]), SEP22 + timedelta(days=8))
     assert len(slack.messages) == 1  # only the owner's
     assert gh.alert("entities:import_caught_up_to_feed") is None
@@ -379,6 +425,54 @@ def test_the_entities_backstop_leaves_a_show_its_owner_is_already_reporting():
     _run(gh, slack, _entities([_feed_failing("sop", "tal")]), SEP22 + timedelta(days=9))
     assert len(slack.messages) == 2
     assert gh.alert("entities:import_caught_up_to_feed").subjects == ["tal"]
+
+
+def test_only_the_owners_own_feed_alert_counts_as_reporting_it():
+    """Review C1/C7/C10: the owner must be reporting the same check. A music-sop step
+    failure is a different fact (and it skips the owner's feed check altogether)."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    run_announce(SOP, _music_step_red(SOP), gh=gh, post=slack, today=SEP22, run_url=RUN)
+    _run(gh, slack, _entities([_feed_failing("sop")]), SEP22 + timedelta(days=8))
+    assert len(slack.messages) == 2 and gh.alert("entities:import_caught_up_to_feed")
+
+
+def test_no_music_alert_ever_mutes_the_songs_check():
+    """Review C1/C7/C10, high: the hand-off applied to every per-show check, so any active
+    music-tal alert silenced 'tal: NO NEW SONGS' — the check built for the July TAL
+    outage, which only the entities run evaluates."""
+    songs = {"name": "music_songs_still_arriving", "status": "fail",
+             "summary": "1 music show(s) have stopped acquiring songs: tal.",
+             "details": ["tal: NO NEW SONGS in 30 days"], "failures": ["tal: NO NEW SONGS in 30 days"]}
+    for owner in (_music_step_red(TAL), _music_feed_red(TAL, "tal")):
+        gh, slack = FakeGitHub(), FakeSlack()
+        run_announce(TAL, owner, gh=gh, post=slack, today=SEP22, run_url=RUN)
+        out = _run(gh, slack, _entities([songs]), SEP22 + timedelta(days=3))
+        assert len(slack.messages) == 2 and "stopped getting songs" in slack.messages[1]
+        assert gh.alert("entities:music_songs_still_arriving")
+        assert not any("to the music workflow" in a for a in out.actions)
+
+
+def test_a_fully_handed_off_entities_thread_is_closed_with_a_pointer():
+    """Review L16: the backstop opened first, then the owner started reporting the same
+    show. The entities thread must not linger open and silent."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, _entities([_feed_failing("sop")]), SEP22)  # the backstop speaks first
+    run_announce(SOP, _music_feed_red(SOP, "sop"), gh=gh, post=slack,
+                 today=SEP22 + timedelta(days=1), run_url=RUN)
+    _run(gh, slack, _entities([_feed_failing("sop")]), SEP22 + timedelta(days=2))
+    assert gh.issues[101]["state"] == "closed"
+    assert any(n == 101 and "(#102)" in b for n, b in gh.comments)
+    assert len(slack.messages) == 2  # the handover itself is not news
+
+
+def test_an_owner_alert_opened_moments_ago_counts_as_reporting():
+    """Review L7: both workflows run at the same minute; the music issue exists before its
+    message is marked as posted. Opened within a day counts as active."""
+    gh, slack = FakeGitHub(), FakeSlack(ok=False)
+    run_announce(SOP, _music_feed_red(SOP, "sop"), gh=gh, post=slack, today=SEP22, run_url=RUN)
+    assert gh.alert("music-sop:import_caught_up_to_feed").last_posted is None
+    out = _run(gh, FakeSlack(), _entities([_feed_failing("sop")]), SEP22)
+    assert any("to the music workflow" in a for a in out.actions)
 
 
 def test_a_manual_ai_daily_music_run_never_mutes_the_entities_runs_own_show():
@@ -438,8 +532,9 @@ def test_a_milder_warning_does_end_a_failure():
              "details": ["hard-fork ep 1: 5d pending"], "failures": []}
     draining = dict(stuck, status="warn", summary="2 episode(s) queued")
     _run(gh, slack, _entities([stuck]), SEP22)
-    _run(gh, slack, collect_findings(ENTITIES, GREEN_STEPS, "success", [draining]),
-         SEP22 + timedelta(days=1))
+    for day in (1, 2):
+        _run(gh, slack, collect_findings(ENTITIES, GREEN_STEPS, "success", [draining]),
+             SEP22 + timedelta(days=day))
     assert "recovered" in slack.messages[-1] and gh.issues[101]["state"] == "closed"
 
 
@@ -475,7 +570,11 @@ def test_a_message_that_did_not_land_is_retried_the_next_day():
 
     slack = FakeSlack()
     _run(gh, slack, _entities([AI_DAILY_BEHIND]), SEP22 + timedelta(days=1))
-    assert len(slack.messages) == 1 and "Still failing since Sep 22" in slack.messages[0]
+    # Review L5: the first message Kevin actually receives reads as a new problem, with
+    # its usual cause, not as a reminder of something he never heard.
+    assert len(slack.messages) == 1
+    msg = slack.messages[0]
+    assert "first announced today; failing since Sep 22" in msg and "_Usually:_" in msg
     assert gh.alert("entities:import_caught_up_to_feed").last_posted == SEP22 + timedelta(days=1)
 
 
@@ -491,7 +590,8 @@ def test_the_old_failure_thread_is_retired_on_the_first_run():
     legacy = {"number": 64, "title": "Entity pipeline failure (2026-09-14)", "state": "open",
               "body": "The scheduled entity pipeline run failed.",
               "labels": [{"name": "pipeline-failure"}, {"name": "entities"}],
-              "html_url": "https://github.com/khglynn/list-maker/issues/64"}
+              "html_url": "https://github.com/khglynn/list-maker/issues/64",
+              "created_at": "2026-09-14T21:00:00Z"}
     music_legacy = dict(legacy, number=57, labels=[{"name": "pipeline-failure"}, {"name": "music"}])
     gh, slack = FakeGitHub([legacy, music_legacy]), FakeSlack()
     green = collect_findings(ENTITIES, GREEN_STEPS, "success", [_passing("import_caught_up_to_feed")])
