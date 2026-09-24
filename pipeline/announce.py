@@ -381,7 +381,10 @@ def decide(ctx: "RunContext", findings: dict[str, Finding], memory: dict[str, Al
             if alert is None or alert.closed:
                 continue
             if alert.green + 1 >= need:
-                items.append(Item("recovered" if alert.said == "failing" else "quiet_close", finding, alert))
+                # Said only if Slack was last told "failing" — and was told at all: a
+                # recovery of something whose first message never landed closes quietly.
+                speak = alert.said == "failing" and alert.last_posted is not None
+                items.append(Item("recovered" if speak else "quiet_close", finding, alert))
             else:
                 items.append(Item("quiet_pass", finding, alert))
         else:  # not evaluated

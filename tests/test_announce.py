@@ -943,3 +943,14 @@ def test_r4_7_a_relapse_after_a_half_saved_recovery_is_not_a_new_problem():
     _run(gh, slack, red, _day_after(3))
     assert len(gh.issues) == 1
     assert not any("new problem" in m for m in slack.messages[2:])
+
+
+def test_a_problem_never_announced_recovers_quietly():
+    """If the first message never landed and it recovers before the next try, 'recovered'
+    about a problem Kevin never heard of would only confuse."""
+    gh = FakeGitHub()
+    _run(gh, FakeSlack(ok=False), _entities([AI_DAILY_BEHIND]), _day_after(0))
+    slack = FakeSlack()
+    for n in (1, 2):
+        _run(gh, slack, _green("import_caught_up_to_feed"), _day_after(n))
+    assert slack.messages == [] and gh.issues[101]["state"] == "closed"
