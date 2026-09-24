@@ -57,7 +57,11 @@ permissions:
 jobs:
   run-entities:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Above the sum of every step's own timeout-minutes, so a hang always FAILS a step
+    # (which the announce step reports) instead of cancelling the whole job. A cancelled
+    # job is still announced (announce.py treats it as a failed run), but a failed step
+    # says which part hung. tests/test_workflows.py keeps the sum under this line.
+    timeout-minutes: 90
     env:
       # The shows this run imports (a manual run may narrow them). An input reaches
       # the shell only through env, never interpolated into run: text.
@@ -68,9 +72,11 @@ jobs:
 
     steps:
       - name: Checkout
+        timeout-minutes: 3
         uses: actions/checkout@v7
 
       - name: Set up Python 3.12
+        timeout-minutes: 3
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
@@ -78,9 +84,11 @@ jobs:
           cache-dependency-path: pipeline/requirements.txt
 
       - name: Install dependencies
+        timeout-minutes: 4
         run: pip install -r pipeline/requirements.txt
 
       - name: DB preflight (fail fast if Neon is unreachable from this runner)
+        timeout-minutes: 3
         # One bounded connect attempt before any real work. On 2026-08-31 a runner with
         # a dead path to the pooler spent 41 minutes rediscovering that in every step;
         # this ends the job in about a minute and Slacks the diagnostics instead.
@@ -93,7 +101,7 @@ jobs:
       - name: Run entity pipeline
         id: import
         # Step-level timeout (< job timeout) so a hang FAILS this step (→ Slack alert)
-        # instead of cancelling the job, which would skip the if:failure() notify.
+        # instead of cancelling the job, so the announce step can say which step hung.
         timeout-minutes: 50
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
@@ -113,6 +121,7 @@ jobs:
           python run_new_episodes.py --shows "$ENTITY_SHOWS" $FLAGS
 
       - name: Sync transcripts to Notion (Transcripts DB)
+        timeout-minutes: 10
         id: notion
         # Runs even if the pipeline step failed: syncs whatever DID land in Neon.
         # Idempotent (notion_transcript_page_id gate) + adopt-don't-duplicate on resume,
@@ -132,6 +141,7 @@ jobs:
           python sync_transcripts_notion.py --target blog-posts
 
       - name: Data health check (staleness, integrity, feed second-source)
+        timeout-minutes: 5
         id: health
         if: always() && steps.preflight.outcome == 'success'
         env:
@@ -155,6 +165,7 @@ jobs:
             --results-file "$ALERT_DETAILS_DIR/health.json" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Keep the failed batch (dead letter)
+        timeout-minutes: 3
         # A broken extraction batch used to leave nothing but a 500-character stderr tail
         # in an expiring log. Keep the batch directory so it can be inspected or replayed
         # without re-running the whole show. eval.yml does the same for its report.
@@ -175,6 +186,7 @@ jobs:
       # run can close what it fixed. Replaced (2026-09-23) the separate speakers that made
       # every red day two pings and a comment on an issue that never closed.
       - name: Announce (Slack + failure issues, once per change)
+        timeout-minutes: 5
         if: always()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

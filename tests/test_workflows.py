@@ -121,3 +121,20 @@ def test_announce_is_the_last_step_of_its_job():
         after = text[text.index("- name: Announce (Slack + failure issues"):]
         later_steps = re.findall(r"^      - (?:name|uses|run):", after, re.M)
         assert later_steps == [], f"{name}: a step follows Announce"
+
+
+def test_every_step_has_a_timeout_that_fits_inside_the_job():
+    """Review finding C6 (2026-09-23): a job cut off by its own time limit ends
+    "cancelled", the shape that hid the May-June 2026 playlist outage. Every step gets
+    its own timeout, and their sum stays under the job's, so a hang fails a step (which
+    is announced) before the job limit can cancel anything."""
+    for name in ANNOUNCED:
+        text = _read(name)
+        job_limit = int(re.search(r"^    timeout-minutes: (\d+)$", text, re.M).group(1))
+        steps = re.split(r"^      - ", text.split("\n    steps:\n", 1)[1], flags=re.M)[1:]
+        total = 0
+        for step in steps:
+            m = re.search(r"^        timeout-minutes: (\d+)$", step, re.M)
+            assert m, f"{name}: step without timeout-minutes: {step.splitlines()[0]}"
+            total += int(m.group(1))
+        assert total < job_limit, f"{name}: steps may take {total} min, job allows {job_limit}"
