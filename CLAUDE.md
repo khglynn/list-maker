@@ -122,8 +122,8 @@ See `pipeline/README.md` for orchestrator docs, `evals/README.md` for the eval h
 
 **One invariant carries it** (`pipeline/announce.py`, simplified 2026-09-24). For each check or step, a Slack post is only ever one of:
 1. **its first failure** ("N new problem(s)"), which also opens its own GitHub issue;
-2. **a weekly word**, at least 7 days after the last post about it: "still failing since Sep 22 (8 days)", "failing again" if it relapsed after "recovered", or "couldn't check today" when the run didn't get to it (a skipped step, a feed that didn't answer). An open problem never goes silent;
-3. **a verified recovery**, and only if the last thing said was "failing": two green runs in a row for the daily entities run, the first green run for the weekly and twice-weekly workflows.
+2. **the weekly word**: every open issue whose last post is 7 or more days old gets one, whatever today's result — "still failing since Sep 22 (8 days)", "failing again" if it relapsed after "recovered", "couldn't check today" when the run didn't get to it (a skipped step, a feed that didn't answer), or "passing, confirming recovery" when it's green but not yet verified. An open problem never goes silent;
+3. **a verified recovery**, and only if the last thing said was "failing": two green runs in a row (consecutive runs of the workflow) for the daily entities run, the first green run for the weekly and twice-weekly workflows. A show the feed check couldn't see stays counted as failing until it's seen passing.
 
 What follows from that:
 - **Flapping is one problem:** a check that flips back and forth stays one issue, said at most weekly, and the weekly word counts the flips ("on and off: failed 4 of the last 7 runs"). A relapse within a week of "recovered" reopens the same issue quietly; the next word is the weekly one.
@@ -137,6 +137,7 @@ What follows from that:
 |---|---|---|---|
 | :rotating_light: `list-maker · daily entities run — N new problem(s)` (also `SOP music run`, `TAL music run`, `weekly curated intake`) | `pipeline/announce.py`, the last step of `entities.yml`, `pipeline.yml`, `blogs.yml` | A check or step started failing | Each item says what failed, why it usually happens and what to check first (text in `pipeline/alert_guides.py`), with links to its issue and the run |
 | :hourglass_flowing_sand: `… — still failing` | same | The same failure, 7+ days after it was last announced (also when it couldn't be checked that day: "couldn't check today") | Nothing got fixed. "On and off" means it is flapping. The issue has the history |
+| :hourglass_flowing_sand: `… — confirming recovery` | same | 7+ days since the last word, and it's passing but not yet verified | Probably fixed; "recovered" follows once it's confirmed |
 | :rotating_light: `… — failing again` | same | It relapsed after "recovered", and a week has passed since the last word | It isn't fixed after all; same issue, reopened |
 | :white_check_mark: `… — recovered` | same | Verified: two green runs in a row (daily), or the first green run (weekly) | Its issue is closed. Nothing to do |
 | :warning: `… — the alert step itself crashed` | same | `announce.py` raised | The run's result wasn't announced; read the Announce step's log |
