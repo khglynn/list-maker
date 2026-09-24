@@ -27,13 +27,18 @@ on:
   workflow_dispatch:
   workflow_call:
 
-# One run of this workflow at a time. A manual re-run or the Worker's HTTP trigger
-# overlapping a scheduled dispatch would run two orchestrators against the same Neon
-# tables (and, for music, the same playlist). The writes are designed idempotent, but
-# that has never been exercised under two concurrent writers — queue instead. Never
-# cancel-in-progress: a run stopped mid-write is worse than one that waits.
+# One pulse at a time, so a manual pulse overlapping the Worker's can't post two
+# heartbeats. The group is a LITERAL on purpose. This file usually runs as a called
+# workflow (entities.yml's `pulse` job, via workflow_call), and inside a called
+# workflow `github.workflow` evaluates to the CALLER's name. So the
+# `${{ github.workflow }}` group the other workflows use became "Entities + Media (…)",
+# the group the calling run already holds, and GitHub cancelled the pulse as a deadlock
+# ("deadlock was detected for concurrency group … between a top level workflow and
+# 'pulse'"). The run's failure hooks live in the job that passed, so nothing said so:
+# the 2026-09-15 pulse never ran, and none had posted since 09-01.
+# tests/test_workflows.py keeps a caller-derived group out of every called workflow.
 concurrency:
-  group: ${{ github.workflow }}
+  group: list-maker-pulse
   cancel-in-progress: false
 
 permissions:
