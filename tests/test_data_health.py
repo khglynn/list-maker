@@ -35,7 +35,7 @@ def _pending_entity(entity_id: int, *, waiting: timedelta, name: str | None = No
 
 
 def _patch_notion_freshness(
-    monkeypatch, *, transcript_rows, stale_entity_rows, failed_entities
+    monkeypatch, *, transcript_rows, stale_entity_rows, failed_entities, failed_create_rows=()
 ):
     """The check makes TWO _rows calls (transcript backlog, pending entity pages) and one
     _one call (failed entity count) — dispatch both on SQL content.
@@ -54,6 +54,8 @@ def _patch_notion_freshness(
     ]
 
     def fake_rows(conn, sql, params=None):
+        if "notion_page_id IS NULL" in sql:
+            return list(failed_create_rows)
         return entity_rows if "FROM ai_entities" in sql else transcript_rows
 
     monkeypatch.setattr(dh, "_rows", fake_rows)
@@ -256,6 +258,23 @@ def test_notion_drift_catches_a_daily_mentioned_entity_whose_sync_keeps_failing(
     assert "1 entity page(s)" in detail and "ChatGPT (9)" in detail
     assert "Claude" not in detail and "Codex" not in detail  # inside the window / the race
     assert result.failures and all("warn" not in f for f in result.failures)
+
+
+def test_notion_pages_that_cannot_be_created_fail_the_check(monkeypatch) -> None:
+    """Review finding C11: a Notion change that rejects every new page left the run green
+    (sync_notion exits 0 on per-row failures) and the stale query needs a page to exist.
+    Before this PR its >10% warning posted daily; now it's a failure, said once, weekly."""
+    from datetime import date as _date
+
+    _patch_notion_freshness(
+        monkeypatch, transcript_rows=[], stale_entity_rows=[], failed_entities=2,
+        failed_create_rows=[{"id": 5, "canonical_name": "Cursor", "last_try": _date(2026, 9, 22)},
+                            {"id": 6, "canonical_name": "Warp", "last_try": _date(2026, 9, 23)}],
+    )
+    result = check_notion_sync_freshness(conn=None)
+    assert result.status == "fail"
+    line = next(f for f in result.failures if "could not be created" in f)
+    assert line.startswith("2 entity(ies)") and "last tried 2026-09-23" in line and "Cursor (5)" in line
 
 
 def test_per_show_checks_hand_their_failing_lines_to_the_announcer(monkeypatch) -> None:
@@ -565,7 +584,7 @@ def test_cli_passes_the_owned_shows_to_the_feed_check(monkeypatch) -> None:
     import pipeline.data_health as dh
 
     seen = {}
-    monkeypatch.setattr(sys, "argv", ["data_health.py", "--feed-owned-shows", "pchh, hard-fork"])
+    monkeypatch.setattr(sys, "argv", ["data_health.py", "--music-as-backstop"])
     monkeypatch.setattr(dh, "load_environment", lambda: None)
     monkeypatch.setattr(dh, "get_db_connection", lambda: type("C", (), {"close": lambda self: None})())
 
@@ -576,7 +595,10 @@ def test_cli_passes_the_owned_shows_to_the_feed_check(monkeypatch) -> None:
     monkeypatch.setattr(dh, "run_checks", fake_run_checks)
     monkeypatch.setattr(dh, "check_optional_null_map", lambda conn: CheckResult("optional_null_map", "pass", "", []))
     dh.main()
-    assert seen["owned"] == ["pchh", "hard-fork"]
+    # Derived from show_config, never from the run's own show list (review C3): the
+    # music shows are the backstop ones, everything else is judged at its own window.
+    assert "sop" not in seen["owned"] and "tal" not in seen["owned"]
+    assert {"ai-daily-brief", "hard-fork", "pchh", "culture-gabfest"} <= set(seen["owned"])
 
 
 def test_split_missing_feed_dates_partitions_by_grace() -> None:

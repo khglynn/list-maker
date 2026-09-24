@@ -59,10 +59,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      # The shows THIS workflow imports: the import step runs them, and the health
-      # check judges only these at their own feed window (the music shows belong to
-      # pipeline.yml's post-import check; this run backstops them a week later). An
-      # input reaches the shell only through env, never interpolated into run: text.
+      # The shows this run imports (a manual run may narrow them). An input reaches
+      # the shell only through env, never interpolated into run: text.
       ENTITY_SHOWS: ${{ github.event.inputs.shows || 'ai-daily-brief,hard-fork,pchh,culture-gabfest' }}
       # Where steps leave detail for the announce step: data_health's results, the
       # preflight's diagnostics, mid-run notes (common.alert_note).
@@ -148,10 +146,12 @@ jobs:
           # --strict: a real failure reddens the run (Slack + the failure issue), the way
           # pipeline.yml's feed check already does. Safe now that the grace windows have
           # removed the false-positive volume — a red X here should mean something.
-          # --feed-owned-shows: a music show's normal wait between imports is
+          # --music-as-backstop: a music show's normal wait between imports is
           # pipeline.yml's to judge (it checks right after each import); this run fails
           # one only a week past its window, as the backstop for pipeline.yml not running.
-          cd pipeline && python data_health.py --strict --feed-owned-shows "$ENTITY_SHOWS" \
+          # Which shows count as music comes from show_config, not from $ENTITY_SHOWS, so
+          # a narrower manual run can't move its skipped shows onto the backstop window.
+          cd pipeline && python data_health.py --strict --music-as-backstop \
             --results-file "$ALERT_DETAILS_DIR/health.json" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Keep the failed batch (dead letter)

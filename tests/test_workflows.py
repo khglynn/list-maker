@@ -62,10 +62,10 @@ def test_entities_health_check_judges_only_the_shows_it_imports():
     right after each import. Unscoped, the daily entities run failed SOP's ordinary
     Friday-to-Wednesday wait as "entity pipeline FAILED" (2026-09-22)."""
     text = _read("entities.yml")
-    assert re.search(r"data_health\.py[^\n]*--feed-owned-shows \"\$ENTITY_SHOWS\"", text)
-    assert re.search(r"run_new_episodes\.py --shows \"\$ENTITY_SHOWS\"", text), (
-        "the import and the health check must read the same show list"
-    )
+    assert re.search(r"data_health\.py[^\n]*--music-as-backstop", text)
+    # Never the run's own show list (review C3): a narrower manual run would move the
+    # shows it skipped onto the backstop window and "recover" their open alerts.
+    assert "--feed-owned-shows" not in text
 
 
 def test_music_workflow_keeps_its_own_strict_feed_check():

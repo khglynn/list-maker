@@ -112,6 +112,12 @@ DEFAULT_FEED_GRACE_DAYS = 2  # mirrors ShowConfig.feed_grace_days for callers ho
 FEED_BACKSTOP_EXTRA_DAYS = 7
 
 
+def entities_owned_slugs() -> list[str]:
+    """The shows the daily entities run is responsible for at their own feed window:
+    every show except the music ones (a Spotify playlist = imported by pipeline.yml)."""
+    return sorted(slug for slug, cfg in SHOWS.items() if not cfg.spotify_playlist_id)
+
+
 def _today() -> date:
     return datetime.now(timezone.utc).date()
 
@@ -344,7 +350,8 @@ def check_episode_identity(conn) -> CheckResult:
     summary = "Every episode has show, title, URL, and publish date." if status == "pass" else (
         f"{issue_count} required episode identity value(s) are missing."
     )
-    return CheckResult("episode_identity_required_fields", status, summary, details)
+    return CheckResult("episode_identity_required_fields", status, summary, details,
+                       [d for d in details if not d.startswith("sample bad rows")])
 
 
 def check_duplicate_episodes(conn) -> CheckResult:
@@ -866,6 +873,22 @@ def check_notion_sync_freshness(conn) -> CheckResult:
         if _entity_update_overdue(r["waiting"], r.get("since_sync"), r.get("sync_status"))
     ]
     stale_entities = len(stale_entity_rows)
+    # Entities whose Notion page could never be CREATED: no page id, and the sync's last
+    # attempt at them failed. The stale-entity query above can't see these (it needs a
+    # page), and sync_notion exits 0 on per-row failures, so without this a Notion change
+    # that rejects every new page would be silent run after run (review finding
+    # 2026-09-23 — its per-run >10% warning used to post directly and now rides along).
+    # The sync retries creates every day, so a one-off API blip clears itself next run.
+    failed_create_rows = _rows(
+        conn,
+        """
+        SELECT id, canonical_name, notion_sync_attempt_at::date AS last_try
+        FROM ai_entities
+        WHERE notion_page_id IS NULL
+          AND notion_sync_status = 'failed'
+        ORDER BY id;
+        """,
+    )
     failed_entities = int(
         _one(
             conn,
@@ -888,6 +911,13 @@ def check_notion_sync_freshness(conn) -> CheckResult:
             + _name_some(
                 [f"{r['canonical_name']} ({r['id']})" for r in stale_entity_rows]
             )
+        )
+    if failed_create_rows:
+        tries = [r["last_try"] for r in failed_create_rows if r.get("last_try")]
+        failures.append(
+            f"{len(failed_create_rows)} entity(ies) whose Notion page could not be created "
+            f"(last tried {max(tries) if tries else 'unknown'})"
+            + _name_some([f"{r['canonical_name']} ({r['id']})" for r in failed_create_rows])
         )
     if failed_entities:
         warnings.append(f"{failed_entities} entity(ies) lingering in notion_sync_status='failed'")
@@ -1639,7 +1669,8 @@ def check_sponsor_share(conn) -> CheckResult:
         "warn": "A tech show's sponsor-read share is above the expected range.",
         "fail": "A tech show has no editorial mentions at all in the recent window.",
     }[status]
-    return CheckResult("sponsor_share", status, summary, details)
+    return CheckResult("sponsor_share", status, summary, details,
+                       [d for d in details if "no editorial content got through" in d])
 
 
 def check_possible_entity_alias_splits(conn) -> CheckResult:
@@ -1779,11 +1810,14 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--feed-owned-shows",
+        "--music-as-backstop",
+        action="store_true",
         help=(
-            "Comma-separated slugs THIS run imports. The feed check judges these at their "
-            "own import window and every other show only as a backstop (a week later), "
-            "since another workflow's post-import check owns it. Default: all shows."
+            "Judge the music shows (the ones with a Spotify playlist, imported by "
+            "pipeline.yml) only as a backstop, a week past their window; every other show "
+            "at its own window. entities.yml passes this. Derived from show_config, not "
+            "from which shows a run happened to import: a narrower manual run must not "
+            "move its skipped shows onto the backstop window."
         ),
     )
     return parser.parse_args()
@@ -1793,11 +1827,7 @@ def main() -> None:
     args = parse_args()
     load_environment()
     slugs = [s.strip() for s in args.shows.split(",") if s.strip()] if args.shows else None
-    owned = (
-        [s.strip() for s in args.feed_owned_shows.split(",") if s.strip()]
-        if args.feed_owned_shows
-        else None
-    )
+    owned = entities_owned_slugs() if args.music_as_backstop else None
     conn = get_db_connection()
     try:
         if args.feed_check_only:
