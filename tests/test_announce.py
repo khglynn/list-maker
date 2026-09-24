@@ -904,3 +904,116 @@ def test_an_import_failure_still_posts_the_crash_line(monkeypatch):
     monkeypatch.setenv("RUN_URL", RUN)
     assert announce.main(["--workflow", "entities"]) == 1
     assert "alert step itself crashed" in slack.messages[0]
+
+
+# ── round 4: Codex's review of round 3, reproduced before fixing ────────────────────────
+# Each starts as a strict xfail against the round-3 announcer (7e1be63): it must FAIL
+# there, which is the reproduction. The markers come off as the fixes land.
+
+def _intake_ctx():
+    return RunContext.build("intake")
+
+
+def _intake(outcome: str):
+    ctx = _intake_ctx()
+    job = "success" if outcome == "success" else "failure"
+    return ctx, collect_findings(ctx, _steps(preflight="success", log_schema="success", intake=outcome), job)
+
+
+@pytest.mark.xfail(strict=True, reason="Codex R1: the music hand-off closes a thread that still has an unverified show")
+def test_r4_1_a_thread_is_never_closed_while_one_of_its_shows_is_unverified():
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), _day_after(0))
+    tal_owner = collect_findings(TAL, _steps(preflight="success", spotify_cache="success",
+                                             pipeline="success", feed_check="failure"), "failure",
+                                 [_feed_failing("tal")])
+    run_announce(TAL, tal_owner, gh=gh, post=slack, today=_day_after(0), run_url=RUN)
+    today = _feed_failing("tal")
+    today["details"] = today["details"] + ["ai-daily-brief: feed UNVERIFIED — second source unreachable"]
+    _run(gh, slack, _entities([today]), _day_after(1))
+    assert gh.issues[101]["state"] == "open"
+    before = len(slack.messages)
+    _run(gh, slack, _entities([today]), _day_after(7))
+    assert len(slack.messages) == before + 1 and "#101" in slack.messages[-1]
+
+
+@pytest.mark.xfail(strict=True, reason="Codex R2: a weekly relapse reopens quietly and is never said")
+def test_r4_2_a_weekly_check_that_relapses_says_so():
+    gh, slack = FakeGitHub(), FakeSlack()
+    for n, outcome in enumerate(["failure", "success", "failure", "success", "failure"]):
+        ctx, findings = _intake(outcome)
+        run_announce(ctx, findings, gh=gh, post=slack, today=_day_after(7 * n), run_url=RUN)
+    assert len(slack.messages) == 5  # failing, recovered, failing again, recovered, failing again
+    assert "recovered" not in slack.messages[2] and "intake" in slack.messages[2].lower()
+
+
+@pytest.mark.xfail(strict=True, reason="Codex R3: a cancel hidden behind a known failure is silent")
+def test_r4_3_a_cancel_is_said_even_when_another_failure_is_already_open():
+    gh, slack = FakeGitHub(), FakeSlack()
+    red = collect_findings(ENTITIES, _steps(preflight="success", **{"import": "failure"},
+                                            notion="success", health="success"), "failure",
+                           [_passing("import_caught_up_to_feed")])
+    _run(gh, slack, red, _day_after(0))
+    cancelled = collect_findings(ENTITIES, _steps(preflight="success", **{"import": "failure"},
+                                                  notion="cancelled", health="skipped"), "cancelled")
+    _run(gh, slack, cancelled, _day_after(1))
+    assert len(slack.messages) == 2 and "cancelled" in slack.messages[1]
+
+
+@pytest.mark.xfail(strict=True, reason="Codex R4: an open alert the run can't reach goes silent")
+def test_r4_4_an_open_alert_the_run_never_reaches_still_gets_its_weekly_reminder():
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, _entities([NOTION_DRIFT]), _day_after(0))
+    down = collect_findings(ENTITIES, _steps(preflight="failure", **{"import": "skipped"},
+                                             notion="skipped", health="skipped"), "failure")
+    for n in range(1, 8):
+        _run(gh, slack, down, _day_after(n))
+    assert any("Notion is behind Neon" in m and "couldn't check" in m.lower() for m in slack.messages[1:])
+
+
+@pytest.mark.xfail(strict=True, reason="Codex R5: fail/pass/pass daily repeats 'recovered' every 3 days")
+def test_r4_5_a_fail_pass_pass_cycle_is_not_announced_every_few_days():
+    gh, slack = FakeGitHub(), FakeSlack()
+    red, green = _entities([AI_DAILY_BEHIND]), _green("import_caught_up_to_feed")
+    days_recovered = []
+    for n in range(15):
+        before = len(slack.messages)
+        _run(gh, slack, red if n % 3 == 0 else green, _day_after(n))
+        if len(slack.messages) > before and "recovered" in slack.messages[-1]:
+            days_recovered.append(n)
+    assert all(b - a >= 7 for a, b in zip(days_recovered, days_recovered[1:])), days_recovered
+
+
+@pytest.mark.xfail(strict=True, reason="Codex R6: fail, unverified, one green is called a recovery")
+def test_r4_6_an_unverified_day_does_not_count_toward_a_daily_recovery():
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, _entities([_feed_failing("ai-daily-brief")]), _day_after(0))
+    unverified = {"name": "import_caught_up_to_feed", "status": "warn", "summary": "unverified",
+                  "details": ["ai-daily-brief: feed UNVERIFIED — second source unreachable"], "failures": []}
+    _run(gh, slack, collect_findings(ENTITIES, GREEN_STEPS, "success", [unverified]), _day_after(1))
+    _run(gh, slack, _green("import_caught_up_to_feed"), _day_after(2))
+    assert len(slack.messages) == 1 and gh.issues[101]["state"] == "open"
+    _run(gh, slack, _green("import_caught_up_to_feed"), _day_after(3))
+    assert "recovered" in slack.messages[-1]
+
+
+@pytest.mark.xfail(strict=True, reason="Codex R7: memory lost when the recovery marker write fails but the close lands")
+def test_r4_7_a_relapse_after_a_half_saved_recovery_is_not_a_new_problem():
+    class FlakyBodies(FakeGitHub):
+        fail_body_only = False
+
+        def edit_issue(self, number, **fields):
+            if self.fail_body_only and "body" in fields and "state" not in fields:
+                raise RuntimeError("HTTP 502")
+            super().edit_issue(number, **fields)
+
+    gh, slack = FlakyBodies(), FakeSlack()
+    red, green = _entities([AI_DAILY_BEHIND]), _green("import_caught_up_to_feed")
+    _run(gh, slack, red, _day_after(0))
+    _run(gh, slack, green, _day_after(1))
+    gh.fail_body_only = True
+    _run(gh, slack, green, _day_after(2))  # "recovered" posted; the marker write fails
+    gh.fail_body_only = False
+    _run(gh, slack, red, _day_after(3))
+    assert len(gh.issues) == 1
+    assert not any("new problem" in m for m in slack.messages[2:])

@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 
+import pytest
+
 from pipeline.data_health import (
     CheckResult,
     HeldEpisodes,
@@ -1770,3 +1772,17 @@ def test_music_silence_is_in_the_standard_check_set() -> None:
     assert "check_music_songs_still_arriving(conn)" in inspect.getsource(
         data_health.run_checks
     )
+
+
+@pytest.mark.xfail(strict=True, reason="Codex R8: a failed create the sync no longer retries can never recover")
+def test_r4_8_a_failed_create_the_sync_stopped_trying_does_not_fail_forever(monkeypatch) -> None:
+    """If an entity loses the mentions that made it eligible, sync_notion stops selecting
+    it, so its 'failed' mark would fail this check forever. Only a recent attempt counts."""
+    from datetime import date as _date
+
+    _patch_notion_freshness(
+        monkeypatch, transcript_rows=[], stale_entity_rows=[], failed_entities=1,
+        failed_create_rows=[{"id": 5, "canonical_name": "Cursor", "last_try": _date(2026, 9, 12),
+                             "since_try": timedelta(days=10)}],
+    )
+    assert check_notion_sync_freshness(conn=None).status != "fail"
