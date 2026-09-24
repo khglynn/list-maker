@@ -413,12 +413,13 @@ def test_feed_check_tolerates_a_fresh_episode_inside_the_import_window(monkeypat
 
 
 def test_feed_check_fails_once_a_missing_episode_is_older_than_the_grace(monkeypatch) -> None:
-    # Sunday: the Wed AND Fri imports both had their turn and the 09-01 episode is still absent.
+    # Monday 09-07: six days on, past SOP's 6-day window (Wed AND Fri imports both had
+    # their turn), and the Tuesday 09-01 episode is still absent.
     result = _feed_check(
         monkeypatch,
         rows=[_held_row("sop", "https://switchedonpop.com/episodes/x", "X", date(2026, 8, 25))],
         feed_dates={"sop": [date(2026, 9, 1), date(2026, 8, 25)]},
-        today=date(2026, 9, 6),
+        today=date(2026, 9, 7),
         slugs=["sop"],
     )
     assert result.status == "fail"
@@ -426,7 +427,7 @@ def test_feed_check_fails_once_a_missing_episode_is_older_than_the_grace(monkeyp
 
 
 def test_feed_grace_is_per_show(monkeypatch) -> None:
-    # The same 3-day-old feed episode is fine for SOP (4-day window) and a real miss
+    # The same 3-day-old feed episode is fine for SOP (6-day window) and a real miss
     # for AI Daily (2-day window, imported every day). SOP is compared by date, AI Daily
     # by identity — the grace window means the same thing on both paths.
     result = _feed_check(
@@ -443,6 +444,21 @@ def test_feed_grace_is_per_show(monkeypatch) -> None:
     assert result.status == "fail"
     assert any(d.startswith("sop: caught up") for d in result.details)
     assert any(d.startswith("ai-daily-brief: BEHIND 1") for d in result.details)
+
+
+def test_sop_friday_episode_waiting_for_wednesday_is_pending_not_behind(monkeypatch) -> None:
+    """The 2026-09-22 false alarm, replayed: Taddy dated SOP's episode Friday 09-18, the
+    Friday scrape found nothing (the website listed it later), and the next SOP import is
+    Wednesday 09-23. On Tuesday 09-22 that is a normal wait, not a missed import."""
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("sop", "https://switchedonpop.com/episodes/x", "X", date(2026, 9, 15))],
+        feed_dates={"sop": [date(2026, 9, 18), date(2026, 9, 15)]},
+        today=date(2026, 9, 22),
+        slugs=["sop"],
+    )
+    assert result.status == "pass"
+    assert any(d.startswith("sop: caught up") and "pending" in d for d in result.details)
 
 
 def test_split_missing_feed_dates_partitions_by_grace() -> None:

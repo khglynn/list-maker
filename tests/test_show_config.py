@@ -88,11 +88,50 @@ def test_feed_grace_matches_each_show_import_cadence() -> None:
         if cfg.medium != "podcast":
             continue  # curated sources have no feed; the check skips them entirely
         assert isinstance(cfg.feed_grace_days, int) and cfg.feed_grace_days >= 1, slug
-    assert SHOWS["sop"].feed_grace_days >= 4  # Tue publish; Wed + Fri imports both get a turn
-    assert SHOWS["tal"].feed_grace_days >= 2  # Mon publish; Mon import at the same minute as the check
     for slug in ("ai-daily-brief", "hard-fork", "pchh"):
         # Daily-imported shows: a grace longer than this would hide a real multi-day gap.
         assert SHOWS[slug].feed_grace_days <= 3, slug
+
+
+# The music shows' schedules, as measured, for the sizing rule in ShowConfig.feed_grace_days.
+# Import days mirror cloudflare-trigger/worker.js dispatchesFor (worker.test.js pins that
+# side); publish days are what Neon holds since 2026-03-01 (measured 2026-09-23). Weekdays
+# are Python's: Monday = 0.
+MON, TUE, WED, THU, FRI, SAT, SUN = range(7)
+MUSIC_SCHEDULES = {
+    # SOP's rows come from its website, which can list an episode later than the feed:
+    # the 2026-09-18 episode missed that Friday's scrape. So an import on the publish day
+    # is not counted as catching it.
+    "sop": {"publish": {MON, TUE, WED, THU, FRI}, "imports": {WED, FRI}, "same_day": False},
+    # TAL imports from Taddy, and every Monday episode since 08-03 landed the same day.
+    "tal": {"publish": {SUN, MON}, "imports": {MON}, "same_day": True},
+}
+
+
+def _grace_by_the_rule(publish: set[int], imports: set[int], same_day: bool) -> int:
+    """Longest wait from a publish day to the next import that would catch it, plus a day."""
+    def wait(day: int) -> int:
+        return min(
+            (imp - day) % 7 or (0 if same_day else 7)
+            for imp in imports
+        )
+    return max(wait(day) for day in publish) + 1
+
+
+def test_music_feed_grace_follows_the_sizing_rule() -> None:
+    """SOP's window was 4, sized for Tuesday-only publishing. SOP now publishes on
+    Fridays too, the Friday scrape can miss an episode the website hasn't listed yet,
+    and the next import is Wednesday — so on 2026-09-22 a 4-day window failed an
+    episode that Wednesday's import fetched on schedule. Derive, don't remember."""
+    for slug, sched in MUSIC_SCHEDULES.items():
+        expected = _grace_by_the_rule(sched["publish"], sched["imports"], sched["same_day"])
+        assert SHOWS[slug].feed_grace_days == expected, (slug, expected)
+
+
+def test_grace_rule_helper_counts_the_weekend_gap() -> None:
+    assert _grace_by_the_rule({FRI}, {WED, FRI}, same_day=False) == 6  # Fri → next Wed
+    assert _grace_by_the_rule({TUE}, {WED, FRI}, same_day=False) == 2  # Tue → Wed
+    assert _grace_by_the_rule({MON}, {MON}, same_day=True) == 1        # caught the same day
 
 
 def test_episode_identity_names_the_writer_of_each_show_url() -> None:

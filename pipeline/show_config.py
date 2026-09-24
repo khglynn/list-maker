@@ -39,17 +39,21 @@ class ShowConfig:
     ended_on: Optional[date] = None
 
     # How long a feed episode may be absent from our DB before that is a real gap.
-    # The daily feed check (data_health.check_import_caught_up, also the pulse) asks
-    # each show's real feed for its latest episodes and compares to what we hold.
-    # Without a grace window it fires the moment an episode publishes — hours or days
-    # before the import that would normally fetch it. The music shows import only on
-    # Mon/Wed/Fri (pipeline.yml) and SOP publishes Tuesdays, so through August 2026 the
-    # channel got a "1 show behind" alarm nearly every day while nothing was wrong —
-    # exactly the noise that trains a reader to ignore the one real alert.
-    # Size it as the longest normal wait between publish and the next scheduled import
-    # that would catch it, plus a day for Taddy's transcript lag (measured 2026-09-01:
-    # p90 = 1 day for the daily shows). A missing episode OLDER than this still fails
-    # loudly — TAL's 10-week gap in 2026-07 would have tripped it on day three.
+    # The feed check (data_health.check_import_caught_up, also the pulse) asks each
+    # show's real feed for its latest episodes and compares to what we hold. Without a
+    # grace window it fires the moment an episode publishes — hours or days before the
+    # import that would normally fetch it. The music shows import only on Mon/Wed/Fri
+    # (the Worker's dispatchesFor), so through August 2026 the channel got a "1 show
+    # behind" alarm nearly every day while nothing was wrong — exactly the noise that
+    # trains a reader to ignore the one real alert.
+    # THE RULE: the longest normal wait between publish and the next scheduled import
+    # that would catch it, plus a day (Taddy's transcript lag for the daily shows,
+    # measured 2026-09-01 at p90 = 1 day; the website lagging the feed for SOP). Size it
+    # from the days the show ACTUALLY publishes, measured in Neon — not from what it
+    # used to do (SOP's 4 was sized for a Tuesday-only show and false-alarmed 09-22).
+    # tests/test_show_config.py derives each music show's window from this rule. A
+    # missing episode OLDER than this still fails loudly — TAL's 10-week gap in 2026-07
+    # would have tripped it on day three.
     feed_grace_days: int = 2
 
     # WHICH IDENTITY THIS SHOW'S `episodes.url` CARRIES — i.e. whether the feed check can
@@ -94,9 +98,13 @@ SHOWS: dict[str, ShowConfig] = {
         name="Switched On Pop",
         show_id=1,
         content_types=["music"],
-        # Publishes Tuesdays; imported Wed + Fri. By Saturday both runs have had their
-        # chance, so a Tuesday episode still missing then is a real miss.
-        feed_grace_days=4,
+        # Imported Wed + Fri. Publishes mostly Tuesdays, but not only: since 2026-03-01
+        # Neon holds Tue 29, Fri 8, Wed 4, Mon 3, Thu 2. The longest normal wait is a
+        # Friday episode the Friday scrape can't see yet (the website lists it later
+        # than the feed — 2026-09-18 appeared there as 09-21), which next imports
+        # Wednesday: 5 days, plus a day = 6. The old 4 assumed Tuesday-only publishing;
+        # it failed that 09-18 episode on 09-22 and the Wednesday import fetched it.
+        feed_grace_days=6,
         # Deliberately no episode_identity: scrapers/sop/scrape.py writes
         # switchedonpop.com/episodes/... urls, so Taddy uuids match almost nothing we
         # hold. The feed check compares DATES for SOP (see ShowConfig.episode_identity).
@@ -111,8 +119,12 @@ SHOWS: dict[str, ShowConfig] = {
         name="This American Life",
         show_id=2,
         content_types=["music"],
-        # Publishes Sun/Mon; imported Mondays (same minute as the daily check, so the
-        # Monday check can't see Monday's import). Missing by Wednesday = Monday missed.
+        # Publishes Sun/Mon (since 2026-03-01: Mon 16, Sun 9) and imports Mondays; every
+        # Monday episode since 08-03 was imported the same day. Longest normal wait is
+        # Sunday → Monday, 1 day, plus a day = 2. The one Friday bonus in that window
+        # would need 4 by the rule, but pipeline.yml judges TAL right after the Monday
+        # import that fetches it, so a bonus can't false-alarm there; widening for it
+        # would only slow the real alarm.
         feed_grace_days=2,
         # run_pipeline.discover_tal_episodes runs the Taddy importer, so TAL rows do
         # carry the Taddy uuid url — unlike SOP.
