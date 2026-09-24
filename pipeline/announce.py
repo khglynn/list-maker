@@ -14,7 +14,8 @@ whatever happened before it. It works out which things this run actually evaluat
 compares them with the open failure issues, which are the memory:
 
   - something starts failing       → one Slack message, and a new issue for it
-  - the set of failures changes    → the same: each new failure is its own issue
+  - the set of failures changes    → the same: each new failure is its own issue, and a
+                                     new show failing a check already open is news too
   - still failing, last said <7d   → quiet; the issue body is refreshed silently
   - still failing, last said ≥7d   → Slack again: "still failing since Sep 22 (8 days)"
   - passes while its issue is open → Slack "recovered", comment, close the issue
@@ -86,6 +87,16 @@ WORKFLOWS: dict[str, dict[str, Any]] = {
 MUSIC_SHOWS = {"1": ("sop", "SOP"), "2": ("tal", "TAL"), "3": ("ai-daily-brief", "AI Daily"),
                "all": ("all", "all-shows")}
 
+# A check whose "warn" means "couldn't find out" rather than "a milder problem". The feed
+# check warns only when a show's feed was unreachable (UNVERIFIED); treating that as a
+# pass would close an open BEHIND issue with "recovered" on a day Taddy was down, and
+# reopen it as a new problem the next. Every other check's warn is a real, milder
+# state — some are standing (transcript coverage warns on music shows every day) — so
+# for those a warn does end a failure.
+UNVERIFIED_WHEN_WARN = frozenset({"import_caught_up_to_feed"})
+
+_SUBJECT_RE = re.compile(r"^([a-z0-9][a-z0-9-]*):\s")
+
 DETAIL_LINES_IN_SLACK = 3
 DETAIL_LINES_IN_ISSUE = 20
 DETAIL_CHARS = 400
@@ -103,6 +114,20 @@ class Finding:
     failing: bool
     summary: str = ""
     details: list[str] = field(default_factory=list)
+    # Which shows (or "general") a per-show check is failing for; empty for steps.
+    subjects: list[str] = field(default_factory=list)
+
+
+def failure_subjects(failure_lines: list[str]) -> list[str]:
+    """The shows a check's failing lines are about ("sop: BEHIND 1 …" → "sop"); a
+    failing line with no show prefix counts as "general". So a second show failing a
+    check that is already open is a change worth saying, while a count moving inside
+    the same show is not."""
+    subjects = set()
+    for line in failure_lines:
+        match = _SUBJECT_RE.match(str(line))
+        subjects.add(match.group(1) if match else "general")
+    return sorted(subjects)
 
 
 @dataclass
@@ -137,9 +162,11 @@ def collect_findings(
     spec = WORKFLOWS[ctx.workflow]
     findings: dict[str, Finding] = {}
 
-    def add(name: str, guide: Guide, failing: bool, summary: str = "", details=None) -> None:
+    def add(name: str, guide: Guide, failing: bool, summary: str = "", details=None,
+            subjects=None) -> None:
         key = f"{ctx.prefix}:{name}"
-        findings[key] = Finding(key, name, guide, failing, summary, list(details or []))
+        findings[key] = Finding(key, name, guide, failing, summary, list(details or []),
+                                list(subjects or []))
 
     for step_id in spec["steps"]:
         outcome = (steps.get(step_id) or {}).get("outcome")
@@ -150,10 +177,14 @@ def collect_findings(
             any_check_failed = False
             for result in health:
                 name = str(result.get("name"))
-                failing = result.get("status") == "fail"
+                status = result.get("status")
+                if status == "warn" and name in UNVERIFIED_WHEN_WARN:
+                    continue  # couldn't find out: neither a failure nor a recovery
+                failing = status == "fail"
                 any_check_failed |= failing
                 add(name, CHECK_GUIDES.get(name) or fallback_guide(name), failing,
-                    str(result.get("summary") or ""), result.get("details") or [])
+                    str(result.get("summary") or ""), result.get("details") or [],
+                    failure_subjects(result.get("failures") or []) if failing else [])
             add(f"step:{step_id}", guide, outcome == "failure" and not any_check_failed)
             continue
         details = []
@@ -178,6 +209,7 @@ class OpenAlert:
     since: date
     last_posted: Optional[date]
     runs: int
+    subjects: list[str] = field(default_factory=list)
 
 
 def parse_alert(issue: dict) -> Optional[OpenAlert]:
@@ -194,6 +226,7 @@ def parse_alert(issue: dict) -> Optional[OpenAlert]:
             since=date.fromisoformat(state["since"]),
             last_posted=date.fromisoformat(state["last_posted"]) if state.get("last_posted") else None,
             runs=int(state.get("runs") or 1),
+            subjects=[str(x) for x in state.get("subjects") or []],
         )
     except (ValueError, KeyError, TypeError):
         return None
@@ -211,13 +244,15 @@ def is_legacy_issue(issue: dict, label: str) -> bool:
 @dataclass
 class Plan:
     new: list[Finding] = field(default_factory=list)
+    # Already open, but failing for a show it wasn't: (finding, alert, the added shows).
+    changed: list[tuple[Finding, OpenAlert, list[str]]] = field(default_factory=list)
     remind: list[tuple[Finding, OpenAlert]] = field(default_factory=list)
     ongoing: list[tuple[Finding, OpenAlert]] = field(default_factory=list)
     recovered: list[tuple[Finding, OpenAlert]] = field(default_factory=list)
 
     @property
     def should_post(self) -> bool:
-        return bool(self.new or self.remind or self.recovered)
+        return bool(self.new or self.changed or self.remind or self.recovered)
 
 
 def decide(findings: dict[str, Finding], open_alerts: dict[str, OpenAlert], today: date) -> Plan:
@@ -226,8 +261,11 @@ def decide(findings: dict[str, Finding], open_alerts: dict[str, OpenAlert], toda
         finding = findings[key]
         alert = open_alerts.get(key)
         if finding.failing:
+            added = sorted(set(finding.subjects) - set(alert.subjects)) if alert else []
             if alert is None:
                 plan.new.append(finding)
+            elif added:
+                plan.changed.append((finding, alert, added))
             elif alert.last_posted is None or (today - alert.last_posted).days >= REMIND_AFTER_DAYS:
                 # last_posted None: the issue exists but its Slack message never landed.
                 plan.remind.append((finding, alert))
@@ -279,8 +317,8 @@ def render_slack(
     notes: list[str] = (),
     state_note: str = "",
 ) -> str:
-    if plan.new:
-        n = len(plan.new)
+    if plan.new or plan.changed:
+        n = len(plan.new) + len(plan.changed)
         head = f":rotating_light: *list-maker · {ctx.label}* — {n} new problem{'s' if n > 1 else ''}"
     elif plan.remind:
         head = f":hourglass_flowing_sand: *list-maker · {ctx.label}* — still failing"
@@ -293,6 +331,15 @@ def render_slack(
         lines.append(f"*{finding.guide.title}* (`{finding.name}`) · {_issue_link(number, url)}")
         lines.extend(_detail_block(finding, DETAIL_LINES_IN_SLACK))
         lines.append(f"_Usually:_ {finding.guide.usually}")
+        lines.append(f"_Check first:_ {finding.guide.check_first}")
+    for finding, alert, added in plan.changed:
+        lines.append("")
+        lines.append(
+            f"*{finding.guide.title}* (`{finding.name}`) — now also failing for "
+            f"{', '.join(added)} · {_issue_link(alert.number, alert.url)} "
+            f"(open since {_day(alert.since)})"
+        )
+        lines.extend(_detail_block(finding, DETAIL_LINES_IN_SLACK))
         lines.append(f"_Check first:_ {finding.guide.check_first}")
     for finding, alert in plan.remind:
         days = (today - alert.since).days
@@ -337,6 +384,7 @@ def issue_body(ctx: RunContext, finding: Finding, *, since: date, last_posted: O
         "since": since.isoformat(),
         "last_posted": last_posted.isoformat() if last_posted else None,
         "runs": runs,
+        "subjects": finding.subjects,
     }
     details = "\n".join(f"- {_clip(d, 600)}" for d in finding.details[:DETAIL_LINES_IN_ISSUE])
     if len(finding.details) > DETAIL_LINES_IN_ISSUE:
@@ -429,6 +477,7 @@ class Outcome:
     message: Optional[str]
     posted: bool
     actions: list[str]
+    notes: list[str] = field(default_factory=list)
 
 
 def announce(
@@ -475,12 +524,12 @@ def announce(
         failing = {k: f for k, f in findings.items() if f.failing}
         plan = Plan(new=list(failing.values()))
         if not plan.should_post:
-            return Outcome(plan, None, False, [f"could not read alert state ({exc}); nothing failing, so quiet"])
+            return Outcome(plan, None, False, [f"could not read alert state ({exc}); nothing failing, so quiet"], list(notes))
         message = render_slack(ctx, plan, today, run_url, {}, notes,
                                state_note=f"Couldn't read the alert memory (GitHub issues: {exc}), "
                                           "so this may repeat tomorrow.")
         posted = False if dry_run else post(message)
-        return Outcome(plan, message, posted, [f"could not read alert state: {exc}"])
+        return Outcome(plan, message, posted, [f"could not read alert state: {exc}"], list(notes))
 
     plan = decide(findings, open_alerts, today)
 
@@ -515,6 +564,15 @@ def announce(
             write(f"mark #{number} as announced", lambda f=finding, n=number: gh.edit_issue(
                 n, body=issue_body(ctx, f, since=today, last_posted=today, runs=1, today=today,
                                    run_url=run_url)))
+    for finding, alert, added in plan.changed:
+        write(f"refresh #{alert.number} (now also {', '.join(added)})",
+              lambda f=finding, a=alert: gh.edit_issue(a.number, body=issue_body(
+                  ctx, f, since=a.since, last_posted=today if posted else a.last_posted,
+                  runs=a.runs + 1, today=today, run_url=run_url)))
+        if posted:
+            write(f"comment on #{alert.number}", lambda a=alert, ad=added: gh.comment(
+                a.number, f"Now also failing for {', '.join(ad)} on {today.isoformat()}. "
+                          f"Slack was told. Latest run: {run_url}"))
     for finding, alert in plan.remind:
         write(f"refresh #{alert.number} (reminder{' posted' if posted else ' not posted'})",
               lambda f=finding, a=alert: gh.edit_issue(a.number, body=issue_body(
@@ -538,6 +596,7 @@ def announce(
 
     # 5. Retire the pre-announcer thread(s) through the same path.
     still = [(f.guide.title, a.number) for f, a in plan.remind + plan.ongoing]
+    still += [(f.guide.title, a.number) for f, a, _ in plan.changed]
     still += [(f.guide.title, new_issues.get(f.key, (None, ""))[0]) for f in plan.new]
     now = ("Everything this run checks is passing." if not still else
            "Failing now, each in its own issue: "
@@ -551,7 +610,7 @@ def announce(
                        f"{now} Run {today.isoformat()}: {run_url}"),
             gh.edit_issue(i["number"], state="closed", state_reason="completed"),
         ))
-    return Outcome(plan, message, posted, actions)
+    return Outcome(plan, message, posted, actions, list(notes))
 
 
 def _read_details(details_dir: Optional[str]) -> tuple[Optional[list[dict]], Optional[str], list[str]]:
@@ -578,14 +637,19 @@ def _summarize(outcome: Outcome) -> str:
     lines = ["## Alerts", ""]
     for heading, items in (
         ("New", [f.key for f in plan.new]),
+        ("Now failing for more shows", [f"{f.key} (+{', '.join(a)})" for f, _, a in plan.changed]),
         ("Reminded (7+ days)", [f.key for f, _ in plan.remind]),
         ("Still failing (quiet)", [f.key for f, _ in plan.ongoing]),
         ("Recovered", [f.key for f, _ in plan.recovered]),
     ):
         if items:
             lines.append(f"- **{heading}:** " + ", ".join(f"`{k}`" for k in items))
-    if not (plan.new or plan.remind or plan.ongoing or plan.recovered):
+    if not (plan.new or plan.changed or plan.remind or plan.ongoing or plan.recovered):
         lines.append("- Nothing failing, nothing recovered: no message.")
+    if outcome.notes:
+        # Mid-run warnings (common.alert_note). They ride in the Slack message when
+        # there is one; this is where they stay visible when there isn't.
+        lines += ["", "Notes from this run:"] + [f"- {n}" for n in outcome.notes]
     lines += ["", "Actions:"] + [f"- {a}" for a in outcome.actions]
     if outcome.message:
         lines += ["", "Message:", "```", outcome.message, "```"]

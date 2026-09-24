@@ -11,10 +11,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
 # Allow running as `python pipeline/data_health.py` from the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -36,6 +36,10 @@ class CheckResult:
     status: str  # pass, warn, fail
     summary: str
     details: list[str]
+    # The failing lines alone, for the checks that fail per show ("sop: BEHIND 1 …").
+    # pipeline/announce.py reads their leading slug so a second show failing the same
+    # check is announced as news, not folded silently into the first show's alert.
+    failures: list[str] = field(default_factory=list)
 
 
 TRANSCRIPT_POLICIES: dict[str, dict[str, Any]] = {
@@ -492,7 +496,9 @@ def check_transcript_coverage(conn) -> CheckResult:
     summary = "Transcript coverage matches each show's current policy." if status == "pass" else (
         f"{len(failures)} failure(s), {len(warnings)} warning(s) in transcript coverage."
     )
-    return CheckResult("transcript_coverage_by_show", status, summary, failures + warnings + details)
+    return CheckResult(
+        "transcript_coverage_by_show", status, summary, failures + warnings + details, failures
+    )
 
 
 def check_episode_freshness(conn) -> CheckResult:
@@ -548,7 +554,7 @@ def check_episode_freshness(conn) -> CheckResult:
         if status == "pass"
         else f"{len(failures)} show(s) stale (no recent episodes)."
     )
-    return CheckResult("episode_freshness_by_show", status, summary, failures + details)
+    return CheckResult("episode_freshness_by_show", status, summary, failures + details, failures)
 
 
 # ── Music shows: has the show stopped ACQUIRING songs? ──────────────────────────────
@@ -770,25 +776,35 @@ def check_music_songs_still_arriving(conn) -> CheckResult:
         status = "pass"
         summary = "Every music show is still acquiring songs."
     return CheckResult(
-        "music_songs_still_arriving", status, summary, failures + warnings + details
+        "music_songs_still_arriving", status, summary, failures + warnings + details, failures
     )
 
 
 def _entity_update_overdue(
-    waiting: timedelta, max_lag_days: int = NOTION_SYNC_MAX_LAG_DAYS
+    waiting: timedelta,
+    since_sync: Optional[timedelta] = None,
+    sync_status: Optional[str] = None,
+    max_lag_days: int = NOTION_SYNC_MAX_LAG_DAYS,
 ) -> bool:
-    """Has this entity's unsynced update been waiting longer than the sync window?
+    """Has the Notion sync stopped reaching this entity (one with an unsynced update)?
 
-    The daily Notion sync picks up any entity whose updated_at is newer than its
-    notion_synced_at, so an update younger than the window is the system working,
-    however long ago the entity was last synced. Only an update that has sat unsynced
-    past the window means the sync stopped reaching it.
+    Two ways to be sure, and they cover each other's blind spot:
+    - the update has WAITED past the window. The daily sync picks up any entity whose
+      updated_at is newer than its notion_synced_at, so an update younger than the
+      window is the system working, however long ago the entity was last synced.
+    - the sync has TRIED and FAILED on it, and its last good sync is older than the
+      window. Needed because every new mention of an entity bumps its updated_at
+      (load_entity_batch.upsert_entity), so an entity mentioned daily never has an
+      update older than a day — the first rule alone would never see its sync failing.
 
-    `waiting` is computed by Postgres (`now() - updated_at`), not here: updated_at is a
-    timestamp WITHOUT time zone, so comparing it with any aware datetime in Python
+    The intervals are computed by Postgres (`now() - updated_at`), not here: the columns
+    are timestamp WITHOUT time zone, so comparing them with an aware datetime in Python
     raises TypeError — which would take down every remaining check in the run.
     """
-    return waiting > timedelta(days=max_lag_days)
+    window = timedelta(days=max_lag_days)
+    if waiting > window:
+        return True
+    return sync_status == "failed" and since_sync is not None and since_sync > window
 
 
 def check_notion_sync_freshness(conn) -> CheckResult:
@@ -800,8 +816,10 @@ def check_notion_sync_freshness(conn) -> CheckResult:
       (empty transcripts excluded — they're never marked synced by design and belong
       to check_transcript_coverage)
     - entities: rows synced once but whose updates stopped propagating
-    Lingering 'failed' entity syncs are a WARN — acute failures already Slack via
-    sync_notion's >10%-per-run alert; this is the slow-leak view.
+    Lingering 'failed' entity syncs are a WARN until the entity has gone unsynced past
+    the window, then part of the FAIL (see _entity_update_overdue). sync_notion's
+    >10%-per-run warning rides along in the run's announcement only when there is one,
+    so this check is what makes a sync that keeps failing loud.
     """
     transcript_rows = _rows(
         conn,
@@ -825,8 +843,8 @@ def check_notion_sync_freshness(conn) -> CheckResult:
     # first writing this query themselves.
     #
     # Every entity whose latest update hasn't reached Notion yet, with how long that
-    # update has waited by the database's own clock; _entity_update_overdue then keeps
-    # only the ones that have waited past the window. Until 2026-09-23 the window lived in this WHERE as
+    # update has waited and how long since its last good sync, by the database's own
+    # clock; _entity_update_overdue then keeps the ones the sync has stopped reaching. Until 2026-09-23 the window lived in this WHERE as
     # `notion_synced_at < updated_at - 2 days`, which measures the gap between the
     # last sync and the update, never how long the update has been waiting. An entity
     # last synced a week ago and updated one second ago failed at once — and on Mondays
@@ -835,7 +853,8 @@ def check_notion_sync_freshness(conn) -> CheckResult:
     pending_entity_rows = _rows(
         conn,
         """
-        SELECT id, canonical_name, now() - updated_at AS waiting
+        SELECT id, canonical_name, now() - updated_at AS waiting,
+               now() - notion_synced_at AS since_sync, notion_sync_status AS sync_status
         FROM ai_entities
         WHERE notion_page_id IS NOT NULL
           AND notion_synced_at < updated_at
@@ -844,7 +863,7 @@ def check_notion_sync_freshness(conn) -> CheckResult:
     )
     stale_entity_rows = [
         r for r in pending_entity_rows
-        if _entity_update_overdue(r["waiting"])
+        if _entity_update_overdue(r["waiting"], r.get("since_sync"), r.get("sync_status"))
     ]
     stale_entities = len(stale_entity_rows)
     failed_entities = int(
@@ -864,8 +883,8 @@ def check_notion_sync_freshness(conn) -> CheckResult:
         )
     if stale_entities:
         failures.append(
-            f"{stale_entities} entity page(s) have Neon updates waiting "
-            f">{NOTION_SYNC_MAX_LAG_DAYS}d that never reached Notion"
+            f"{stale_entities} entity page(s) with Neon updates the Notion sync hasn't "
+            f"delivered in >{NOTION_SYNC_MAX_LAG_DAYS}d"
             + _name_some(
                 [f"{r['canonical_name']} ({r['id']})" for r in stale_entity_rows]
             )
@@ -879,7 +898,7 @@ def check_notion_sync_freshness(conn) -> CheckResult:
         if status == "pass"
         else f"{len(failures)} Notion sync drift failure(s), {len(warnings)} warning(s)."
     )
-    return CheckResult("notion_sync_freshness", status, summary, failures + warnings)
+    return CheckResult("notion_sync_freshness", status, summary, failures + warnings, failures)
 
 
 def _held_episodes_by_show(conn, slugs: set[str] | None = None) -> dict[str, HeldEpisodes]:
@@ -1087,7 +1106,9 @@ def check_import_caught_up(
         status, summary = "warn", f"{len(warnings)} show(s) could not be verified against their feed."
     else:
         status, summary = "pass", "Every show's import is caught up to its feed."
-    return CheckResult("import_caught_up_to_feed", status, summary, failures + warnings + details)
+    return CheckResult(
+        "import_caught_up_to_feed", status, summary, failures + warnings + details, failures
+    )
 
 
 # Which shows a zero-mention `completed` run is an ALARM for, and how far back to look.

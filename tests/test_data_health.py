@@ -237,6 +237,39 @@ def test_notion_drift_fails_on_an_update_that_has_waited_three_days(monkeypatch)
     assert "Codex" not in detail
 
 
+def test_notion_drift_catches_a_daily_mentioned_entity_whose_sync_keeps_failing(monkeypatch) -> None:
+    """Reviewer finding (2026-09-23): every new mention bumps an entity's updated_at
+    (load_entity_batch.upsert_entity), so an entity mentioned daily never has an update
+    older than a day. If its Notion sync fails every day, the wait rule alone never sees
+    it. The sync's own 'failed' mark, with no good sync for 2+ days, does."""
+    hot = {**_pending_entity(9, waiting=timedelta(hours=5), name="ChatGPT"),
+           "since_sync": timedelta(days=4), "sync_status": "failed"}
+    fresh_fail = {**_pending_entity(10, waiting=timedelta(hours=5), name="Claude"),
+                  "since_sync": timedelta(days=1), "sync_status": "failed"}
+    race = {**_pending_entity(11, waiting=timedelta(seconds=5), name="Codex"),
+            "since_sync": timedelta(days=7), "sync_status": "synced"}
+    _patch_notion_freshness(monkeypatch, transcript_rows=[],
+                            stale_entity_rows=[hot, fresh_fail, race], failed_entities=2)
+    result = check_notion_sync_freshness(conn=None)
+    assert result.status == "fail"
+    detail = next(d for d in result.details if "entity page(s)" in d)
+    assert "1 entity page(s)" in detail and "ChatGPT (9)" in detail
+    assert "Claude" not in detail and "Codex" not in detail  # inside the window / the race
+    assert result.failures and all("warn" not in f for f in result.failures)
+
+
+def test_per_show_checks_hand_their_failing_lines_to_the_announcer(monkeypatch) -> None:
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("ai-daily-brief", "taddy:held", "Held one", date(2026, 9, 18))],
+        feed_episodes={"ai-daily-brief": [FeedEpisode("taddy:missing", date(2026, 9, 19), "New")]},
+        today=date(2026, 9, 22),
+        slugs=["ai-daily-brief"],
+    )
+    assert result.status == "fail"
+    assert len(result.failures) == 1 and result.failures[0].startswith("ai-daily-brief: BEHIND 1")
+
+
 def test_entity_update_overdue_is_measured_from_the_update_not_the_last_sync() -> None:
     from pipeline.data_health import NOTION_SYNC_MAX_LAG_DAYS, _entity_update_overdue
 

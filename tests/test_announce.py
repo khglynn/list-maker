@@ -37,12 +37,14 @@ SOP_BEHIND = {
     "status": "fail",
     "summary": "1 show(s) behind their feed (missing episodes).",
     "details": ["ai-daily-brief: BEHIND 1 — feed at 2026-09-19, we have 2026-09-18 (past the 2-day import window)"],
+    "failures": ["ai-daily-brief: BEHIND 1 — feed at 2026-09-19, we have 2026-09-18 (past the 2-day import window)"],
 }
 NOTION_DRIFT = {
     "name": "notion_sync_freshness",
     "status": "fail",
     "summary": "1 Notion sync drift failure(s), 0 warning(s).",
     "details": ["1 entity page(s) have Neon updates waiting >2d that never reached Notion — Codex (7)"],
+    "failures": ["1 entity page(s) have Neon updates waiting >2d that never reached Notion — Codex (7)"],
 }
 
 
@@ -284,6 +286,76 @@ def test_a_failure_joining_one_already_reported_is_new_and_names_the_other():
     assert len(slack.messages) == 2
     assert "Also still failing, already reported" in slack.messages[1]
     assert "Notion is behind Neon" in slack.messages[1]
+
+
+def _feed_failing(*slugs: str) -> dict:
+    lines = [f"{slug}: BEHIND 1 — feed at 2026-09-19 (past the window)" for slug in slugs]
+    return {"name": "import_caught_up_to_feed", "status": "fail",
+            "summary": f"{len(slugs)} show(s) behind their feed (missing episodes).",
+            "details": lines, "failures": lines}
+
+
+def test_a_second_show_failing_an_open_check_is_news():
+    """Reviewer finding (2026-09-23): with one alert per check, TAL falling behind while
+    AI Daily's BEHIND was already open would have waited up to a week to be said."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, _entities([_feed_failing("ai-daily-brief")]), SEP22)
+    _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), SEP22 + timedelta(days=1))
+
+    assert len(slack.messages) == 2
+    assert "now also failing for tal" in slack.messages[1]
+    assert "1 new problem" in slack.messages[1]
+    assert any("Now also failing for tal" in body for _, body in gh.comments)
+    alert = gh.alert("entities:import_caught_up_to_feed")
+    assert alert.subjects == ["ai-daily-brief", "tal"] and alert.since == SEP22
+    assert len([i for i in gh.issues.values() if i["state"] == "open"]) == 1  # same thread
+
+    # Same two shows next day: quiet. One of them catches up: still quiet (partial).
+    _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), SEP22 + timedelta(days=2))
+    _run(gh, slack, _entities([_feed_failing("tal")]), SEP22 + timedelta(days=3))
+    assert len(slack.messages) == 2
+    assert gh.alert("entities:import_caught_up_to_feed").subjects == ["tal"]
+
+    # ...and if it falls behind again, that is news again.
+    _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), SEP22 + timedelta(days=4))
+    assert len(slack.messages) == 3 and "now also failing for ai-daily-brief" in slack.messages[2]
+
+
+def test_an_unverified_feed_neither_fails_nor_recovers():
+    """Reviewer finding: the feed check warns only when a feed was unreachable. Read as
+    a pass, a day of Taddy downtime closed an open BEHIND as 'recovered' and reopened it
+    the next day as a new problem."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, _entities([_feed_failing("ai-daily-brief")]), SEP22)
+    unverified = {"name": "import_caught_up_to_feed", "status": "warn",
+                  "summary": "1 show(s) could not be verified against their feed.",
+                  "details": ["ai-daily-brief: feed UNVERIFIED — second source unreachable"],
+                  "failures": []}
+    findings = collect_findings(ENTITIES, GREEN_STEPS, "success", [unverified])
+    assert "entities:import_caught_up_to_feed" not in findings
+    _run(gh, slack, findings, SEP22 + timedelta(days=1))
+    assert len(slack.messages) == 1 and gh.issues[101]["state"] == "open"
+
+
+def test_a_milder_warning_does_end_a_failure():
+    """Other checks' warn is a real, milder state (some stand every day), so it ends
+    the failure — otherwise an issue could never close."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    stuck = {"name": "transcript_race_selfheal", "status": "fail", "summary": "not draining",
+             "details": ["hard-fork ep 1: 5d pending"], "failures": []}
+    draining = dict(stuck, status="warn", summary="2 episode(s) queued")
+    _run(gh, slack, _entities([stuck]), SEP22)
+    _run(gh, slack, collect_findings(ENTITIES, GREEN_STEPS, "success", [draining]),
+         SEP22 + timedelta(days=1))
+    assert "recovered" in slack.messages[-1] and gh.issues[101]["state"] == "closed"
+
+
+def test_notes_stay_visible_in_the_step_summary_when_nothing_is_said():
+    gh, slack = FakeGitHub(), FakeSlack()
+    green = collect_findings(ENTITIES, GREEN_STEPS, "success", [_passing("import_caught_up_to_feed")])
+    out = _run(gh, slack, green, SEP22, notes=["Notion sync — incremental update: 2/10 failed (20%)"])
+    assert slack.messages == []
+    assert "2/10 failed" in announce._summarize(out)
 
 
 def test_a_music_run_cannot_recover_another_shows_failure():
