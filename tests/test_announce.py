@@ -736,3 +736,171 @@ def test_a_crash_in_the_announcer_is_loud(monkeypatch):
     monkeypatch.setattr(announce, "post_slack", slack)
     assert announce.main(["--workflow", "intake"]) == 1
     assert "alert step itself crashed" in slack.messages[0]
+
+
+# ── round 3: flapping, reopening, and the paths that must never go silent ──────────────
+
+def _day_after(n: int) -> date:
+    return SEP22 + timedelta(days=n)
+
+
+def test_a_flapping_check_is_one_problem_said_at_most_weekly():
+    """Review C4: red, green, red, green, red on five days gave 5 posts and 3 issues.
+    Kevin's rule: start, weekly while unfixed, once on recovery, never daily."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    red, green = _entities([AI_DAILY_BEHIND]), _green("import_caught_up_to_feed")
+    for n in range(7):  # Sep 22-28: F P F P F P F
+        _run(gh, slack, red if n % 2 == 0 else green, _day_after(n))
+    assert len(slack.messages) == 1  # the start, then quiet
+    assert len(gh.issues) == 1 and gh.issues[101]["state"] == "open"
+
+    _run(gh, slack, red, _day_after(7))  # a week after the first post
+    assert len(slack.messages) == 2
+    assert "on and off: failed 4 of the last 7 runs" in slack.messages[1]  # Sep 23-29: P F P F P F F
+    assert len(gh.issues) == 1
+
+
+def test_a_failure_soon_after_a_recovery_reopens_the_same_issue_quietly():
+    gh, slack = FakeGitHub(), FakeSlack()
+    red, green = _entities([AI_DAILY_BEHIND]), _green("import_caught_up_to_feed")
+    _run(gh, slack, red, _day_after(0))
+    _run(gh, slack, green, _day_after(1))
+    _run(gh, slack, green, _day_after(2))  # held: "recovered", closed
+    assert len(slack.messages) == 2 and gh.issues[101]["state"] == "closed"
+
+    _run(gh, slack, red, _day_after(4))  # failing again two days later
+    assert len(slack.messages) == 2  # quiet: same problem, next word is the reminder
+    assert gh.issues[101]["state"] == "open" and len(gh.issues) == 1
+    assert any(n == 101 and "Failing again on 2026-09-26" in b for n, b in gh.comments)
+
+    _run(gh, slack, red, _day_after(9))  # 7 days after the "recovered" post
+    assert len(slack.messages) == 3 and "Still failing since Sep 22" in slack.messages[2]
+
+
+def test_an_issue_closed_by_hand_is_not_reopened():
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), _day_after(0))
+    gh.issues[101]["state"] = "closed"  # Kevin: "I think it's fixed"
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), _day_after(1))
+    assert len(gh.issues) == 2 and gh.issues[102]["state"] == "open"
+    assert len(slack.messages) == 2 and "1 new problem" in slack.messages[1]
+
+
+def test_a_recovery_that_was_not_announced_keeps_the_issue_open():
+    """Review C12: closing without the message landing meant 'recovered' was never said."""
+    gh = FakeGitHub()
+    _run(gh, FakeSlack(), _entities([AI_DAILY_BEHIND]), _day_after(0))
+    green = _green("import_caught_up_to_feed")
+    _run(gh, FakeSlack(), green, _day_after(1))
+    _run(gh, FakeSlack(ok=False), green, _day_after(2))
+    assert gh.issues[101]["state"] == "open"
+    slack = FakeSlack()
+    _run(gh, slack, green, _day_after(3))
+    assert len(slack.messages) == 1 and "recovered" in slack.messages[0]
+    assert gh.issues[101]["state"] == "closed"
+
+
+def test_a_failed_close_after_recovered_finishes_quietly():
+    """Review L3: the message landed but the close didn't; the next run closes without
+    saying 'recovered' again."""
+    class NoClose(FakeGitHub):
+        closes_left_to_fail = 1
+
+        def edit_issue(self, number, **fields):
+            if fields.get("state") == "closed" and self.closes_left_to_fail:
+                self.closes_left_to_fail -= 1
+                raise RuntimeError("HTTP 502")
+            super().edit_issue(number, **fields)
+
+    gh, slack = NoClose(), FakeSlack()
+    _run(gh, slack, _entities([AI_DAILY_BEHIND]), _day_after(0))
+    green = _green("import_caught_up_to_feed")
+    _run(gh, slack, green, _day_after(1))
+    _run(gh, slack, green, _day_after(2))
+    assert gh.issues[101]["state"] == "open" and "recovered" in slack.messages[-1]
+    _run(gh, slack, green, _day_after(3))
+    assert gh.issues[101]["state"] == "closed" and len(slack.messages) == 2
+
+
+def test_an_unreachable_feed_still_gets_its_weekly_reminder():
+    """Review C9: an open BEHIND whose feed stopped answering went silent for good."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, _entities([_feed_failing("tal")]), _day_after(0))
+    down = {"name": "import_caught_up_to_feed", "status": "warn", "summary": "unverified",
+            "details": ["tal: feed UNVERIFIED — second source unreachable"], "failures": []}
+    for n in range(1, 22):
+        _run(gh, slack, collect_findings(ENTITIES, GREEN_STEPS, "success", [down]), _day_after(n))
+    assert len(slack.messages) == 4  # day 0, then days 7, 14 and 21
+    assert "Couldn't check today: the feed for tal didn't answer" in slack.messages[1]
+    assert gh.issues[101]["state"] == "open"
+
+
+def test_an_unreachable_show_on_a_fail_day_is_not_forgotten():
+    """Review C2/L11: tal behind, ai-daily-brief's feed down for a day while tal still
+    fails. The next day both behind again must not read as 'now also failing'."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), _day_after(0))
+    blip = _feed_failing("tal")
+    blip["details"] = blip["details"] + ["ai-daily-brief: feed UNVERIFIED — second source unreachable"]
+    _run(gh, slack, _entities([blip]), _day_after(1))
+    assert gh.alert("entities:import_caught_up_to_feed").subjects == ["ai-daily-brief", "tal"]
+    _run(gh, slack, _entities([_feed_failing("ai-daily-brief", "tal")]), _day_after(2))
+    assert len(slack.messages) == 1
+
+
+def test_a_manual_all_shows_music_run_posts_but_keeps_no_issue():
+    """Review C5/L9/L14: no schedule re-checks show_id 'all' or '3', so an issue from
+    one of those runs would never be reminded or closed."""
+    for show_id in ("all", "3"):
+        ctx = RunContext.build("music", show_id)
+        assert ctx.stateless
+        gh, slack = FakeGitHub(), FakeSlack()
+        red = collect_findings(ctx, _steps(preflight="success", spotify_cache="success",
+                                           pipeline="failure", feed_check="skipped"), "failure")
+        run_announce(ctx, red, gh=gh, post=slack, today=SEP22, run_url=RUN)
+        assert gh.issues == {} and len(slack.messages) == 1
+        assert "not tracked" in slack.messages[0]
+        green = collect_findings(ctx, _steps(preflight="success", spotify_cache="success",
+                                             pipeline="success", feed_check="success"), "success")
+        run_announce(ctx, green, gh=gh, post=slack, today=SEP22, run_url=RUN)
+        assert len(slack.messages) == 1
+
+
+def test_an_issue_for_a_check_that_no_longer_exists_is_closed():
+    """Review C5/F12: a renamed or removed check's issue would stay open forever."""
+    gh, slack = FakeGitHub(), FakeSlack()
+    old = {"name": "old_check_name", "status": "fail", "summary": "x", "details": [], "failures": []}
+    _run(gh, slack, _entities([old]), _day_after(0))
+    green = _green("import_caught_up_to_feed")
+    _run(gh, slack, green, _day_after(1), reported_checks={"import_caught_up_to_feed"})
+    assert gh.issues[101]["state"] == "closed" and gh.issues[101]["state_reason"] == "not_planned"
+    assert len(slack.messages) == 1
+
+
+def test_a_hand_filed_failure_issue_is_never_retired():
+    """Review L2: only issues from before the switch are legacy."""
+    hand = {"number": 70, "title": "Pipeline question", "state": "open", "body": "Kevin's note",
+            "labels": [{"name": "pipeline-failure"}, {"name": "entities"}],
+            "html_url": "https://x/70", "created_at": "2026-10-01T12:00:00Z"}
+    gh = FakeGitHub([hand])
+    _run(gh, FakeSlack(), _green("import_caught_up_to_feed"), date(2026, 10, 2))
+    assert gh.issues[70]["state"] == "open" and gh.comments == []
+
+
+def test_the_no_memory_fallback_says_it_may_be_a_repeat():
+    """Review L4: without the memory every failure looks new; the headline says so."""
+    slack = FakeSlack()
+    _run(FakeGitHub(fail_reads=True), slack, _entities([AI_DAILY_BEHIND]), _day_after(20))
+    assert "alert history unavailable, so this may be a repeat" in slack.messages[0]
+    assert "new problem" not in slack.messages[0]
+
+
+def test_an_import_failure_still_posts_the_crash_line(monkeypatch):
+    """Review L10: announce.py's own imports are guarded, so a broken show_config still
+    produces 'the alert step itself crashed' instead of a traceback nobody sees."""
+    slack = FakeSlack()
+    monkeypatch.setattr(announce, "_IMPORT_ERROR", "Traceback: SyntaxError in show_config.py")
+    monkeypatch.setattr(announce, "post_slack", slack)
+    monkeypatch.setenv("RUN_URL", RUN)
+    assert announce.main(["--workflow", "entities"]) == 1
+    assert "alert step itself crashed" in slack.messages[0]
