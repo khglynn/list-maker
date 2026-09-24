@@ -757,6 +757,23 @@ def check_music_songs_still_arriving(conn) -> CheckResult:
     )
 
 
+def _entity_update_overdue(
+    waiting: timedelta, max_lag_days: int = NOTION_SYNC_MAX_LAG_DAYS
+) -> bool:
+    """Has this entity's unsynced update been waiting longer than the sync window?
+
+    The daily Notion sync picks up any entity whose updated_at is newer than its
+    notion_synced_at, so an update younger than the window is the system working,
+    however long ago the entity was last synced. Only an update that has sat unsynced
+    past the window means the sync stopped reaching it.
+
+    `waiting` is computed by Postgres (`now() - updated_at`), not here: updated_at is a
+    timestamp WITHOUT time zone, so comparing it with any aware datetime in Python
+    raises TypeError — which would take down every remaining check in the run.
+    """
+    return waiting > timedelta(days=max_lag_days)
+
+
 def check_notion_sync_freshness(conn) -> CheckResult:
     """Notion is a DESTINATION — a green pipeline run proves data reached Neon, not Notion.
 
@@ -789,17 +806,29 @@ def check_notion_sync_freshness(conn) -> CheckResult:
     # Rows, so the FAIL can name the entities (4f) — "12 entity page(s) have Neon
     # updates that never reached Notion" is not something a person can act on without
     # first writing this query themselves.
-    stale_entity_rows = _rows(
+    #
+    # Every entity whose latest update hasn't reached Notion yet, with how long that
+    # update has waited by the database's own clock; _entity_update_overdue then keeps
+    # only the ones that have waited past the window. Until 2026-09-23 the window lived in this WHERE as
+    # `notion_synced_at < updated_at - 2 days`, which measures the gap between the
+    # last sync and the update, never how long the update has been waiting. An entity
+    # last synced a week ago and updated one second ago failed at once — and on Mondays
+    # the curated intake updates entities in the same minute this check runs, so
+    # 09-14 and 09-21 went red for pages that reached Notion half an hour later.
+    pending_entity_rows = _rows(
         conn,
         """
-        SELECT id, canonical_name
+        SELECT id, canonical_name, now() - updated_at AS waiting
         FROM ai_entities
         WHERE notion_page_id IS NOT NULL
-          AND notion_synced_at < updated_at - make_interval(days => %s)
+          AND notion_synced_at < updated_at
         ORDER BY id;
         """,
-        [NOTION_SYNC_MAX_LAG_DAYS],
     )
+    stale_entity_rows = [
+        r for r in pending_entity_rows
+        if _entity_update_overdue(r["waiting"])
+    ]
     stale_entities = len(stale_entity_rows)
     failed_entities = int(
         _one(
@@ -818,8 +847,8 @@ def check_notion_sync_freshness(conn) -> CheckResult:
         )
     if stale_entities:
         failures.append(
-            f"{stale_entities} entity page(s) have Neon updates >{NOTION_SYNC_MAX_LAG_DAYS}d "
-            "old that never reached Notion"
+            f"{stale_entities} entity page(s) have Neon updates waiting "
+            f">{NOTION_SYNC_MAX_LAG_DAYS}d that never reached Notion"
             + _name_some(
                 [f"{r['canonical_name']} ({r['id']})" for r in stale_entity_rows]
             )

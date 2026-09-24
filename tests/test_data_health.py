@@ -28,20 +28,33 @@ def _held(*episodes: tuple[str, str, date]) -> HeldEpisodes:
     return held
 
 
+def _pending_entity(entity_id: int, *, waiting: timedelta, name: str | None = None) -> dict:
+    """One row of the pending-entity query: an update that has waited `waiting`
+    (Postgres computes it as `now() - updated_at`)."""
+    return {"id": entity_id, "canonical_name": name or f"Tool {entity_id}", "waiting": waiting}
+
+
 def _patch_notion_freshness(
     monkeypatch, *, transcript_rows, stale_entity_rows, failed_entities
 ):
-    """The check makes TWO _rows calls (transcript backlog, stale entity pages) and one
+    """The check makes TWO _rows calls (transcript backlog, pending entity pages) and one
     _one call (failed entity count) — dispatch both on SQL content.
 
-    The stale-entity query became row-returning in 4f so the FAIL can name the entities
+    The entity query became row-returning in 4f so the FAIL can name the entities
     rather than only count them; a blanket `_rows` stub would hand the transcript rows
-    to both queries and quietly test the wrong thing.
+    to both queries and quietly test the wrong thing. Rows given as plain
+    {"id", "canonical_name"} dicts are treated as updates that have waited three days
+    (overdue), so the naming and capping tests keep reading as they did.
     """
     import pipeline.data_health as dh
 
+    entity_rows = [
+        row if "waiting" in row else {**_pending_entity(row["id"], waiting=timedelta(days=3)), **row}
+        for row in stale_entity_rows
+    ]
+
     def fake_rows(conn, sql, params=None):
-        return stale_entity_rows if "FROM ai_entities" in sql else transcript_rows
+        return entity_rows if "FROM ai_entities" in sql else transcript_rows
 
     monkeypatch.setattr(dh, "_rows", fake_rows)
     monkeypatch.setattr(
@@ -186,6 +199,51 @@ def test_notion_sync_freshness_fails_on_stale_entity_pages(monkeypatch) -> None:
     # 4f: the alert names them, so a person can open those pages without first
     # writing the query themselves.
     assert any("Tool 1 (1)" in d for d in result.details)
+
+
+def test_notion_drift_ignores_an_update_made_seconds_ago(monkeypatch) -> None:
+    """The 2026-09-14 and 09-21 false alarms.
+
+    On Mondays the curated intake updates entities in the same minute this check runs.
+    An entity last synced days ago and updated seconds ago is the daily sync's next job,
+    not drift, however old its last sync is. The old WHERE clause compared the sync time
+    with the update time and never asked how long the update had waited, so it failed.
+    """
+    _patch_notion_freshness(
+        monkeypatch,
+        transcript_rows=[],
+        stale_entity_rows=[_pending_entity(7, waiting=timedelta(seconds=5), name="Codex")],
+        failed_entities=0,
+    )
+    assert check_notion_sync_freshness(conn=None).status == "pass"
+
+
+def test_notion_drift_fails_on_an_update_that_has_waited_three_days(monkeypatch) -> None:
+    _patch_notion_freshness(
+        monkeypatch,
+        transcript_rows=[],
+        stale_entity_rows=[
+            _pending_entity(7, waiting=timedelta(seconds=5), name="Codex"),
+            _pending_entity(8, waiting=timedelta(days=3), name="Claude Code"),
+        ],
+        failed_entities=0,
+    )
+    result = check_notion_sync_freshness(conn=None)
+    assert result.status == "fail"
+    detail = next(d for d in result.details if "entity page(s)" in d)
+    # Only the update that has waited past the window is named or counted.
+    assert "1 entity page(s)" in detail
+    assert "Claude Code (8)" in detail
+    assert "Codex" not in detail
+
+
+def test_entity_update_overdue_is_measured_from_the_update_not_the_last_sync() -> None:
+    from pipeline.data_health import NOTION_SYNC_MAX_LAG_DAYS, _entity_update_overdue
+
+    window = timedelta(days=NOTION_SYNC_MAX_LAG_DAYS)
+    assert not _entity_update_overdue(timedelta(seconds=1))
+    assert not _entity_update_overdue(window)  # at the edge: still inside the window
+    assert _entity_update_overdue(window + timedelta(minutes=1))
 
 
 def test_stale_entity_failure_caps_the_names_it_lists(monkeypatch) -> None:
