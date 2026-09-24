@@ -42,13 +42,20 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
 
+# `issues: write` for the announce step's failure issues (the other two workflows explain
+# why the default read-only token can't). Least privilege otherwise.
 permissions:
   contents: read
+  issues: write
 
 jobs:
   intake:
     runs-on: ubuntu-latest
     timeout-minutes: 70
+    env:
+      # Where steps leave detail for the announce step: data_health's results, the
+      # preflight's diagnostics, mid-run notes (common.alert_note).
+      ALERT_DETAILS_DIR: ${{ github.workspace }}/.alert-details
 
     steps:
       - name: Checkout
@@ -75,6 +82,7 @@ jobs:
         run: cd pipeline && python db_preflight.py
 
       - name: Ensure the Notion intake log has the properties this run writes
+        id: log_schema
         # Idempotent and additive: adds missing properties and Status options, renames
         # Pull → "Pull anyway", refreshes the title/description prose. Never removes a
         # property, an option, or a row. Explicit rather than a side effect of judging,
@@ -85,6 +93,7 @@ jobs:
         run: cd pipeline && python run_intake.py --ensure-log-schema
 
       - name: Discover, judge, log
+        id: intake
         timeout-minutes: 60
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
@@ -109,13 +118,23 @@ jobs:
           cd pipeline
           python run_intake.py "${ARGS[@]}"
 
-      - name: Notify Slack (failure)
-        # Not when the preflight failed — it already posted the diagnostics.
-        if: failure() && steps.preflight.outcome != 'failure'
+      # The run's one voice (pipeline/announce.py): Slack and the failure issues, once per
+      # change of state — a new failure, a changed set of failures, "recovered" on the
+      # first green — plus a weekly reminder while a failure lasts. Always runs, so a green
+      # run can close what it fixed. Replaced (2026-09-23) the separate speakers that made
+      # every red day two pings and a comment on an issue that never closed.
+      - name: Announce (Slack + failure issues, once per change)
+        if: always()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_TOKEN: ${{ github.token }}
+          STEPS_JSON: ${{ toJSON(steps) }}
+          JOB_STATUS: ${{ job.status }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
+        # python3, standard library only: this must still run when setup or the
+        # dependency install is what failed.
         run: |
-          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
-          curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' \
-            --data "{\"text\": \":rotating_light: *list-maker: curated intake FAILED*\n<${RUN_URL}|View logs>\"}"
+          ARGS=(--workflow intake)
+          [ "$DRY_RUN_INPUT" = "true" ] && ARGS+=(--dry-run)
+          python3 pipeline/announce.py "${ARGS[@]}"

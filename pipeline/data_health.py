@@ -18,7 +18,7 @@ from typing import Any, Iterable
 
 # Allow running as `python pipeline/data_health.py` from the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import get_db_connection, load_environment, post_slack
+from common import get_db_connection, load_environment
 from feed_check import FeedEpisode, feed_recent_dates, feed_recent_episodes
 from show_config import (
     BLOG_NOTION_SHOWS,
@@ -1751,6 +1751,13 @@ def parse_args() -> argparse.Namespace:
         help="Comma-separated slugs to limit the feed check to (default: all shows).",
     )
     parser.add_argument(
+        "--results-file",
+        help=(
+            "Also write every check result as JSON here. The scheduled workflows pass it "
+            "so their announce step (pipeline/announce.py) can say which checks failed."
+        ),
+    )
+    parser.add_argument(
         "--feed-owned-shows",
         help=(
             "Comma-separated slugs THIS run imports. The feed check judges these at their "
@@ -1796,16 +1803,16 @@ def main() -> None:
     else:
         print(render_text(results))
 
-    # Alert to Slack when a check fails — especially staleness, where a show has silently
-    # stopped updating. This is the backstop for a partial pipeline failure that didn't crash
-    # the run. post_slack is a no-op without SLACK_WEBHOOK_URL, so local runs stay quiet.
-    failed = [r for r in results if r.status == "fail"]
-    if failed:
-        post_slack(
-            ":warning: *list-maker data health* — "
-            + "; ".join(f"{r.name}: {r.summary}" for r in failed)
-        )
+    # No Slack from here. Until 2026-09-23 this posted its own ":warning: data health"
+    # line on every failing run, one second before the workflow's "FAILED" line, and
+    # again every day the condition held (June 8 to August 26, near daily). The
+    # workflows' announce step now speaks once per change of state, from these results.
+    if args.results_file:
+        path = Path(args.results_file)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps([asdict(r) for r in results], default=str, indent=2))
 
+    failed = [r for r in results if r.status == "fail"]
     if args.strict and failed:
         sys.exit(1)
 

@@ -25,7 +25,7 @@ import requests
 
 # Allow imports from pipeline/
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import get_db_connection, get_logger, load_environment, post_slack
+from common import alert_note, get_db_connection, get_logger, load_environment
 from show_config import SHOWS, get_show
 
 NOTION_API = "https://api.notion.com/v1"
@@ -434,7 +434,7 @@ def alert_on_failure_rate(phase: str, succeeded: int, failed: int) -> None:
     msg = f"Notion sync — {phase}: {failed}/{total} failed ({rate:.0%})"
     log.warning(msg)
     if rate > FAILURE_ALERT_THRESHOLD:
-        post_slack(f":warning: list-maker {msg}")
+        alert_note(f":warning: list-maker {msg}")
 
 
 def run_full_reset(token: str, database_id: str, show_ids: list[int], show_names: dict[int, str], min_mentions: int, dry_run: bool,

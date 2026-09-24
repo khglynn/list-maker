@@ -53,6 +53,28 @@ def post_slack(text: str) -> bool:
         return False
 
 
+def alert_note(text: str) -> bool:
+    """A mid-run warning (e.g. "Notion sync: 2/40 failed") for whoever speaks for the run.
+
+    In a workflow with an announce step (ALERT_DETAILS_DIR set: entities.yml,
+    pipeline.yml, blogs.yml), the note is appended to <dir>/notes.txt and rides along in
+    that step's one message, if the run has something to say; otherwise it stays in the
+    step summary. That keeps "one message per failure" true when the failing step also
+    has its own complaint. Anywhere else (a local run) it falls back to post_slack.
+    """
+    details_dir = os.getenv("ALERT_DETAILS_DIR")
+    if not details_dir:
+        return post_slack(text)
+    try:
+        Path(details_dir).mkdir(parents=True, exist_ok=True)
+        with open(Path(details_dir) / "notes.txt", "a", encoding="utf-8") as fh:
+            fh.write(" ".join(text.split()) + "\n")
+        return True
+    except OSError as exc:  # alerting must never break the run
+        get_logger("pipeline.slack").warning("could not record alert note: %s", exc)
+        return post_slack(text)
+
+
 def get_repo_root() -> Path:
     """Return the repo root (parent of pipeline/)."""
     return Path(__file__).resolve().parent.parent

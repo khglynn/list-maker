@@ -70,3 +70,41 @@ def test_entities_health_check_judges_only_the_shows_it_imports():
 
 def test_music_workflow_keeps_its_own_strict_feed_check():
     assert re.search(r"data_health\.py --feed-check-only --shows \"\$SLUGS\" --strict", _read("pipeline.yml"))
+
+
+ANNOUNCED = {"entities.yml": "entities", "pipeline.yml": "music", "blogs.yml": "intake"}
+
+
+def test_each_scheduled_workflow_speaks_through_the_announce_step_only():
+    """One voice per run (pipeline/announce.py). The old per-workflow Slack curl and the
+    daily "Failed again" issue comment are what made a red day two pings and a comment."""
+    for name, workflow in ANNOUNCED.items():
+        text = _read(name)
+        step = text[text.index("- name: Announce (Slack + failure issues"):]
+        assert re.search(r"^\s+if: always\(\)\s*$", step, re.M), name
+        assert f"ARGS=(--workflow {workflow}" in step, name
+        assert "python3 pipeline/announce.py" in step, name
+        for leftover in ("Notify Slack (failure)", "Create issue on failure", "hooks.slack.com",
+                         'curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL"'):
+            assert leftover not in text, f"{name} still has {leftover!r}"
+        assert re.search(r"^  issues: write$", text, re.M), f"{name} needs issues: write"
+        assert "ALERT_DETAILS_DIR: ${{ github.workspace }}/.alert-details" in text, name
+
+
+def test_the_steps_the_announcer_tracks_exist_in_each_workflow():
+    """announce.WORKFLOWS names step ids; a renamed or missing id would make that step
+    invisible to the alerts (it would never count as run, so never fail or recover)."""
+    from pipeline.announce import WORKFLOWS as TRACKED
+
+    for name, workflow in ANNOUNCED.items():
+        ids = set(re.findall(r"^\s+id: ([\w-]+)\s*$", _read(name), re.M))
+        missing = set(TRACKED[workflow]["steps"]) - ids
+        assert not missing, f"{name} lacks step id(s) {sorted(missing)}"
+
+
+def test_every_health_check_run_hands_its_results_to_the_announcer():
+    for name in ("entities.yml", "pipeline.yml"):
+        runs = re.findall(r"python data_health\.py(?:[^\n]*\\\n)*[^\n]*", _read(name))
+        assert runs, name
+        for line in runs:
+            assert '--results-file "$ALERT_DETAILS_DIR/health.json"' in line, (name, line)

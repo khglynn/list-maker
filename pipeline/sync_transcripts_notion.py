@@ -27,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from pipeline.common import get_db_connection, get_logger, load_environment, post_slack  # noqa: E402
+from pipeline.common import alert_note, get_db_connection, get_logger, load_environment  # noqa: E402
 from pipeline.show_config import BLOG_NOTION_SHOWS, SHOWS, TRANSCRIPT_NOTION_SHOWS  # noqa: E402
 from pipeline.sync_notion import NOTION_API, notion_request  # noqa: E402 — reuse hardened client
 
@@ -353,7 +353,7 @@ def main() -> None:
                f"skipped_empty {skipped_empty}, failed {failed} (of {len(episodes)})")
         log.info(msg)
         if failed or skipped_empty:
-            post_slack(f":warning: *list-maker {msg}*")
+            alert_note(f":warning: *list-maker {msg}*")
         if failed:
             # Exit non-zero so the CI step goes red — a green step with lost work is
             # the silent-failure class this pipeline hunts. (skipped_empty stays

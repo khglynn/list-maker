@@ -9,7 +9,8 @@ fact, and a Slack line that said only "FAILED, view logs".
 
 This runs FIRST in each workflow: one bounded connect attempt. On failure it posts the
 diagnostics the log had and the alert didn't — host, resolved addresses, runner — and
-exits non-zero so the job ends here. Downstream steps marked `if: always()` gate on
+exits non-zero so the job ends here. In a workflow with an announce step (ALERT_DETAILS_DIR
+set) it leaves the diagnostics for that step instead of posting, so the run says it once. Downstream steps marked `if: always()` gate on
 this step's outcome, so nothing re-pays the wait.
 """
 
@@ -68,7 +69,15 @@ def main() -> None:
         print(message)
         return
     print(message, file=sys.stderr)
-    post_slack(message)
+    details_dir = os.getenv("ALERT_DETAILS_DIR")
+    if details_dir:
+        # The workflow's announce step speaks for this run (one message per failure):
+        # hand it the diagnostics, without the headline it writes itself. The first
+        # line of `message` is that headline by construction (see check()).
+        Path(details_dir).mkdir(parents=True, exist_ok=True)
+        (Path(details_dir) / "preflight.txt").write_text(message.split("\n", 1)[-1])
+    else:
+        post_slack(message)
     sys.exit(1)
 
 
