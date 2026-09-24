@@ -24,7 +24,7 @@ constant back to False returns to shadow mode — verdicts recorded and mirrored
 Kevin ticks.
 
 Failure states are visible by construction: a missing table, a missing rubric, or any
-failed candidate exits non-zero (so blogs.yml's failure notify fires), and the Slack
+failed candidate exits non-zero (so blogs.yml's announce step reports it), and the Slack
 line posts on every run — including a week where nothing happened. Silence must never
 be the designed outcome of a job whose job is to tell you something.
 """
@@ -578,6 +578,44 @@ def ensure_log_schema(token: str, *, dry_run: bool = False) -> list[str]:
 
 
 
+def _report_queries(conn, started: datetime, with_titles: bool) -> tuple[dict, list, list]:
+    counts = store.weekly_counts(conn, started)
+    if not with_titles:
+        return counts, [], []
+    # Follows the mode: once AUTO_INGEST is on, a save is ingested in the same loop
+    # iteration and no row is left at `judged` at report time, so querying that status
+    # would print an empty "Saved:" list on the very week it matters.
+    saved = store.titles(conn, started, store.STATUS_SAVED if AUTO_INGEST else store.STATUS_JUDGED)
+    held = store.titles(conn, started, store.STATUS_HELD)
+    return counts, saved, held
+
+
+def read_report(conn, started: datetime, *, with_titles: bool) -> tuple[dict, list, list]:
+    """The weekly line's numbers, read even if the run's connection has been dropped.
+
+    The report is read at the very end, after the Notion sync (7–9 minutes on a normal
+    Monday), and it is the job's deliverable. On 09-07, 09-14 and 09-21 the connection
+    was gone by then ("SSL connection has been closed unexpectedly") and a run that had
+    done all its work went red. main() now opens the connection in autocommit, which
+    removes the cause (see there); this is the backstop for any other drop — a pooler or
+    compute restart during an hour-long run. The report is reads only, so one retry on a
+    fresh connection is safe.
+    """
+    import psycopg2  # the driver get_db_connection uses
+
+    try:
+        return _report_queries(conn, started, with_titles)
+    except (psycopg2.OperationalError, psycopg2.InterfaceError) as exc:
+        log.warning("database connection dropped before the report (%s); reconnecting once",
+                    str(exc).strip().splitlines()[0] if str(exc).strip() else type(exc).__name__)
+        fresh = get_db_connection()
+        fresh.autocommit = True
+        try:
+            return _report_queries(fresh, started, with_titles)
+        finally:
+            fresh.close()
+
+
 def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str],
         openrouter_key: Optional[str]) -> int:
     """One intake run. Returns the number of failures.
@@ -610,7 +648,8 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
                  ok, failed, len(unknown), store.TABLE)
         if ok and not sync_ingested():
             failed += 1
-        posted = post_slack(weekly_line(store.weekly_counts(conn, started), [], [],
+        counts, _, _ = read_report(conn, started, with_titles=False)
+        posted = post_slack(weekly_line(counts, [], [],
                                         auto_ingest=AUTO_INGEST,
                                         unknown_overrides=len(unknown),
                                         sources_label="overrides only"))
@@ -670,7 +709,7 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
             if AUTO_INGEST and status == store.STATUS_JUDGED:
                 # ingest_one swallows the failure by design (one bad row must not end
                 # the week) and returns the bool. Discarding it would leave a failed
-                # auto-ingest exiting 0, so blogs.yml's notify would never fire.
+                # auto-ingest exiting 0, so blogs.yml's announce step would never hear of it.
                 if ingest_one(conn, store.get_by_id(conn, row["id"]) or row, save_for_intake):
                     ingested_count += 1
                 else:
@@ -722,15 +761,10 @@ def run(args: argparse.Namespace, conn, token: str, firecrawl_key: Optional[str]
     # The weekly line IS this job's deliverable — Neon and Notion are where the data
     # lives, but the Slack post is the only thing that reaches Kevin unprompted. A post
     # that didn't land is a week he never heard about, so it fails the run and
-    # blogs.yml's notify fires. Same call the pulse already makes for its heartbeat.
+    # blogs.yml's announce step reports it. Same call the pulse makes for its heartbeat.
+    counts, saved_titles, held_titles = read_report(conn, started, with_titles=True)
     if not post_slack(weekly_line(
-        store.weekly_counts(conn, started),
-        # Follows the mode: once AUTO_INGEST is on, a save is ingested in the same
-        # loop iteration and no row is left at `judged` at report time, so querying
-        # that status would print an empty "Saved:" list on the very week it matters.
-        store.titles(conn, started,
-                     store.STATUS_SAVED if AUTO_INGEST else store.STATUS_JUDGED),
-        store.titles(conn, started, store.STATUS_HELD),
+        counts, saved_titles, held_titles,
         auto_ingest=AUTO_INGEST, backlog=backlog, unknown_overrides=len(unknown),
         sources_label=args.sources, ingest_backlog=ingest_backlog,
     )):
@@ -750,6 +784,18 @@ def main(argv: Optional[list[str]] = None) -> None:
         return
 
     conn = get_db_connection()
+    # Autocommit: every statement is its own transaction, so this connection is never
+    # left "idle in transaction" across the run's long stretches of non-database work
+    # (judging, Firecrawl searches, a save's extraction, the end-of-run Notion sync).
+    # Neon ends any session idle in a transaction for 5 minutes
+    # (idle_in_transaction_session_timeout = 5min, read 2026-09-23; a merely idle
+    # session is never timed out), and psycopg2 opens a transaction on the first
+    # SELECT. That is what killed the 09-07, 09-14 and 09-21 intakes at the final
+    # report, after the Notion sync. Most writes here are one statement per row and safe
+    # to repeat; the two batches that must be all-or-nothing (upsert_candidates, which
+    # feeds a newest-first date cursor, and links.write_back) open their own
+    # transaction with common.one_transaction.
+    conn.autocommit = True
     try:
         failures = run(args, conn, token, firecrawl_key, openrouter_key)
     finally:

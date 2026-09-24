@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 
+import pytest
+
 from pipeline.data_health import (
     CheckResult,
     HeldEpisodes,
@@ -28,20 +30,35 @@ def _held(*episodes: tuple[str, str, date]) -> HeldEpisodes:
     return held
 
 
+def _pending_entity(entity_id: int, *, waiting: timedelta, name: str | None = None) -> dict:
+    """One row of the pending-entity query: an update that has waited `waiting`
+    (Postgres computes it as `now() - updated_at`)."""
+    return {"id": entity_id, "canonical_name": name or f"Tool {entity_id}", "waiting": waiting}
+
+
 def _patch_notion_freshness(
-    monkeypatch, *, transcript_rows, stale_entity_rows, failed_entities
+    monkeypatch, *, transcript_rows, stale_entity_rows, failed_entities, failed_create_rows=()
 ):
-    """The check makes TWO _rows calls (transcript backlog, stale entity pages) and one
+    """The check makes TWO _rows calls (transcript backlog, pending entity pages) and one
     _one call (failed entity count) — dispatch both on SQL content.
 
-    The stale-entity query became row-returning in 4f so the FAIL can name the entities
+    The entity query became row-returning in 4f so the FAIL can name the entities
     rather than only count them; a blanket `_rows` stub would hand the transcript rows
-    to both queries and quietly test the wrong thing.
+    to both queries and quietly test the wrong thing. Rows given as plain
+    {"id", "canonical_name"} dicts are treated as updates that have waited three days
+    (overdue), so the naming and capping tests keep reading as they did.
     """
     import pipeline.data_health as dh
 
+    entity_rows = [
+        row if "waiting" in row else {**_pending_entity(row["id"], waiting=timedelta(days=3)), **row}
+        for row in stale_entity_rows
+    ]
+
     def fake_rows(conn, sql, params=None):
-        return stale_entity_rows if "FROM ai_entities" in sql else transcript_rows
+        if "notion_page_id IS NULL" in sql:
+            return list(failed_create_rows)
+        return entity_rows if "FROM ai_entities" in sql else transcript_rows
 
     monkeypatch.setattr(dh, "_rows", fake_rows)
     monkeypatch.setattr(
@@ -188,6 +205,103 @@ def test_notion_sync_freshness_fails_on_stale_entity_pages(monkeypatch) -> None:
     assert any("Tool 1 (1)" in d for d in result.details)
 
 
+def test_notion_drift_ignores_an_update_made_seconds_ago(monkeypatch) -> None:
+    """The 2026-09-14 and 09-21 false alarms.
+
+    On Mondays the curated intake updates entities in the same minute this check runs.
+    An entity last synced days ago and updated seconds ago is the daily sync's next job,
+    not drift, however old its last sync is. The old WHERE clause compared the sync time
+    with the update time and never asked how long the update had waited, so it failed.
+    """
+    _patch_notion_freshness(
+        monkeypatch,
+        transcript_rows=[],
+        stale_entity_rows=[_pending_entity(7, waiting=timedelta(seconds=5), name="Codex")],
+        failed_entities=0,
+    )
+    assert check_notion_sync_freshness(conn=None).status == "pass"
+
+
+def test_notion_drift_fails_on_an_update_that_has_waited_three_days(monkeypatch) -> None:
+    _patch_notion_freshness(
+        monkeypatch,
+        transcript_rows=[],
+        stale_entity_rows=[
+            _pending_entity(7, waiting=timedelta(seconds=5), name="Codex"),
+            _pending_entity(8, waiting=timedelta(days=3), name="Claude Code"),
+        ],
+        failed_entities=0,
+    )
+    result = check_notion_sync_freshness(conn=None)
+    assert result.status == "fail"
+    detail = next(d for d in result.details if "entity page(s)" in d)
+    # Only the update that has waited past the window is named or counted.
+    assert "1 entity page(s)" in detail
+    assert "Claude Code (8)" in detail
+    assert "Codex" not in detail
+
+
+def test_notion_drift_catches_a_daily_mentioned_entity_whose_sync_keeps_failing(monkeypatch) -> None:
+    """Reviewer finding (2026-09-23): every new mention bumps an entity's updated_at
+    (load_entity_batch.upsert_entity), so an entity mentioned daily never has an update
+    older than a day. If its Notion sync fails every day, the wait rule alone never sees
+    it. The sync's own 'failed' mark, with no good sync for 2+ days, does."""
+    hot = {**_pending_entity(9, waiting=timedelta(hours=5), name="ChatGPT"),
+           "since_sync": timedelta(days=4), "sync_status": "failed"}
+    fresh_fail = {**_pending_entity(10, waiting=timedelta(hours=5), name="Claude"),
+                  "since_sync": timedelta(days=1), "sync_status": "failed"}
+    race = {**_pending_entity(11, waiting=timedelta(seconds=5), name="Codex"),
+            "since_sync": timedelta(days=7), "sync_status": "synced"}
+    _patch_notion_freshness(monkeypatch, transcript_rows=[],
+                            stale_entity_rows=[hot, fresh_fail, race], failed_entities=2)
+    result = check_notion_sync_freshness(conn=None)
+    assert result.status == "fail"
+    detail = next(d for d in result.details if "entity page(s)" in d)
+    assert "1 entity page(s)" in detail and "ChatGPT (9)" in detail
+    assert "Claude" not in detail and "Codex" not in detail  # inside the window / the race
+    assert result.failures and all("warn" not in f for f in result.failures)
+
+
+def test_notion_pages_that_cannot_be_created_fail_the_check(monkeypatch) -> None:
+    """Review finding C11: a Notion change that rejects every new page left the run green
+    (sync_notion exits 0 on per-row failures) and the stale query needs a page to exist.
+    Before this PR its >10% warning posted daily; now it's a failure, said once, weekly."""
+    from datetime import date as _date
+
+    _patch_notion_freshness(
+        monkeypatch, transcript_rows=[], stale_entity_rows=[], failed_entities=2,
+        failed_create_rows=[{"id": 5, "canonical_name": "Cursor", "last_try": _date(2026, 9, 22),
+                             "since_try": timedelta(hours=30)},
+                            {"id": 6, "canonical_name": "Warp", "last_try": _date(2026, 9, 23),
+                             "since_try": timedelta(hours=6)}],
+    )
+    result = check_notion_sync_freshness(conn=None)
+    assert result.status == "fail"
+    line = next(f for f in result.failures if "could not be created" in f)
+    assert line.startswith("2 entity(ies)") and "last tried 2026-09-23" in line and "Cursor (5)" in line
+
+
+def test_per_show_checks_hand_their_failing_lines_to_the_announcer(monkeypatch) -> None:
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("ai-daily-brief", "taddy:held", "Held one", date(2026, 9, 18))],
+        feed_episodes={"ai-daily-brief": [FeedEpisode("taddy:missing", date(2026, 9, 19), "New")]},
+        today=date(2026, 9, 22),
+        slugs=["ai-daily-brief"],
+    )
+    assert result.status == "fail"
+    assert len(result.failures) == 1 and result.failures[0].startswith("ai-daily-brief: BEHIND 1")
+
+
+def test_entity_update_overdue_is_measured_from_the_update_not_the_last_sync() -> None:
+    from pipeline.data_health import NOTION_SYNC_MAX_LAG_DAYS, _entity_update_overdue
+
+    window = timedelta(days=NOTION_SYNC_MAX_LAG_DAYS)
+    assert not _entity_update_overdue(timedelta(seconds=1))
+    assert not _entity_update_overdue(window)  # at the edge: still inside the window
+    assert _entity_update_overdue(window + timedelta(minutes=1))
+
+
 def test_stale_entity_failure_caps_the_names_it_lists(monkeypatch) -> None:
     """A systemic sync break must post a bounded line, not 400 entity names."""
     _patch_notion_freshness(
@@ -322,6 +436,7 @@ def _feed_check(
     slugs: list[str],
     feed_dates: dict | None = None,
     feed_episodes: dict | None = None,
+    owned: list[str] | None = None,
 ):
     """Drive check_import_caught_up with both feed readers stubbed.
 
@@ -337,7 +452,7 @@ def _feed_check(
         dh, "feed_recent_episodes", lambda cfg, limit=15: (feed_episodes or {}).get(cfg.slug)
     )
     monkeypatch.setattr(dh, "_today", lambda: today)
-    return check_import_caught_up(conn=None, slugs=slugs)
+    return check_import_caught_up(conn=None, slugs=slugs, owned=owned)
 
 
 def test_feed_check_tolerates_a_fresh_episode_inside_the_import_window(monkeypatch) -> None:
@@ -355,12 +470,13 @@ def test_feed_check_tolerates_a_fresh_episode_inside_the_import_window(monkeypat
 
 
 def test_feed_check_fails_once_a_missing_episode_is_older_than_the_grace(monkeypatch) -> None:
-    # Sunday: the Wed AND Fri imports both had their turn and the 09-01 episode is still absent.
+    # Monday 09-07: six days on, past SOP's 6-day window (Wed AND Fri imports both had
+    # their turn), and the Tuesday 09-01 episode is still absent.
     result = _feed_check(
         monkeypatch,
         rows=[_held_row("sop", "https://switchedonpop.com/episodes/x", "X", date(2026, 8, 25))],
         feed_dates={"sop": [date(2026, 9, 1), date(2026, 8, 25)]},
-        today=date(2026, 9, 6),
+        today=date(2026, 9, 7),
         slugs=["sop"],
     )
     assert result.status == "fail"
@@ -368,7 +484,7 @@ def test_feed_check_fails_once_a_missing_episode_is_older_than_the_grace(monkeyp
 
 
 def test_feed_grace_is_per_show(monkeypatch) -> None:
-    # The same 3-day-old feed episode is fine for SOP (4-day window) and a real miss
+    # The same 3-day-old feed episode is fine for SOP (6-day window) and a real miss
     # for AI Daily (2-day window, imported every day). SOP is compared by date, AI Daily
     # by identity — the grace window means the same thing on both paths.
     result = _feed_check(
@@ -385,6 +501,108 @@ def test_feed_grace_is_per_show(monkeypatch) -> None:
     assert result.status == "fail"
     assert any(d.startswith("sop: caught up") for d in result.details)
     assert any(d.startswith("ai-daily-brief: BEHIND 1") for d in result.details)
+
+
+def test_sop_friday_episode_waiting_for_wednesday_is_pending_not_behind(monkeypatch) -> None:
+    """The 2026-09-22 false alarm, replayed: Taddy dated SOP's episode Friday 09-18, the
+    Friday scrape found nothing (the website listed it later), and the next SOP import is
+    Wednesday 09-23. On Tuesday 09-22 that is a normal wait, not a missed import."""
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("sop", "https://switchedonpop.com/episodes/x", "X", date(2026, 9, 15))],
+        feed_dates={"sop": [date(2026, 9, 18), date(2026, 9, 15)]},
+        today=date(2026, 9, 22),
+        slugs=["sop"],
+    )
+    assert result.status == "pass"
+    assert any(d.startswith("sop: caught up") and "pending" in d for d in result.details)
+
+
+ENTITY_RUN_SHOWS = ["ai-daily-brief", "hard-fork", "pchh", "culture-gabfest"]
+
+
+def test_entities_run_leaves_a_music_show_to_its_owner_until_the_backstop(monkeypatch) -> None:
+    """The 2026-09-22 "entity pipeline FAILED": a music show judged by the run that
+    doesn't import it. Past SOP's own window but inside the backstop, the entities run
+    only notes it — pipeline.yml's post-import check is where SOP goes red (at its next
+    import after the window, about a week in; see FEED_BACKSTOP_EXTRA_DAYS)."""
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("sop", "https://switchedonpop.com/episodes/x", "X", date(2026, 9, 15))],
+        feed_dates={"sop": [date(2026, 9, 16), date(2026, 9, 15)]},
+        today=date(2026, 9, 24),  # 8 days: past SOP's 6-day window, inside the backstop
+        slugs=None,
+        owned=ENTITY_RUN_SHOWS,
+    )
+    assert result.status != "fail"
+    line = next(d for d in result.details if d.startswith("sop:"))
+    assert "pipeline.yml" in line and "not held yet" in line
+
+
+def test_entities_run_still_backstops_a_music_show_that_stopped_importing(monkeypatch) -> None:
+    """July 2026: pipeline.yml never ran on a Monday for six weeks, so no post-import
+    check could see TAL falling behind. A week past its own window, the entities run
+    still fails it — and says which workflow should have caught it."""
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("tal", "taddy:held", "Held one", date(2026, 7, 6))],
+        feed_episodes={"tal": [FeedEpisode("taddy:missing", date(2026, 7, 13), "Missed Monday")]},
+        today=date(2026, 7, 23),  # 10 days: past TAL's 2 + 7-day backstop
+        slugs=None,
+        owned=ENTITY_RUN_SHOWS,
+    )
+    assert result.status == "fail"
+    line = next(d for d in result.details if d.startswith("tal: BEHIND 1"))
+    assert "backstop window" in line
+    assert "pipeline.yml" in line and "still being dispatched" in line
+
+
+def test_entities_run_judges_its_own_shows_at_their_own_window(monkeypatch) -> None:
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("ai-daily-brief", "taddy:held", "Held one", date(2026, 9, 18))],
+        feed_episodes={"ai-daily-brief": [FeedEpisode("taddy:missing", date(2026, 9, 19), "New")]},
+        today=date(2026, 9, 22),  # 3 days: past AI Daily's 2-day window
+        slugs=["ai-daily-brief"],
+        owned=ENTITY_RUN_SHOWS,
+    )
+    assert result.status == "fail"
+    line = next(d for d in result.details if d.startswith("ai-daily-brief: BEHIND 1"))
+    assert "import window" in line and "backstop" not in line
+
+
+def test_unowned_backstop_is_the_owners_window_plus_a_week() -> None:
+    from pipeline.data_health import FEED_BACKSTOP_EXTRA_DAYS
+    from pipeline.show_config import SHOWS
+
+    # Every show's importer runs at least weekly, so a week past its own window it has
+    # had another full turn. TAL's backstop (9 days) stays faster than its 21-day
+    # staleness check, which is the only other alarm for a workflow that stopped running.
+    assert FEED_BACKSTOP_EXTRA_DAYS == 7
+    assert SHOWS["tal"].feed_grace_days + FEED_BACKSTOP_EXTRA_DAYS < 21
+
+
+def test_cli_passes_the_owned_shows_to_the_feed_check(monkeypatch) -> None:
+    import sys
+
+    import pipeline.data_health as dh
+
+    seen = {}
+    monkeypatch.setattr(sys, "argv", ["data_health.py", "--music-as-backstop"])
+    monkeypatch.setattr(dh, "load_environment", lambda: None)
+    monkeypatch.setattr(dh, "get_db_connection", lambda: type("C", (), {"close": lambda self: None})())
+
+    def fake_run_checks(conn, include_feed_check=False, feed_owned=None):
+        seen["owned"] = feed_owned
+        return []
+
+    monkeypatch.setattr(dh, "run_checks", fake_run_checks)
+    monkeypatch.setattr(dh, "check_optional_null_map", lambda conn: CheckResult("optional_null_map", "pass", "", []))
+    dh.main()
+    # Derived from show_config, never from the run's own show list (review C3): the
+    # music shows are the backstop ones, everything else is judged at its own window.
+    assert "sop" not in seen["owned"] and "tal" not in seen["owned"]
+    assert {"ai-daily-brief", "hard-fork", "pchh", "culture-gabfest"} <= set(seen["owned"])
 
 
 def test_split_missing_feed_dates_partitions_by_grace() -> None:
@@ -1556,3 +1774,28 @@ def test_music_silence_is_in_the_standard_check_set() -> None:
     assert "check_music_songs_still_arriving(conn)" in inspect.getsource(
         data_health.run_checks
     )
+
+
+def test_r4_8_a_failed_create_the_sync_stopped_trying_does_not_fail_forever(monkeypatch) -> None:
+    """If an entity loses every mention (a replaced batch), sync_notion never selects it
+    again, so its 'failed' mark would fail this check forever. An entity with no mentions
+    is explicitly ineligible and doesn't count (round 5 replaced the age gate with this)."""
+    from datetime import date as _date
+
+    _patch_notion_freshness(
+        monkeypatch, transcript_rows=[], stale_entity_rows=[], failed_entities=1,
+        failed_create_rows=[{"id": 5, "canonical_name": "Cursor", "last_try": _date(2026, 9, 12),
+                             "has_mentions": False}],
+    )
+    assert check_notion_sync_freshness(conn=None).status != "fail"
+
+
+def test_r5_4_a_failed_create_still_eligible_stays_a_failure_however_old(monkeypatch) -> None:
+    from datetime import date as _date
+
+    _patch_notion_freshness(
+        monkeypatch, transcript_rows=[], stale_entity_rows=[], failed_entities=1,
+        failed_create_rows=[{"id": 5, "canonical_name": "Cursor", "last_try": _date(2026, 9, 12),
+                             "since_try": timedelta(days=10), "has_mentions": True}],
+    )
+    assert check_notion_sync_freshness(conn=None).status == "fail"

@@ -676,7 +676,7 @@ def test_a_failed_auto_ingest_fails_the_run(monkeypatch) -> None:
 # ── main() turns a failure count into the exit code CI reads ────────────────
 
 def test_main_exits_non_zero_so_the_workflow_notify_fires(monkeypatch) -> None:
-    """blogs.yml's "Notify Slack (failure)" step is gated on `if: failure()`.
+    """blogs.yml's announce step reports this step as failed only if it exits non-zero.
 
     That alert exists only because main() translates run()'s count into a SystemExit,
     which is two branch-free lines nothing else covers.
@@ -774,3 +774,70 @@ class _closable:
 
     def close(self) -> None:
         self.closed = True
+
+
+# ── surviving Neon dropping the run's connection (09-07, 09-14, 09-21) ──────────────
+
+class _Handle:
+    """A stand-in connection that remembers whether it was closed and its autocommit."""
+
+    def __init__(self, name: str) -> None:
+        self.name, self.closed, self.autocommit = name, False, False
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def test_a_dropped_connection_no_longer_costs_the_weekly_report(monkeypatch) -> None:
+    """The three Monday failures, replayed: all the work done, then the final report's
+    first query hits a connection Neon has ended. Now the report reconnects once, the
+    weekly line posts, and the run reports its real result."""
+    import psycopg2
+
+    _stub_one_saved_candidate(monkeypatch, [])
+    run_conn, fresh = _Handle("run"), _Handle("fresh")
+    queried_on: list = []
+
+    def weekly_counts(conn, since):
+        queried_on.append(conn.name)
+        if conn is run_conn:
+            raise psycopg2.OperationalError("SSL connection has been closed unexpectedly\n")
+        return _counts()
+
+    monkeypatch.setattr(store, "weekly_counts", weekly_counts)
+    monkeypatch.setattr(store, "titles", lambda conn, since, status, **k: queried_on.append(conn.name) or [])
+    monkeypatch.setattr(R, "get_db_connection", lambda: fresh)
+    lines: list = []
+    monkeypatch.setattr(R, "post_slack", lambda text: lines.append(text) or True)
+
+    assert R.run(R.parse_args([]), run_conn, "tok", "fc", "or") == 0
+    assert queried_on == ["run", "fresh", "fresh", "fresh"]  # counts retried, titles on fresh
+    assert len(lines) == 1, "the weekly line is the deliverable; it must still post"
+    assert fresh.closed and fresh.autocommit
+
+
+def test_the_report_retries_only_a_lost_connection_not_a_real_error(monkeypatch) -> None:
+    import psycopg2
+
+    def broken(conn, since):
+        raise psycopg2.ProgrammingError('column "judged_at" does not exist')
+
+    monkeypatch.setattr(store, "weekly_counts", broken)
+    monkeypatch.setattr(R, "get_db_connection", lambda: pytest.fail("must not reconnect"))
+    with pytest.raises(psycopg2.ProgrammingError):
+        R.read_report(object(), R.datetime.now(R.timezone.utc), with_titles=False)
+
+
+def test_main_runs_the_intake_in_autocommit(monkeypatch) -> None:
+    """psycopg2 opens a transaction on the first SELECT; Neon ends any session idle in
+    a transaction for 5 minutes (idle_in_transaction_session_timeout, read 2026-09-23),
+    and the intake spends 7-9 minutes in the Notion sync with this connection idle."""
+    conn = _Handle("run")
+    seen: dict = {}
+    monkeypatch.setattr(R, "load_environment", lambda: None)
+    monkeypatch.setattr(R, "require_secrets", lambda args: ("tok", "fc", "or"))
+    monkeypatch.setattr(R, "get_db_connection", lambda: conn)
+    monkeypatch.setattr(R, "run", lambda args, c, *a: seen.update(autocommit=c.autocommit) or 0)
+    R.main([])
+    assert seen == {"autocommit": True}
+    assert conn.closed

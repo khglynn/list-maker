@@ -33,9 +33,9 @@ on:
         type: boolean
         default: false
 
-# `issues: write` so "Create issue on failure" can actually create one — GITHUB_TOKEN is
-# read-only by default here, and that step had silently failed on every failure since
-# June 2026 (see entities.yml for the story). Least privilege otherwise.
+# `issues: write` so the announce step can open and close failure issues — GITHUB_TOKEN is
+# read-only by default here, and the old issue step had silently failed on every failure
+# since June 2026 (see entities.yml for the story). Least privilege otherwise.
 # One run of this workflow at a time. A manual re-run or the Worker's HTTP trigger
 # overlapping a scheduled dispatch would run two orchestrators against the same Neon
 # tables (and, for music, the same playlist). The writes are designed idempotent, but
@@ -52,13 +52,23 @@ permissions:
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Above the sum of every step's own timeout-minutes, so a hang always FAILS a step
+    # (which the announce step reports) instead of cancelling the whole job. A cancelled
+    # job is still announced (announce.py treats it as a failed run), but a failed step
+    # says which part hung. tests/test_workflows.py keeps the sum under this line.
+    timeout-minutes: 55
+    env:
+      # Where steps leave detail for the announce step: data_health's results, the
+      # preflight's diagnostics, mid-run notes (common.alert_note).
+      ALERT_DETAILS_DIR: ${{ github.workspace }}/.alert-details
 
     steps:
       - name: Checkout
+        timeout-minutes: 3
         uses: actions/checkout@v7
 
       - name: Determine show to run
+        timeout-minutes: 1
         id: show
         # Every trigger arrives as workflow_dispatch (Cloudflare Worker cron or manual UI)
         # since the 2026-06-11 migration removed schedule: blocks — no day-of-week fallback.
@@ -67,6 +77,7 @@ jobs:
           echo "dry_run=${{ inputs.dry_run }}" >> $GITHUB_OUTPUT
 
       - name: Set up Python 3.12
+        timeout-minutes: 3
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
@@ -74,9 +85,11 @@ jobs:
           cache-dependency-path: pipeline/requirements.txt
 
       - name: Install dependencies
+        timeout-minutes: 4
         run: pip install -r pipeline/requirements.txt
 
       - name: DB preflight (fail fast if Neon is unreachable from this runner)
+        timeout-minutes: 3
         # One bounded connect attempt before any real work. On 2026-08-31 a runner with
         # a dead path to the pooler spent 41 minutes rediscovering that in every step;
         # this ends the job in about a minute and Slacks the diagnostics instead.
@@ -87,6 +100,8 @@ jobs:
         run: cd pipeline && python db_preflight.py
 
       - name: Reconstruct Spotify cache
+        timeout-minutes: 1
+        id: spotify_cache
         # Through env, not ${{ }} inside the script: interpolating a secret into shell
         # text is GitHub's documented injection anti-pattern, and it breaks the day the
         # cache JSON contains a single quote. Every other secret in this file uses env.
@@ -99,7 +114,7 @@ jobs:
       - name: Run pipeline
         id: pipeline
         # Step-level timeout (< job timeout) so a hang FAILS this step (→ Slack alert)
-        # instead of cancelling the job, which would skip the if:failure() notify.
+        # instead of cancelling the job, so the announce step can say which step hung.
         timeout-minutes: 25
         env:
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
@@ -134,6 +149,8 @@ jobs:
       # whether we are caught up is the only way this run can prove it did its job.
       # Scoped to the show that just ran: one Taddy call, not one per show.
       - name: Feed second-source check (did this run actually catch up?)
+        timeout-minutes: 5
+        id: feed_check
         if: steps.show.outputs.dry_run != 'true'
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
@@ -149,13 +166,14 @@ jobs:
             *) echo "No feed second-source for show_id=$SHOW_ID — skipping."; exit 0 ;;
           esac
 
-          # --strict: BEHIND exits non-zero, failing this step so the failure Slack and
-          # the issue-on-failure both fire. data_health also posts its own detail line.
+          # --strict: BEHIND exits non-zero, failing this step; the announce step reads
+          # which show and why from --results-file and says it once.
           cd pipeline
           python data_health.py --feed-check-only --shows "$SLUGS" --strict \
-            | tee -a "$GITHUB_STEP_SUMMARY"
+            --results-file "$ALERT_DETAILS_DIR/health.json" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Write job summary
+        timeout-minutes: 1
         if: always()
         run: |
           SHOW_ID="${{ steps.show.outputs.show_id }}"
@@ -190,57 +208,36 @@ jobs:
           echo "**Run:** [View logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
 
       # No per-run success ping — it's noise (the run summary lives in the job summary,
-      # and the biweekly pulse is the positive report). Only failures ping.
-      - name: Notify Slack (failure)
-        # Not when the preflight failed — it already posted the diagnostics.
-        if: failure() && steps.preflight.outcome != 'failure'
+      # and the biweekly pulse is the positive report). Failures are scoped to the show
+      # that ran: a TAL run can't close an SOP failure.
+      # The run's one voice (pipeline/announce.py): Slack and the failure issues, once per
+      # change of state — a new failure, a changed set of failures, "recovered" on the
+      # first green — plus a weekly reminder while a failure lasts. Always runs, so a green
+      # run can close what it fixed. Replaced (2026-09-23) the separate speakers that made
+      # every red day two pings and a comment on an issue that never closed.
+      - name: Announce (Slack + failure issues, once per change)
+        timeout-minutes: 5
+        if: always()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_TOKEN: ${{ github.token }}
+          STEPS_JSON: ${{ toJSON(steps) }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DRY_RUN_INPUT: ${{ steps.show.outputs.dry_run }}
+          SHOW_ID: ${{ steps.show.outputs.show_id }}
+        # python3, standard library only: this must still run when setup or the
+        # dependency install is what failed.
         run: |
-          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+          if [ ! -f pipeline/announce.py ]; then
+            # Checkout itself failed, so the announcer isn't on disk. Say that much
+            # rather than nothing (the one case the announcer can't cover).
+            if [ "$JOB_STATUS" != "success" ] && [ -n "$SLACK_WEBHOOK_URL" ]; then
+              curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' \
+                --data "{\"text\": \":rotating_light: *list-maker · $GITHUB_WORKFLOW* failed before its code was checked out, so it could not say why. <${RUN_URL}|View the run>\"}"
+            fi
             exit 0
           fi
-
-          SHOW_ID="${{ steps.show.outputs.show_id }}"
-          case $SHOW_ID in
-            1) SHOW_NAME="SOP" ;;
-            2) SHOW_NAME="TAL" ;;
-            3) SHOW_NAME="AI Daily" ;;
-            all) SHOW_NAME="All Shows" ;;
-          esac
-
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          curl -sS --retry 3 -X POST "$SLACK_WEBHOOK_URL" \
-            -H 'Content-type: application/json' \
-            -d "{\"text\": \":rotating_light: *list-maker: ${SHOW_NAME} pipeline failed*\n<${RUN_URL}|View logs>\"}"
-
-      - name: Create issue on failure
-        if: failure()  # all triggers — 'schedule' events no longer exist post Worker migration
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const showId = '${{ steps.show.outputs.show_id }}';
-            const showNames = {'1': 'SOP', '2': 'TAL', '3': 'AI Daily', 'all': 'All Shows'};
-            const showName = showNames[showId] || showId;
-            const { owner, repo } = context.repo;
-            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
-            const day = new Date().toISOString().split('T')[0];
-            // One open issue per failure streak per workflow (see entities.yml): the
-            // 'music' label keeps this thread separate from the entities one.
-            const { data: open } = await github.rest.issues.listForRepo({
-              owner, repo, state: 'open', labels: 'pipeline-failure,music', per_page: 1,
-            });
-            if (open.length) {
-              await github.rest.issues.createComment({
-                owner, repo, issue_number: open[0].number,
-                body: `**${showName}** failed again on ${day}.\n\n**Run:** ${runUrl}`,
-              });
-            } else {
-              await github.rest.issues.create({
-                owner, repo,
-                title: `Pipeline failure: ${showName} (${day})`,
-                body: `The scheduled pipeline run for **${showName}** failed.\n\n**Run:** ${runUrl}\n**Triggered:** ${context.eventName}\n\nCheck the workflow logs for details.`,
-                labels: ['pipeline-failure', 'music'],
-              });
-            }
+          ARGS=(--workflow music --show-id "$SHOW_ID")
+          [ "$DRY_RUN_INPUT" = "true" ] && ARGS+=(--dry-run)
+          python3 pipeline/announce.py "${ARGS[@]}"

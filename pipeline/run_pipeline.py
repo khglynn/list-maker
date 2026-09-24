@@ -67,8 +67,8 @@ SHOWS = {
 # The one key any step's summary uses to say "I attempted N units of work and could not
 # complete them." Raising is for "this step cannot proceed"; this is for partial loss —
 # the step did real work, the rest of the pipeline should still run on what came back,
-# and the run must still end RED so the failure Slack fires (pipeline.yml's notify step
-# is `if: failure()`, so exit 0 means silence).
+# and the run must still end RED so the failure is announced (pipeline.yml's announce
+# step reads each step's outcome, so exit 0 means silence).
 #
 # Without this, a Monday where Firecrawl failed on every page exited 0: scrape_new_episodes
 # returned a summary listing the failures, nothing raised, and the only signal was a line

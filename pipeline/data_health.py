@@ -11,14 +11,14 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
 # Allow running as `python pipeline/data_health.py` from the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import get_db_connection, load_environment, post_slack
+from common import get_db_connection, load_environment
 from feed_check import FeedEpisode, feed_recent_dates, feed_recent_episodes
 from show_config import (
     BLOG_NOTION_SHOWS,
@@ -36,6 +36,10 @@ class CheckResult:
     status: str  # pass, warn, fail
     summary: str
     details: list[str]
+    # The failing lines alone, for the checks that fail per show ("sop: BEHIND 1 …").
+    # pipeline/announce.py reads their leading slug so a second show failing the same
+    # check is announced as news, not folded silently into the first show's alert.
+    failures: list[str] = field(default_factory=list)
 
 
 TRANSCRIPT_POLICIES: dict[str, dict[str, Any]] = {
@@ -91,6 +95,27 @@ OPTIONAL_NULL_NOTES = {
 
 
 DEFAULT_FEED_GRACE_DAYS = 2  # mirrors ShowConfig.feed_grace_days for callers holding no cfg
+
+# How much longer than its own import window a show gets when the run checking it is NOT
+# the run that imports it (check_import_caught_up's `owned`). The daily entities run
+# imports the entity/media shows; the music shows (SOP, TAL) are imported by pipeline.yml,
+# which runs this same check --strict right after each import. Judging music shows at
+# their own window from the daily entities run is what turned SOP's normal Friday-to-
+# Wednesday wait into "entity pipeline FAILED" on 2026-09-22.
+#
+# Not dropped outright, because the owner's check only runs when the owner runs. In
+# June–July 2026 the Worker's day-of-week bug meant pipeline.yml never ran on a Monday for
+# six weeks and TAL was never imported (DEVLOG 2026-07-24) — no post-import check can see
+# that. So the non-owning run still backstops: a week past the show's own window, every
+# show's importer (TAL's is weekly) has had at least one more full turn, and a gap that
+# old means that workflow is not running or not catching up.
+FEED_BACKSTOP_EXTRA_DAYS = 7
+
+
+def entities_owned_slugs() -> list[str]:
+    """The shows the daily entities run is responsible for at their own feed window:
+    every show except the music ones (a Spotify playlist = imported by pipeline.yml)."""
+    return sorted(slug for slug, cfg in SHOWS.items() if not cfg.spotify_playlist_id)
 
 
 def _today() -> date:
@@ -159,10 +184,12 @@ def _feed_episode_is_held(episode: FeedEpisode, held: HeldEpisodes) -> bool:
 
     Which means THE RE-DATE IMMUNITY ABOVE IS A PROPERTY OF THE URL PATH ONLY. This path
     keys on the date, so a Taddy edit to either the TITLE or the PUBLISH DATE of a legacy
-    row makes that episode read as missing — a real FAIL on the daily unscoped --strict
-    run in entities.yml (TAL imports on Mondays, so a Tuesday re-date reddens the daily
-    entities run, not the music one, which imports before it checks). It does clear
-    itself at that show's next import: the title+date lookup misses, so the INSERT branch
+    row makes that episode read as missing. Until 2026-09-23 that reddened the daily
+    entities run, which judged TAL at its own 2-day window; it now judges TAL only as a
+    backstop (a week past the window), which TAL's next Monday import normally beats —
+    unless Taddy re-dates the row to a date already that old. It clears itself at that
+    show's next import:
+    the title+date lookup misses, so the INSERT branch
     writes a uuid-keyed row and identity matching takes over from then on — at the cost
     of a duplicate row that check_duplicate_episodes will NOT surface, since it groups by
     show/title/date and the new row carries the new date.
@@ -323,7 +350,8 @@ def check_episode_identity(conn) -> CheckResult:
     summary = "Every episode has show, title, URL, and publish date." if status == "pass" else (
         f"{issue_count} required episode identity value(s) are missing."
     )
-    return CheckResult("episode_identity_required_fields", status, summary, details)
+    return CheckResult("episode_identity_required_fields", status, summary, details,
+                       [d for d in details if not d.startswith("sample bad rows")])
 
 
 def check_duplicate_episodes(conn) -> CheckResult:
@@ -475,7 +503,9 @@ def check_transcript_coverage(conn) -> CheckResult:
     summary = "Transcript coverage matches each show's current policy." if status == "pass" else (
         f"{len(failures)} failure(s), {len(warnings)} warning(s) in transcript coverage."
     )
-    return CheckResult("transcript_coverage_by_show", status, summary, failures + warnings + details)
+    return CheckResult(
+        "transcript_coverage_by_show", status, summary, failures + warnings + details, failures
+    )
 
 
 def check_episode_freshness(conn) -> CheckResult:
@@ -531,7 +561,7 @@ def check_episode_freshness(conn) -> CheckResult:
         if status == "pass"
         else f"{len(failures)} show(s) stale (no recent episodes)."
     )
-    return CheckResult("episode_freshness_by_show", status, summary, failures + details)
+    return CheckResult("episode_freshness_by_show", status, summary, failures + details, failures)
 
 
 # ── Music shows: has the show stopped ACQUIRING songs? ──────────────────────────────
@@ -753,8 +783,35 @@ def check_music_songs_still_arriving(conn) -> CheckResult:
         status = "pass"
         summary = "Every music show is still acquiring songs."
     return CheckResult(
-        "music_songs_still_arriving", status, summary, failures + warnings + details
+        "music_songs_still_arriving", status, summary, failures + warnings + details, failures
     )
+
+
+def _entity_update_overdue(
+    waiting: timedelta,
+    since_sync: Optional[timedelta] = None,
+    sync_status: Optional[str] = None,
+    max_lag_days: int = NOTION_SYNC_MAX_LAG_DAYS,
+) -> bool:
+    """Has the Notion sync stopped reaching this entity (one with an unsynced update)?
+
+    Two ways to be sure, and they cover each other's blind spot:
+    - the update has WAITED past the window. The daily sync picks up any entity whose
+      updated_at is newer than its notion_synced_at, so an update younger than the
+      window is the system working, however long ago the entity was last synced.
+    - the sync has TRIED and FAILED on it, and its last good sync is older than the
+      window. Needed because every new mention of an entity bumps its updated_at
+      (load_entity_batch.upsert_entity), so an entity mentioned daily never has an
+      update older than a day — the first rule alone would never see its sync failing.
+
+    The intervals are computed by Postgres (`now() - updated_at`), not here: the columns
+    are timestamp WITHOUT time zone, so comparing them with an aware datetime in Python
+    raises TypeError — which would take down every remaining check in the run.
+    """
+    window = timedelta(days=max_lag_days)
+    if waiting > window:
+        return True
+    return sync_status == "failed" and since_sync is not None and since_sync > window
 
 
 def check_notion_sync_freshness(conn) -> CheckResult:
@@ -766,8 +823,10 @@ def check_notion_sync_freshness(conn) -> CheckResult:
       (empty transcripts excluded — they're never marked synced by design and belong
       to check_transcript_coverage)
     - entities: rows synced once but whose updates stopped propagating
-    Lingering 'failed' entity syncs are a WARN — acute failures already Slack via
-    sync_notion's >10%-per-run alert; this is the slow-leak view.
+    Lingering 'failed' entity syncs are a WARN until the entity has gone unsynced past
+    the window, then part of the FAIL (see _entity_update_overdue). sync_notion's
+    >10%-per-run warning rides along in the run's announcement only when there is one,
+    so this check is what makes a sync that keeps failing loud.
     """
     transcript_rows = _rows(
         conn,
@@ -789,18 +848,58 @@ def check_notion_sync_freshness(conn) -> CheckResult:
     # Rows, so the FAIL can name the entities (4f) — "12 entity page(s) have Neon
     # updates that never reached Notion" is not something a person can act on without
     # first writing this query themselves.
-    stale_entity_rows = _rows(
+    #
+    # Every entity whose latest update hasn't reached Notion yet, with how long that
+    # update has waited and how long since its last good sync, by the database's own
+    # clock; _entity_update_overdue then keeps the ones the sync has stopped reaching. Until 2026-09-23 the window lived in this WHERE as
+    # `notion_synced_at < updated_at - 2 days`, which measures the gap between the
+    # last sync and the update, never how long the update has been waiting. An entity
+    # last synced a week ago and updated one second ago failed at once — and on Mondays
+    # the curated intake updates entities in the same minute this check runs, so
+    # 09-14 and 09-21 went red for pages that reached Notion half an hour later.
+    pending_entity_rows = _rows(
         conn,
         """
-        SELECT id, canonical_name
+        SELECT id, canonical_name, now() - updated_at AS waiting,
+               now() - notion_synced_at AS since_sync, notion_sync_status AS sync_status
         FROM ai_entities
         WHERE notion_page_id IS NOT NULL
-          AND notion_synced_at < updated_at - make_interval(days => %s)
+          AND notion_synced_at < updated_at
         ORDER BY id;
         """,
-        [NOTION_SYNC_MAX_LAG_DAYS],
     )
+    stale_entity_rows = [
+        r for r in pending_entity_rows
+        if _entity_update_overdue(r["waiting"], r.get("since_sync"), r.get("sync_status"))
+    ]
     stale_entities = len(stale_entity_rows)
+    # Entities whose Notion page could never be CREATED: no page id, and the sync's last
+    # attempt at them failed. The stale-entity query above can't see these (it needs a
+    # page), and sync_notion exits 0 on per-row failures, so without this a Notion change
+    # that rejects every new page would be silent run after run (review finding
+    # 2026-09-23 — its per-run >10% warning used to post directly and now rides along).
+    # The sync retries creates every day, so a one-off API blip clears itself next run.
+    # A failed create stays a failure until the entity has a page or is EXPLICITLY
+    # ineligible — it has no mentions left at all (a replaced batch can take them all
+    # away), so sync_notion will never select it again. Age alone never resolves it
+    # (review, 2026-09-24): a sync that stopped retrying must not turn into a recovery.
+    # Known limit: an entity whose mentions drop below its group's threshold without
+    # reaching zero keeps failing here; that needs a human look at the entity anyway.
+    failed_create_rows = [
+        r for r in _rows(
+            conn,
+            """
+            SELECT id, canonical_name, notion_sync_attempt_at::date AS last_try,
+                   EXISTS (SELECT 1 FROM ai_mentions m WHERE m.entity_id = ai_entities.id)
+                     AS has_mentions
+            FROM ai_entities
+            WHERE notion_page_id IS NULL
+              AND notion_sync_status = 'failed'
+            ORDER BY id;
+            """,
+        )
+        if r.get("has_mentions", True)
+    ]
     failed_entities = int(
         _one(
             conn,
@@ -818,11 +917,18 @@ def check_notion_sync_freshness(conn) -> CheckResult:
         )
     if stale_entities:
         failures.append(
-            f"{stale_entities} entity page(s) have Neon updates >{NOTION_SYNC_MAX_LAG_DAYS}d "
-            "old that never reached Notion"
+            f"{stale_entities} entity page(s) with Neon updates the Notion sync hasn't "
+            f"delivered in >{NOTION_SYNC_MAX_LAG_DAYS}d"
             + _name_some(
                 [f"{r['canonical_name']} ({r['id']})" for r in stale_entity_rows]
             )
+        )
+    if failed_create_rows:
+        tries = [r["last_try"] for r in failed_create_rows if r.get("last_try")]
+        failures.append(
+            f"{len(failed_create_rows)} entity(ies) whose Notion page could not be created "
+            f"(last tried {max(tries) if tries else 'unknown'})"
+            + _name_some([f"{r['canonical_name']} ({r['id']})" for r in failed_create_rows])
         )
     if failed_entities:
         warnings.append(f"{failed_entities} entity(ies) lingering in notion_sync_status='failed'")
@@ -833,7 +939,7 @@ def check_notion_sync_freshness(conn) -> CheckResult:
         if status == "pass"
         else f"{len(failures)} Notion sync drift failure(s), {len(warnings)} warning(s)."
     )
-    return CheckResult("notion_sync_freshness", status, summary, failures + warnings)
+    return CheckResult("notion_sync_freshness", status, summary, failures + warnings, failures)
 
 
 def _held_episodes_by_show(conn, slugs: set[str] | None = None) -> dict[str, HeldEpisodes]:
@@ -875,7 +981,16 @@ def _held_episodes_by_show(conn, slugs: set[str] | None = None) -> dict[str, Hel
     return held
 
 
-def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckResult:
+def _importing_workflow(cfg) -> str:
+    """Which workflow imports this show, for a backstop failure to point at. Music shows
+    (the ones with a Spotify playlist) import in pipeline.yml; every other podcast in
+    entities.yml."""
+    return "pipeline.yml" if getattr(cfg, "spotify_playlist_id", None) else "entities.yml"
+
+
+def check_import_caught_up(
+    conn, slugs: Iterable[str] | None = None, owned: Iterable[str] | None = None
+) -> CheckResult:
     """SECOND-SOURCE freshness: is our import behind each show's REAL feed?
 
     episode_freshness_by_show only knows "days since OUR latest", which can't tell a show
@@ -903,8 +1018,15 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
     feed_grace_days (see show_config) — newer ones are reported as pending. Without
     that, this check fired on nearly every August-2026 run for SOP, whose Tuesday
     episode simply hadn't met its Wednesday import yet.
+
+    `owned` names the shows the CALLING run imports (None = all of them, the CLI
+    default and pipeline.yml's scoped call). Any other show is judged as a backstop: it
+    fails only once a missing episode is FEED_BACKSTOP_EXTRA_DAYS past its own window,
+    and the failure says which workflow should have caught it. The daily entities run
+    passes its own shows, so a music show's normal wait is pipeline.yml's to judge.
     """
     wanted = set(slugs) if slugs is not None else None
+    owned_set = set(owned) if owned is not None else None
     held_by_show = _held_episodes_by_show(conn, wanted)
     failures: list[str] = []
     warnings: list[str] = []
@@ -934,6 +1056,8 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             continue
         held = held_by_show.get(slug) or HeldEpisodes(urls=set(), title_dates=set())
         latest = held.latest
+        backstop = owned_set is not None and slug not in owned_set
+        window = cfg.feed_grace_days + (FEED_BACKSTOP_EXTRA_DAYS if backstop else 0)
         # UNVERIFIED = None from either reader: couldn't get a trustworthy answer
         # (unreachable / error / empty). A persistent one means the second source itself
         # is broken — surface it as a WARN so it can't hide as a silent pass, without
@@ -948,9 +1072,7 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             # Raising `limit` widens the window into older episodes, where more rows are
             # legacy-keyed and titles have had longer to be edited: a bigger window
             # bought with a softer identity. Deliberate or not at all.
-            overdue_eps, pending_eps = split_missing_feed_episodes(
-                feed_episodes, held, cfg.feed_grace_days
-            )
+            overdue_eps, pending_eps = split_missing_feed_episodes(feed_episodes, held, window)
             overdue = [ep.publish_date for ep in overdue_eps]
             pending = [ep.publish_date for ep in pending_eps]
             feed_latest = feed_episodes[0].publish_date
@@ -974,7 +1096,7 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             if not feed_dates:
                 warnings.append(f"{slug}: feed UNVERIFIED — second source unreachable")
                 continue
-            overdue, pending = split_missing_feed_dates(feed_dates, latest, cfg.feed_grace_days)
+            overdue, pending = split_missing_feed_dates(feed_dates, latest, window)
             feed_latest = feed_dates[0]
             everything_missing = False  # a date compare cannot tell this apart
             named_missing = ""  # the feed's dates are all we have; no titles to name
@@ -988,12 +1110,29 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
                 if everything_missing
                 else ""
             )
+            owner_hint = (
+                f" — this run doesn't import {slug}; {_importing_workflow(cfg)} does, and "
+                "its own post-import check should have caught this. If it hasn't, check "
+                "that the workflow is still being dispatched"
+                if backstop
+                else ""
+            )
             failures.append(
                 f"{slug}: BEHIND {len(overdue)} — feed at {feed_latest}, we have {latest} "
-                f"(oldest missing {min(overdue)}, past the {cfg.feed_grace_days}-day import "
-                f"window)"
+                f"(oldest missing {min(overdue)}, past the {window}-day "
+                + ("backstop window" if backstop else "import window")
+                + ")"
                 + (f" — missing: {named_missing}" if named_missing else "")
                 + scheme_hint
+                + owner_hint
+            )
+        elif pending and backstop:
+            # The owner's post-import check judges these; say so rather than pretend
+            # they're all "inside the import window" when some may be past it.
+            details.append(
+                f"{slug}: {len(pending)} feed episode(s) not held yet (feed at {feed_latest}, "
+                f"we have {latest}) — judged by {_importing_workflow(cfg)} after its import; "
+                f"this run only fails it past {window} days"
             )
         elif pending:
             details.append(
@@ -1008,7 +1147,9 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
         status, summary = "warn", f"{len(warnings)} show(s) could not be verified against their feed."
     else:
         status, summary = "pass", "Every show's import is caught up to its feed."
-    return CheckResult("import_caught_up_to_feed", status, summary, failures + warnings + details)
+    return CheckResult(
+        "import_caught_up_to_feed", status, summary, failures + warnings + details, failures
+    )
 
 
 # Which shows a zero-mention `completed` run is an ALARM for, and how far back to look.
@@ -1539,7 +1680,8 @@ def check_sponsor_share(conn) -> CheckResult:
         "warn": "A tech show's sponsor-read share is above the expected range.",
         "fail": "A tech show has no editorial mentions at all in the recent window.",
     }[status]
-    return CheckResult("sponsor_share", status, summary, details)
+    return CheckResult("sponsor_share", status, summary, details,
+                       [d for d in details if "no editorial content got through" in d])
 
 
 def check_possible_entity_alias_splits(conn) -> CheckResult:
@@ -1607,7 +1749,9 @@ def check_optional_null_map(conn) -> CheckResult:
     )
 
 
-def run_checks(conn, include_feed_check: bool = False) -> list[CheckResult]:
+def run_checks(
+    conn, include_feed_check: bool = False, feed_owned: Iterable[str] | None = None
+) -> list[CheckResult]:
     checks = [
         check_expected_shows(conn),
         check_episode_identity(conn),
@@ -1627,7 +1771,7 @@ def run_checks(conn, include_feed_check: bool = False) -> list[CheckResult]:
     if include_feed_check:
         # Opt-in: makes external Taddy/RSS calls. The CLI enables it (the daily alarm);
         # the pulse omits it because it does its own per-show feed display.
-        checks.append(check_import_caught_up(conn))
+        checks.append(check_import_caught_up(conn, owned=feed_owned))
     return checks
 
 
@@ -1669,6 +1813,24 @@ def parse_args() -> argparse.Namespace:
         "--shows",
         help="Comma-separated slugs to limit the feed check to (default: all shows).",
     )
+    parser.add_argument(
+        "--results-file",
+        help=(
+            "Also write every check result as JSON here. The scheduled workflows pass it "
+            "so their announce step (pipeline/announce.py) can say which checks failed."
+        ),
+    )
+    parser.add_argument(
+        "--music-as-backstop",
+        action="store_true",
+        help=(
+            "Judge the music shows (the ones with a Spotify playlist, imported by "
+            "pipeline.yml) only as a backstop, a week past their window; every other show "
+            "at its own window. entities.yml passes this. Derived from show_config, not "
+            "from which shows a run happened to import: a narrower manual run must not "
+            "move its skipped shows onto the backstop window."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -1676,6 +1838,7 @@ def main() -> None:
     args = parse_args()
     load_environment()
     slugs = [s.strip() for s in args.shows.split(",") if s.strip()] if args.shows else None
+    owned = entities_owned_slugs() if args.music_as_backstop else None
     conn = get_db_connection()
     try:
         if args.feed_check_only:
@@ -1685,7 +1848,7 @@ def main() -> None:
             results = [check_import_caught_up(conn, slugs)]
         else:
             # Daily CLI run includes the second-source feed check (the loud import-behind alarm).
-            results = run_checks(conn, include_feed_check=True)
+            results = run_checks(conn, include_feed_check=True, feed_owned=owned)
             # Appended to the REPORT, never to run_checks(). check_optional_null_map
             # hardcodes status="pass", so it can never appear in the fail/warn
             # reduction that drives the Slack alert here or the pulse digest — it was
@@ -1702,16 +1865,16 @@ def main() -> None:
     else:
         print(render_text(results))
 
-    # Alert to Slack when a check fails — especially staleness, where a show has silently
-    # stopped updating. This is the backstop for a partial pipeline failure that didn't crash
-    # the run. post_slack is a no-op without SLACK_WEBHOOK_URL, so local runs stay quiet.
-    failed = [r for r in results if r.status == "fail"]
-    if failed:
-        post_slack(
-            ":warning: *list-maker data health* — "
-            + "; ".join(f"{r.name}: {r.summary}" for r in failed)
-        )
+    # No Slack from here. Until 2026-09-23 this posted its own ":warning: data health"
+    # line on every failing run, one second before the workflow's "FAILED" line, and
+    # again every day the condition held (June 8 to August 26, near daily). The
+    # workflows' announce step now speaks once per change of state, from these results.
+    if args.results_file:
+        path = Path(args.results_file)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps([asdict(r) for r in results], default=str, indent=2))
 
+    failed = [r for r in results if r.status == "fail"]
     if args.strict and failed:
         sys.exit(1)
 

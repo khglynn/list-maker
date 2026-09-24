@@ -165,7 +165,7 @@ def test_alert_on_failure_rate_alerts_above_threshold(monkeypatch) -> None:
     import pipeline.sync_notion as sn
 
     posted: list = []
-    monkeypatch.setattr(sn, "post_slack", lambda text: posted.append(text))
+    monkeypatch.setattr(sn, "alert_note", lambda text: posted.append(text))
 
     sn.alert_on_failure_rate("incremental create", succeeded=8, failed=2)  # 20%
     assert posted, "should alert above 10%"
@@ -183,7 +183,7 @@ def test_alert_on_failure_rate_silent_when_no_failures(monkeypatch) -> None:
     import pipeline.sync_notion as sn
 
     posted: list = []
-    monkeypatch.setattr(sn, "post_slack", lambda text: posted.append(text))
+    monkeypatch.setattr(sn, "alert_note", lambda text: posted.append(text))
     sn.alert_on_failure_rate("incremental create", succeeded=10, failed=0)
     assert not posted
 
