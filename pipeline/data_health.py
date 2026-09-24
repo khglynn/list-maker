@@ -92,6 +92,21 @@ OPTIONAL_NULL_NOTES = {
 
 DEFAULT_FEED_GRACE_DAYS = 2  # mirrors ShowConfig.feed_grace_days for callers holding no cfg
 
+# How much longer than its own import window a show gets when the run checking it is NOT
+# the run that imports it (check_import_caught_up's `owned`). The daily entities run
+# imports the entity/media shows; the music shows (SOP, TAL) are imported by pipeline.yml,
+# which runs this same check --strict right after each import. Judging music shows at
+# their own window from the daily entities run is what turned SOP's normal Friday-to-
+# Wednesday wait into "entity pipeline FAILED" on 2026-09-22.
+#
+# Not dropped outright, because the owner's check only runs when the owner runs. In
+# June–July 2026 the Worker's day-of-week bug meant pipeline.yml never ran on a Monday for
+# six weeks and TAL was never imported (DEVLOG 2026-07-24) — no post-import check can see
+# that. So the non-owning run still backstops: a week past the show's own window, every
+# show's importer (TAL's is weekly) has had at least one more full turn, and a gap that
+# old means that workflow is not running or not catching up.
+FEED_BACKSTOP_EXTRA_DAYS = 7
+
 
 def _today() -> date:
     return datetime.now(timezone.utc).date()
@@ -159,10 +174,12 @@ def _feed_episode_is_held(episode: FeedEpisode, held: HeldEpisodes) -> bool:
 
     Which means THE RE-DATE IMMUNITY ABOVE IS A PROPERTY OF THE URL PATH ONLY. This path
     keys on the date, so a Taddy edit to either the TITLE or the PUBLISH DATE of a legacy
-    row makes that episode read as missing — a real FAIL on the daily unscoped --strict
-    run in entities.yml (TAL imports on Mondays, so a Tuesday re-date reddens the daily
-    entities run, not the music one, which imports before it checks). It does clear
-    itself at that show's next import: the title+date lookup misses, so the INSERT branch
+    row makes that episode read as missing. Until 2026-09-23 that reddened the daily
+    entities run, which judged TAL at its own 2-day window; it now judges TAL only as a
+    backstop (a week past the window), which TAL's next Monday import normally beats —
+    unless Taddy re-dates the row to a date already that old. It clears itself at that
+    show's next import:
+    the title+date lookup misses, so the INSERT branch
     writes a uuid-keyed row and identity matching takes over from then on — at the cost
     of a duplicate row that check_duplicate_episodes will NOT surface, since it groups by
     show/title/date and the new row carries the new date.
@@ -904,7 +921,16 @@ def _held_episodes_by_show(conn, slugs: set[str] | None = None) -> dict[str, Hel
     return held
 
 
-def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckResult:
+def _importing_workflow(cfg) -> str:
+    """Which workflow imports this show, for a backstop failure to point at. Music shows
+    (the ones with a Spotify playlist) import in pipeline.yml; every other podcast in
+    entities.yml."""
+    return "pipeline.yml" if getattr(cfg, "spotify_playlist_id", None) else "entities.yml"
+
+
+def check_import_caught_up(
+    conn, slugs: Iterable[str] | None = None, owned: Iterable[str] | None = None
+) -> CheckResult:
     """SECOND-SOURCE freshness: is our import behind each show's REAL feed?
 
     episode_freshness_by_show only knows "days since OUR latest", which can't tell a show
@@ -932,8 +958,15 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
     feed_grace_days (see show_config) — newer ones are reported as pending. Without
     that, this check fired on nearly every August-2026 run for SOP, whose Tuesday
     episode simply hadn't met its Wednesday import yet.
+
+    `owned` names the shows the CALLING run imports (None = all of them, the CLI
+    default and pipeline.yml's scoped call). Any other show is judged as a backstop: it
+    fails only once a missing episode is FEED_BACKSTOP_EXTRA_DAYS past its own window,
+    and the failure says which workflow should have caught it. The daily entities run
+    passes its own shows, so a music show's normal wait is pipeline.yml's to judge.
     """
     wanted = set(slugs) if slugs is not None else None
+    owned_set = set(owned) if owned is not None else None
     held_by_show = _held_episodes_by_show(conn, wanted)
     failures: list[str] = []
     warnings: list[str] = []
@@ -963,6 +996,8 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             continue
         held = held_by_show.get(slug) or HeldEpisodes(urls=set(), title_dates=set())
         latest = held.latest
+        backstop = owned_set is not None and slug not in owned_set
+        window = cfg.feed_grace_days + (FEED_BACKSTOP_EXTRA_DAYS if backstop else 0)
         # UNVERIFIED = None from either reader: couldn't get a trustworthy answer
         # (unreachable / error / empty). A persistent one means the second source itself
         # is broken — surface it as a WARN so it can't hide as a silent pass, without
@@ -977,9 +1012,7 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             # Raising `limit` widens the window into older episodes, where more rows are
             # legacy-keyed and titles have had longer to be edited: a bigger window
             # bought with a softer identity. Deliberate or not at all.
-            overdue_eps, pending_eps = split_missing_feed_episodes(
-                feed_episodes, held, cfg.feed_grace_days
-            )
+            overdue_eps, pending_eps = split_missing_feed_episodes(feed_episodes, held, window)
             overdue = [ep.publish_date for ep in overdue_eps]
             pending = [ep.publish_date for ep in pending_eps]
             feed_latest = feed_episodes[0].publish_date
@@ -1003,7 +1036,7 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
             if not feed_dates:
                 warnings.append(f"{slug}: feed UNVERIFIED — second source unreachable")
                 continue
-            overdue, pending = split_missing_feed_dates(feed_dates, latest, cfg.feed_grace_days)
+            overdue, pending = split_missing_feed_dates(feed_dates, latest, window)
             feed_latest = feed_dates[0]
             everything_missing = False  # a date compare cannot tell this apart
             named_missing = ""  # the feed's dates are all we have; no titles to name
@@ -1017,12 +1050,29 @@ def check_import_caught_up(conn, slugs: Iterable[str] | None = None) -> CheckRes
                 if everything_missing
                 else ""
             )
+            owner_hint = (
+                f" — this run doesn't import {slug}; {_importing_workflow(cfg)} does, and "
+                "its own post-import check should have caught this. If it hasn't, check "
+                "that the workflow is still being dispatched"
+                if backstop
+                else ""
+            )
             failures.append(
                 f"{slug}: BEHIND {len(overdue)} — feed at {feed_latest}, we have {latest} "
-                f"(oldest missing {min(overdue)}, past the {cfg.feed_grace_days}-day import "
-                f"window)"
+                f"(oldest missing {min(overdue)}, past the {window}-day "
+                + ("backstop window" if backstop else "import window")
+                + ")"
                 + (f" — missing: {named_missing}" if named_missing else "")
                 + scheme_hint
+                + owner_hint
+            )
+        elif pending and backstop:
+            # The owner's post-import check judges these; say so rather than pretend
+            # they're all "inside the import window" when some may be past it.
+            details.append(
+                f"{slug}: {len(pending)} feed episode(s) not held yet (feed at {feed_latest}, "
+                f"we have {latest}) — judged by {_importing_workflow(cfg)} after its import; "
+                f"this run only fails it past {window} days"
             )
         elif pending:
             details.append(
@@ -1636,7 +1686,9 @@ def check_optional_null_map(conn) -> CheckResult:
     )
 
 
-def run_checks(conn, include_feed_check: bool = False) -> list[CheckResult]:
+def run_checks(
+    conn, include_feed_check: bool = False, feed_owned: Iterable[str] | None = None
+) -> list[CheckResult]:
     checks = [
         check_expected_shows(conn),
         check_episode_identity(conn),
@@ -1656,7 +1708,7 @@ def run_checks(conn, include_feed_check: bool = False) -> list[CheckResult]:
     if include_feed_check:
         # Opt-in: makes external Taddy/RSS calls. The CLI enables it (the daily alarm);
         # the pulse omits it because it does its own per-show feed display.
-        checks.append(check_import_caught_up(conn))
+        checks.append(check_import_caught_up(conn, owned=feed_owned))
     return checks
 
 
@@ -1698,6 +1750,14 @@ def parse_args() -> argparse.Namespace:
         "--shows",
         help="Comma-separated slugs to limit the feed check to (default: all shows).",
     )
+    parser.add_argument(
+        "--feed-owned-shows",
+        help=(
+            "Comma-separated slugs THIS run imports. The feed check judges these at their "
+            "own import window and every other show only as a backstop (a week later), "
+            "since another workflow's post-import check owns it. Default: all shows."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -1705,6 +1765,11 @@ def main() -> None:
     args = parse_args()
     load_environment()
     slugs = [s.strip() for s in args.shows.split(",") if s.strip()] if args.shows else None
+    owned = (
+        [s.strip() for s in args.feed_owned_shows.split(",") if s.strip()]
+        if args.feed_owned_shows
+        else None
+    )
     conn = get_db_connection()
     try:
         if args.feed_check_only:
@@ -1714,7 +1779,7 @@ def main() -> None:
             results = [check_import_caught_up(conn, slugs)]
         else:
             # Daily CLI run includes the second-source feed check (the loud import-behind alarm).
-            results = run_checks(conn, include_feed_check=True)
+            results = run_checks(conn, include_feed_check=True, feed_owned=owned)
             # Appended to the REPORT, never to run_checks(). check_optional_null_map
             # hardcodes status="pass", so it can never appear in the fail/warn
             # reduction that drives the Slack alert here or the pulse digest — it was

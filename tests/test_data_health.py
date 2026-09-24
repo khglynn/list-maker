@@ -380,6 +380,7 @@ def _feed_check(
     slugs: list[str],
     feed_dates: dict | None = None,
     feed_episodes: dict | None = None,
+    owned: list[str] | None = None,
 ):
     """Drive check_import_caught_up with both feed readers stubbed.
 
@@ -395,7 +396,7 @@ def _feed_check(
         dh, "feed_recent_episodes", lambda cfg, limit=15: (feed_episodes or {}).get(cfg.slug)
     )
     monkeypatch.setattr(dh, "_today", lambda: today)
-    return check_import_caught_up(conn=None, slugs=slugs)
+    return check_import_caught_up(conn=None, slugs=slugs, owned=owned)
 
 
 def test_feed_check_tolerates_a_fresh_episode_inside_the_import_window(monkeypatch) -> None:
@@ -459,6 +460,89 @@ def test_sop_friday_episode_waiting_for_wednesday_is_pending_not_behind(monkeypa
     )
     assert result.status == "pass"
     assert any(d.startswith("sop: caught up") and "pending" in d for d in result.details)
+
+
+ENTITY_RUN_SHOWS = ["ai-daily-brief", "hard-fork", "pchh", "culture-gabfest"]
+
+
+def test_entities_run_leaves_a_music_shows_normal_wait_to_its_own_workflow(monkeypatch) -> None:
+    """The 2026-09-22 "entity pipeline FAILED": a music-show wait judged by the run that
+    doesn't import it. Even past SOP's own window, the entities run only notes it —
+    pipeline.yml's post-import check is where SOP goes red."""
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("sop", "https://switchedonpop.com/episodes/x", "X", date(2026, 9, 15))],
+        feed_dates={"sop": [date(2026, 9, 16), date(2026, 9, 15)]},
+        today=date(2026, 9, 24),  # 8 days: past SOP's 6-day window, inside the backstop
+        slugs=None,
+        owned=ENTITY_RUN_SHOWS,
+    )
+    assert result.status != "fail"
+    line = next(d for d in result.details if d.startswith("sop:"))
+    assert "pipeline.yml" in line and "not held yet" in line
+
+
+def test_entities_run_still_backstops_a_music_show_that_stopped_importing(monkeypatch) -> None:
+    """July 2026: pipeline.yml never ran on a Monday for six weeks, so no post-import
+    check could see TAL falling behind. A week past its own window, the entities run
+    still fails it — and says which workflow should have caught it."""
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("tal", "taddy:held", "Held one", date(2026, 7, 6))],
+        feed_episodes={"tal": [FeedEpisode("taddy:missing", date(2026, 7, 13), "Missed Monday")]},
+        today=date(2026, 7, 23),  # 10 days: past TAL's 2 + 7-day backstop
+        slugs=None,
+        owned=ENTITY_RUN_SHOWS,
+    )
+    assert result.status == "fail"
+    line = next(d for d in result.details if d.startswith("tal: BEHIND 1"))
+    assert "backstop window" in line
+    assert "pipeline.yml" in line and "still being dispatched" in line
+
+
+def test_entities_run_judges_its_own_shows_at_their_own_window(monkeypatch) -> None:
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("ai-daily-brief", "taddy:held", "Held one", date(2026, 9, 18))],
+        feed_episodes={"ai-daily-brief": [FeedEpisode("taddy:missing", date(2026, 9, 19), "New")]},
+        today=date(2026, 9, 22),  # 3 days: past AI Daily's 2-day window
+        slugs=["ai-daily-brief"],
+        owned=ENTITY_RUN_SHOWS,
+    )
+    assert result.status == "fail"
+    line = next(d for d in result.details if d.startswith("ai-daily-brief: BEHIND 1"))
+    assert "import window" in line and "backstop" not in line
+
+
+def test_unowned_backstop_is_the_owners_window_plus_a_week() -> None:
+    from pipeline.data_health import FEED_BACKSTOP_EXTRA_DAYS
+    from pipeline.show_config import SHOWS
+
+    # Every show's importer runs at least weekly, so a week past its own window it has
+    # had another full turn. TAL's backstop (9 days) stays faster than its 21-day
+    # staleness check, which is the only other alarm for a workflow that stopped running.
+    assert FEED_BACKSTOP_EXTRA_DAYS == 7
+    assert SHOWS["tal"].feed_grace_days + FEED_BACKSTOP_EXTRA_DAYS < 21
+
+
+def test_cli_passes_the_owned_shows_to_the_feed_check(monkeypatch) -> None:
+    import sys
+
+    import pipeline.data_health as dh
+
+    seen = {}
+    monkeypatch.setattr(sys, "argv", ["data_health.py", "--feed-owned-shows", "pchh, hard-fork"])
+    monkeypatch.setattr(dh, "load_environment", lambda: None)
+    monkeypatch.setattr(dh, "get_db_connection", lambda: type("C", (), {"close": lambda self: None})())
+
+    def fake_run_checks(conn, include_feed_check=False, feed_owned=None):
+        seen["owned"] = feed_owned
+        return []
+
+    monkeypatch.setattr(dh, "run_checks", fake_run_checks)
+    monkeypatch.setattr(dh, "check_optional_null_map", lambda conn: CheckResult("optional_null_map", "pass", "", []))
+    dh.main()
+    assert seen["owned"] == ["pchh", "hard-fork"]
 
 
 def test_split_missing_feed_dates_partitions_by_grace() -> None:

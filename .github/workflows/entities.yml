@@ -58,6 +58,12 @@ jobs:
   run-entities:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      # The shows THIS workflow imports: the import step runs them, and the health
+      # check judges only these at their own feed window (the music shows belong to
+      # pipeline.yml's post-import check; this run backstops them a week later). An
+      # input reaches the shell only through env, never interpolated into run: text.
+      ENTITY_SHOWS: ${{ github.event.inputs.shows || 'ai-daily-brief,hard-fork,pchh,culture-gabfest' }}
 
     steps:
       - name: Checkout
@@ -95,16 +101,14 @@ jobs:
           TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           # Inputs via env (never interpolate ${{ inputs }} directly into run: — injection).
-          SHOWS_INPUT: ${{ github.event.inputs.shows }}
           BACKFILL_INPUT: ${{ github.event.inputs.backfill }}
           DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
         run: |
-          SHOWS="${SHOWS_INPUT:-ai-daily-brief,hard-fork,pchh,culture-gabfest}"
           FLAGS=""
           [ "$BACKFILL_INPUT" = "true" ] && FLAGS="$FLAGS --backfill"
           [ "$DRY_RUN_INPUT" = "true" ] && FLAGS="$FLAGS --dry-run"
           cd pipeline
-          python run_new_episodes.py --shows "$SHOWS" $FLAGS
+          python run_new_episodes.py --shows "$ENTITY_SHOWS" $FLAGS
 
       - name: Sync transcripts to Notion (Transcripts DB)
         # Runs even if the pipeline step failed: syncs whatever DID land in Neon.
@@ -137,7 +141,11 @@ jobs:
           # --strict: a real failure reddens the run (Slack + the failure issue), the way
           # pipeline.yml's feed check already does. Safe now that the grace windows have
           # removed the false-positive volume — a red X here should mean something.
-          cd pipeline && python data_health.py --strict | tee -a "$GITHUB_STEP_SUMMARY"
+          # --feed-owned-shows: a music show's normal wait between imports is
+          # pipeline.yml's to judge (it checks right after each import); this run fails
+          # one only a week past its window, as the backstop for pipeline.yml not running.
+          cd pipeline && python data_health.py --strict --feed-owned-shows "$ENTITY_SHOWS" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Keep the failed batch (dead letter)
         # A broken extraction batch used to leave nothing but a 500-character stderr tail

@@ -55,3 +55,18 @@ def test_called_workflows_do_not_take_the_callers_concurrency_group():
             "resolves to the caller's name — the caller already holds that group, so "
             "GitHub cancels this workflow as a deadlock. Use a literal group."
         )
+
+
+def test_entities_health_check_judges_only_the_shows_it_imports():
+    """A music show's normal wait between imports belongs to pipeline.yml, which checks
+    right after each import. Unscoped, the daily entities run failed SOP's ordinary
+    Friday-to-Wednesday wait as "entity pipeline FAILED" (2026-09-22)."""
+    text = _read("entities.yml")
+    assert re.search(r"data_health\.py[^\n]*--feed-owned-shows \"\$ENTITY_SHOWS\"", text)
+    assert re.search(r"run_new_episodes\.py --shows \"\$ENTITY_SHOWS\"", text), (
+        "the import and the health check must read the same show list"
+    )
+
+
+def test_music_workflow_keeps_its_own_strict_feed_check():
+    assert re.search(r"data_health\.py --feed-check-only --shows \"\$SLUGS\" --strict", _read("pipeline.yml"))
