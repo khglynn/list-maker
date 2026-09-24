@@ -121,6 +121,9 @@ class FakeSlack:
 
 
 def _run(gh, slack, findings, today, **kw):
+    # One entities run a day, so the run number follows the date (GITHUB_RUN_NUMBER counts
+    # one workflow's runs); the green streak relies on it.
+    kw.setdefault("run_number", (today - date(2026, 9, 1)).days)
     return run_announce(ENTITIES, findings, gh=gh, post=slack, today=today, run_url=RUN, **kw)
 
 
@@ -184,8 +187,9 @@ def test_music_keys_are_scoped_to_the_show_that_ran():
 # ── the decision ────────────────────────────────────────────────────────────────────────
 
 def _alert(key, *, since=SEP22, last_posted=SEP22, number=70, said="failing", green=0,
-           closed=False) -> Alert:
-    return Alert(number, f"https://x/{number}", key, since, last_posted, said, green, "F", [], 1, closed)
+           closed=False, eval_run=None) -> Alert:
+    return Alert(number, f"https://x/{number}", key, since, last_posted, said, green, "F", [], 1,
+                 closed, eval_run)
 
 
 def _kinds(items) -> dict[str, str]:
@@ -202,23 +206,27 @@ def test_decide_covers_every_transition():
         "entities:open": _alert("entities:open"),
         "entities:relapse": _alert("entities:relapse", said="recovered", closed=True),
         "entities:green1": _alert("entities:green1"),
-        "entities:green2": _alert("entities:green2", green=1),
-        "entities:healed_again": _alert("entities:healed_again", said="recovered", green=1),
+        "entities:green2": _alert("entities:green2", green=1, eval_run=9),
+        "entities:healed_again": _alert("entities:healed_again", said="recovered", green=1, eval_run=9),
         "entities:unreached": _alert("entities:unreached"),
     }
-    assert _kinds(decide(ENTITIES, findings, memory, SEP22 + timedelta(days=3))) == {
+    assert _kinds(decide(ENTITIES, findings, memory, SEP22 + timedelta(days=3), run_number=10)) == {
         "entities:new": "new",                   # first failure: said at once
         "entities:open": "quiet_fail",           # said 3 days ago: quiet
         "entities:relapse": "quiet_fail",        # relapse within a week: reopened quietly
         "entities:green1": "quiet_pass",         # one green day is not yet a recovery
-        "entities:green2": "recovered",          # second green day in a row: said
+        "entities:green2": "recovered",          # second green run in a row (run 9, then 10): said
         "entities:healed_again": "quiet_close",  # "recovered" was already the last word
         # entities:unreached: not due yet, so nothing
     }
-    week = _kinds(decide(ENTITIES, findings, memory, SEP22 + timedelta(days=REMIND_AFTER_DAYS)))
+    week = _kinds(decide(ENTITIES, findings, memory, SEP22 + timedelta(days=REMIND_AFTER_DAYS),
+                         run_number=14))
     assert week["entities:open"] == "remind"
     assert week["entities:relapse"] == "again"
     assert week["entities:unreached"] == "unchecked"  # not evaluated, and due: still said
+    assert week["entities:green1"] == "confirming"    # passing but unverified, and due: said
+    # A pass that doesn't follow the saved evaluation's run restarts the streak at 1.
+    assert week["entities:green2"] == "confirming"
 
 
 def test_an_issue_whose_message_never_landed_is_reminded_next_run():
@@ -326,13 +334,15 @@ def test_unrelated_failures_get_separate_issues_and_each_recovers_on_its_own():
     assert notion_issue["state"] == "closed" and feed_issue["state"] == "open"
 
 
-def test_a_failure_joining_one_already_reported_is_new_and_names_the_other():
+def test_a_failure_joining_one_already_reported_is_said_on_its_own():
+    """Each key speaks only on its own schedule: the new failure's message doesn't repeat
+    the one already reported (round 5; its issue shows it)."""
     gh, slack = FakeGitHub(), FakeSlack()
     _run(gh, slack, _entities([NOTION_DRIFT]), date(2026, 9, 21))
     _run(gh, slack, _entities([NOTION_DRIFT, AI_DAILY_BEHIND]), SEP22)
     assert len(slack.messages) == 2
-    assert "Also still failing, already reported" in slack.messages[1]
-    assert "Notion is behind Neon" in slack.messages[1]
+    assert "1 new problem" in slack.messages[1]
+    assert "Notion is behind Neon" not in slack.messages[1]
 
 
 def _feed_failing(*slugs: str) -> dict:
@@ -971,7 +981,6 @@ def _preflight_down():
                                              notion="skipped", health="skipped"), "failure")
 
 
-@pytest.mark.xfail(strict=True, reason="Codex P1: an unverified show is forgotten, then a false recovery")
 def test_r5_1_a_show_that_is_still_unverified_blocks_recovery():
     gh, slack = FakeGitHub(), FakeSlack()
     _run(gh, slack, _entities([_unverified_feed(("ai-daily-brief", "tal"), ())]), _day_after(0))
@@ -982,7 +991,6 @@ def test_r5_1_a_show_that_is_still_unverified_blocks_recovery():
     assert len(slack.messages) == 1 and gh.issues[101]["state"] == "open"
 
 
-@pytest.mark.xfail(strict=True, reason="Codex P1: a quiet relapse stays silent while unchecked")
 def test_r5_2_a_quiet_relapse_is_said_weekly_even_while_unchecked():
     gh, slack = FakeGitHub(), FakeSlack()
     red, green = _entities([AI_DAILY_BEHIND]), _green("import_caught_up_to_feed")
@@ -994,7 +1002,6 @@ def test_r5_2_a_quiet_relapse_is_said_weekly_even_while_unchecked():
     assert len(feed_words) >= 2  # weekly, from day 9
 
 
-@pytest.mark.xfail(strict=True, reason="Codex P1: a lost save lets a stale green streak confirm a recovery")
 def test_r5_3_a_lost_save_restarts_the_green_streak():
     class DownOnDay2(FakeGitHub):
         down = False
@@ -1015,7 +1022,6 @@ def test_r5_3_a_lost_save_restarts_the_green_streak():
     assert not any(m.startswith(":white_check_mark:") for m in slack.messages)
 
 
-@pytest.mark.xfail(strict=True, reason="Codex P2: another check's failure is repeated in unrelated news")
 def test_r5_5_unrelated_news_does_not_repeat_a_quiet_failure():
     gh, slack = FakeGitHub(), FakeSlack()
     _run(gh, slack, _entities([AI_DAILY_BEHIND]), _day_after(0))
@@ -1024,7 +1030,6 @@ def test_r5_5_unrelated_news_does_not_repeat_a_quiet_failure():
     assert "A show is behind its podcast feed" not in slack.messages[1]
 
 
-@pytest.mark.xfail(strict=True, reason="Codex P2: an overdue weekly word is skipped on a passing day")
 def test_r5_6_the_weekly_word_comes_on_a_passing_day_too():
     gh, slack = FakeGitHub(), FakeSlack()
     red, green = _entities([AI_DAILY_BEHIND]), _green("import_caught_up_to_feed")
@@ -1038,7 +1043,6 @@ def test_r5_6_the_weekly_word_comes_on_a_passing_day_too():
     assert "confirming recovery" in slack.messages[1]
 
 
-@pytest.mark.xfail(strict=True, reason="Codex P2: a failed closed-issue lookup throws away the open state")
 def test_r5_7_a_failed_closed_lookup_keeps_the_open_state():
     class NoHistory(FakeGitHub):
         def recently_closed(self, since):
@@ -1048,3 +1052,39 @@ def test_r5_7_a_failed_closed_lookup_keeps_the_open_state():
     for n in range(3):
         _run(gh, slack, _entities([AI_DAILY_BEHIND]), _day_after(n))
     assert len(slack.messages) == 1
+
+
+def test_the_invariant_holds_over_random_histories():
+    """Kevin's rule as a property, over 200 random 60-day histories of one daily check
+    (fail / pass / unverified / not reached). Per key: the only posts inside 7 days of the
+    previous one are a first failure and a verified recovery; two recoveries always have a
+    failing word between them; and an open issue is never left 7+ days without a word."""
+    import random
+
+    rng = random.Random(20260924)
+    unverified = _unverified_feed((), ("ai-daily-brief",))
+    for _ in range(200):
+        gh, slack = FakeGitHub(), FakeSlack()
+        said = []  # (day, kind) of every post about the feed check
+        for n in range(60):
+            roll = rng.random()
+            if roll < 0.35:
+                findings = _entities([_feed_failing("ai-daily-brief")])
+            elif roll < 0.8:
+                findings = _green("import_caught_up_to_feed")
+            elif roll < 0.9:
+                findings = collect_findings(ENTITIES, GREEN_STEPS, "success", [unverified])
+            else:
+                findings = _preflight_down()
+            out = _run(gh, slack, findings, _day_after(n))
+            for item in out.items:
+                if item.finding.key == "entities:import_caught_up_to_feed" and item.kind in announce.POSTING:
+                    said.append((n, item.kind))
+            alert = gh.alert("entities:import_caught_up_to_feed")
+            if alert and not alert.closed and alert.last_posted:
+                assert (_day_after(n) - alert.last_posted).days < REMIND_AFTER_DAYS, (n, said)
+        for (d0, k0), (d1, k1) in zip(said, said[1:]):
+            if k1 not in ("new", "recovered"):
+                assert d1 - d0 >= REMIND_AFTER_DAYS, said
+            if k1 == "recovered":
+                assert k0 != "recovered", said
