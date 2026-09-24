@@ -1,7 +1,7 @@
 # list-maker - Agent Instructions
 
 *Inherits from ~/DevKev/CLAUDE.md*
-*Last updated: 2026-09-01*
+*Last updated: 2026-09-23*
 
 ## ⚑ Resuming (especially after a compaction)
 
@@ -76,6 +76,8 @@ list-maker/
 │   ├── run_pipeline.py      # Orchestrator: scrape → match → sync (SOP/TAL → Spotify)
 │   ├── db_preflight.py      # First step of every workflow: fail in ~1 min if Neon is unreachable
 │   ├── data_health.py       # Health checks (staleness, integrity, feed second-source); --strict in CI
+│   ├── announce.py          # Last step of entities/pipeline/blogs: the one Slack voice + self-closing issues (§ Alerts)
+│   ├── alert_guides.py      # The plain words for every alert: what failed, usual cause, what to check first
 │   ├── pulse_report.py      # Biweekly Slack digest (runs after the import on the 1st/15th)
 │   ├── feed_check.py        # The independent second source: what each show's real feed says is latest
 │   ├── sync_notion.py / sync_transcripts_notion.py / sync_playlist.py / spotify_match.py
@@ -113,6 +115,26 @@ The pipeline runs automatically. The **durable trigger** is the Cloudflare Worke
 **If Spotify auth fails:** Re-auth locally (`python spotify_match.py --show-id 1 --limit 1`), then update `SPOTIFY_CACHE_JSON` secret with new `.spotify_cache/.cache` contents.
 
 See `pipeline/README.md` for orchestrator docs, `evals/README.md` for the eval harness, `cloudflare-trigger/README.md` for the trigger.
+
+## Alerts — what each Slack message in #list-maker means (2026-09-23)
+
+**The rule for failures:** say it once when it starts (or when the set of failing things changes), again **every 7 days** while it is still true ("still failing since Sep 22 (8 days)"), and "recovered" on the first run where it passes. Nothing in between. Kevin's standard: a check that talks every day trains its reader to ignore it; one that talks only once can't tell him a problem was never fixed. Each failing check or step gets its **own GitHub issue** (label `pipeline-failure` + `entities` / `music` / `intake`), which opens itself, is commented weekly, and closes itself with a "recovered" comment. The issue is also the alert's memory: a hidden marker at the top of its description holds the dates. Closing one by hand means "I think it's fixed"; if it isn't, the next run opens a fresh one.
+
+| Message | Sent by | When | What it means / first move |
+|---|---|---|---|
+| :rotating_light: `list-maker · daily entities run — N new problem(s)` (also `SOP music run`, `TAL music run`, `weekly curated intake`) | `pipeline/announce.py`, the last step of `entities.yml`, `pipeline.yml`, `blogs.yml` | Something started failing, or a different thing failed | Each item says what failed, why it usually happens and what to check first (text in `pipeline/alert_guides.py`), with links to its issue and the run |
+| :hourglass_flowing_sand: `… — still failing` | same | The same failure, 7+ days after it was last announced | Nothing got fixed. The issue has the history |
+| :white_check_mark: `… — recovered` | same | First run where it passes | Its issue is closed. Nothing to do |
+| :warning: `… — the alert step itself crashed` | same | `announce.py` raised | The run's result wasn't announced; read the Announce step's log |
+| :inbox_tray: `list-maker intake [all]: judged …` | `pipeline/run_intake.py` (`blogs.yml`) | Every Monday, even a quiet week | Not an alert: the week's intake report |
+| :bar_chart: `list-maker pulse` | `pipeline/pulse_report.py`, the `pulse` job in `entities.yml` | 1st and 15th | The positive heartbeat. If one doesn't arrive, the trigger or the pulse is broken. `pulse FAILED` comes from `pulse.yml` |
+| :rotating_light: `DB preflight failed` | `pipeline/db_preflight.py` | Only in `eval.yml` / `pulse.yml`; elsewhere it's folded into the announce message | The runner couldn't reach Neon; usually that runner's network, and the next run heals it |
+| :rotating_light: `extraction eval FAILED` / `intake judge eval FAILED` | `eval.yml` (+ `evals/*/run_eval.py`) | Monday eval breaches a quality floor | Not yet on the announce step, so it can still post twice |
+| `list-maker: <workflow> failed` / `cron trigger FAILED` / `dispatches could not be checked` | `cloudflare-trigger/worker.js` | Next day, about yesterday's dispatches | Only if the Worker's own `SLACK_WEBHOOK_URL` secret is set — none has appeared in the channel since June |
+
+**Mid-run warnings** (a Notion sync with some failed pages) go through `common.alert_note`: inside the three announced workflows they ride along in that run's message, and are otherwise only in the step summary. Run locally, they post directly.
+
+**Where to change it:** thresholds live with each check in `pipeline/data_health.py`; words in `pipeline/alert_guides.py` (a test fails if a check has none); the once / weekly / recovered logic in `pipeline/announce.py`. The music shows are judged by `pipeline.yml` right after each import; the daily entities run checks them only as a backstop a week past their window (`FEED_BACKSTOP_EXTRA_DAYS`). A workflow's `dry_run` input runs the announce step read-only and prints what it would have said.
 
 ## AI Daily Pipeline
 
