@@ -31,6 +31,9 @@ class _Cursor:
         return False
 
     def execute(self, sql: str, params=()) -> None:
+        self.conn.autocommit_during.append(self.conn.autocommit)
+        if self.conn.fail_on_call is not None and len(self.conn.calls) == self.conn.fail_on_call:
+            raise RuntimeError("server closed the connection unexpectedly")
         self.conn.calls.append((" ".join(sql.split()), params))
 
     def fetchone(self):
@@ -41,16 +44,23 @@ class _Cursor:
 
 
 class _Conn:
-    def __init__(self, rows=None) -> None:
+    def __init__(self, rows=None, autocommit: bool = False, fail_on_call: int | None = None) -> None:
         self.rows = list(rows or [])
         self.calls: list[tuple[str, object]] = []
         self.commits = 0
+        self.rollbacks = 0
+        self.autocommit = autocommit
+        self.autocommit_during: list[bool] = []
+        self.fail_on_call = fail_on_call
 
     def cursor(self) -> _Cursor:
         return _Cursor(self)
 
     def commit(self) -> None:
         self.commits += 1
+
+    def rollback(self) -> None:
+        self.rollbacks += 1
 
 
 def _candidate(**kw) -> Candidate:
@@ -92,6 +102,49 @@ def test_upsert_canonicalizes_and_counts_new_versus_known() -> None:
     # second row for the http:// or utm-tagged twin of a URL already in the table.
     assert conn.calls[0][1][0] == "https://openai.com/index/a"
     assert conn.commits == 1
+
+
+def test_upsert_is_all_or_nothing_even_on_an_autocommit_connection() -> None:
+    """Review finding (2026-09-23): run_intake now opens its connection in autocommit.
+    Candidates arrive newest first and the next run's cursor starts at the newest saved
+    date, so a batch that saved its first rows and then failed would strand the older
+    posts behind the cursor for good. The batch must roll back as one."""
+    conn = _Conn([{"id": 1, "created": True}, {"id": 2, "created": True}],
+                 autocommit=True, fail_on_call=1)
+    with pytest.raises(RuntimeError):
+        store.upsert_candidates(conn, [
+            _candidate(url="https://openai.com/index/newest", published_on=date(2026, 9, 21)),
+            _candidate(url="https://openai.com/index/older", published_on=date(2026, 9, 14)),
+        ])
+    assert conn.commits == 0 and conn.rollbacks == 1
+    assert conn.autocommit_during == [False, False]  # both inserts inside one transaction
+    assert conn.autocommit is True  # the run's mode is restored afterwards
+
+
+def test_upsert_commits_once_and_restores_autocommit() -> None:
+    conn = _Conn([{"id": 1, "created": True}], autocommit=True)
+    assert store.upsert_candidates(conn, [_candidate()]) == (1, 0)
+    assert conn.commits == 1 and conn.rollbacks == 0 and conn.autocommit is True
+
+
+def test_link_write_back_is_all_or_nothing(monkeypatch) -> None:
+    from pipeline.scrapers.ai_daily import discover_links
+    from pipeline.scrapers.intake import links
+
+    conn = _Conn(autocommit=True)
+    applied: list[int] = []
+
+    def apply(conn_, *, mention_id, **kw):
+        if mention_id == 2:
+            raise RuntimeError("boom")
+        applied.append(mention_id)
+
+    monkeypatch.setattr(discover_links, "apply_mention_updates", apply)
+    resolutions = [links.Resolution(mention_id=i, query="q", candidates=[], url=None, confidence=0.0)
+                   for i in (1, 2)]
+    with pytest.raises(RuntimeError):
+        links.write_back(conn, resolutions)
+    assert applied == [1] and conn.commits == 0 and conn.rollbacks == 1 and conn.autocommit is True
 
 
 def test_upsert_keeps_the_first_discovery_and_records_the_second_source() -> None:

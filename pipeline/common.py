@@ -6,6 +6,7 @@ import logging
 import os
 import sys
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -51,6 +52,37 @@ def post_slack(text: str) -> bool:
     except Exception as exc:  # alerting must never break the run
         logger.warning("Slack post failed: %s", exc)
         return False
+
+
+@contextmanager
+def one_transaction(conn):
+    """Run a multi-row write as a single transaction, whatever mode the connection is in.
+
+    The intake runs its connection in autocommit (so it is never left idle inside a
+    transaction while it waits on Notion or a model — Neon ends those after 5 minutes).
+    A few writes are only safe all-or-nothing: `upsert_candidates` feeds a newest-first
+    date cursor, so a half-saved batch would move the cursor past posts that never got
+    saved, and they would never be fetched again. This turns autocommit off for the
+    block, commits at the end, rolls back on any error, and puts the mode back.
+    """
+    was_autocommit = bool(getattr(conn, "autocommit", False))
+    if was_autocommit:
+        conn.autocommit = False
+    try:
+        yield conn
+        conn.commit()
+    except BaseException:
+        try:
+            conn.rollback()
+        except Exception:  # noqa: BLE001 — a dead connection can't roll back; the error below matters
+            pass
+        raise
+    finally:
+        if was_autocommit:
+            try:
+                conn.autocommit = True
+            except Exception:  # noqa: BLE001 — a dead connection keeps its old mode; nothing to restore
+                pass
 
 
 def alert_note(text: str) -> bool:

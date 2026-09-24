@@ -200,16 +200,19 @@ def resolve_mentions(mentions: list[dict], search: Callable[[str, int], list[dic
 
 def write_back(conn, resolutions: list[Resolution]) -> int:
     """Record every search's candidates; promote the auto-resolved URL. Returns promoted count."""
+    from pipeline.common import one_transaction
     from pipeline.scrapers.ai_daily.discover_links import apply_mention_updates
     promoted = 0
-    for r in resolutions:
-        apply_mention_updates(
-            conn, mention_id=r.mention_id, candidates=r.candidates,
-            promoted_url=r.url, promoted_platform=None,
-            promoted_score=r.confidence if r.url else None,
-        )
-        promoted += bool(r.url)
-    conn.commit()
+    # All or nothing: if this fails partway, the caller drops this run's resolved
+    # candidates, so half the mentions must not be left marked as resolved.
+    with one_transaction(conn):
+        for r in resolutions:
+            apply_mention_updates(
+                conn, mention_id=r.mention_id, candidates=r.candidates,
+                promoted_url=r.url, promoted_platform=None,
+                promoted_score=r.confidence if r.url else None,
+            )
+            promoted += bool(r.url)
     return promoted
 
 

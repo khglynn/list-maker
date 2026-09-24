@@ -791,8 +791,10 @@ def main(argv: Optional[list[str]] = None) -> None:
     # (idle_in_transaction_session_timeout = 5min, read 2026-09-23; a merely idle
     # session is never timed out), and psycopg2 opens a transaction on the first
     # SELECT. That is what killed the 09-07, 09-14 and 09-21 intakes at the final
-    # report, after the Notion sync. Every write here is one statement per row and safe
-    # to repeat, so nothing relied on a multi-statement transaction.
+    # report, after the Notion sync. Most writes here are one statement per row and safe
+    # to repeat; the two batches that must be all-or-nothing (upsert_candidates, which
+    # feeds a newest-first date cursor, and links.write_back) open their own
+    # transaction with common.one_transaction.
     conn.autocommit = True
     try:
         failures = run(args, conn, token, firecrawl_key, openrouter_key)

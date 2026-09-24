@@ -41,6 +41,7 @@ import json
 from datetime import date, datetime
 from typing import Iterable, Optional, Sequence
 
+from pipeline.common import one_transaction
 from pipeline.scrapers.blog.import_blog import canonicalize_url
 from pipeline.scrapers.intake.judge import Decision, Precheck
 from pipeline.scrapers.intake.sources import Candidate
@@ -140,7 +141,10 @@ def upsert_candidates(conn, candidates: Iterable[Candidate]) -> tuple[int, int]:
     second row for the http:// or utm-tagged twin of a URL already in the table.
     """
     new = existing = 0
-    with conn.cursor() as cur:
+    # All or nothing (common.one_transaction): candidates arrive newest first and the
+    # next run's feed cursor starts at the newest saved date, so a half-saved batch
+    # would strand the older posts behind the cursor for good.
+    with one_transaction(conn), conn.cursor() as cur:
         for cand in candidates:
             if not cand.url:
                 continue  # an unresolved citation is not a candidate (links.py keeps the mention)
@@ -155,7 +159,6 @@ def upsert_candidates(conn, candidates: Iterable[Candidate]) -> tuple[int, int]:
             row = cur.fetchone()
             new += bool(row["created"])
             existing += not row["created"]
-    conn.commit()
     return new, existing
 
 
