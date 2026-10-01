@@ -11,7 +11,7 @@
 - Any value shown downstream (Notion, pulse, playlist) must trace to its source in one query. Prefer NULL for "no data" over a plausible default — never COALESCE to a fake number; missing data should fail visibly.
 - Tests are the precondition for safe agent-assisted change, not QA hygiene. An untested module is a haunted graveyard — add tests before touching old pipeline code.
 
-*Bites hardest in:* `pipeline/` scripts and scrapers, Neon schema defaults, Notion sync logic, this repo's CLAUDE.md.
+*Bites hardest in:* `pipeline/` scripts and scrapers, Neon schema defaults, Notion sync logic, this repo's AGENTS.md.
 
 ## Automation that stays alive (control / runtime / data planes)
 
