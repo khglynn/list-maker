@@ -1,6 +1,6 @@
 # Album Cover Mosaic Generator dependencies
 spotipy>=2.26.0
-python-dotenv>=1.2.3
+python-dotenv>=1.2.4
 Pillow>=12.3.0
 numpy>=2.5.3
 tqdm>=4.70.1
