@@ -13,7 +13,7 @@ updates:
     directory: /pipeline
     schedule:
       interval: weekly
-      day: monday
+      day: thursday
     groups:
       pip-minor-and-patch:
         update-types: [minor, patch]
@@ -21,7 +21,7 @@ updates:
     directory: /marketing
     schedule:
       interval: weekly
-      day: monday
+      day: thursday
     groups:
       pip-minor-and-patch:
         update-types: [minor, patch]
@@ -32,7 +32,7 @@ updates:
     directory: /cloudflare-trigger
     schedule:
       interval: weekly
-      day: monday
+      day: thursday
     open-pull-requests-limit: 3
     groups:
       cf-trigger-minor-and-patch:
@@ -44,7 +44,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
-      day: monday
+      day: thursday
     groups:
       actions-minor-and-patch:
         update-types: [minor, patch]
