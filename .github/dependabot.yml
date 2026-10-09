@@ -14,6 +14,13 @@ updates:
     schedule:
       interval: weekly
       day: thursday
+    # 7-day soak, majors 30 (stamped from repo-standards). pip has no install-time
+    # release-age setting, so this cooldown is the only wait on these packages.
+    cooldown:
+      default-days: 7
+      semver-patch-days: 7
+      semver-minor-days: 7
+      semver-major-days: 30
     groups:
       pip-minor-and-patch:
         update-types: [minor, patch]
@@ -22,6 +29,11 @@ updates:
     schedule:
       interval: weekly
       day: thursday
+    cooldown:
+      default-days: 7
+      semver-patch-days: 7
+      semver-minor-days: 7
+      semver-major-days: 30
     groups:
       pip-minor-and-patch:
         update-types: [minor, patch]
@@ -34,6 +46,12 @@ updates:
       interval: weekly
       day: thursday
     open-pull-requests-limit: 3
+    # Same 7 days as the .npmrc min-release-age, so a PR never proposes what npm would refuse.
+    cooldown:
+      default-days: 7
+      semver-patch-days: 7
+      semver-minor-days: 7
+      semver-major-days: 30
     groups:
       cf-trigger-minor-and-patch:
         update-types: [minor, patch]
@@ -45,6 +63,8 @@ updates:
     schedule:
       interval: weekly
       day: thursday
+    cooldown:
+      default-days: 7
     groups:
       actions-minor-and-patch:
         update-types: [minor, patch]
