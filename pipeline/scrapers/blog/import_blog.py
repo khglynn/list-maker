@@ -118,13 +118,49 @@ def parse_publish_date(metadata: dict, url: str = "") -> Optional[date]:
     return None
 
 
+TITLE_SEPARATOR = re.compile(r"\s*[|—]\s+(?=[^|]*$)")
+
+
+def _letters(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
+def _is_site_name(text: str, metadata: dict, url: str) -> bool:
+    """True when `text` names the site rather than the post: og:site_name, or the domain's own
+    name ("Dario Amodei" on darioamodei.com)."""
+    key = _letters(text)
+    if not key:
+        return False
+    site_name = _letters(str(metadata.get("ogSiteName") or metadata.get("og:site_name") or ""))
+    host = _letters(urlsplit(url).netloc.lower().removeprefix("www.").rsplit(".", 1)[0])
+    return key == site_name or (len(key) >= 4 and key == host)
+
+
 def pick_title(metadata: dict, url: str) -> str:
+    """The post's own title from the page's metadata, without the site's name.
+
+    Most pages say "Post | Site", so the part before the last separator is kept. Some say
+    "Site — Post" (darioamodei.com: "Dario Amodei — The Adolescence of Technology"), and keeping
+    the first part stored three different essays saved on 2026-09-28 under the one title "Dario
+    Amodei", which the duplicate-episode check then read as one post stored three times; the daily
+    run was red on it from 2026-09-29 (issue #68). So a first part that names the site gives way to the rest,
+    and a value that is only the site's name gives way to the next key that says more."""
+    fallback = None
     for key in ("ogTitle", "og:title", "title"):
         value = (metadata.get(key) or "").strip()
-        if value:
-            # Strip " | Site Name" suffixes that og pages often carry.
-            return re.split(r"\s*[|—]\s+(?=[^|]*$)", value)[0].strip() or value
-    return url
+        if not value:
+            continue
+        parts = TITLE_SEPARATOR.split(value)
+        head = parts[0].strip()
+        if len(parts) > 1 and _is_site_name(head, metadata, url):
+            rest = TITLE_SEPARATOR.split(value, maxsplit=1)[1].strip()
+            if rest:
+                return rest
+        if len(parts) == 1 and _is_site_name(head, metadata, url):
+            fallback = fallback or value
+            continue
+        return head or value
+    return fallback or url
 
 
 def upsert_post(conn, show_id: int, url: str, title: str, publish_date: date,
