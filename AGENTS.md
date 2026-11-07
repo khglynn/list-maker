@@ -157,6 +157,16 @@ What follows from that:
 
 **Where to change it:** thresholds live with each check in `pipeline/data_health.py`; words in `pipeline/alert_guides.py` (a test fails if a check has none); the once / weekly / recovered logic in `pipeline/announce.py`. The music shows are judged by `pipeline.yml` right after each import; the daily entities run checks their feeds only as a backstop a week past their window (`FEED_BACKSTOP_EXTRA_DAYS`, `--music-as-backstop`). Every other check about a music show (songs still arriving, freshness) belongs to the entities run alone. A workflow's `dry_run` input runs the announce step read-only and prints what it would have said.
 
+## Gabby watches this (2026-11-06)
+
+Kevin, 2026-11-06: "can you read and write all the pod lists? That list automation should live here too", and the same day, that the always-on Air should keep an eye on every automated pipe. The jobs stay where they are (the Cloudflare cron, GitHub Actions, Neon, Notion); Gabby on the Air is the one who knows whether they ran, runs them on his ask and fixes them. Why: from 2026-09-29 to 11-06 the daily entities run was red on one check (issue #68) and its only word went to `#list-maker`, which nobody read.
+
+- **How she hears.** Her 06:30 self-check on the Air reads this repo's open `pipeline-failure` issues (one per check that keeps failing, as above) and each scheduled workflow's last run against its rhythm (`entities.yml` daily, `pipeline.yml` Mon/Wed/Fri, `blogs.yml` Mondays), since a cron that stops firing files no issue. A change is a quiet line in her `#gabby-log` and one line on her own work list, which her morning roundup picks up; Kevin hears only what needs him. Where that lives: `audit/review_counts.py` (`PIPES`) and `audit/self_check.py` in khglynn/gabby. `#list-maker` keeps getting the messages above.
+- **Checking by hand.** `gh issue list -R khglynn/list-maker --label pipeline-failure --state open` and `gh run list -R khglynn/list-maker --limit 10`; a failed run's checks: `gh run view <id> -R khglynn/list-maker --log | grep -E '\[(FAIL|WARN)\]' -A3`, or read the "Data health check" step.
+- **Running one.** `gh workflow run entities.yml -R khglynn/list-maker` (or `pipeline.yml` with `-f show_id=...`, `blogs.yml`); all three take `-f dry_run=true`, a preview that writes nothing and posts nothing. Each run spends Actions minutes, so only on his ask or to prove a fix.
+- **Fixing.** A worktree and a PR, as any change here; a data fix is a numbered file in `pipeline/scrapers/ai_daily/sql/` that Kevin pastes (or she runs, once Neon is one of her connectors and he says so).
+- **His lists.** The Notion side (Pod Lists: Blog Posts, Transcripts, the Tech DB, Blog Intake) through her Notion connector; edits there are hers to make on his ask. The Spotify playlists through his `spotify-bulk-actions-mcp`, once it is one of the Air's connectors.
+
 ## AI Daily Pipeline
 
 Extracts app/tool/platform mentions from transcripts using LLM extraction.

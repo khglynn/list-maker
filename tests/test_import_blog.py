@@ -57,6 +57,29 @@ def test_pick_title_falls_back_to_url() -> None:
     assert pick_title({}, "https://example.com/post") == "https://example.com/post"
 
 
+def test_pick_title_drops_a_site_name_that_comes_first() -> None:
+    # darioamodei.com, 2026-09-28: three essays stored under the one title "Dario Amodei".
+    url = "https://darioamodei.com/essay/the-adolescence-of-technology"
+    meta = {"ogTitle": "Dario Amodei — The Adolescence of Technology"}
+    assert pick_title(meta, url) == "The Adolescence of Technology"
+    meta = {"ogTitle": "Anthropic | Claude Fable 5", "ogSiteName": "Anthropic"}
+    assert pick_title(meta, "https://www.anthropic.com/news/claude-fable-5") == "Claude Fable 5"
+
+
+def test_pick_title_keeps_a_first_part_that_is_not_the_site() -> None:
+    # The site's name in the second half is the usual case and still stripped.
+    meta = {"ogTitle": "Notes on Dario Amodei | Darioamodei"}
+    assert pick_title(meta, "https://darioamodei.com/notes") == "Notes on Dario Amodei"
+    meta = {"ogTitle": "Dario — a profile | Example Weekly"}
+    assert pick_title(meta, "https://example.com/dario") == "Dario — a profile"
+
+
+def test_pick_title_skips_a_value_that_is_only_the_site_name() -> None:
+    meta = {"ogTitle": "Dario Amodei", "title": "Machines of Loving Grace"}
+    assert pick_title(meta, "https://darioamodei.com/essay/machines-of-loving-grace") == "Machines of Loving Grace"
+    assert pick_title({"ogTitle": "Dario Amodei"}, "https://darioamodei.com/x") == "Dario Amodei"
+
+
 def test_parse_publish_date_from_url_path() -> None:
     assert parse_publish_date({}, "https://www.technologyreview.com/2026/05/26/1137855/x/") == (
         date(2026, 5, 26)
