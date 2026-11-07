@@ -143,7 +143,7 @@ def pick_title(metadata: dict, url: str) -> str:
     "Site — Post" (darioamodei.com: "Dario Amodei — The Adolescence of Technology"), and keeping
     the first part stored three different essays saved on 2026-09-28 under the one title "Dario
     Amodei", which the duplicate-episode check then read as one post stored three times; the daily
-    run stayed red on it until 2026-11-06. So a first part that names the site gives way to the rest,
+    run was red on it from 2026-09-29 (issue #68). So a first part that names the site gives way to the rest,
     and a value that is only the site's name gives way to the next key that says more."""
     fallback = None
     for key in ("ogTitle", "og:title", "title"):
