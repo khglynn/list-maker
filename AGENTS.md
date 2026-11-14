@@ -76,8 +76,8 @@ list-maker/
 ├── tests/                   # pytest (hermetic — no DB, no network); CI runs it on every PR and push
 ├── evals/extraction/        # The extraction eval harness (frozen set + aggregate gates)
 ├── cloudflare-trigger/      # The Worker cron that starts everything (worker.js + worker.test.js)
-├── .github/workflows/       # entities / pipeline / eval / blogs / pulse dispatched by the Worker; test on PRs and main;
-│                            # claude (comment-triggered) and dependabot-automerge
+├── .github/workflows/       # entities / pipeline / eval / blogs dispatched by the Worker; pulse runs inside entities
+│                            # on the 1st/15th; test on PRs and main; claude (comment-triggered); dependabot-automerge
 ├── docs/                    # principles.md (the engineering rules) · curation-runbook.md · intake-rubric.md · alerts.md
 ├── codex-notes/             # Historical AI Daily design notes + one kept example batch; CI also writes extraction
 │                            # output here (codex-notes/ai-daily-entity-extraction/incremental-*, gitignored)
@@ -91,7 +91,7 @@ Eleven sources (one ended), three destinations. **Podcasts** (Taddy transcripts 
 
 ## Automation
 
-The pipeline runs automatically. The **durable trigger** is the Cloudflare Worker (`cloudflare-trigger/`) calling `workflow_dispatch` — NOT GitHub's own `schedule:` (which silently disables after 60 idle days). Workflows: `pipeline.yml` (music → Spotify), `entities.yml` (tech + media → Notion), `blogs.yml` (the weekly curated intake), `eval.yml` (weekly extraction eval), `pulse.yml` (the 1st/15th digest), plus `test.yml` (pytest on every PR and push to main).
+The pipeline runs automatically. The **durable trigger** is the Cloudflare Worker (`cloudflare-trigger/`) calling `workflow_dispatch` — NOT GitHub's own `schedule:` (which silently disables after 60 idle days). Workflows: `pipeline.yml` (music → Spotify), `entities.yml` (tech + media → Notion), `blogs.yml` (the weekly curated intake), `eval.yml` (weekly extraction eval), `pulse.yml` (the 1st/15th digest, called by `entities.yml`'s `pulse` job, or run by hand), plus `test.yml` (pytest on every PR and push to main).
 
 **Schedule:** one Cloudflare cron fans out by day — entities daily; SOP Wed+Fri, TAL Mon; eval + blogs Mon; pulse 1st/15th (after the import). The time and the day logic live in `cloudflare-trigger/worker.js` (`dispatchesFor`, tested) — read it there rather than trusting a restated copy.
 
@@ -140,9 +140,9 @@ See `pipeline/scrapers/ai_daily/README.md` for full pipeline docs.
 
 ### Running Pipeline Scripts
 
-The pipeline uses a Python venv and two `.env.local` files (repo root and `pipeline/`) that don't use `export`. The orchestrators and `import_transcripts.py` load them themselves (`load_environment()`); a few helper modules (`announce.py`, `feed_check.py`, the intake judge) only read the environment, so run one of those on its own with the vars exported.
+The pipeline uses a Python venv and two `.env.local` files (repo root and `pipeline/`) that don't use `export`. `run_new_episodes.py` and `import_transcripts.py` load `~/.env` and both files themselves (`load_environment()`). The music orchestrator, `run_pipeline.py`, loads only the root `.env.local`, `~/.env` and the Spotify MCP's `.env` at its old path (`load_env()`), never `pipeline/.env.local`. A few helper modules (`announce.py`, `feed_check.py`, the intake judge) load nothing. When in doubt, export both files first:
 
-**Working command pattern** (exports both files first, so it works for any script):
+**Working command pattern** (works for any script):
 ```bash
 cd ~/DevKev/personal/list-maker && set -a && source .env.local && source pipeline/.env.local && set +a && cd pipeline && ./venv/bin/python3 <script>
 ```
