@@ -1,6 +1,6 @@
 # Album Cover Mosaic Generator
 
-*Last updated: 2026-01-25*
+*Last verified: 2026-11-13*
 
 Creates mosaic artwork from album/episode covers for podcast logos.
 
@@ -47,14 +47,14 @@ This will download all unique album covers (640x640px) to `./album_covers/`.
 
 ### Step 3: Get Target Image
 
-You need the SOP podcast logo/artwork to use as the target. Save it as `sop_logo.png` in this folder.
+You need the SOP podcast logo/artwork to use as the target. It is already saved as `sop/targets/sop_logo.png`, beside the other targets.
 
 The SOP logo can be found at: https://switchedonpop.com (grab from their website or podcast apps)
 
 ### Step 4: Generate Mosaic
 
 ```bash
-python create_mosaic.py --target sop_logo.png --tiles ./album_covers/ --output sop_mosaic.png
+python create_mosaic.py --target sop/targets/sop_logo.png --tiles ./album_covers/ --output sop_mosaic.png
 ```
 
 #### Optional Parameters
@@ -80,22 +80,22 @@ python create_mosaic.py --target sop_logo.png --tiles ./album_covers/ --output s
 
 ```bash
 # Higher resolution output (each tile is 80px)
-python create_mosaic.py --target sop_logo.png --tiles ./album_covers/ --tile-size 40 --enlarge 2
+python create_mosaic.py --target sop/targets/sop_logo.png --tiles ./album_covers/ --tile-size 40 --enlarge 2
 
 # No tile repetition (needs 2500+ unique albums)
-python create_mosaic.py --target sop_logo.png --tiles ./album_covers/ --no-reuse
+python create_mosaic.py --target sop/targets/sop_logo.png --tiles ./album_covers/ --no-reuse
 
 # Smaller tiles = more detail (but tiles less recognizable)
-python create_mosaic.py --target sop_logo.png --tiles ./album_covers/ --tile-size 20
+python create_mosaic.py --target sop/targets/sop_logo.png --tiles ./album_covers/ --tile-size 20
 
 # White background with variety (recommended for logos)
-python create_mosaic.py --target sop_logo.png --tiles ./album_covers/ --background white --diversity 0.4
+python create_mosaic.py --target sop/targets/sop_logo.png --tiles ./album_covers/ --background white --diversity 0.4
 
 # Auto-detect background from image corners
-python create_mosaic.py --target sop_logo.png --tiles ./album_covers/ --background auto --bg-threshold 0.6
+python create_mosaic.py --target sop/targets/sop_logo.png --tiles ./album_covers/ --background auto --bg-threshold 0.6
 
 # Reduce repetition without background detection
-python create_mosaic.py --target sop_logo.png --tiles ./album_covers/ --diversity 0.5 --max-reuse 3
+python create_mosaic.py --target sop/targets/sop_logo.png --tiles ./album_covers/ --diversity 0.5 --max-reuse 3
 ```
 
 ### Background Detection
@@ -158,9 +158,7 @@ marketing/
 
 ## Environment
 
-Uses the same Spotify OAuth as the main `spotify_match.py` script:
-- Reads `.env` from `~/DevKev/personal/spotify-bulk-actions-mcp/.env`
-- Uses cached auth from `~/DevKev/personal/spotify-bulk-actions-mcp/.spotify_cache/`
+Uses the same Spotify OAuth as the main `spotify_match.py` script, from the Spotify MCP's folder, now `~/DevKev/personal/self-hosted-mcps/spotify-bulk-actions-mcp/` (its `.env` and `.spotify_cache/`). Careful: `download_album_art.py` (lines 56 and 348) still names the folder's old place, `~/DevKev/personal/spotify-bulk-actions-mcp/`, so its default `.env` and token paths miss until that is fixed in code.
 
 Required env vars (already configured if you've used the Spotify MCP):
 - `SPOTIFY_CLIENT_ID`
@@ -197,6 +195,8 @@ This is useful for multi-color logos like SOP where different regions should hav
 **Episode art workflow:** Use `--no-color-match` (random selection) + `--region-tint` to apply per-region tints since color matching doesn't work well with varied episode illustrations.
 
 ## Current State (Jan 2026)
+
+The tiles, `album_covers/` and every `output/` are gitignored, so the files named below live only on the Mac that made them, not in a fresh checkout.
 
 | Show | Tiles | Status | Best Output |
 |------|-------|--------|-------------|
