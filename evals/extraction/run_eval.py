@@ -13,7 +13,8 @@ because LLM judges have transitivity violations and position bias. (A narrow LLM
 like "is this canonical_name a real product?" could slot in later; it is deliberately
 NOT used to grade overall quality.)
 
-Cost: one real OpenAI call per fixture episode (re-extraction). Use --limit for a quick
+Cost: one real model call per fixture episode (re-extraction, through the same route as
+production: OpenRouter when OPENROUTER_API_KEY is set, else OpenAI). Use --limit for a quick
 read; the full set is ~30 episodes.
 
   ./pipeline/venv/bin/python evals/extraction/run_eval.py                 # both, current model
@@ -27,7 +28,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import sys
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -51,8 +51,10 @@ from pipeline.scrapers.ai_daily.sponsors import roster_from_raw_content  # noqa:
 from pipeline.scrapers.ai_daily.extract_entities import (  # noqa: E402
     DEFAULT_MODEL,
     EpisodeInput,
+    ModelRoute,
     get_profile,
-    openai_extract,
+    model_extract,
+    resolve_route,
     process_episode_mentions,
 )
 
@@ -125,7 +127,7 @@ def pull_transcript(conn, episode_id: int) -> dict | None:
         return cur.fetchone()
 
 
-def reextract(api_key: str, model: str, row: dict, max_chars: int) -> tuple[dict, dict]:
+def reextract(route: ModelRoute, model: str, row: dict, max_chars: int) -> tuple[dict, dict]:
     """Re-extract one episode through the EXACT production path and collapse to entities.
     Returns (extracted_entities, confidence_report)."""
     transcript = (row["transcript_text"] or "")[:max_chars]
@@ -134,10 +136,10 @@ def reextract(api_key: str, model: str, row: dict, max_chars: int) -> tuple[dict
         publish_date=str(row["publish_date"]) if row["publish_date"] else "",
         title=row["title"] or "",
         episode_url="",
-        transcript_path=Path("/dev/null"),  # unused by openai_extract
+        transcript_path=Path("/dev/null"),  # unused by model_extract
     )
     profile = get_profile("entity_extraction")
-    raw, _usage = openai_extract(api_key, model, episode, transcript, profile)
+    raw, _usage = model_extract(route, model, episode, transcript, profile)
     # Sponsor detection is part of the production path as of 2026-09-02 (ads are kept
     # and tagged, not dropped), so the eval feeds it the same two inputs the orchestrator
     # does — the episode's declared roster and the truncated transcript. Without them
@@ -157,11 +159,11 @@ def input_sha(transcript_text: str, max_chars: int) -> str:
     return hashlib.sha256(((transcript_text or "")[:max_chars]).encode("utf-8")).hexdigest()
 
 
-def score_episode(api_key, model, episode_id, row, baseline_ep, gold_ep) -> dict:
+def score_episode(route, model, episode_id, row, baseline_ep, gold_ep) -> dict:
     """Re-extract one episode (transcript already fetched) and score it.
 
     Takes a pre-fetched `row` rather than a DB connection: transcripts are pulled
-    serially up front so the concurrent path here touches only OpenAI + pure scoring.
+    serially up front so the concurrent path here touches only the model API + pure scoring.
     A single psycopg2 connection is NOT safe for concurrent use across threads.
     """
     ref = baseline_ep or gold_ep
@@ -170,7 +172,7 @@ def score_episode(api_key, model, episode_id, row, baseline_ep, gold_ep) -> dict
         return {"episode_id": episode_id, "error": "no transcript in Neon"}
 
     drifted = input_sha(row["transcript_text"], max_chars) != ref.get("input_sha256")
-    extracted, conf = reextract(api_key, model, row, max_chars)
+    extracted, conf = reextract(route, model, row, max_chars)
 
     result: dict = {
         "episode_id": episode_id,
@@ -352,9 +354,9 @@ def print_report(report: dict) -> None:
 def main() -> None:
     args = parse_args()
     load_environment(REPO_ROOT)
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
-    if not api_key:
-        raise SystemExit("OPENAI_API_KEY is required")
+    route = resolve_route()
+    if route is None:
+        raise SystemExit("OPENROUTER_API_KEY or OPENAI_API_KEY is required")
 
     baseline_fx = load_fixture(Path(args.baseline_fixture)) if args.mode in ("both", "baseline") else {}
     gold_fx = load_fixture(Path(args.gold_fixture)) if args.mode in ("both", "gold") else {}
@@ -368,20 +370,20 @@ def main() -> None:
         episode_ids = episode_ids[: args.limit]
 
     # Pull all transcripts SERIALLY first (a single connection isn't thread-safe), then
-    # parallelize only the OpenAI re-extraction + pure scoring.
+    # parallelize only the model re-extraction + pure scoring.
     conn = get_db_connection()
     try:
         rows = {eid: pull_transcript(conn, eid) for eid in episode_ids}
     finally:
         conn.close()
 
-    print(f"Re-extracting {len(episode_ids)} episodes with {args.model} ({args.workers} workers)...", flush=True)
+    print(f"Re-extracting {len(episode_ids)} episodes with {args.model} via {route.label} ({args.workers} workers)...", flush=True)
 
     results: list[dict] = []
     with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
         futures = {
             pool.submit(
-                score_episode, api_key, args.model, eid, rows.get(eid), baseline_idx.get(eid), gold_idx.get(eid)
+                score_episode, route, args.model, eid, rows.get(eid), baseline_idx.get(eid), gold_idx.get(eid)
             ): eid
             for eid in episode_ids
         }

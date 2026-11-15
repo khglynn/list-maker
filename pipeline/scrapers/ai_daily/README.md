@@ -24,7 +24,7 @@ No required custom views and no extra AI review/link tables.
 ## Required Env Vars
 
 - `DATABASE_URL` (or `NEON_DATABASE_URL`)
-- `OPENAI_API_KEY`
+- `OPENROUTER_API_KEY` (preferred) or `OPENAI_API_KEY`: the extraction model's route (`extract_entities.resolve_route`)
 
 Optional:
 - `FIRECRAWL_API_KEY` (used by `discover_links.py`)

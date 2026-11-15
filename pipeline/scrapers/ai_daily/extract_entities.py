@@ -2,8 +2,8 @@
 """
 AI Daily Brief entity extraction test runner (batch mode).
 
-This script reads cached transcripts and uses OpenAI chat completion to produce
-structured mention candidates for schema validation.
+This script reads cached transcripts and asks a chat model (gpt-4.1-mini, through
+OpenRouter or OpenAI directly — see resolve_route) for structured mention candidates.
 
 Key goals:
 1. Use locked taxonomy so types do not drift over time.
@@ -62,6 +62,53 @@ except ImportError:  # pragma: no cover - direct script execution
 
 
 OPENAI_CHAT_COMPLETIONS_ENDPOINT = "https://api.openai.com/v1/chat/completions"
+OPENROUTER_CHAT_COMPLETIONS_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+
+
+@dataclass(frozen=True)
+class ModelRoute:
+    """Where the extraction call goes: one OpenAI-compatible chat endpoint and its key.
+
+    OpenRouter first, when its key is set. Why (2026-11-14): OpenAI closed the account
+    behind OPENAI_API_KEY, so every extraction came back 401 `account_deactivated`.
+    The intake judge already runs on OpenRouter (same repo secret, a weekly spend cap),
+    and OpenRouter serves the same pinned model at the same per-token price, so the
+    extraction output and its eval baseline are unchanged. OpenAI direct stays as the
+    route for a machine or step that only has OPENAI_API_KEY.
+    """
+
+    provider: str  # "openrouter" | "openai" — written to ai_runs.provider
+    endpoint: str
+    api_key: str
+
+    @property
+    def label(self) -> str:
+        return "OpenRouter" if self.provider == "openrouter" else "OpenAI"
+
+    def model_id(self, model: str) -> str:
+        """OpenRouter names models by vendor ("openai/gpt-4.1-mini"); OpenAI by bare id.
+        The bare id stays the one stored on runs and priced, so history lines up."""
+        if self.provider == "openrouter" and "/" not in model:
+            return f"openai/{model}"
+        return model
+
+
+def resolve_route() -> Optional[ModelRoute]:
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if openrouter_key:
+        return ModelRoute("openrouter", OPENROUTER_CHAT_COMPLETIONS_ENDPOINT, openrouter_key)
+    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if openai_key:
+        return ModelRoute("openai", OPENAI_CHAT_COMPLETIONS_ENDPOINT, openai_key)
+    return None
+
+
+class KeyRefused(RuntimeError):
+    """The provider refused the key or the account (401/402/403). A retry seconds later
+    gets the same answer, so the __main__ block exits 2 (deterministic, not retried)."""
+
+
+KEY_REFUSED_STATUS_CODES = {401, 402, 403}
 
 LOCKED_TYPES = [
     "software_product",
@@ -175,7 +222,7 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Comma-separated explicit episode IDs (overrides limit/offset)",
     )
-    parser.add_argument("--model", type=str, default=DEFAULT_MODEL, help="OpenAI chat model")
+    parser.add_argument("--model", type=str, default=DEFAULT_MODEL, help="Chat model, by its OpenAI id (OpenRouter gets it as openai/<id>)")
     parser.add_argument(
         "--max-chars",
         type=int,
@@ -380,8 +427,8 @@ def get_profile(extraction_type: Optional[str]) -> ExtractionProfile:
     )
 
 
-def openai_extract(
-    api_key: str,
+def model_extract(
+    route: ModelRoute,
     model: str,
     episode: EpisodeInput,
     transcript_text: str,
@@ -435,7 +482,7 @@ def openai_extract(
     )
 
     payload = {
-        "model": model,
+        "model": route.model_id(model),
         "temperature": 0,
         "response_format": {"type": "json_object"},
         "messages": [
@@ -445,7 +492,7 @@ def openai_extract(
     }
 
     headers = {
-        "Authorization": f"Bearer {api_key}",
+        "Authorization": f"Bearer {route.api_key}",
         "Content-Type": "application/json",
     }
 
@@ -453,7 +500,7 @@ def openai_extract(
     for attempt in range(1, OPENAI_MAX_RETRIES + 1):
         try:
             resp = requests.post(
-                OPENAI_CHAT_COMPLETIONS_ENDPOINT,
+                route.endpoint,
                 headers=headers,
                 json=payload,
                 timeout=REQUEST_TIMEOUT_SECONDS,
@@ -461,14 +508,14 @@ def openai_extract(
         except requests.RequestException as exc:
             if attempt >= OPENAI_MAX_RETRIES:
                 raise RuntimeError(
-                    f"OpenAI request failed after {attempt} attempts: {exc}"
+                    f"{route.label} request failed after {attempt} attempts: {exc}"
                 ) from exc
             sleep_s = min(
                 OPENAI_MAX_BACKOFF_SECONDS,
                 OPENAI_INITIAL_BACKOFF_SECONDS * (2 ** (attempt - 1)) + random.uniform(0, 1.0),
             )
             print(
-                f"OpenAI request error (attempt {attempt}/{OPENAI_MAX_RETRIES}); "
+                f"{route.label} request error (attempt {attempt}/{OPENAI_MAX_RETRIES}); "
                 f"retrying in {sleep_s:.1f}s: {exc}",
                 file=sys.stderr,
                 flush=True,
@@ -487,7 +534,7 @@ def openai_extract(
             )
             sleep_s = retry_after if retry_after is not None else backoff
             print(
-                f"OpenAI transient error {resp.status_code} (attempt {attempt}/{OPENAI_MAX_RETRIES}); "
+                f"{route.label} transient error {resp.status_code} (attempt {attempt}/{OPENAI_MAX_RETRIES}); "
                 f"retrying in {sleep_s:.1f}s",
                 file=sys.stderr,
                 flush=True,
@@ -495,10 +542,14 @@ def openai_extract(
             time.sleep(sleep_s)
             continue
 
-        raise RuntimeError(f"OpenAI error {resp.status_code}: {resp.text[:800]}")
+        if resp.status_code in KEY_REFUSED_STATUS_CODES:
+            raise KeyRefused(
+                f"{route.label} refused the key ({resp.status_code}): {resp.text[:800]}"
+            )
+        raise RuntimeError(f"{route.label} error {resp.status_code}: {resp.text[:800]}")
 
     if resp is None:
-        raise RuntimeError("OpenAI request failed with no response")
+        raise RuntimeError(f"{route.label} request failed with no response")
 
     data = resp.json()
     content = data["choices"][0]["message"]["content"]
@@ -1120,9 +1171,9 @@ def build_summary_markdown(
     lines.append(f"- Total tokens: {usage_summary.get('total_tokens', 0)}")
     estimated_cost = usage_summary.get("estimated_total_cost_usd")
     if estimated_cost is not None:
-        lines.append(f"- Estimated OpenAI API cost: `${estimated_cost:.6f}`")
+        lines.append(f"- Estimated API cost: `${estimated_cost:.6f}`")
     else:
-        lines.append("- Estimated OpenAI API cost: n/a (model pricing not configured)")
+        lines.append("- Estimated API cost: n/a (model pricing not configured)")
     lines.append("")
     lines.append("## Episodes")
     lines.append("")
@@ -1159,14 +1210,15 @@ def main() -> None:
     repo_root = Path(__file__).resolve().parents[3]
     load_environment(repo_root)
 
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
-    if not api_key:
+    route = resolve_route()
+    if route is None:
         # exit 2 = deterministic; the orchestrator must not retry it (see
         # run_new_episodes.DETERMINISTIC_EXIT_CODE). Raised inline rather than as a
-        # RuntimeError because this file also raises RuntimeError for OpenAI HTTP
+        # RuntimeError because this file also raises RuntimeError for transient HTTP
         # errors, which ARE worth retrying — a type-based handler would conflate them.
-        print("OPENAI_API_KEY is required", file=sys.stderr)
+        print("OPENROUTER_API_KEY or OPENAI_API_KEY is required", file=sys.stderr)
         sys.exit(2)
+    print(f"Model route: {route.label} ({route.model_id(args.model)})", flush=True)
 
     explicit_ids: list[int] = []
     if args.episodes.strip():
@@ -1241,8 +1293,8 @@ def main() -> None:
             flush=True,
         )
 
-        raw, usage = openai_extract(
-            api_key=api_key,
+        raw, usage = model_extract(
+            route=route,
             model=args.model,
             episode=episode,
             transcript_text=transcript_text,
@@ -1409,6 +1461,7 @@ def main() -> None:
         "batch_name": batch_name,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "model": args.model,
+        "provider": route.provider,  # load_entity_batch writes it to ai_runs.provider
         "input": {
             "episodes_csv": str(episodes_csv),
             "transcripts_dir": str(transcripts_dir),
@@ -1474,8 +1527,13 @@ if __name__ == "__main__":
     try:
         main()
     except requests.exceptions.RequestException as exc:
-        print(f"Network error calling OpenAI API: {exc}", file=sys.stderr)
+        print(f"Network error calling the model API: {exc}", file=sys.stderr)
         sys.exit(1)
+    except KeyRefused as exc:
+        # A refused key or a closed account (2026-11-14: OpenAI `account_deactivated`)
+        # answers the same way on every retry: exit 2, reported once, not retried.
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(2)
     except FileNotFoundError as exc:
         # A missing episodes CSV, transcripts dir, or per-episode transcript file is
         # an input that will still be missing on the next attempt — deterministic

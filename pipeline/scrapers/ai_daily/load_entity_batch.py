@@ -186,6 +186,7 @@ def insert_run(
     parameters: dict[str, Any],
     status: str = "completed",
     commit: bool = True,
+    provider: str = "openai",
 ) -> int:
     """Write the ai_runs row for one batch.
 
@@ -203,15 +204,16 @@ def insert_run(
         cur.execute(
             """
             INSERT INTO ai_runs (
-              show_id, batch_name, run_type, provider, model, prompt_version,
-              parameters, status, started_at, completed_at, created_at
+              show_id, batch_name, run_type, model, prompt_version,
+              parameters, status, started_at, completed_at, created_at, provider
             )
-            VALUES (%s, %s, 'entity_extraction', 'openai', %s, %s, %s::jsonb,
-                    %s, NOW(), CASE WHEN %s THEN NOW() END, NOW())
+            VALUES (%s, %s, 'entity_extraction', %s, %s, %s::jsonb,
+                    %s, NOW(), CASE WHEN %s THEN NOW() END, NOW(), %s)
             RETURNING id;
             """,
+            # provider last, so the positions callers and tests read stay where they were.
             (show_id, batch_name, model, prompt_version, json.dumps(parameters),
-             status, has_completed),
+             status, has_completed, provider),
         )
         row = cur.fetchone()
     if commit:
@@ -247,6 +249,12 @@ def finalize_run_completed(conn, run_id: int, *, commit: bool = True) -> None:
 
 
 EMPTY_RUN_STATUS = "completed_empty"
+
+
+def batch_provider(manifest: dict[str, Any]) -> str:
+    """Which API the batch's extraction went through, as extract_entities wrote it.
+    Batches from before 2026-11-15 carry no field; every one of them was OpenAI."""
+    return manifest.get("provider") or "openai"
 
 
 def record_empty_batch(
@@ -287,6 +295,7 @@ def record_empty_batch(
         model=model,
         prompt_version=prompt_version,
         status=EMPTY_RUN_STATUS,
+        provider=batch_provider(manifest),
         parameters={
             "batch_dir": str(batch_dir),
             "episodes": episodes,
@@ -774,6 +783,7 @@ def main() -> None:
             model=model,
             prompt_version=args.prompt_version,
             status=LOADING_RUN_STATUS,
+            provider=batch_provider(manifest),
             parameters={
                 "batch_dir": str(batch_dir),
                 "episodes": episode_ids,
