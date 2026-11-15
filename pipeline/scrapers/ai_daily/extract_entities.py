@@ -29,7 +29,7 @@ import re
 import sys
 import time
 from collections import Counter, defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, Sequence
@@ -79,7 +79,7 @@ class ModelRoute:
 
     provider: str  # "openrouter" | "openai" — written to ai_runs.provider
     endpoint: str
-    api_key: str
+    api_key: str = field(repr=False)  # never in a printed route or a traceback
 
     @property
     def label(self) -> str:
@@ -542,6 +542,15 @@ def model_extract(
             time.sleep(sleep_s)
             continue
 
+        if resp.status_code == 403 and "flagged_input" in resp.text:
+            # OpenRouter's moderation (applied to OpenAI models there, never on the direct
+            # API) answers 403 with the flagged text in error.metadata. That's this
+            # episode's transcript, not the key: say so, and leave it retryable rather
+            # than calling the key refused. Unseen as of 2026-11-15.
+            raise RuntimeError(
+                f"{route.label} moderation flagged episode {episode.episode_id}'s transcript "
+                f"(403): {resp.text[:800]}"
+            )
         if resp.status_code in KEY_REFUSED_STATUS_CODES:
             raise KeyRefused(
                 f"{route.label} refused the key ({resp.status_code}): {resp.text[:800]}"

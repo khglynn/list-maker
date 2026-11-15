@@ -94,7 +94,7 @@ silently comparing apples to oranges.
 ## Faithfulness
 
 The runner re-extracts through the **exact production path** —
-`openai_extract → process_episode_mentions` (the single shared sanitize→postprocess→classify→filter
+`model_extract → process_episode_mentions` (the single shared sanitize→postprocess→classify→filter
 function that `main()` also uses) → `collapse_to_entities` (production's `normalize_name`).
 So "did the run find entity X" means exactly what it means downstream; the eval can't
 drift from production. That includes sponsor detection: the runner passes the episode's

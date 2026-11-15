@@ -593,3 +593,18 @@ def test_a_refused_key_is_not_retried(monkeypatch) -> None:
     with pytest.raises(ee.KeyRefused, match=r"OpenAI refused the key \(401\).*account_deactivated"):
         ee.model_extract(route, "gpt-4.1-mini", _episode(), "text", get_profile(None))
     assert len(calls) == 1
+
+
+def test_a_moderation_403_names_the_episode_not_the_key(monkeypatch) -> None:
+    """OpenRouter moderates OpenAI models; a flagged transcript is about that episode,
+    so it must not read as (or exit like) a refused key."""
+    from pipeline.scrapers.ai_daily import extract_entities as ee
+
+    monkeypatch.setattr(ee.requests, "post", lambda url, headers, json, timeout: _Resp(
+        403, {"error": {"code": 403, "message": "flagged",
+                        "metadata": {"reasons": ["x"], "flagged_input": "..."}}}))
+    route = ee.ModelRoute("openrouter", ee.OPENROUTER_CHAT_COMPLETIONS_ENDPOINT, "or-key")
+    with pytest.raises(RuntimeError, match="moderation flagged episode 1") as exc:
+        ee.model_extract(route, "gpt-4.1-mini", _episode(), "text", get_profile(None))
+    assert not isinstance(exc.value, ee.KeyRefused)
+    assert "or-key" not in repr(route)

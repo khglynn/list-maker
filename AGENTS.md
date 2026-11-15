@@ -44,7 +44,7 @@ Kevin prefers a "help me mode" by default:
 - **Database:** Neon (Postgres) - source of truth
 - **APIs:** Spotify (via MCP), Notion, Firecrawl (web scraping)
 - **Transcripts:** Taddy API (multi-show transcript import)
-- **Extraction:** gpt-4.1-mini through OpenRouter (AI Daily entity extraction from transcripts; OpenAI direct when only `OPENAI_API_KEY` is set. OpenAI closed that account 2026-11-14, appeal pending)
+- **Extraction:** gpt-4.1-mini (AI Daily entity extraction from transcripts), through OpenRouter when the step has `OPENROUTER_API_KEY`, else OpenAI direct (OpenAI closed that account 2026-11-14, appeal pending)
 
 ## Spotify MCP
 
@@ -110,7 +110,7 @@ The pipeline runs automatically. The **durable trigger** is the Cloudflare Worke
 
 **Manual trigger:** Actions tab → the workflow → Run workflow (or the Worker's `/?token=…` endpoint).
 
-**Secrets:** `SPOTIFY_CLIENT_ID/SECRET/REDIRECT_URI/CACHE_JSON`, `NEON_DATABASE_URL`, `FIRECRAWL_API_KEY`, `SLACK_WEBHOOK_URL`, `OPENAI_API_KEY` (Whisper fallbacks only since its account closed 2026-11-14), `OPENROUTER_API_KEY` (entity extraction + the two intake judge models), `NOTION_TOKEN`, `TADDY_USER_ID/API_KEY`. Cloudflare Worker secret: `GH_PAT` (+ optional `SLACK_WEBHOOK_URL`, `TRIGGER_TOKEN`).
+**Secrets:** `SPOTIFY_CLIENT_ID/SECRET/REDIRECT_URI/CACHE_JSON`, `NEON_DATABASE_URL`, `FIRECRAWL_API_KEY`, `SLACK_WEBHOOK_URL`, `OPENROUTER_API_KEY` (the two intake judge models, and entity extraction in any step whose env carries it: `extract_entities.resolve_route` prefers it), `OPENAI_API_KEY` (the fallback extraction route and Whisper; OpenAI closed that account 2026-11-14, so a step with only this key fails extraction), `NOTION_TOKEN`, `TADDY_USER_ID/API_KEY`. Cloudflare Worker secret: `GH_PAT` (+ optional `SLACK_WEBHOOK_URL`, `TRIGGER_TOKEN`).
 
 **If Spotify auth fails:** Re-auth locally (`python spotify_match.py --show-id 1 --limit 1`), then update `SPOTIFY_CACHE_JSON` secret with new `.spotify_cache/.cache` contents.
 
