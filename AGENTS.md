@@ -44,7 +44,7 @@ Kevin prefers a "help me mode" by default:
 - **Database:** Neon (Postgres) - source of truth
 - **APIs:** Spotify (via MCP), Notion, Firecrawl (web scraping)
 - **Transcripts:** Taddy API (multi-show transcript import)
-- **Extraction:** OpenAI gpt-4.1-mini (AI Daily entity extraction from transcripts)
+- **Extraction:** gpt-4.1-mini (AI Daily entity extraction from transcripts), through OpenRouter when the step has `OPENROUTER_API_KEY`, else OpenAI direct (OpenAI closed that account 2026-11-14, appeal pending)
 
 ## Spotify MCP
 
@@ -110,7 +110,7 @@ The pipeline runs automatically. The **durable trigger** is the Cloudflare Worke
 
 **Manual trigger:** Actions tab → the workflow → Run workflow (or the Worker's `/?token=…` endpoint).
 
-**Secrets:** `SPOTIFY_CLIENT_ID/SECRET/REDIRECT_URI/CACHE_JSON`, `NEON_DATABASE_URL`, `FIRECRAWL_API_KEY`, `SLACK_WEBHOOK_URL`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY` (the two intake judge models), `NOTION_TOKEN`, `TADDY_USER_ID/API_KEY`. Cloudflare Worker secret: `GH_PAT` (+ optional `SLACK_WEBHOOK_URL`, `TRIGGER_TOKEN`).
+**Secrets:** `SPOTIFY_CLIENT_ID/SECRET/REDIRECT_URI/CACHE_JSON`, `NEON_DATABASE_URL`, `FIRECRAWL_API_KEY`, `SLACK_WEBHOOK_URL`, `OPENROUTER_API_KEY` (the two intake judge models, and entity extraction in any step whose env carries it: `extract_entities.resolve_route` prefers it), `OPENAI_API_KEY` (the fallback extraction route and Whisper; OpenAI closed that account 2026-11-14, so a step with only this key fails extraction), `NOTION_TOKEN`, `TADDY_USER_ID/API_KEY`. Cloudflare Worker secret: `GH_PAT` (+ optional `SLACK_WEBHOOK_URL`, `TRIGGER_TOKEN`).
 
 **If Spotify auth fails:** Re-auth locally (`python spotify_match.py --show-id 1 --limit 1`), then update `SPOTIFY_CACHE_JSON` secret with new `.spotify_cache/.cache` contents.
 
@@ -172,7 +172,7 @@ Kevin, 2026-11-06, in his Slack DM with Gabby: "That list automation should live
 Extracts app/tool/platform mentions from transcripts using LLM extraction.
 
 **Neon schema:** 3 tables — `ai_runs`, `ai_entities`, `ai_mentions` (plus `notion_page_id` / `notion_synced_at` on entities)
-**Extraction model:** gpt-4.1-mini via OpenAI API
+**Extraction model:** gpt-4.1-mini via OpenRouter (`openai/gpt-4.1-mini`, same price), or the OpenAI API when only its key is set; the route is written to `ai_runs.provider`
 **Transcripts:** 915 episodes imported via Taddy API (originally RSS + Firecrawl, migrated to Taddy)
 **Extraction status:** 773/914 episodes extracted (85%). ~141 old episodes (pre-Dec 2025) are intentionally skipped — they failed quality gates on lighter episodes and aren't worth re-processing. The orchestrator's `recent_only` filter (90 days) excludes them automatically. New episodes are extracted automatically.
 **Notion destination:** Connected. Database "AI Daily Brief — Tools & Mentions" (DB ID: `982dafa0ad374d618e25207e67860e33`, MCP data source: `a72f8f82-1ca0-4973-9dc2-3757aa729c6e`). Sync via `pipeline/sync_notion.py`.
@@ -180,7 +180,7 @@ Extracts app/tool/platform mentions from transcripts using LLM extraction.
 
 **Required env vars** (in `.env.local`):
 - `DATABASE_URL` — Neon connection string
-- `OPENAI_API_KEY` — for entity extraction
+- `OPENROUTER_API_KEY` (or `OPENAI_API_KEY`) — for entity extraction
 - `NOTION_TOKEN` — for Notion sync
 - `TADDY_USER_ID` / `TADDY_API_KEY` — for Taddy transcript import
 

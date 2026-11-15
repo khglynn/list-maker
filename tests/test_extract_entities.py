@@ -439,12 +439,12 @@ def test_sponsor_source_is_written_as_an_empty_cell_not_the_string_none() -> Non
 
 
 # --- deterministic refusals (exit 2) ---
-# Both checks run before the first OpenAI call and reproduce identically on a retry.
+# Both checks run before the first model call and reproduce identically on a retry.
 # Raised inline rather than through `except RuntimeError`, because this file also
-# raises RuntimeError for OpenAI HTTP failures — the retryable case.
+# raises RuntimeError for transient HTTP failures — the retryable case.
 
 
-def test_missing_openai_key_exits_deterministically(monkeypatch) -> None:
+def test_missing_model_key_exits_deterministically(monkeypatch) -> None:
     from pipeline.scrapers.ai_daily import extract_entities as ee
 
     monkeypatch.setattr("sys.argv", ["extract_entities.py"])
@@ -452,6 +452,7 @@ def test_missing_openai_key_exits_deterministically(monkeypatch) -> None:
     # will not override a variable that is already present — so this holds on a
     # machine with a real .env.local as well as on a bare CI runner.
     monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "")
     with pytest.raises(SystemExit) as exc:
         ee.main()
     assert exc.value.code == 2
@@ -497,3 +498,113 @@ def test_the_process_really_exits_two(tmp_path) -> None:
     )
     assert result.returncode == 2, result.stderr[-500:]
     assert "Missing input file" in result.stderr
+
+
+# --- the model route (2026-11-14: OpenAI closed the account; OpenRouter carries it) ---
+
+
+def test_route_prefers_openrouter_when_both_keys_are_set(monkeypatch) -> None:
+    from pipeline.scrapers.ai_daily import extract_entities as ee
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
+    monkeypatch.setenv("OPENAI_API_KEY", "oa-key")
+    route = ee.resolve_route()
+    assert route.provider == "openrouter"
+    assert route.endpoint == ee.OPENROUTER_CHAT_COMPLETIONS_ENDPOINT
+    assert route.api_key == "or-key"
+    # The same pinned model, by OpenRouter's vendor-prefixed name.
+    assert route.model_id("gpt-4.1-mini") == "openai/gpt-4.1-mini"
+    assert route.model_id("google/gemini-3.5-flash") == "google/gemini-3.5-flash"
+
+
+def test_route_falls_back_to_openai_direct(monkeypatch) -> None:
+    from pipeline.scrapers.ai_daily import extract_entities as ee
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", " ")
+    monkeypatch.setenv("OPENAI_API_KEY", "oa-key")
+    route = ee.resolve_route()
+    assert route.provider == "openai" and route.api_key == "oa-key"
+    assert route.model_id("gpt-4.1-mini") == "gpt-4.1-mini"
+
+
+def test_route_is_none_without_any_key(monkeypatch) -> None:
+    from pipeline.scrapers.ai_daily import extract_entities as ee
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    assert ee.resolve_route() is None
+
+
+class _Resp:
+    def __init__(self, status_code: int, body: dict) -> None:
+        import json as _json
+
+        self.status_code = status_code
+        self._body = body
+        self.text = _json.dumps(body)
+        self.headers: dict = {}
+
+    def json(self) -> dict:
+        return self._body
+
+
+def _episode() -> EpisodeInput:
+    return EpisodeInput(1, "2026-11-14", "t", "", Path("/dev/null"))
+
+
+def test_model_extract_sends_the_routed_model_to_the_routed_endpoint(monkeypatch) -> None:
+    from pipeline.scrapers.ai_daily import extract_entities as ee
+
+    sent: dict = {}
+
+    def fake_post(url, headers, json, timeout):
+        sent.update(url=url, auth=headers["Authorization"], model=json["model"])
+        return _Resp(200, {
+            "choices": [{"message": {"content": '{"episode_id": 1, "mentions": []}'}}],
+            "usage": {"prompt_tokens": 1000, "completion_tokens": 100},
+        })
+
+    monkeypatch.setattr(ee.requests, "post", fake_post)
+    route = ee.ModelRoute("openrouter", ee.OPENROUTER_CHAT_COMPLETIONS_ENDPOINT, "or-key")
+    raw, usage = ee.model_extract(route, "gpt-4.1-mini", _episode(), "text", get_profile(None))
+    assert sent == {
+        "url": ee.OPENROUTER_CHAT_COMPLETIONS_ENDPOINT,
+        "auth": "Bearer or-key",
+        "model": "openai/gpt-4.1-mini",
+    }
+    assert raw["episode_id"] == 1
+    # Priced by the bare id: OpenRouter charges OpenAI's list price for this model.
+    assert usage.estimated_total_cost_usd == pytest.approx(1000 / 1e6 * 0.40 + 100 / 1e6 * 1.60)
+
+
+def test_a_refused_key_is_not_retried(monkeypatch) -> None:
+    """2026-11-14's failure: 401 `account_deactivated`, three orchestrator retries of an
+    answer that could not change. KeyRefused maps to exit 2 in the __main__ block."""
+    from pipeline.scrapers.ai_daily import extract_entities as ee
+
+    calls = []
+
+    def fake_post(url, headers, json, timeout):
+        calls.append(url)
+        return _Resp(401, {"error": {"code": "account_deactivated"}})
+
+    monkeypatch.setattr(ee.requests, "post", fake_post)
+    route = ee.ModelRoute("openai", ee.OPENAI_CHAT_COMPLETIONS_ENDPOINT, "oa-key")
+    with pytest.raises(ee.KeyRefused, match=r"OpenAI refused the key \(401\).*account_deactivated"):
+        ee.model_extract(route, "gpt-4.1-mini", _episode(), "text", get_profile(None))
+    assert len(calls) == 1
+
+
+def test_a_moderation_403_names_the_episode_not_the_key(monkeypatch) -> None:
+    """OpenRouter moderates OpenAI models; a flagged transcript is about that episode,
+    so it must not read as (or exit like) a refused key."""
+    from pipeline.scrapers.ai_daily import extract_entities as ee
+
+    monkeypatch.setattr(ee.requests, "post", lambda url, headers, json, timeout: _Resp(
+        403, {"error": {"code": 403, "message": "flagged",
+                        "metadata": {"reasons": ["x"], "flagged_input": "..."}}}))
+    route = ee.ModelRoute("openrouter", ee.OPENROUTER_CHAT_COMPLETIONS_ENDPOINT, "or-key")
+    with pytest.raises(RuntimeError, match="moderation flagged episode 1") as exc:
+        ee.model_extract(route, "gpt-4.1-mini", _episode(), "text", get_profile(None))
+    assert not isinstance(exc.value, ee.KeyRefused)
+    assert "or-key" not in repr(route)

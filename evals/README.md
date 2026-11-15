@@ -50,7 +50,7 @@ one is a real decision — note why in the commit.
 ## Run it
 
 ```bash
-# Full run (both modes), current model — ~30 OpenAI calls, a few minutes:
+# Full run (both modes), current model — ~30 model calls, a few minutes:
 ./pipeline/venv/bin/python evals/extraction/run_eval.py
 
 # Quick read while iterating on a prompt:
@@ -63,7 +63,8 @@ one is a real decision — note why in the commit.
 ./pipeline/venv/bin/python evals/extraction/run_eval.py --ci
 ```
 
-Needs `DATABASE_URL` + `OPENAI_API_KEY` (from `.env.local`, or CI secrets). Transcripts
+Needs `DATABASE_URL` + `OPENROUTER_API_KEY` (or `OPENAI_API_KEY`: the same route as
+production, `extract_entities.resolve_route`) (from `.env.local`, or CI secrets). Transcripts
 are pulled fresh from Neon by episode_id and hash-checked against the frozen fixture, so
 an episode whose transcript changed upstream is flagged (`input drifted`) rather than
 silently comparing apples to oranges.
@@ -93,7 +94,7 @@ silently comparing apples to oranges.
 ## Faithfulness
 
 The runner re-extracts through the **exact production path** —
-`openai_extract → process_episode_mentions` (the single shared sanitize→postprocess→classify→filter
+`model_extract → process_episode_mentions` (the single shared sanitize→postprocess→classify→filter
 function that `main()` also uses) → `collapse_to_entities` (production's `normalize_name`).
 So "did the run find entity X" means exactly what it means downstream; the eval can't
 drift from production. That includes sponsor detection: the runner passes the episode's
