@@ -116,7 +116,8 @@ STEP_GUIDES: dict[str, Guide] = {
     "entities:preflight": _PREFLIGHT,
     "entities:import": Guide(
         "The daily import and extraction step failed",
-        "a Taddy or OpenAI error, a timeout on a large batch, or a code error.",
+        "a Taddy or model-API error (a refused key reads \"refused the key (401)\"), "
+        "a timeout on a large batch, or a code error.",
         "the end of the step's log; the extraction batch is kept as the run's dead-letter artifact.",
     ),
     "entities:notion": Guide(

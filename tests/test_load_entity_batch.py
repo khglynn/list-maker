@@ -936,3 +936,19 @@ def test_a_rolled_back_batch_is_retryable_not_deterministic(monkeypatch, tmp_pat
     # replaces the abandoned 'loading' row.
     assert not isinstance(exc.value, FileNotFoundError)
     assert not isinstance(exc.value, SystemExit)
+
+
+def test_the_run_records_which_provider_extracted_it() -> None:
+    """ai_runs.provider was a hard-coded 'openai'; since 2026-11-15 extraction can go
+    through OpenRouter, and the row says which. Older manifests have no field: OpenAI."""
+    from pipeline.scrapers.ai_daily.load_entity_batch import batch_provider, insert_run
+
+    assert batch_provider({"provider": "openrouter"}) == "openrouter"
+    assert batch_provider({}) == "openai"
+
+    conn = _RunConn()
+    insert_run(conn, show_id=3, batch_name="b", model="gpt-4.1-mini", prompt_version="v",
+               parameters={}, provider="openrouter")
+    sql, params = conn._cursor.calls[-1]
+    assert "'openai'" not in sql
+    assert params[-1] == "openrouter"
