@@ -108,8 +108,8 @@ jobs:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}   # the two judge models
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}           # entity extraction on an override ingest
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}   # the two judge models + entity extraction on an ingest
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}           # extraction's fallback route; account closed 2026-11-14
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
           SOURCES_INPUT: ${{ github.event.inputs.sources }}

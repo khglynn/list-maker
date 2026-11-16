@@ -105,7 +105,8 @@ jobs:
         timeout-minutes: 50
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}  # entity extraction (extract_entities.resolve_route)
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}          # fallback route + Whisper; account closed 2026-11-14
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           TADDY_USER_ID: ${{ secrets.TADDY_USER_ID }}
           TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
