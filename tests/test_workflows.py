@@ -139,16 +139,3 @@ def test_every_step_has_a_timeout_that_fits_inside_the_job():
             total += int(m.group(1))
         assert total < job_limit, f"{name}: steps may take {total} min, job allows {job_limit}"
 
-
-def test_the_shadow_step_can_never_redden_the_daily_run() -> None:
-    """While Taddy is still the writer, the feed path runs beside it read-only. A shadow
-    failure is reported in its own step summary; it must not fail the job, which would
-    announce a failure in a step the alerts do not even track."""
-    text = _read("entities.yml")
-    step = text[text.index('- name: "Shadow: the feed path beside Taddy'):]
-    step = step[: step.index("\n      - name:")]
-    assert re.search(r"^        continue-on-error: true$", step, re.M)
-    assert "python shadow_feeds.py" in step
-    # Read-only by construction: the only secret it gets is the database url.
-    assert re.findall(r"\$\{\{ secrets\.(\w+) \}\}", step) == ["NEON_DATABASE_URL"]
-    assert text.index("- name: Run entity pipeline") < text.index('- name: "Shadow: the feed path')

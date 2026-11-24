@@ -61,6 +61,14 @@ class FeedItem:
     duration_seconds: Optional[int] = None
     episode_number: Optional[int] = None
     image_url: Optional[str] = None
+    # <itunes:episodeType>: "full", "bonus" or "trailer"; None when the feed omits it.
+    episode_type: Optional[str] = None
+
+    @property
+    def is_trailer(self) -> bool:
+        """A show's trailer is an ad for the show, not an episode: no transcript, nothing
+        to extract. The importer skips it and the feed check doesn't expect it."""
+        return (self.episode_type or "").strip().lower() == "trailer"
 
     @property
     def publish_date(self) -> Optional[date]:
@@ -185,6 +193,7 @@ def parse_feed(xml_bytes: bytes) -> ParsedFeed:
                 duration_seconds=parse_duration(it.findtext(f"{_ITUNES}duration")),
                 episode_number=_int_or_none(it.findtext(f"{_ITUNES}episode")),
                 image_url=(image_el.get("href") or None) if image_el is not None else None,
+                episode_type=(it.findtext(f"{_ITUNES}episodeType") or "").strip() or None,
             )
         )
     return ParsedFeed(

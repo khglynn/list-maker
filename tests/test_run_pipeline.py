@@ -26,7 +26,7 @@ def _patch_counts(monkeypatch, counts: list[int]) -> None:
     monkeypatch.setattr(run_pipeline, "count_tal_episodes", lambda: counts.pop(0))
 
 
-def test_discovery_invokes_the_taddy_importer_for_tal(monkeypatch) -> None:
+def test_discovery_invokes_the_feed_importer_for_tal(monkeypatch) -> None:
     calls: list[list[str]] = []
 
     def fake_run(cmd, **kwargs):
@@ -40,10 +40,10 @@ def test_discovery_invokes_the_taddy_importer_for_tal(monkeypatch) -> None:
 
     assert len(calls) == 1
     cmd = calls[0]
-    assert "import_transcripts.py" in " ".join(cmd)
+    assert "import_feed.py" in " ".join(cmd) and "taddy" not in " ".join(cmd)
     assert "--shows" in cmd and "tal" in cmd
     # Bounded: never sweep the whole archive on a routine run.
-    assert "--per-show-limit" in cmd
+    assert "--limit" in cmd and "--backfill" not in cmd
     assert result["discovered"] == 2
 
 
@@ -57,7 +57,7 @@ def test_discovery_reports_zero_rather_than_staying_quiet(monkeypatch) -> None:
 
 
 def test_discovery_is_skipped_on_dry_run(monkeypatch) -> None:
-    def fail(*a, **k):  # a dry run must not touch Taddy or the DB
+    def fail(*a, **k):  # a dry run must not touch the feed or the DB
         raise AssertionError("dry run must not shell out")
 
     monkeypatch.setattr(subprocess, "run", fail)
@@ -69,7 +69,7 @@ def test_discovery_failure_raises_instead_of_passing_silently(monkeypatch) -> No
     """The whole defect was a green run that discovered nothing. A non-zero exit
     must reach run_pipeline's handler, which marks the run failed and Slacks."""
     monkeypatch.setattr(
-        subprocess, "run", lambda *a, **k: _Completed(returncode=1, stderr="taddy 500")
+        subprocess, "run", lambda *a, **k: _Completed(returncode=1, stderr="feed 500")
     )
     _patch_counts(monkeypatch, [889, 889])
 
