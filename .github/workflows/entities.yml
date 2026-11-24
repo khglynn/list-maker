@@ -189,7 +189,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: extraction-batches-${{ github.run_id }}
-          path: codex-notes/ai-daily-entity-extraction/incremental-*
+          # The summary only: mentions.csv and review_queue.csv carry context snippets
+          # quoted from the transcript, and this repo's artifacts are public. The full
+          # batch can be rebuilt from Neon by re-running the show.
+          path: codex-notes/ai-daily-entity-extraction/incremental-*/episode_summary.csv
           if-no-files-found: ignore
           retention-days: 14
 
