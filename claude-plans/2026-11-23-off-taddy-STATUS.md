@@ -31,7 +31,15 @@
 5. **Gabfest's feed moved to Acast** (Slate, by 2026-11; the old Megaphone url redirects). `show_config.feed_url` names the new one; the show ended in July, so this changes no data.
 
 ## In flight
-- PR 1 (phase 0 + 1 + shadow): open it, independent review (Codex), green CI, merge. Then the daily 20:30 UTC run starts shadowing.
+- **PR #84** (phase 0 + 1 + shadow): open; reviewed by four Claude lenses + Codex, every finding checked by a refuter. 12 checked findings, 10 real; all fixed in `21b5abe` / `f4db164` except those carried to part 2 below. A second Codex pass on the fixes is running; then green CI and merge. The next daily 20:30 UTC run after merge is the first shadow from a GitHub runner.
+
+## Carried into part 2 (the cut-over PR), from the review
+1. **The feed check must use the importer's matcher** (`import_feed.HeldIndex.match`). Otherwise the importer can call an episode held (punctuation, a one-day shift) while the check calls it missing, and nothing would ever clear the alarm.
+2. **Episodes that will never have a transcript** (trailers, NPR announcements, an AI Daily promo): skip `episodeType=trailer` items, and let the transcript-coverage check stop expecting a transcript for them. Otherwise one trailer is a permanent red check.
+3. **Machine Gods' first run would import its last 30 days on its own.** Give a new show an explicit start date so the October backfill stays Kevin's call.
+4. **Pass the episode's real web link to extraction**, not the guid: the extractor sometimes copies the episode url into a mention's source url (112 Taddy urls and 158 Spotify urls in `ai_mentions.source_url` today).
+5. **Hard Fork stops being collected:** a "not collected since" state so its staleness, feed and transcript checks don't fail forever.
+6. Set aside (taste or rare): conditional GET for AI Daily's 8.6 MB feed; a guid-less feed collapsing items onto one shared link (none of the feeds we read can reach it).
 
 ## Waiting on Kevin
 Nothing yet. The yes-items come with evidence when they're ready: the one-time episode-id change in Neon, stopping TAL transcripts, the Machine Gods backfill, deleting the two Taddy secrets, and the cancel click.
