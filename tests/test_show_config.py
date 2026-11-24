@@ -171,7 +171,7 @@ def test_episode_identity_values_are_backed_by_a_real_source() -> None:
         if cfg.episode_identity == "taddy_uuid":
             assert cfg.taddy_uuid, f"{slug}: declares taddy identity with no taddy_uuid"
         elif cfg.episode_identity == "rss_guid":
-            assert "megaphone" in (cfg.fallback_website_url or ""), f"{slug}: no RSS feed url"
+            assert (cfg.feed_url or "").startswith("https://"), f"{slug}: no RSS feed url"
         else:
             assert cfg.episode_identity is None, f"{slug}: unknown scheme {cfg.episode_identity!r}"
 
@@ -181,3 +181,32 @@ def test_curated_sources_have_no_episode_identity() -> None:
     the feed check skips them before either reader is asked."""
     for slug in curated_show_slugs():
         assert SHOWS[slug].episode_identity is None, f"{slug}: curated shows have no feed"
+
+
+def test_every_podcast_names_its_own_feed() -> None:
+    """The feed is where new episodes come from once Taddy is gone, and what the feed
+    check reads. A podcast without one would import nothing and check nothing."""
+    for slug, cfg in SHOWS.items():
+        if cfg.medium == "podcast":
+            assert (cfg.feed_url or "").startswith("https://"), f"{slug}: no feed_url"
+
+
+def test_transcript_sources_are_registered_readers() -> None:
+    """A typo here would fail every day at import time, far from the cause."""
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "pipeline"))
+    from scrapers.transcripts import READERS
+
+    for slug, cfg in SHOWS.items():
+        if cfg.transcript_source is not None:
+            assert cfg.transcript_source in READERS, f"{slug}: unknown transcript_source {cfg.transcript_source!r}"
+            assert cfg.require_transcript, f"{slug}: has a transcript source but doesn't wait for it"
+
+
+def test_which_shows_wait_for_a_transcript() -> None:
+    """Until 2026-11 this was inferred from "has a taddy_uuid"; it is now stated, and
+    the set must not move by accident (a show-notes show that waited would lose a week
+    on every episode; a transcript show that didn't would mine show notes the same day)."""
+    assert {slug for slug, cfg in SHOWS.items() if cfg.require_transcript} == {"ai-daily-brief", "pchh", "hard-fork"}

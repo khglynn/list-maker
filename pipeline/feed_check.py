@@ -32,17 +32,16 @@ from __future__ import annotations
 import os
 import sys
 from datetime import date, datetime, timezone
-from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import NamedTuple, Optional
 
-import defusedxml.ElementTree as ET  # hardened against XXE / billion-laughs
 import requests
 
 # pipeline/ on the path so `show_config` imports whether this module is loaded flat
 # (`from feed_check import ...`, how data_health runs) or as `pipeline.feed_check`
 # (how the tests import it). Mirrors data_health.py's own guard.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import feeds  # noqa: E402  (the one RSS parser)
 from show_config import taddy_episode_url  # noqa: E402
 
 TADDY_API_URL = "https://api.taddy.org"
@@ -72,15 +71,9 @@ def _ts_to_date(ts: object) -> Optional[date]:
 
 
 def _rss_date(raw: Optional[str]) -> Optional[date]:
-    if not raw:
-        return None
-    try:
-        dt = parsedate_to_datetime(raw)
-    except (TypeError, ValueError):
-        return None
-    if dt.tzinfo is not None:  # normalize to UTC so a late-night -0500 episode lands on the right day
-        dt = dt.astimezone(timezone.utc)
-    return dt.date()
+    """The UTC day of an RSS pubDate (feeds.parse_pubdate_utc, the one parser)."""
+    dt = feeds.parse_pubdate_utc(raw)
+    return dt.date() if dt else None
 
 
 def _taddy_latest_episodes(series_uuid: str, limit: int) -> Optional[list[dict]]:
@@ -147,27 +140,21 @@ def taddy_recent_episodes(series_uuid: str, limit: int = 15) -> Optional[list[Fe
     return sorted(episodes, key=lambda ep: ep.publish_date, reverse=True)
 
 
-def rss_recent_dates(feed_url: str, title_prefix: str = "", limit: int = 15) -> Optional[list[date]]:
+def _rss_items(feed_url: str, title_prefix: Optional[str]) -> Optional[list]:
+    """The feed's items (feeds.parse_feed), filtered by title prefix; None for every
+    "couldn't really check" case (unreachable, HTTP error, not RSS, malformed)."""
     try:
-        resp = requests.get(feed_url, timeout=TIMEOUT, headers={"User-Agent": "list-maker-health"})
-        resp.raise_for_status()  # don't try to parse a 404/500 HTML error page as a feed
-        root = ET.fromstring(resp.content)
-        if root.tag.lower() != "rss":
-            return None
-        channel = root.find("channel")
-        if channel is None:
-            return None
-        dates: list[date] = []
-        for item in channel.findall("item"):
-            title = (item.findtext("title") or "").strip()
-            if title_prefix and not title.startswith(title_prefix):
-                continue
-            d = _rss_date(item.findtext("pubDate"))
-            if d:
-                dates.append(d)
-    except Exception:  # noqa: BLE001
+        items = feeds.parse_feed(feeds.fetch_feed(feed_url, timeout=TIMEOUT).content).items
+    except Exception:  # noqa: BLE001 — any failure = "couldn't verify", not a crash
         return None
-    return sorted(dates, reverse=True)[:limit]
+    return [it for it in items if not title_prefix or it.title.startswith(title_prefix)]
+
+
+def rss_recent_dates(feed_url: str, title_prefix: str = "", limit: int = 15) -> Optional[list[date]]:
+    items = _rss_items(feed_url, title_prefix)
+    if items is None:
+        return None
+    return sorted((it.publish_date for it in items if it.publish_date), reverse=True)[:limit]
 
 
 def rss_recent_episodes(
@@ -175,40 +162,23 @@ def rss_recent_episodes(
 ) -> Optional[list[FeedEpisode]]:
     """Like rss_recent_dates, but pairs each item's identity with its date and title.
 
-    Everything that decides what an episode IS comes from the importer: episode_url (its
-    guid > enclosure > link > synthetic chain), parse_feed, and TITLE_PREFIX for the
-    show filter — reused, never re-implemented, so the reader and the writer of
-    episodes.url cannot drift. The import is function-level on purpose: import_gabfest
-    pulls in `common`, and this module's contract is "read-only, no DB" for the callers
-    that never touch the RSS path.
+    Parsing, dates and identity all come from pipeline/feeds.py, the module the
+    importers write `episodes.url` and `publish_date` from, so the reader and the writer
+    cannot drift. Dates are the UTC day on both sides (until 2026-11 the Gabfest
+    importer kept the feed's local date and this reader had to copy it; Slate's feed is
+    all GMT, so the move changed no stored date).
 
-    NOTE, deliberate: the date here is parse_feed's (import_gabfest.parse_pubdate), which
-    does NOT normalize to UTC, while rss_recent_dates' _rss_date does. They disagree by a
-    day for an episode published late at night in a negative offset. This reader has to
-    match the importer, because that value is what landed in episodes.publish_date and
-    the title+date fallback compares against it — an "accurate" UTC date here would fail
-    to match our own row. The date reader is the one out of step with the DB; changing it
-    would move what the pulse reports and belongs in the pulse's own change.
+    `title_prefix` None or empty means no filter, as everywhere else; a mixed feed
+    (Culture Gabfest's) passes its show_config.feed_title_prefix.
     """
-    from scrapers.gabfest.import_gabfest import TITLE_PREFIX, episode_url, parse_feed
-
-    if title_prefix is None:
-        title_prefix = TITLE_PREFIX
-
-    try:
-        resp = requests.get(feed_url, timeout=TIMEOUT, headers={"User-Agent": "list-maker-health"})
-        resp.raise_for_status()  # don't try to parse a 404/500 HTML error page as a feed
-        items = parse_feed(resp.content)
-    except Exception:  # noqa: BLE001
+    items = _rss_items(feed_url, title_prefix or "")
+    if items is None:
         return None
-    episodes: list[FeedEpisode] = []
-    for item in items:
-        title = (item.get("title") or "").strip()
-        if title_prefix and not title.startswith(title_prefix):
-            continue
-        d = item.get("publish_date")  # parse_feed already ran parse_pubdate
-        if d:
-            episodes.append(FeedEpisode(episode_url(item), d, title))
+    episodes = [
+        FeedEpisode(feeds.episode_identity(it, synthetic_prefix="gabfest"), it.publish_date, it.title)
+        for it in items
+        if it.publish_date
+    ]
     return sorted(episodes, key=lambda ep: ep.publish_date, reverse=True)[:limit]
 
 
@@ -221,8 +191,8 @@ def feed_recent_dates(cfg, limit: int = 15) -> Optional[list[date]]:
     """
     if getattr(cfg, "taddy_uuid", None):
         dates = taddy_recent_dates(cfg.taddy_uuid, limit)
-    elif (url := getattr(cfg, "fallback_website_url", None)) and "megaphone" in url:
-        dates = rss_recent_dates(url, title_prefix="Culture Gabfest", limit=limit)
+    elif getattr(cfg, "importer", None) == "gabfest_rss" and (url := getattr(cfg, "feed_url", None)):
+        dates = rss_recent_dates(url, title_prefix=cfg.feed_title_prefix or "", limit=limit)
     else:
         return None
     if dates is None:
@@ -253,8 +223,8 @@ def feed_recent_episodes(cfg, limit: int = 15) -> Optional[list[FeedEpisode]]:
     identity = getattr(cfg, "episode_identity", None)
     if identity == "taddy_uuid" and getattr(cfg, "taddy_uuid", None):
         episodes = taddy_recent_episodes(cfg.taddy_uuid, limit)
-    elif identity == "rss_guid" and (url := getattr(cfg, "fallback_website_url", None)):
-        episodes = rss_recent_episodes(url, limit=limit)
+    elif identity == "rss_guid" and (url := getattr(cfg, "feed_url", None)):
+        episodes = rss_recent_episodes(url, title_prefix=getattr(cfg, "feed_title_prefix", None), limit=limit)
     else:
         return None
     if episodes is None:

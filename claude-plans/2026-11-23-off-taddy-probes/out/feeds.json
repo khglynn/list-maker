@@ -1,0 +1,345 @@
+{
+  "ai-daily-brief": {
+    "search_term": "The AI Daily Brief",
+    "itunes_hits": [
+      {
+        "collectionId": 1680633614,
+        "name": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+        "artist": "Nathaniel Whittemore",
+        "feedUrl": "https://anchor.fm/s/f7cac464/podcast/rss",
+        "trackCount": 1147
+      },
+      {
+        "collectionId": 1778060368,
+        "name": "The AI News Daily Brief",
+        "artist": "PodcastAI",
+        "feedUrl": "https://feeds.podcastai.com/lzSp5oGSGEaLNzHdqUBaTh.xml",
+        "trackCount": 252
+      },
+      {
+        "collectionId": 1784290225,
+        "name": "The Anthropic AI Daily Brief",
+        "artist": "PodcastAI",
+        "feedUrl": "https://feeds.podcastai.com/6KBha9KI2a95IejKjkdjud.xml",
+        "trackCount": 104
+      }
+    ],
+    "chosen_feed": "https://anchor.fm/s/f7cac464/podcast/rss",
+    "feed": {
+      "feed_url": "https://anchor.fm/s/f7cac464/podcast/rss",
+      "final_url": "https://anchor.fm/s/f7cac464/podcast/rss",
+      "bytes": 8641184,
+      "items": 1147,
+      "etag": "W/\"83daa0-p+RikBvBhMerFMxxbcd9mTzoW/Y\"",
+      "last_modified": null,
+      "newest": "2026-11-23",
+      "oldest": "2023-04-04",
+      "guid_samples": [
+        "fd57e298-f35e-4240-99a3-79a0c6e8ca2c",
+        "ee0abf6d-236e-41af-a05a-bb80ecde9cb3",
+        "f6167e44-4ff4-4262-a874-342517f0d5b7"
+      ],
+      "guids_unique": true,
+      "link_samples": [
+        "https://podcasters.spotify.com/pod/show/nlw/episodes/Too-Big-to-Fire-Jensen-Huang-Is-Back-as-Nvidia-CEO-e3ssrpk",
+        "https://podcasters.spotify.com/pod/show/nlw/episodes/When-AI-Labs-Rival-Nations-e3sqkoa",
+        "https://podcasters.spotify.com/pod/show/nlw/episodes/Why-You-Should-Try-Gemini-Neon-Even-if-You-Love-Fable-e3sod5e"
+      ],
+      "enclosure_hosts": [
+        [
+          "anchor.fm",
+          1147
+        ]
+      ],
+      "items_with_podcast_transcript": 0,
+      "of_newest_20_with_transcript": 0,
+      "transcript_types": {},
+      "channel_title": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+      "itunes_new_feed_url": null,
+      "newest_10_durations": [
+        "00:24:45",
+        "00:24:58",
+        "00:26:44",
+        "00:26:34",
+        "00:25:01",
+        "00:24:21",
+        "00:28:28",
+        "00:22:35",
+        "00:26:32",
+        "00:29:42"
+      ]
+    }
+  },
+  "hard-fork": {
+    "search_term": "Hard Fork",
+    "itunes_hits": [
+      {
+        "collectionId": 1528594034,
+        "name": "Hard Fork",
+        "artist": "The New York Times",
+        "feedUrl": "https://feeds.simplecast.com/6HKOhNgS",
+        "trackCount": 226
+      },
+      {
+        "collectionId": 1551690721,
+        "name": "Hard Fork Caf\u00e9",
+        "artist": "Hard Fork Caf\u00e9",
+        "feedUrl": "https://anchor.fm/s/4a793c64/podcast/rss",
+        "trackCount": 62
+      },
+      {
+        "collectionId": 1465393232,
+        "name": "Hard Fork Decentralized",
+        "artist": "Hard Fork Decentralized",
+        "feedUrl": "https://anchor.fm/s/b8d68e0/podcast/rss",
+        "trackCount": 19
+      }
+    ],
+    "chosen_feed": "https://feeds.simplecast.com/6HKOhNgS",
+    "feed": {
+      "feed_url": "https://feeds.simplecast.com/6HKOhNgS",
+      "final_url": "https://feeds.simplecast.com/6HKOhNgS",
+      "bytes": 29958,
+      "items": 4,
+      "etag": "\"4889d000eb7c226ffbb2ad7cef59a64b\"",
+      "last_modified": "Fri, 20 Nov 2026 20:18:01 GMT",
+      "newest": "2026-11-20",
+      "oldest": "2022-09-27",
+      "guid_samples": [
+        "0ef0dda2-c60e-44d1-8d24-60d48e6d64fd",
+        "8f6f552a-34d2-4f97-a546-4e70e0441328",
+        "54147085-2b19-4a9a-8168-21bc0bb2f086"
+      ],
+      "guids_unique": true,
+      "link_samples": [
+        "https://www.nytimes.com/column/hard-fork",
+        "https://www.nytimes.com/column/hard-fork",
+        "https://www.nytimes.com/column/hard-fork"
+      ],
+      "enclosure_hosts": [
+        [
+          "dts.podtrac.com",
+          4
+        ]
+      ],
+      "items_with_podcast_transcript": 0,
+      "of_newest_20_with_transcript": 0,
+      "transcript_types": {},
+      "channel_title": "Hard Fork",
+      "itunes_new_feed_url": "https://feeds.simplecast.com/6HKOhNgS",
+      "newest_10_durations": [
+        "01:04:01",
+        "00:39:22",
+        "00:54:21",
+        "00:01:24"
+      ]
+    }
+  },
+  "pchh": {
+    "search_term": "Pop Culture Happy Hour",
+    "itunes_hits": [
+      {
+        "collectionId": 278974813,
+        "name": "Pop Culture Happy Hour",
+        "artist": "NPR",
+        "feedUrl": "https://feeds.npr.org/510282/podcast.xml",
+        "trackCount": 1162
+      },
+      {
+        "collectionId": 1067057017,
+        "name": "Pop Culture Coffee Hour",
+        "artist": "Steven Christoforou, Christian Gonzalez, Christina Andresen, Emma Solak, and Ancient Faith Ministries",
+        "feedUrl": "https://feeds.feedburner.com/PopCultureCoffeeHour",
+        "trackCount": 202
+      },
+      {
+        "collectionId": 1858110580,
+        "name": "Crime & Pop Culture Office Hours",
+        "artist": "Kevin Buckler",
+        "feedUrl": "https://rss.buzzsprout.com/2561761.rss",
+        "trackCount": 14
+      }
+    ],
+    "chosen_feed": "https://feeds.npr.org/510282/podcast.xml",
+    "feed": {
+      "feed_url": "https://feeds.npr.org/510282/podcast.xml",
+      "final_url": "https://feeds.npr.org/510282/podcast.xml",
+      "bytes": 1225811,
+      "items": 300,
+      "etag": "W/\"12b453-J5KfQNJ4rF6x2W2bC9VF/+cbfPM\"",
+      "last_modified": null,
+      "newest": "2026-11-20",
+      "oldest": "2025-06-18",
+      "guid_samples": [
+        "408794f1-00a4-4966-bc07-2520d55b40ca",
+        "e19bd047-65b5-41b3-ae87-fac4c2d90c47",
+        "b2920f44-ae18-4de2-9520-0e6f9ebb5a7e"
+      ],
+      "guids_unique": true,
+      "link_samples": [
+        "https://www.npr.org/2026/11/20/nx-s1-6047363/the-latest-hunger-games-prequel-gives-us-the-haymitch-backstory",
+        "https://www.npr.org/2026/11/19/nx-s1-6044244/i-play-rocky-is-an-underdog-story-about-an-underdog-story",
+        "https://www.npr.org/2026/11/18/nx-s1-6043854/a-civil-rights-struggle-takes-center-stage-in-being-heumann"
+      ],
+      "enclosure_hosts": [
+        [
+          "tracking.swap.fm",
+          300
+        ]
+      ],
+      "items_with_podcast_transcript": 0,
+      "of_newest_20_with_transcript": 0,
+      "transcript_types": {},
+      "channel_title": "Pop Culture Happy Hour",
+      "itunes_new_feed_url": null,
+      "newest_10_durations": [
+        "1327",
+        "1241",
+        "1284",
+        "1574",
+        "1781",
+        "1310",
+        "1162",
+        "1204",
+        "1384",
+        "1291"
+      ]
+    }
+  },
+  "tal": {
+    "search_term": "This American Life",
+    "itunes_hits": [
+      {
+        "collectionId": 201671138,
+        "name": "This American Life",
+        "artist": "This American Life",
+        "feedUrl": "https://www.thisamericanlife.org/podcast/rss.xml",
+        "trackCount": 518
+      },
+      {
+        "collectionId": 1442892516,
+        "name": "School Colors",
+        "artist": "Brooklyn Deep",
+        "feedUrl": "https://feeds.simplecast.com/WdWJSnNK",
+        "trackCount": 26
+      },
+      {
+        "collectionId": 684158414,
+        "name": "Modern Day Philosophers with Daniel Lobell",
+        "artist": "Daniel Lobell (of WTF and This American Life) talks Comedy & Philosophy",
+        "feedUrl": "https://rss.libsyn.com/shows/46564/destinations/155002.xml",
+        "trackCount": 84
+      }
+    ],
+    "chosen_feed": "https://www.thisamericanlife.org/podcast/rss.xml",
+    "feed": {
+      "feed_url": "https://www.thisamericanlife.org/podcast/rss.xml",
+      "final_url": "https://www.thisamericanlife.org/podcast/rss.xml",
+      "bytes": 57294,
+      "items": 16,
+      "etag": null,
+      "last_modified": null,
+      "newest": "2026-11-22",
+      "oldest": "2024-10-16",
+      "guid_samples": [
+        "37237 at https://www.thisamericanlife.org",
+        "46259 at https://www.thisamericanlife.org",
+        "46253 at https://www.thisamericanlife.org"
+      ],
+      "guids_unique": true,
+      "link_samples": [
+        "https://www.thisamericanlife.org/436/the-psychopath-test",
+        "https://www.thisamericanlife.org/902/the-missing-minutes",
+        "https://www.thisamericanlife.org/901/is-your-blue-my-blue"
+      ],
+      "enclosure_hosts": [
+        [
+          "pfx.vpixl.com",
+          10
+        ],
+        [
+          "www.thisamericanlife.org",
+          5
+        ],
+        [
+          "npr.simplecastaudio.com",
+          1
+        ]
+      ],
+      "items_with_podcast_transcript": 0,
+      "of_newest_20_with_transcript": 0,
+      "transcript_types": {},
+      "channel_title": "This American Life",
+      "itunes_new_feed_url": "https://www.thisamericanlife.org/podcast/rss.xml",
+      "newest_10_durations": [
+        "01:02:37",
+        "00:59:06",
+        "01:00:01",
+        "01:01:15",
+        "01:02:05",
+        "01:02:51",
+        "01:06:46",
+        "01:07:44",
+        "00:57:46",
+        "00:59:51"
+      ]
+    }
+  },
+  "sop": {
+    "search_term": "Switched On Pop",
+    "itunes_hits": [
+      {
+        "collectionId": 934552872,
+        "name": "Switched on Pop",
+        "artist": "Vulture",
+        "feedUrl": "https://feeds.megaphone.fm/switchedonpop",
+        "trackCount": 562
+      }
+    ],
+    "chosen_feed": "https://feeds.megaphone.fm/switchedonpop",
+    "feed": {
+      "feed_url": "https://feeds.megaphone.fm/switchedonpop",
+      "final_url": "https://feeds.megaphone.fm/switchedonpop",
+      "bytes": 2822618,
+      "items": 562,
+      "etag": null,
+      "last_modified": "Sat, 21 Nov 2026 11:00:59 GMT",
+      "newest": "2026-11-17",
+      "oldest": "2014-10-28",
+      "guid_samples": [
+        "42cd188a-be65-11f0-9a96-eff3c1cdf3d1",
+        "42bb7440-be65-11f0-9a96-cf243fa96bfa",
+        "42a964bc-be65-11f0-9a96-6fd031e1c690"
+      ],
+      "guids_unique": true,
+      "link_samples": [
+        "",
+        "",
+        ""
+      ],
+      "enclosure_hosts": [
+        [
+          "www.podtrac.com",
+          562
+        ]
+      ],
+      "items_with_podcast_transcript": 0,
+      "of_newest_20_with_transcript": 0,
+      "transcript_types": {},
+      "channel_title": "Switched on Pop",
+      "itunes_new_feed_url": "https://feeds.megaphone.fm/switchedonpop",
+      "newest_10_durations": [
+        "2494",
+        "2630",
+        "2804",
+        "1820",
+        "2916",
+        "3704",
+        "2875",
+        "2957",
+        "2299",
+        "3479"
+      ]
+    }
+  }
+}

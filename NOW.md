@@ -1,6 +1,9 @@
 # NOW — list-maker
 
-**Last updated:** 2026-11-06 · **Mode:** live (routine cron-driven operation since 2026-06-07; hardening on top)
+**Last updated:** 2026-11-23 · **Mode:** live (routine cron-driven operation since 2026-06-07; hardening on top)
+
+## 2026-11-23: moving off Taddy before its 12-07 charge
+- **The arc:** new episodes from each show's own RSS feed, transcripts from the publishers' own pages (AI Daily's markdown, NPR's transcript pages), Taddy cancelled. Hard Fork stops being collected; Machine Gods (NPR) replaces it. Plan `claude-plans/2026-11-23-off-taddy-plan.md`; **live status and next step: `claude-plans/2026-11-23-off-taddy-STATUS.md`.**
 
 ## 2026-11-06: Gabby watches it; the 39-day red run was four mistitled essays
 - **Health today (Gabby, read 11-06):** every show's episodes are current (AI Daily 11-05, Hard Fork and PCHH 11-06, SOP 11-03, TAL 11-02); the music run (`pipeline.yml`) and the Monday intake pass; songs are still arriving. The daily entities run has been red since 09-29 on one check only: `duplicate_episodes_by_show_title_date` (issue #68). Warnings only elsewhere: SOP's latest transcript lags 91 days.

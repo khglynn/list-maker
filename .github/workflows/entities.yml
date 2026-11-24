@@ -61,7 +61,7 @@ jobs:
     # (which the announce step reports) instead of cancelling the whole job. A cancelled
     # job is still announced (announce.py treats it as a failed run), but a failed step
     # says which part hung. tests/test_workflows.py keeps the sum under this line.
-    timeout-minutes: 90
+    timeout-minutes: 100
     env:
       # The shows this run imports (a manual run may narrow them). An input reaches
       # the shell only through env, never interpolated into run: text.
@@ -121,6 +121,21 @@ jobs:
           cd pipeline
           python run_new_episodes.py --shows "$ENTITY_SHOWS" $FLAGS
 
+      - name: "Shadow: the feed path beside Taddy (read-only, never fails the run)"
+        # The move off Taddy, phase 2 (claude-plans/2026-11-23-off-taddy-plan.md). Runs the
+        # new feed importer's plan and the publisher-transcript readers against what Taddy
+        # just imported, and writes only counts, titles and ratios to the step summary.
+        # The database session is read-only. continue-on-error: while Taddy is still the
+        # writer, a shadow problem is something to read here, not a red run. Comes out at
+        # the cut-over, when the feed path becomes the import itself.
+        id: shadow
+        timeout-minutes: 8
+        if: always() && steps.preflight.outcome == 'success'
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: cd pipeline && python shadow_feeds.py
+
       - name: Sync transcripts to Notion (Transcripts DB)
         timeout-minutes: 10
         id: notion
@@ -174,7 +189,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: extraction-batches-${{ github.run_id }}
-          path: codex-notes/ai-daily-entity-extraction/incremental-*
+          # The summary only: mentions.csv and review_queue.csv carry context snippets
+          # quoted from the transcript, and this repo's artifacts are public. The full
+          # batch can be rebuilt from Neon by re-running the show.
+          path: codex-notes/ai-daily-entity-extraction/incremental-*/episode_summary.csv
           if-no-files-found: ignore
           retention-days: 14
 
