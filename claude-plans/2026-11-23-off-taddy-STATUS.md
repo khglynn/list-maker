@@ -59,6 +59,54 @@ A read-only design pass. The full note is kept privately at `~/.claude/plans/202
 5. **Hard Fork stops being collected:** a "not collected since" state so its staleness, feed and transcript checks don't fail forever.
 6. Set aside (taste or rare): conditional GET for AI Daily's 8.6 MB feed; a guid-less feed collapsing items onto one shared link (none of the feeds we read can reach it).
 
+## The shortened path (2026-11-24, after Kevin asked for a faster cut-over and for Claude to do the Taddy downgrade)
+1. **Tue 11-24, 20:30 UTC:** the first shadow run from a GitHub runner, the one thing not yet seen (NPR and aidailybrief.ai answering the runner). PR #84 merged 2026-11-24.
+2. **Wed 11-25, if that run is clean and the PR #85 review is clean:**
+   a. Claude makes a Neon snapshot branch.
+   b. Kevin pastes `apply_sql.py … 014` (one line).
+   c. Claude merges PR #85 and dispatches the entities run by hand, to see the new path write.
+3. **Wed 11-25 and Thu 11-26, 20:30 UTC:** two green daily runs on the new path. That is the alert rule's own "verified".
+4. **Fri 11-27:**
+   a. Claude deletes the two Taddy secrets.
+   b. The money session ("Q4 budgeting and subs") clicks "Downgrade to the free plan" on Taddy's dashboard. That leaves 10 days before the 12-07 bill.
+   c. After PR #85 nothing scheduled calls Taddy; only comments name it. So the downgrade is safe whether it takes effect at once or on 12-07. Its timing isn't documented anywhere found.
+5. **What the shorter path gives up:**
+   a. The planned five shadow runs and the Monday TAL run. Discovery and transcripts were already seen agreeing live from the Mac on every show, and TAL's Monday import isn't exercised by the shadow anyway.
+   b. Rollback to Taddy after 11-27. A revert of PR #85 would have nothing to fall back on, so a problem after that is fixed forward. The snapshot branch keeps the id move recoverable.
+
+## Waiting on Kevin
+- **Yes-items, asked 2026-11-24, each to be used only if the 11-24 shadow run is clean:**
+  1. The id move (snapshot branch first).
+  2. Stopping TAL transcripts.
+  3. The Machine Gods backfill (about 11 episodes).
+  4. Deleting the two Taddy secrets on 11-27.
+  5. Deleting the rehearsal Neon branch.
+
+## Phase 5 (the manual tools): designed, not built (2026-11-24)
+A read-only design pass. The full note is kept privately at `~/.claude/plans/2026-11-23-off-taddy-phase5-design.md` and not in this repo, because it quotes saved-episode titles.
+1. **This has to land with or before the teardown.** `pipeline/save_episode.py:49` imports `scrapers.taddy` at module level, so deleting that folder breaks its tests and CI. Both manual tools are already broken: clip transcription used OpenAI's Whisper, and that account closed 2026-11-14.
+2. **Finding an episode:**
+   a. Apple's free iTunes Search (`entity=podcastEpisode`) gives the feed guid, the audio url and the duration. The guid matched the live feed on 15 of 15 episodes across 5 shows.
+   b. NPR shows get their transcript from the existing NPR reader, through the story id in Apple's audio url.
+3. **Speech-to-text for everything else:**
+   a. The engine is local `parakeet-mlx` (tdt-0.6b-v2), not `mlx-whisper`. On this M2 Pro a 37-minute episode took 49 s against 92 s, and its published error rate is lower (4.70 against 6.36). `mlx-whisper` turbo stays the fallback.
+   b. It installs from a separate `pipeline/requirements-stt.txt`, never in a workflow.
+   c. The model, about 2.5 GB, is already cached in `~/.cache/huggingface`.
+4. **Traps for the builder:**
+   a. The readers' `Transcript` class is imported under a different module path than `save_episode`'s, so an `isinstance` check silently fails.
+   b. An upgraded transcript probably never reaches Notion, because the sync adopts the old page by Episode ID. This came from reading the code and hasn't been run.
+   c. One saved row (4801) holds another show's episode.
+   d. 19 transcript rows lack `model` and `is_generated`.
+5. **Dead code to delete at the teardown:** `scrapers/ai_daily/transcripts.py` and `run_guarded_backfill.py`. Nothing imports either; only the READMEs mention them.
+
+## Carried into part 2 (the cut-over PR), from the review
+1. **The feed check must use the importer's matcher** (`import_feed.HeldIndex.match`). Otherwise the importer can call an episode held (punctuation, a one-day shift) while the check calls it missing, and nothing would ever clear the alarm.
+2. **Episodes that will never have a transcript** (trailers, NPR announcements, an AI Daily promo): skip `episodeType=trailer` items, and let the transcript-coverage check stop expecting a transcript for them. Otherwise one trailer is a permanent red check.
+3. **Machine Gods' first run would import its last 30 days on its own.** Give a new show an explicit start date so the October backfill stays Kevin's call.
+4. **Pass the episode's real web link to extraction**, not the guid: the extractor sometimes copies the episode url into a mention's source url (112 Taddy urls and 158 Spotify urls in `ai_mentions.source_url` today).
+5. **Hard Fork stops being collected:** a "not collected since" state so its staleness, feed and transcript checks don't fail forever.
+6. Set aside (taste or rare): conditional GET for AI Daily's 8.6 MB feed; a guid-less feed collapsing items onto one shared link (none of the feeds we read can reach it).
+
 ## Waiting on Kevin
 - **The PR #84 merge (2026-11-24).** Review is clean and CI is green on `be721ab`, but the merge command hit a permission prompt nobody was there to answer, so it was declined and not retried. Until it merges, the daily run does no comparison, and each day without it is one fewer comparison run before 12-04.
 
