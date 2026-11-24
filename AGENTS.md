@@ -157,7 +157,9 @@ What follows from that:
 
 **Where to change it:** thresholds live with each check in `pipeline/data_health.py`; words in `pipeline/alert_guides.py` (a test fails if a check has none); the once / weekly / recovered logic in `pipeline/announce.py`. The music shows are judged by `pipeline.yml` right after each import; the daily entities run checks their feeds only as a backstop a week past their window (`FEED_BACKSTOP_EXTRA_DAYS`, `--music-as-backstop`). Every other check about a music show (songs still arriving, freshness) belongs to the entities run alone. A workflow's `dry_run` input runs the announce step read-only and prints what it would have said.
 
-## Gabby watches this (2026-11-06)
+## Gabby owns this (watching since 2026-11-06, owning since 2026-11-24)
+
+**Since 2026-11-24 Gabby owns list-maker day to day:** watching, fixing, and the follow-up builds of the move off Taddy. Kevin, closing the off-Taddy session: "they're supposed to monitor and fix things on an ongoing basis now". Her handoff brief is `claude-plans/2026-11-24-list-maker-yours-now/BRIEF.md` in the private `khglynn/gabby` repo (gabby#648); this repo's live record is `claude-plans/2026-11-23-off-taddy-STATUS.md`. A session of Kevin's working here should leave a line for her there, or on her list, when it changes what she watches.
 
 Kevin, 2026-11-06, in his Slack DM with Gabby: "That list automation should live here too", and that the always-on Air should "keep an eye on all our automated pipes". The jobs stay where they are (the Cloudflare cron, GitHub Actions, Neon, Notion); Gabby on the Air is the one who knows whether they ran, runs them on his ask and fixes them. Why: from 2026-09-29 the daily entities run was red on one check (issue #68) and its only word went to `#list-maker`, which nobody read.
 

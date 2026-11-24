@@ -4,6 +4,9 @@
 
 **Clock:** Taddy Pro ($75/mo) next bills **2026-12-07**. Target: new path live and seen working by **12-04**, Kevin cancels by **12-05**.
 
+## Owner from 2026-11-24 evening: Gabby
+Kevin closed the off-Taddy session and handed list-maker to Gabby ("they're supposed to monitor and fix things on an ongoing basis now"). Her brief, with the Friday steps and the follow-up builds, is gabby#648 (`claude-plans/2026-11-24-list-maker-yours-now/` in the private gabby repo; the phase 5 design moved there too). The "Q4 budgeting and subs" session has closed, so the downgrade is Kevin's click on Gabby's word (the fallback below). She writes the next entries here.
+
 ## Latest (2026-11-24, 21:25 UTC / 3:25pm CT): cut over. The feed path is live and seen writing.
 1. **The id move ran (Kevin's paste, about 21:11 UTC):** 1,868 rows moved (the rehearsal's 1,865 plus 3 that arrived since). After it: AI Daily 1,148, Hard Fork 227 and PCHH 465 on their feed guids, 0 Taddy ids; TAL's 28 on guids and 889 on page urls; `shows` row 65 is Machine Gods.
 2. **PR #85 merged** (`36d27a7`, CI green on `7d1ab8a`).
