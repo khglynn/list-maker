@@ -94,7 +94,8 @@ def test_aidb_asks_only_for_the_episodes_own_eastern_day() -> None:
 def test_aidb_accepts_its_page_even_retitled_when_the_length_matches() -> None:
     """The feed's "A System for Testing New AI Models" is "The Best Way to Test New AI
     Models" on its 2026-10-07 page. The audio length is the fingerprint, not the title."""
-    session = _aidb({"2026-11-20": _aidb_page("A Different Headline Entirely", "2026-11-20")})
+    # Scores 62 against the feed title, as the real 2026-10-07 pair does.
+    session = _aidb({"2026-11-20": _aidb_page("The Best Way to Remember Agents", "2026-11-20")})
     result = aidailybrief.fetch(_item(), session=session)
     assert isinstance(result, Transcript)
     assert result.source_type == "publisher_transcript" and result.model == "aidailybrief_md"
@@ -249,3 +250,12 @@ def test_aidb_a_looser_length_match_also_needs_the_title() -> None:
     assert isinstance(aidailybrief.fetch(_item(), session=_aidb({"2026-11-20": late_close})), Transcript)
     other = late_close.replace("Why Agents Need Memory", "How People Are Using AI for Health")
     assert isinstance(aidailybrief.fetch(_item(), session=_aidb({"2026-11-20": other})), NotYet)
+
+
+def test_aidb_a_same_day_neighbour_whose_page_ends_early_cannot_take_it() -> None:
+    """Two episodes on one Eastern day (2026-01-08: 24 and 29 minutes). If the longer
+    one's page ended at 83% it would land on the shorter one's length; the titles (32
+    apart) are what refuse it."""
+    shorter = _item(title="How People Are Using AI for Health", duration=1462)
+    page = _aidb_page("Why Everyone Is Obsessed With Claude Code", "2026-11-20", body_words=4800, ends_at="00:24:00")
+    assert isinstance(aidailybrief.fetch(shorter, session=_aidb({"2026-11-20": page})), NotYet)
