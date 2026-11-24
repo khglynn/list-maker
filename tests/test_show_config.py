@@ -222,7 +222,9 @@ def test_transcript_sources_are_registered_readers() -> None:
     for slug, cfg in SHOWS.items():
         if cfg.transcript_source is not None:
             assert cfg.transcript_source in READERS, f"{slug}: unknown transcript_source {cfg.transcript_source!r}"
-            assert cfg.require_transcript, f"{slug}: has a transcript source but doesn't wait for it"
+            # Shows extracted FROM the transcript wait for it; TAL's songs come from its website.
+            if cfg.extraction_type == "entity_extraction":
+                assert cfg.require_transcript, f"{slug}: extracts from a transcript but doesn't wait for it"
 
 
 def test_which_shows_wait_for_a_transcript() -> None:

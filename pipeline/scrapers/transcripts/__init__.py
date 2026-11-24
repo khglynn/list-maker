@@ -13,6 +13,7 @@ import importlib
 READERS: dict[str, str] = {
     "aidailybrief": "aidailybrief",
     "npr": "npr",
+    "tal": "tal",
 }
 
 

@@ -57,12 +57,15 @@ TRANSCRIPT_POLICIES: dict[str, dict[str, Any]] = {
     # Show-notes-based: extracts from the Megaphone RSS description, NOT transcripts —
     # 0 transcripts is correct, not a gap. (Without this, "cannot compare dates" fails daily.)
     "culture-gabfest": {"mode": "none"},
-    # The music shows match songs from their websites and never used transcripts. Taddy
-    # gave TAL one as a side effect of discovering its episodes, and SOP had a one-off
-    # backfill (to 2026-08-04). Since the move off Taddy nobody fetches either, so a
-    # growing lag is the design, not a gap (Kevin's call on TAL, plan section 8).
-    "sop": {"mode": "none"},
-    "tal": {"mode": "none"},
+    # The music shows match songs from their websites, so a transcript gap is a WARN,
+    # never a FAIL. Kevin wants them kept complete all the same (2026-11-24).
+    # TAL: its own site has every episode's transcript; the importer fetches new ones and
+    # scrapers/rss/backfill_transcripts.py the archive. It imports weekly, so a page that
+    # is late on Monday is retried the next Monday: 14 days of lag is normal.
+    "tal": {"mode": "latest", "max_latest_lag_days": 14, "min_coverage": 0.01},
+    # SOP: Taddy's one-off backfill stopped at 2026-08-04 and SOP publishes no transcript
+    # of its own, so the gap since then stays visible here until speech-to-text fills it.
+    "sop": {"mode": "latest", "max_latest_lag_days": 14, "min_coverage": 0.50},
     # No longer collected (show_config.collected_until): its transcripts stay complete.
     "hard-fork": {"mode": "none"},
 }

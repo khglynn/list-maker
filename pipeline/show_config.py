@@ -123,10 +123,11 @@ class ShowConfig:
 # for 2026-11-25. Hard Fork was imported by Taddy until then; the date is only shown in
 # the checks that skip it ("not collected since ...").
 HARD_FORK_LAST_COLLECTED = date(2026, 11, 25)
-# Machine Gods' back catalogue (2026-10-21 to 11-20) is Kevin's call (`import_feed.py
-# --shows machine-gods --backfill`). Everything after its last pre-cut-over episode comes
-# in on its own, so a cut-over that slips by a few days loses nothing.
-MACHINE_GODS_IMPORT_SINCE = date(2026, 11, 21)
+# Machine Gods is collected from its first episode (Kevin, 2026-11-24: "complete
+# work"). The importer reads import_since as "everything from this date", so the whole
+# run (2026-10-21 on; the 09-16 trailer is skipped as a trailer) arrives on the first
+# import, and the feed check expects all of it.
+MACHINE_GODS_IMPORT_SINCE = date(2026, 9, 16)
 
 
 SHOWS: dict[str, ShowConfig] = {
@@ -171,6 +172,9 @@ SHOWS: dict[str, ShowConfig] = {
         # urls and match by title + date.
         importer="rss",
         episode_identity="rss_guid",
+        # thisamericanlife.org/<number>/transcript, every episode back to #1. A song-credits
+        # show, so a missing one is a warning, never a red run (data_health policy).
+        transcript_source="tal",
         taddy_uuid="d682a935-ad2d-46ee-a0ac-139198b83bcc",
         feed_url="https://www.thisamericanlife.org/podcast/rss.xml",
         itunes_id=201671138,

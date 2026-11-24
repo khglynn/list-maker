@@ -184,8 +184,10 @@ def plan_import(
 ) -> list[Action]:
     """Decide, without any I/O, what to do with every item of a show's feed.
 
-    `import_since` (show_config) keeps a new show's first run from importing a month of
-    back catalogue: items before it are "old" unless this is a --backfill.
+    `import_since` (show_config), when a show sets it, replaces the 30-day window: the
+    show is collected from that date on, however far back it is, so a new show's whole
+    run arrives on its first import without a manual --backfill. Items before it are
+    "old" unless this is a --backfill.
     """
     today = now.astimezone(timezone.utc).date()
     actions: list[Action] = []
@@ -222,7 +224,7 @@ def plan_import(
                 and (backfill or day >= today - timedelta(days=transcript_retry_days))
             )
             actions.append(Action("transcript" if waiting else "held", item, identity, row, how))
-        elif backfill or (day >= today - timedelta(days=new_window_days) and (import_since is None or day >= import_since)):
+        elif backfill or (day >= import_since if import_since is not None else day >= today - timedelta(days=new_window_days)):
             key = (normalize_title(item.title or "Untitled Episode"), day)
             if key in planned_inserts:
                 actions.append(Action("duplicate", item, identity))

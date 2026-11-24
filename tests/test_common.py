@@ -261,6 +261,7 @@ SCHEDULED_PATH_MODULES = (
     "pipeline/scrapers/gabfest/import_gabfest.py",
     "pipeline/scrapers/blog/import_blog.py",
     "pipeline/scrapers/rss/import_feed.py",
+    "pipeline/scrapers/rss/backfill_transcripts.py",
     "pipeline/apply_sql.py",
 )
 
