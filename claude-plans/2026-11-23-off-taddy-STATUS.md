@@ -72,10 +72,11 @@ CI is green on the fixes, which are small and tested, so they had no fourth revi
    d. Until it lands, the warning-level check keeps the gap visible.
 
 ## Waiting on Kevin
-- **Yes-items, asked 2026-11-24, each used only if the 11-24 shadow run is clean:**
-  1. The id move (snapshot branch first).
-  2. Deleting the two Taddy secrets on 11-27.
-  3. Deleting the rehearsal Neon branch.
+- **Kevin's yeses, given in chat on 2026-11-24.** Each is used only if the 11-24 shadow run is clean:
+  1. **The id move:** Claude makes the snapshot branch on Wed 11-25, then sends Kevin the one-line paste.
+  2. **Deleting the two Taddy secrets** on Fri 11-27.
+  3. **Deleting the rehearsal Neon branch** right after the real id move.
+- Nothing else waits on him. The Taddy downgrade is the money session's click, once Claude messages it.
 
 ## Phase 5 (the manual tools): designed, not built (2026-11-24)
 A read-only design pass. The full note is kept privately at `~/.claude/plans/2026-11-23-off-taddy-phase5-design.md` and not in this repo, because it quotes saved-episode titles.
