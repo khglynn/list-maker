@@ -15,7 +15,8 @@ and token matching scores a subset title 100). So the mechanism is now:
     2026-11-23 had their page there, and a late page is NotYet, retried next run, never a
     neighbour's page.
   - The page is accepted when its last "[HH:MM:SS]" marker lands where the episode's
-    audio ends (same_episode, below, has the bands and the measurements). The one promo
+    audio ends AND its title is not a stranger's (same_episode, below, has the bands,
+    the floors and the measurements). The one promo
     that shared a day (6 minutes) reads 430% of its own length against its 27-minute
     neighbour's page.
   - A page with no markers, or an item with no duration, falls back to an exact title
@@ -37,7 +38,6 @@ from zoneinfo import ZoneInfo
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from feeds import USER_AGENT, FeedItem  # noqa: E402
 from scrapers.transcripts.base import (  # noqa: E402
-    MIN_TITLE_SIMILARITY,
     Failed,
     NotYet,
     Result,
@@ -99,24 +99,36 @@ def parse_markdown(markdown: str) -> tuple[Optional[str], Optional[str], str]:
 
 # The last marker sits a little before the end of the audio (outro, closing ad), never
 # after it. Measured 2026-11-24 on the 62 newest episodes with a page: 96 to 100% for 53,
-# down to 83% for a few with a long close. A close match is the episode's page whatever
-# its title says (the retitle case); a looser one must also carry the episode's title, so
-# that two episodes on one day (24 and 29 minutes on 2026-01-08, 83% apart) can't swap.
+# down to 83% for a few with a long close.
 STRONG_MARKER_SHARE = (0.95, 1.02)
 LOOSE_MARKER_SHARE = (0.80, 1.02)
+# Titles alone can't tell episodes apart (the site retitles: 62 for 2026-10-07's page
+# against its feed title), and lengths alone can't either (two episodes on one day, one
+# page ending early, could land on the other's length). Together they can. Between
+# DIFFERENT episodes' titles, measured over 19,900 pairs of the newest 200 (2026-11-24):
+# median 42, 99th percentile 60, and the one real same-day pair (2026-01-08) scores 32.
+TITLE_FLOOR_STRONG = 45  # with a close length match
+TITLE_FLOOR_LOOSE = 60   # with a looser one
 
 
 def same_episode(markdown: str, page_title: Optional[str], item: FeedItem) -> tuple[bool, str]:
-    """(is this page the item's episode, why not). See the module docstring."""
+    """(is this page the item's episode, why not). See the module docstring.
+
+    Known trade (review of PR #84, round 3): a retitled page that also ends early (under
+    95% of the audio) with a title scoring under 60 is refused and the episode is
+    extracted from show notes. Neither has been seen together; refusing is the safe side,
+    since a wrong transcript would be stored for good.
+    """
     last = last_marker_seconds(markdown)
-    title_ok = bool(page_title) and title_similarity(page_title, item.title) >= MIN_TITLE_SIMILARITY
+    similarity = title_similarity(page_title, item.title) if page_title else 0
     if last is not None and item.duration_seconds:
         share = last / item.duration_seconds
-        if STRONG_MARKER_SHARE[0] <= share <= STRONG_MARKER_SHARE[1]:
+        if STRONG_MARKER_SHARE[0] <= share <= STRONG_MARKER_SHARE[1] and similarity >= TITLE_FLOOR_STRONG:
             return True, ""
-        if LOOSE_MARKER_SHARE[0] <= share <= LOOSE_MARKER_SHARE[1] and title_ok:
+        if LOOSE_MARKER_SHARE[0] <= share <= LOOSE_MARKER_SHARE[1] and similarity >= TITLE_FLOOR_LOOSE:
             return True, ""
-        return False, f"the page runs to {last // 60} min, the episode is {item.duration_seconds // 60} min (another episode's page)"
+        return False, (f"the page runs to {last // 60} min against a {item.duration_seconds // 60}-min episode, "
+                       f"title match {similarity} (another episode's page?)")
     if page_title and normalize_title(page_title) == normalize_title(item.title):
         return True, ""
     return False, "no time markers to match on, and the title differs"
