@@ -10,7 +10,7 @@
 - The 28 This American Life rows stored under a Taddy id are mapped to their feed guids: `2026-11-23-off-taddy-probes/out/tal-taddy-uuid-to-guid.json`. 28 of 28, all guids distinct, every title and date agrees with Taddy's. Taddy's "latest" list only covers the feed's 16 items, so the 15 older rows took one `getPodcastEpisode` lookup each (no transcript credits spent).
 - Baseline before anything changes: `2026-11-23-off-taddy-probes/out/baseline-2026-11-23.json` (episodes, transcripts and characters per show, url schemes, a hash of the saved guids).
 
-**Phase 1 (build it, switched off): built, tests green locally, PR not yet open.**
+**Phase 1 (build it, switched off): built, reviewed, tests green (985) locally and in CI.**
 - `pipeline/feeds.py`: the one RSS reader (UTC dates, guid identity). The Gabfest importer, the TAL page-link lookup and the feed check now all use it.
 - `pipeline/scrapers/transcripts/`: AI Daily's markdown reader and NPR's transcript-page reader (PCHH, Machine Gods), one contract, with the title and length guards.
 - `pipeline/scrapers/rss/import_feed.py`: the importer that replaces Taddy. Nothing scheduled calls it to write until the cut-over.
@@ -31,7 +31,8 @@
 5. **Gabfest's feed moved to Acast** (Slate, by 2026-11; the old Megaphone url redirects). `show_config.feed_url` names the new one; the show ended in July, so this changes no data.
 
 ## In flight
-- **PR #84** (phase 0 + 1 + shadow): open; reviewed by four Claude lenses + Codex, every finding checked by a refuter. 12 checked findings, 10 real; all fixed in `21b5abe` / `f4db164` except those carried to part 2 below. A second Codex pass on the fixes is running; then green CI and merge. The next daily 20:30 UTC run after merge is the first shadow from a GitHub runner.
+- **PR #84** (phase 0 + 1 + shadow): three review rounds (four Claude lenses + Codex, then two Codex passes on the fixes). Round 1: 10 real findings, all fixed. Rounds 2 and 3 kept finding the same kind of hole, AI Daily accepting another episode's page, so the mechanism was cut: the reader now asks only the episode's own Eastern day and matches the page by where its last timestamp lands against the audio length, plus a title floor. Live check: 57 of 61 recent episodes found, the same-day promo refused. Remaining known trade (written in `aidailybrief.same_episode`): a retitled page that also ends early is refused rather than risk a wrong transcript.
+- **Cut-over branch `off-taddy/2-cutover`** (part 2): built and banked, not for merge until the shadow window ends. The id move (`sql/014`) was rehearsed on a throwaway Neon branch (`rehearsal-off-taddy-014-2026-11-24`): 1,865 rows moved, a re-run moves 0; after it, the new importer and the feed check see every show caught up.
 
 ## Carried into part 2 (the cut-over PR), from the review
 1. **The feed check must use the importer's matcher** (`import_feed.HeldIndex.match`). Otherwise the importer can call an episode held (punctuation, a one-day shift) while the check calls it missing, and nothing would ever clear the alarm.
