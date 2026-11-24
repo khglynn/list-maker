@@ -257,7 +257,7 @@ def test_feed_recent_episodes_routes_the_real_gabfest_config_to_its_rss_feed(mon
     episodes = feed_check.feed_recent_episodes(SHOWS["culture-gabfest"])
 
     assert asked, "the rss_guid arm never reached rss_recent_episodes"
-    assert asked["url"] == SHOWS["culture-gabfest"].fallback_website_url  # the Megaphone feed
+    assert asked["url"] == SHOWS["culture-gabfest"].feed_url  # the Acast feed Slate moved it to
     expected = [
         episode_url(it)
         for it in parse_feed(SAMPLE_FEED)

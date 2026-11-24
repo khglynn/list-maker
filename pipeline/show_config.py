@@ -75,6 +75,27 @@ class ShowConfig:
     #       Curated sources are None too: no feed at all (see curated_show_slugs).
     episode_identity: Optional[str] = None
 
+    # The show's own public RSS feed: where new episodes are found (scrapers/rss/
+    # import_feed.py) and what the feed check compares against. Found through Apple's
+    # free lookup (https://itunes.apple.com/lookup?id=<itunes_id> returns feedUrl), so if
+    # a feed ever moves, re-finding it is one lookup with the id kept here. Checked live
+    # 2026-11-23 for every show below.
+    feed_url: Optional[str] = None
+    itunes_id: Optional[int] = None
+    # Keep only items whose title starts with this, for a feed that carries several
+    # shows (Slate's feed mixes Culture Gabfest with its other podcasts).
+    feed_title_prefix: Optional[str] = None
+
+    # Where this show's full transcripts come from: a key of scrapers.transcripts.READERS
+    # ("aidailybrief", "npr"), or None for a show we do not transcribe (TAL and SOP get
+    # their songs from their websites; Gabfest is show notes only).
+    transcript_source: Optional[str] = None
+    # Whether extraction should wait for that transcript before falling back to the show
+    # notes (run_new_episodes.find_unextracted_episodes, up to TRANSCRIPT_GRACE_DAYS).
+    # Until 2026-11 this was inferred from "has a taddy_uuid"; it is a fact about the
+    # show, so it is stated here instead.
+    require_transcript: bool = False
+
     # Taddy
     taddy_uuid: Optional[str] = None
     fallback_website_url: Optional[str] = None
@@ -109,6 +130,8 @@ SHOWS: dict[str, ShowConfig] = {
         # switchedonpop.com/episodes/... urls, so Taddy uuids match almost nothing we
         # hold. The feed check compares DATES for SOP (see ShowConfig.episode_identity).
         taddy_uuid="97ed51a4-460e-4dc8-8db5-30df96ad59bc",
+        feed_url="https://feeds.megaphone.fm/switchedonpop",
+        itunes_id=934552872,
         fallback_website_url="https://switchedonpop.com",
         spotify_playlist_id="0cEVeX4pdHf5RJOiTRzgxX",
         spotify_playlist_name="Switched On Pop - All Songs Ever Discussed",
@@ -130,6 +153,8 @@ SHOWS: dict[str, ShowConfig] = {
         # carry the Taddy uuid url — unlike SOP.
         episode_identity="taddy_uuid",
         taddy_uuid="d682a935-ad2d-46ee-a0ac-139198b83bcc",
+        feed_url="https://www.thisamericanlife.org/podcast/rss.xml",
+        itunes_id=201671138,
         fallback_website_url="https://www.thisamericanlife.org/podcast/rss.xml",
         spotify_playlist_id="3d7fjfrTTKvrl7VHv5JzIz",
         spotify_playlist_name="This American Life: Full Music Archive",
@@ -142,6 +167,10 @@ SHOWS: dict[str, ShowConfig] = {
         content_types=["entities"],
         episode_identity="taddy_uuid",
         taddy_uuid="60fabbea-f51e-4c8b-82b4-1cbd57fe8c02",
+        feed_url="https://anchor.fm/s/f7cac464/podcast/rss",
+        itunes_id=1680633614,
+        transcript_source="aidailybrief",
+        require_transcript=True,
         fallback_website_url="https://www.aidailybrief.ai/",
         store_raw_content=True,
         notion_database_id="982dafa0ad374d618e25207e67860e33",
@@ -154,6 +183,10 @@ SHOWS: dict[str, ShowConfig] = {
         content_types=["mixed"],
         episode_identity="taddy_uuid",
         taddy_uuid="81b2a312-6976-4d22-bc54-4e3991fee332",
+        feed_url="https://feeds.npr.org/510282/podcast.xml",
+        itunes_id=278974813,
+        transcript_source="npr",
+        require_transcript=True,
         fallback_website_url="https://www.npr.org/podcasts/510282/pop-culture-happy-hour",
         store_raw_content=True,
         notion_database_id="3780501ef95081a783ebf8a32fa94657",  # shared Media DB (Option A)
@@ -167,6 +200,9 @@ SHOWS: dict[str, ShowConfig] = {
         content_types=["entities"],
         episode_identity="taddy_uuid",
         taddy_uuid="ff1d51d4-4fc9-4161-b23b-f0079f6dd5a0",
+        feed_url="https://feeds.simplecast.com/6HKOhNgS",
+        itunes_id=1528594034,
+        require_transcript=True,  # transcripts came from Taddy; no free source replaces it
         fallback_website_url="https://www.nytimes.com/column/hard-fork",
         store_raw_content=True,
         notion_database_id="982dafa0ad374d618e25207e67860e33",  # shared Tech DB (Option A) — same as AI Daily
@@ -181,6 +217,10 @@ SHOWS: dict[str, ShowConfig] = {
         episode_identity="rss_guid",
         taddy_uuid=None,  # Taddy won't transcribe Gabfest (iHeart rights) — Megaphone RSS show-notes instead
         fallback_website_url="https://feeds.megaphone.fm/slatesculturegabfest",
+        # Slate moved its feed to Acast; the Megaphone url above redirects there, and the
+        # channel's itunes:new-feed-url names this one (checked 2026-11-23).
+        feed_url="https://feeds.acast.com/public/shows/6969638b5f7f66b0e4468dad",
+        feed_title_prefix="Culture Gabfest",
         # Slate ended the show: final episode 2026-07-01, "So Long, and Thanks for All
         # the Granola Edition". https://slate.com/podcasts/culture-gabfest/2026/07/the-last-episode-of-the-slate-culture-gabfest-ever
         ended_on=date(2026, 7, 1),

@@ -247,7 +247,7 @@ def fetch_feed_page_links(feed_url: Optional[str] = None) -> dict[str, str]:
     for the same reason: one parser for this project's RSS, not three.
     """
     if feed_url is None:
-        feed_url = SHOWS["tal"].fallback_website_url
+        feed_url = SHOWS["tal"].feed_url
 
     # Deliberately OUTSIDE the try: a broken import is a bug in this repo, not a feed
     # outage, and swallowing it would silently disable the authoritative url source for
