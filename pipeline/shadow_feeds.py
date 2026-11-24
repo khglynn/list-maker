@@ -47,7 +47,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "scrapers" / "rss"))
 from thefuzz import fuzz  # noqa: E402
 
 from feeds import FeedItem, fetch_feed, parse_feed  # noqa: E402
-from import_feed import HeldIndex, eastern_day, load_held, plan_import  # noqa: E402
+from import_feed import HeldIndex, load_held, plan_import  # noqa: E402
 from scrapers.transcripts import reader_for  # noqa: E402
 from scrapers.transcripts.base import Transcript, words_per_minute  # noqa: E402
 from show_config import SHOWS, ShowConfig  # noqa: E402
@@ -220,12 +220,11 @@ def _taddy_text(conn, episode_id: int) -> Optional[str]:
     return row["transcript_text"] if row else None
 
 
-def check_transcript(conn, cfg: ShowConfig, item: FeedItem, episode_id: Optional[int], now: datetime, session=None,
-                     same_day_titles=()) -> TranscriptCheck:
+def check_transcript(conn, cfg: ShowConfig, item: FeedItem, episode_id: Optional[int], now: datetime, session=None) -> TranscriptCheck:
     reader = reader_for(cfg.transcript_source)
     hours = round((now - item.published_at).total_seconds() / 3600, 1)
     started = time.monotonic()
-    result = reader.fetch(item, session=session, same_day_titles=same_day_titles)
+    result = reader.fetch(item, session=session)
     elapsed = round(time.monotonic() - started, 2)
     check = TranscriptCheck(
         episode_id=episode_id,
@@ -310,14 +309,9 @@ def shadow_show(conn, cfg: ShowConfig, now: datetime, session=None, pause: float
         recent = [a for a in actions if a.item.publish_date and a.kind != "future"
                   and (a.item.publish_date >= lookback or not cfg.show_id)]
         recent.sort(key=lambda a: a.item.published_at, reverse=True)
-        same_day: dict = {}
-        for b in actions:
-            if b.item.published_at:
-                same_day.setdefault(eastern_day(b.item), []).append(b.item.title)
         for a in recent[:MAX_TRANSCRIPT_FETCHES_PER_SHOW]:
-            others = [t for t in same_day.get(eastern_day(a.item), []) if t != a.item.title]
             try:
-                check = check_transcript(conn, cfg, a.item, a.row.id if a.row else None, now, session, others)
+                check = check_transcript(conn, cfg, a.item, a.row.id if a.row else None, now, session)
                 out.transcripts.append(asdict(check))
             except Exception as exc:  # noqa: BLE001
                 if conn is not None:

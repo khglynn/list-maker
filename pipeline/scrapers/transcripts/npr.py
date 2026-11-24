@@ -147,9 +147,7 @@ def parse_transcript_page(page_html: str) -> tuple[str, bool]:
     return join_paragraphs(kept), generated
 
 
-def fetch(item: FeedItem, session=None, same_day_titles=()) -> Result:
-    """`same_day_titles` is part of the shared contract and unused here: the story id
-    comes from the item itself."""
+def fetch(item: FeedItem, session=None) -> Result:
     import requests
 
     sid = story_id(item.link)

@@ -64,85 +64,66 @@ class _Session:
 # ── AI Daily Brief ────────────────────────────────────────────────────────────
 
 
-def _aidb_page(title: str, day: str, body_words: int = 2000) -> str:
-    return f"# {title} — Transcript ({day})\n\n[00:00:00] Opening line here.\n\n{_words(body_words)}\n\n[00:12:00] Later.\n"
+def _aidb_page(title: str, day: str, body_words: int = 2000, ends_at: str = "00:09:40") -> str:
+    """A page in AI Daily's shape: the header, timestamped paragraphs, the last marker near
+    the end of the audio (the default suits _item()'s 10 minutes)."""
+    return f"# {title} — Transcript ({day})\n\n[00:00:00] Opening line here.\n\n{_words(body_words)}\n\n[{ends_at}] Later.\n"
+
+
+def _aidb(pages: dict[str, str]) -> _Session:
+    return _Session({aidailybrief.BASE_URL.format(day=d): _Resp(text=t) for d, t in pages.items()})
 
 
 def test_aidb_markdown_loses_its_header_and_timestamps() -> None:
-    title, day, body = aidailybrief.parse_markdown(_aidb_page("Why Agents Need Memory", "2026-11-20", 3) + "\n\u200b\n")
+    page = _aidb_page("Why Agents Need Memory", "2026-11-20", 3) + "\n\u200b\n"
+    title, day, body = aidailybrief.parse_markdown(page)
     assert (title, day) == ("Why Agents Need Memory", "2026-11-20")
     assert body == "Opening line here.\n\nword word word\n\nLater."
-    assert "[00:" not in body
+    assert aidailybrief.last_marker_seconds(page) == 580
 
 
-def test_aidb_looks_up_the_eastern_day_first() -> None:
-    # 02:00 UTC on 11-21 is still 11-20 in New York.
-    days = aidailybrief.candidate_days(_item(published="2026-11-21T02:00:00"))
-    assert days[:2] == [date(2026, 11, 20), date(2026, 11, 21)]
-    assert len(days) == len(set(days))
+def test_aidb_asks_only_for_the_episodes_own_eastern_day() -> None:
+    """02:00 UTC on 11-21 is still 11-20 in New York. No neighbouring day is asked: a late
+    page is "not yet", never yesterday's page (the Part 1 / Part 2 trap)."""
+    session = _aidb({})
+    result = aidailybrief.fetch(_item(published="2026-11-21T02:00:00"), session=session)
+    assert isinstance(result, NotYet)
+    assert session.asked == [aidailybrief.BASE_URL.format(day="2026-11-20")]
 
 
-def test_aidb_on_a_shared_day_takes_only_the_page_that_is_ours() -> None:
-    """A promo item shared its date with the main episode (2026-10-26). With another item
-    on the day, the page must match this item's title better than the other's."""
-    url = aidailybrief.BASE_URL.format(day="2026-11-20")
-    session = _Session({url: _Resp(text=_aidb_page("Listen to Our Sister Show", "2026-11-20"))})
-    result = aidailybrief.fetch(_item(), session=session, same_day_titles=["Listen to Our Sister Show"])
+def test_aidb_accepts_its_page_even_retitled_when_the_length_matches() -> None:
+    """The feed's "A System for Testing New AI Models" is "The Best Way to Test New AI
+    Models" on its 2026-10-07 page. The audio length is the fingerprint, not the title."""
+    session = _aidb({"2026-11-20": _aidb_page("A Different Headline Entirely", "2026-11-20")})
+    result = aidailybrief.fetch(_item(), session=session)
+    assert isinstance(result, Transcript)
+    assert result.source_type == "publisher_transcript" and result.model == "aidailybrief_md"
+
+
+def test_aidb_refuses_a_page_whose_length_is_another_episodes() -> None:
+    """A six-minute promo sharing a day with the 27-minute main episode: the day's page is
+    the main episode's, and the promo must not take it, title or no title."""
+    promo = _item(title="Why Agents Need Memory", duration=377)
+    session = _aidb({"2026-11-20": _aidb_page("Why Agents Need Memory", "2026-11-20", ends_at="00:27:00")})
+    result = aidailybrief.fetch(promo, session=session)
     assert isinstance(result, NotYet) and "another episode" in result.reason
 
 
-def test_aidb_a_retitled_page_on_the_episodes_own_day_is_still_its_page() -> None:
-    """The feed's "A System for Testing New AI Models" is "The Best Way to Test New AI
-    Models" on its own 2026-10-07 page. The only item that day owns that day's page."""
-    url = aidailybrief.BASE_URL.format(day="2026-11-20")
-    session = _Session({url: _Resp(text=_aidb_page("The Best Way to Remember Things", "2026-11-20"))})
-    assert isinstance(aidailybrief.fetch(_item(), session=session), Transcript)
+def test_aidb_without_markers_needs_the_exact_title() -> None:
+    plain = "# Why Agents Need Memory — Transcript (2026-11-20)\n\n" + _words(2000) + "\n"
+    assert isinstance(aidailybrief.fetch(_item(), session=_aidb({"2026-11-20": plain})), Transcript)
+    other = plain.replace("Why Agents Need Memory", "Agents, Part 1")
+    assert isinstance(aidailybrief.fetch(_item(), session=_aidb({"2026-11-20": other})), NotYet)
 
 
-def test_aidb_the_day_before_needs_an_exact_title() -> None:
-    """Today's page is not up yet, and yesterday's is "Part 1" of today's "Part 2": a
-    token-set score calls those 100. A page from another day must match exactly."""
-    item = _item(title="Agents, Part 2")
-    yesterday = aidailybrief.BASE_URL.format(day="2026-11-19")
-    session = _Session({yesterday: _Resp(text=_aidb_page("Agents, Part 1", "2026-11-19"))})
-    result = aidailybrief.fetch(item, session=session)
-    assert isinstance(result, NotYet) and yesterday in session.asked
-
-
-def test_aidb_a_page_whose_header_names_another_day_is_refused() -> None:
-    url = aidailybrief.BASE_URL.format(day="2026-11-20")
-    session = _Session({url: _Resp(text=_aidb_page("Why Agents Need Memory", "2026-11-19"))})
+def test_aidb_a_page_headed_with_another_day_is_refused() -> None:
+    session = _aidb({"2026-11-20": _aidb_page("Why Agents Need Memory", "2026-11-19")})
     assert isinstance(aidailybrief.fetch(_item(), session=session), NotYet)
 
 
-def test_aidb_numbers_must_agree_on_a_shared_day() -> None:
-    url = aidailybrief.BASE_URL.format(day="2026-11-20")
-    page = _aidb_page("Why the AI Kids Hate Astra 6.3", "2026-11-20")
-    result = aidailybrief.fetch(_item(title="Why the AI Kids Hate Astra 6.2"), session=_Session({url: _Resp(text=page)}),
-                                same_day_titles=["A Bonus Episode"])
-    assert isinstance(result, NotYet)
-
-
-def test_aidb_finds_the_page_whose_title_matches() -> None:
-    page = _aidb_page("Why Agents Need Memory", "2026-11-20")
-    url = aidailybrief.BASE_URL.format(day="2026-11-20")
-    result = aidailybrief.fetch(_item(), session=_Session({url: _Resp(text=page)}))
-    assert isinstance(result, Transcript)
-    assert result.source_type == "publisher_transcript" and result.model == "aidailybrief_md"
-    assert result.source_url == url
-
-
-def test_aidb_not_published_yet_is_not_yet() -> None:
-    session = _Session({})
-    result = aidailybrief.fetch(_item(), session=session)
-    assert isinstance(result, NotYet)
-    assert len(session.asked) == len(aidailybrief.candidate_days(_item()))
-
-
 def test_aidb_a_page_too_short_for_the_audio_is_not_stored() -> None:
-    url = aidailybrief.BASE_URL.format(day="2026-11-20")
     page = _aidb_page("Why Agents Need Memory", "2026-11-20", body_words=400)  # 40 wpm for 10 min
-    result = aidailybrief.fetch(_item(), session=_Session({url: _Resp(text=page)}))
+    result = aidailybrief.fetch(_item(), session=_aidb({"2026-11-20": page}))
     assert isinstance(result, NotYet) and "words per audio minute" in result.reason
 
 
@@ -258,3 +239,13 @@ def test_sanity_check_bounds() -> None:
 @pytest.mark.parametrize("source", sorted(READERS))
 def test_every_registered_source_has_a_reader_with_fetch(source) -> None:
     assert callable(reader_for(source).fetch)
+
+
+def test_aidb_a_looser_length_match_also_needs_the_title() -> None:
+    """Some real pages end at 83 to 87% of the audio (a long close). That band alone would
+    let two episodes on one day swap pages (24 and 29 minutes, 2026-01-08), so in it the
+    title must match too."""
+    late_close = _aidb_page("Why Agents Need Memory", "2026-11-20", ends_at="00:08:30")  # 85%
+    assert isinstance(aidailybrief.fetch(_item(), session=_aidb({"2026-11-20": late_close})), Transcript)
+    other = late_close.replace("Why Agents Need Memory", "How People Are Using AI for Health")
+    assert isinstance(aidailybrief.fetch(_item(), session=_aidb({"2026-11-20": other})), NotYet)

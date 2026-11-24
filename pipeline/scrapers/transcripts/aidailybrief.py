@@ -6,22 +6,20 @@ keyed by the episode's date in US Eastern time. 39 of 39 episodes in the 45 days
 2026-11-23 had one. Its first line is "# <title> — Transcript (<date>)", and
 "[HH:MM:SS]" markers start some paragraphs.
 
-The lookup is by DATE, so the page can belong to a different episode. Three ways that
-happens, each seen in the live feed (2026-11-24 review of PR #84):
-  - A new episode's page is not up yet, and the day before holds YESTERDAY's episode,
-    often with a near-identical title ("... Part 1" / "... Part 2"; token-set matching
-    scores a title whose words are a subset of another's as 100).
-  - A promo item shares its date with the main episode.
-  - The site retitles the page ("A System for Testing New AI Models" in the feed is
-    "The Best Way to Test New AI Models" on its 2026-10-07 page).
-So the rule depends on which day the page is for:
-  - The episode's OWN Eastern day: when no other feed item shares that day, the page is
-    this episode's whatever its title says (the retitle case). When others do, the page
-    must match this item's title better than any of theirs, at MIN_TITLE_SIMILARITY or
-    above, with the same numbers in both titles.
-  - Any OTHER day (the UTC day when it differs, the day before or after): the page's title
-    must equal the feed's once normalised. Anything else is NotYet, and a later run asks
-    again.
+The lookup is by DATE, so a page can belong to another episode, and two review rounds of
+PR #84 kept finding new ways a title rule let one through: yesterday's "Part 1" for
+today's "Part 2" when today's page is late, a promo sharing a day with the main episode,
+two episodes with one title. Titles are the wrong fingerprint (the site retitles pages,
+and token matching scores a subset title 100). So the mechanism is now:
+  - Only the episode's own Eastern day is asked. 39 of 39 episodes in the 45 days to
+    2026-11-23 had their page there, and a late page is NotYet, retried next run, never a
+    neighbour's page.
+  - The page is accepted when its last "[HH:MM:SS]" marker lands where the episode's
+    audio ends (same_episode, below, has the bands and the measurements). The one promo
+    that shared a day (6 minutes) reads 430% of its own length against its 27-minute
+    neighbour's page.
+  - A page with no markers, or an item with no duration, falls back to an exact title
+    match (after normalising case and punctuation).
 The page's own header date must also equal the day in its url.
 """
 
@@ -29,9 +27,9 @@ from __future__ import annotations
 
 import re
 import sys
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional
 from zoneinfo import ZoneInfo
 
 # pipeline/ on the path, as every module under scrapers/ does, so this imports the same
@@ -60,17 +58,16 @@ _HEADER_RE = re.compile(r"^#\s+(?P<title>.+?)\s+[—-]+\s+Transcript\s*\((?P<day
 _TIMESTAMP_RE = re.compile(r"\[\d{1,2}:\d{2}(?::\d{2})?\]\s*")
 
 
-def candidate_days(item: FeedItem) -> list[date]:
-    """Eastern date first (the site's key), then the UTC date, then the Eastern day
-    before and after. Distinct, in that order. The title check decides which is right."""
-    if not item.published_at:
-        return []
-    eastern = item.published_at.astimezone(EASTERN).date()
-    days: list[date] = []
-    for d in (eastern, item.published_at.date(), eastern - timedelta(days=1), eastern + timedelta(days=1)):
-        if d not in days:
-            days.append(d)
-    return days
+def eastern_day(item: FeedItem) -> Optional[date]:
+    """The day the site keys the episode's page by."""
+    return item.published_at.astimezone(EASTERN).date() if item.published_at else None
+
+
+def last_marker_seconds(markdown: str) -> Optional[int]:
+    """Where the page's last "[HH:MM:SS]" marker falls, in seconds; None without markers."""
+    marks = [int(a) * 3600 + int(b) * 60 + int(c) if c else int(a) * 60 + int(b)  # [HH:MM:SS] or [MM:SS]
+             for a, b, c in re.findall(r"\[(\d{1,2}):(\d{2})(?::(\d{2}))?\]", markdown)]
+    return max(marks) if marks else None
 
 
 def parse_markdown(markdown: str) -> tuple[Optional[str], Optional[str], str]:
@@ -100,60 +97,56 @@ def parse_markdown(markdown: str) -> tuple[Optional[str], Optional[str], str]:
     return title, page_day, join_paragraphs(paragraphs)
 
 
-def _numbers(title: Optional[str]) -> list[str]:
-    return sorted(re.findall(r"\d+", normalize_title(title)))
+# The last marker sits a little before the end of the audio (outro, closing ad), never
+# after it. Measured 2026-11-24 on the 62 newest episodes with a page: 96 to 100% for 53,
+# down to 83% for a few with a long close. A close match is the episode's page whatever
+# its title says (the retitle case); a looser one must also carry the episode's title, so
+# that two episodes on one day (24 and 29 minutes on 2026-01-08, 83% apart) can't swap.
+STRONG_MARKER_SHARE = (0.95, 1.02)
+LOOSE_MARKER_SHARE = (0.80, 1.02)
 
 
-def _accepts(page_title: Optional[str], item: FeedItem, own_day: bool, same_day_titles: Sequence[str]) -> tuple[bool, str]:
-    """(is this page the item's episode, why not)."""
-    if not own_day:
-        if page_title and normalize_title(page_title) == normalize_title(item.title):
+def same_episode(markdown: str, page_title: Optional[str], item: FeedItem) -> tuple[bool, str]:
+    """(is this page the item's episode, why not). See the module docstring."""
+    last = last_marker_seconds(markdown)
+    title_ok = bool(page_title) and title_similarity(page_title, item.title) >= MIN_TITLE_SIMILARITY
+    if last is not None and item.duration_seconds:
+        share = last / item.duration_seconds
+        if STRONG_MARKER_SHARE[0] <= share <= STRONG_MARKER_SHARE[1]:
             return True, ""
-        return False, "another episode's page (a different day needs an exact title)"
-    others = [t for t in same_day_titles if normalize_title(t) != normalize_title(item.title)]
-    if not others:
-        return True, ""  # the only episode that day: the page is ours, even retitled
-    mine = title_similarity(page_title, item.title)
-    best_other = max(title_similarity(page_title, t) for t in others)
-    if mine >= MIN_TITLE_SIMILARITY and mine > best_other and _numbers(page_title) == _numbers(item.title):
+        if LOOSE_MARKER_SHARE[0] <= share <= LOOSE_MARKER_SHARE[1] and title_ok:
+            return True, ""
+        return False, f"the page runs to {last // 60} min, the episode is {item.duration_seconds // 60} min (another episode's page)"
+    if page_title and normalize_title(page_title) == normalize_title(item.title):
         return True, ""
-    return False, f"another episode's page (title match {mine}, another item that day {best_other})"
+    return False, "no time markers to match on, and the title differs"
 
 
-def fetch(item: FeedItem, session=None, same_day_titles: Sequence[str] = ()) -> Result:
-    """`same_day_titles`: the titles of the OTHER feed items on this item's Eastern day.
-    The caller holds the whole feed; without them the reader cannot tell a retitled page
-    from a promo's."""
+def fetch(item: FeedItem, session=None) -> Result:
     import requests
 
     getter = session or requests
-    days = candidate_days(item)
-    if not days:
+    day = eastern_day(item)
+    if day is None:
         return Failed("the feed item has no parseable date, and this source is keyed by date")
-    tried: list[str] = []
-    for index, day in enumerate(days):
-        url = BASE_URL.format(day=day.isoformat())
-        try:
-            resp = getter.get(url, timeout=TIMEOUT_SECONDS, headers={"User-Agent": USER_AGENT})
-        except requests.RequestException as exc:
-            return NotYet(f"{url}: {exc.__class__.__name__}")
-        if resp.status_code == 404:
-            tried.append(f"{day} (none)")
-            continue
-        if resp.status_code == 429:
-            return NotYet(f"{url}: HTTP 429", rate_limited=True)
-        if resp.status_code != 200:
-            return NotYet(f"{url}: HTTP {resp.status_code}")
-        page_title, page_day, body = parse_markdown(resp.text)
-        if page_day is not None and page_day != day.isoformat():
-            tried.append(f"{day} (page says {page_day})")
-            continue
-        ok, why = _accepts(page_title, item, own_day=index == 0, same_day_titles=same_day_titles)
-        if not ok:
-            tried.append(f"{day} ({why})")
-            continue
-        problem = sanity_check(body, item.duration_seconds)
-        if problem:
-            return NotYet(f"{url}: {problem}")
-        return Transcript(text=body, source_type=SOURCE_TYPE, model=MODEL, is_generated=True, source_url=url)
-    return NotYet("no transcript page for this episode yet; tried " + ", ".join(tried))
+    url = BASE_URL.format(day=day.isoformat())
+    try:
+        resp = getter.get(url, timeout=TIMEOUT_SECONDS, headers={"User-Agent": USER_AGENT})
+    except requests.RequestException as exc:
+        return NotYet(f"{url}: {exc.__class__.__name__}")
+    if resp.status_code == 404:
+        return NotYet(f"{url}: no transcript page yet")
+    if resp.status_code == 429:
+        return NotYet(f"{url}: HTTP 429", rate_limited=True)
+    if resp.status_code != 200:
+        return NotYet(f"{url}: HTTP {resp.status_code}")
+    page_title, page_day, body = parse_markdown(resp.text)
+    if page_day is not None and page_day != day.isoformat():
+        return NotYet(f"{url}: the page is headed {page_day}")
+    ok, why = same_episode(resp.text, page_title, item)
+    if not ok:
+        return NotYet(f"{url}: {why}")
+    problem = sanity_check(body, item.duration_seconds)
+    if problem:
+        return NotYet(f"{url}: {problem}")
+    return Transcript(text=body, source_type=SOURCE_TYPE, model=MODEL, is_generated=True, source_url=url)

@@ -347,14 +347,6 @@ class ShowReport:
     notes: list[str] = field(default_factory=list)
 
 
-def eastern_day(item: FeedItem) -> date:
-    """The day AI Daily keys its transcript pages by; also groups "the same day" for the
-    title rule. Harmless for other shows, which ignore it."""
-    from zoneinfo import ZoneInfo
-
-    return item.published_at.astimezone(ZoneInfo("America/New_York")).date()
-
-
 def _label(item: FeedItem) -> str:
     return f"{item.publish_date} {item.title[:70]!r}"
 
@@ -412,11 +404,6 @@ def run_show(
         # nothing usable is a broken feed, never a quiet day.
         report.problems.append(f"the feed lists no dated items ({len(feed.items)} raw items); treating it as unreadable")
 
-    same_day: dict[date, list[str]] = {}
-    for a in actions:
-        if a.item.published_at:
-            same_day.setdefault(eastern_day(a.item), []).append(a.item.title)
-
     todo = [a for a in actions if a.kind in ("insert", "transcript")]
     # Oldest first, so a --limit'ed backfill fills the gap from its start.
     todo.sort(key=lambda a: a.item.published_at)
@@ -440,8 +427,7 @@ def run_show(
             print(f"  + episode {episode_id}: {_label(a.item)}")
         if reader is None or rate_limited:
             continue
-        others = [t for t in same_day.get(eastern_day(a.item), []) if t != a.item.title]
-        result = reader.fetch(a.item, session=session, same_day_titles=others)
+        result = reader.fetch(a.item, session=session)
         if pause_seconds:
             time.sleep(pause_seconds)
         if isinstance(result, Transcript):
