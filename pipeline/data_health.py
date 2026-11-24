@@ -529,13 +529,17 @@ def check_transcript_coverage(conn) -> CheckResult:
                     f"transcript (oldest {min(stale)}); they were extracted from show notes"
                 )
 
-        # For transcript-first shows the lag tolerance is the same grace window; the
-        # policy's own number still applies where it is larger (music shows: 30).
-        max_lag = max(int(policy.get("max_latest_lag_days", 30)), grace if is_strict else 0)
-        if lag_days is None:
-            bucket.append(f"{slug}: cannot compare latest episode/transcript dates")
-        elif lag_days > max_lag:
-            bucket.append(f"{slug}: latest transcript lags latest episode by {lag_days} days")
+        # The newest-transcript lag is only judged for the 'latest' shows. A 'complete'
+        # show is judged episode by episode above, which knows which episodes expect no
+        # transcript (short recaps) and which are still inside the grace window; the lag
+        # can't, so a weekend of recaps plus Monday's not-yet transcript read as a 3-day
+        # lag and failed (PR #85 review).
+        if not is_strict:
+            max_lag = int(policy.get("max_latest_lag_days", 30))
+            if lag_days is None:
+                bucket.append(f"{slug}: cannot compare latest episode/transcript dates")
+            elif lag_days > max_lag:
+                bucket.append(f"{slug}: latest transcript lags latest episode by {lag_days} days")
 
         min_coverage = policy.get("min_coverage")
         if min_coverage is not None and coverage < float(min_coverage):

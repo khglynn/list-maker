@@ -1827,3 +1827,23 @@ def test_the_feed_check_counts_held_what_the_importer_counts_held(monkeypatch) -
         slugs=["tal"],
     )
     assert result.status == "pass", result.details
+
+
+def test_weekend_recaps_without_transcripts_do_not_read_as_a_lag(monkeypatch) -> None:
+    """Friday has its transcript, Saturday's and Sunday's 5-minute recaps expect none, and
+    Monday's is still inside the window. Nothing is late."""
+    import pipeline.data_health as dh
+
+    coverage_rows = [{
+        "slug": "ai-daily-brief", "episodes": 1200, "transcripts": 1197, "missing_transcripts": 3,
+        "latest_episode": date(2026, 11, 30), "latest_transcript": date(2026, 11, 27),
+    }]
+    missing_rows = [
+        {"slug": "ai-daily-brief", "publish_date": date(2026, 11, 28), "duration_seconds": 356},
+        {"slug": "ai-daily-brief", "publish_date": date(2026, 11, 29), "duration_seconds": 340},
+        {"slug": "ai-daily-brief", "publish_date": date(2026, 11, 30), "duration_seconds": 1600},
+    ]
+    monkeypatch.setattr(dh, "_rows", lambda conn, sql, params=None: missing_rows if "et.id IS NULL AND s.slug = ANY" in sql else coverage_rows)
+    monkeypatch.setattr(dh, "_today", lambda: date(2026, 11, 30))
+    result = dh.check_transcript_coverage(conn=None)
+    assert result.status == "pass", result.details

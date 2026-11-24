@@ -119,11 +119,14 @@ class ShowConfig:
     extraction_type: Optional[str] = None  # "entity_extraction", "song_extraction"
 
 
-# The cut-over from Taddy (claude-plans/2026-11-23-off-taddy-plan.md, phase 3).
-HARD_FORK_LAST_COLLECTED = date(2026, 12, 1)
-# Machine Gods' back catalogue (from 2026-10-21) is Kevin's call; until he says yes, its
-# first run starts at the cut-over and the backfill is `import_feed.py --backfill`.
-MACHINE_GODS_IMPORT_SINCE = date(2026, 12, 1)
+# The cut-over from Taddy (claude-plans/2026-11-23-off-taddy-plan.md, phase 3), planned
+# for 2026-11-25. Hard Fork was imported by Taddy until then; the date is only shown in
+# the checks that skip it ("not collected since ...").
+HARD_FORK_LAST_COLLECTED = date(2026, 11, 25)
+# Machine Gods' back catalogue (2026-10-21 to 11-20) is Kevin's call (`import_feed.py
+# --shows machine-gods --backfill`). Everything after its last pre-cut-over episode comes
+# in on its own, so a cut-over that slips by a few days loses nothing.
+MACHINE_GODS_IMPORT_SINCE = date(2026, 11, 21)
 
 
 SHOWS: dict[str, ShowConfig] = {
