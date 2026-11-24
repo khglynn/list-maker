@@ -4,6 +4,9 @@
 
 **Clock:** Taddy Pro ($75/mo) next bills **2026-12-07**. Target: new path live and seen working by **12-04**, Kevin cancels by **12-05**.
 
+## Taddy downgraded: 2026-11-24, about 4:59pm (seen)
+Kevin clicked "Downgrade to the free plan" himself, after this session said early was fine (rolling back to Taddy was already the last resort). Taddy's page answered "Downgrade Successful. You are now on the Free Plan." (his screenshot in chat). The 12-07 bill should not come. Left on the Taddy side: deleting the two GitHub secrets on Fri 11-27, after two green runs (Gabby). After that, a red run is fixed forward.
+
 ## Owner from 2026-11-24 evening: Gabby
 Kevin closed the off-Taddy session and handed list-maker to Gabby ("they're supposed to monitor and fix things on an ongoing basis now"). Her brief, with the Fri 2026-11-27 steps and the follow-up builds, is gabby#648 (`claude-plans/2026-11-24-list-maker-yours-now/` in the private gabby repo, on the PR's branch until it merges; the phase 5 design is there too). The "Q4 budgeting and subs" session has closed, so the downgrade is Kevin's click when Gabby says go. Gabby deletes the two Taddy secrets under Kevin's 11-24 yes. She writes the next entries here.
 
@@ -78,7 +81,7 @@ CI is green on the fixes, which are small and tested, so they had no fourth revi
 3. **Wed 11-25 and Thu 11-26, 20:30 UTC:** two green daily runs on the new path. That is the alert rule's own "verified".
 4. **Fri 11-27:**
    a. Gabby deletes the two Taddy secrets (Claude's job until the 11-24 handoff).
-   b. Gabby tells Kevin "Taddy downgrade: go", and he clicks it: https://taddy.org/login, sign in with his personal (trimm.co) login, then "Downgrade to the free plan". That leaves 10 days before the 12-07 bill. (The "Q4 budgeting and subs" session first offered to click it; it has since closed. It left a Friday 11-27 reminder on his calendar.)
+   b. **Done early, 2026-11-24** (see the top). The plan was: Gabby tells Kevin "Taddy downgrade: go", and he clicks it: https://taddy.org/login, sign in with his personal (trimm.co) login, then "Downgrade to the free plan". That leaves 10 days before the 12-07 bill. (The "Q4 budgeting and subs" session first offered to click it; it has since closed. It left a Friday 11-27 reminder on his calendar.)
    c. After PR #85 nothing scheduled calls Taddy; only comments name it. So the downgrade is safe whether it takes effect at once or on 12-07. Its timing isn't documented anywhere found.
 5. **What the shorter path gives up:**
    a. The planned five shadow runs and the Monday TAL run. Discovery and transcripts were already seen agreeing live from the Mac on every show, and TAL's Monday import isn't exercised by the shadow anyway.
@@ -103,7 +106,7 @@ CI is green on the fixes, which are small and tested, so they had no fourth revi
   1. **The id move:** done 11-24 (snapshot, then his paste).
   2. **Deleting the two Taddy secrets** on Fri 11-27, after two green daily runs.
   3. **Deleting the rehearsal Neon branch:** done 11-24.
-- The Taddy downgrade is Kevin's own click (his login), when Gabby says go on Fri 11-27.
+- The Taddy downgrade: done by Kevin on 2026-11-24.
 
 ## Phase 5 (the manual tools): designed, not built (2026-11-24)
 A read-only design pass. The full note is `claude-plans/2026-11-24-list-maker-yours-now/phase5-design.md` in the private gabby repo (gabby#648), not in this repo, because it quotes saved-episode titles.
