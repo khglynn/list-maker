@@ -30,6 +30,7 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from feeds import USER_AGENT, FeedItem  # noqa: E402
 from scrapers.transcripts.base import (  # noqa: E402
+    Failed,
     NotYet,
     Result,
     Transcript,
@@ -91,6 +92,10 @@ def fetch(item: FeedItem, session=None) -> Result:
         return NotYet(f"{url}: no transcript page yet")
     if resp.status_code == 429:
         return NotYet(f"{url}: HTTP 429", rate_limited=True)
+    if resp.status_code in (401, 403) or resp.status_code >= 500:
+        # Blocked or broken, not "not posted yet": a whole backfill answering this way
+        # must say so, not finish green with nothing added.
+        return Failed(f"{url}: HTTP {resp.status_code}")
     if resp.status_code != 200:
         return NotYet(f"{url}: HTTP {resp.status_code}")
     stated, body = parse_transcript_page(resp.text)

@@ -51,17 +51,20 @@ def item_from_row(row: dict) -> FeedItem:
             raw = json.loads(row["raw_content"])
         except ValueError:
             raw = {}
+    # Taddy rows kept the episode's own fields one level down, under "episode_raw".
+    taddy = raw.get("episode_raw") if isinstance(raw.get("episode_raw"), dict) else {}
     url = row.get("url") or ""
-    link = raw.get("link") or raw.get("websiteUrl") or (url if url.startswith("http") else None)
-    duration = raw.get("duration_seconds") or raw.get("duration")
+    page_url = url if url.startswith("http") and "api.taddy.org" not in url else None
+    link = raw.get("link") or taddy.get("websiteUrl") or raw.get("websiteUrl") or page_url
+    duration = raw.get("duration_seconds") or taddy.get("duration") or raw.get("duration")
     published = row.get("publish_date")
     if isinstance(published, str):
         published = date.fromisoformat(published[:10])
     return FeedItem(
         title=row.get("title") or "",
-        guid=raw.get("guid"),
+        guid=raw.get("guid") or taddy.get("guid"),
         link=link,
-        enclosure_url=raw.get("enclosure_url") or row.get("audio_url"),
+        enclosure_url=raw.get("enclosure_url") or taddy.get("audioUrl") or row.get("audio_url"),
         pubdate_raw=None,
         published_at=datetime(published.year, published.month, published.day, 12, tzinfo=timezone.utc) if published else None,
         description_html="",
