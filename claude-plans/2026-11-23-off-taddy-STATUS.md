@@ -4,6 +4,9 @@
 
 **Clock:** Taddy Pro ($75/mo) next bills **2026-12-07**. Target: new path live and seen working by **12-04**, Kevin cancels by **12-05**.
 
+## Owner from 2026-11-24 evening: Gabby
+Kevin closed the off-Taddy session and handed list-maker to Gabby ("they're supposed to monitor and fix things on an ongoing basis now"). Her brief, with the Fri 2026-11-27 steps and the follow-up builds, is gabby#648 (`claude-plans/2026-11-24-list-maker-yours-now/` in the private gabby repo, on the PR's branch until it merges; the phase 5 design is there too). The "Q4 budgeting and subs" session has closed, so the downgrade is Kevin's click when Gabby says go. Gabby deletes the two Taddy secrets under Kevin's 11-24 yes. She writes the next entries here.
+
 ## Latest (2026-11-24, 21:25 UTC / 3:25pm CT): cut over. The feed path is live and seen writing.
 1. **The id move ran (Kevin's paste, about 21:11 UTC):** 1,868 rows moved (the rehearsal's 1,865 plus 3 that arrived since). After it: AI Daily 1,148, Hard Fork 227 and PCHH 465 on their feed guids, 0 Taddy ids; TAL's 28 on guids and 889 on page urls; `shows` row 65 is Machine Gods.
 2. **PR #85 merged** (`36d27a7`, CI green on `7d1ab8a`).
@@ -14,7 +17,7 @@
 4. **Rehearsal Neon branch deleted** (Kevin's yes). The snapshot `pre-off-taddy-014-2026-11-24` stays until the downgrade.
 5. **Left for the teardown:** SOP's 2 rows still on Taddy ids (7852, a 07-14 Netflix promo; 7853, a 06-23 rerun). Nothing calls Taddy with them.
 
-**Next:** Wed 11-25 and Thu 11-26 20:30 UTC runs green on the new path, then Fri 11-27: delete the two Taddy secrets and message the money session for the downgrade.
+**Next:** Wed 11-25 and Thu 11-26 20:30 UTC runs green on the new path, then Fri 11-27: Gabby deletes the two Taddy secrets and tells Kevin to click the downgrade.
 
 ## Earlier (2026-11-24, 21:15 UTC / 3:15pm CT): the first shadow run from a GitHub runner is clean
 **Seen working:** entities run 45481428202 (20:30 UTC, green; every step green, the shadow step included). Its "Shadow" step:
@@ -74,9 +77,8 @@ CI is green on the fixes, which are small and tested, so they had no fourth revi
    c. Claude merges PR #85 right after and dispatches the entities run by hand, to see the new path write. **Done 11-24 21:12 UTC; the run was green.**
 3. **Wed 11-25 and Thu 11-26, 20:30 UTC:** two green daily runs on the new path. That is the alert rule's own "verified".
 4. **Fri 11-27:**
-   a. Claude deletes the two Taddy secrets.
-   b. The money session ("Q4 budgeting and subs") clicks "Downgrade to the free plan" on Taddy's dashboard. That leaves 10 days before the 12-07 bill.
-   b2. **If that session is closed by then:** put "Taddy downgrade: go" at the top of this file, and give Kevin the click in chat: https://taddy.org/login, sign in with his personal (trimm.co) login, then "Downgrade to the free plan". The money session also put a Friday 11-27 reminder on his calendar as a backstop. If the dates move, send that session a one-line message.
+   a. Gabby deletes the two Taddy secrets (Claude's job until the 11-24 handoff).
+   b. Gabby tells Kevin "Taddy downgrade: go", and he clicks it: https://taddy.org/login, sign in with his personal (trimm.co) login, then "Downgrade to the free plan". That leaves 10 days before the 12-07 bill. (The "Q4 budgeting and subs" session first offered to click it; it has since closed. It left a Friday 11-27 reminder on his calendar.)
    c. After PR #85 nothing scheduled calls Taddy; only comments name it. So the downgrade is safe whether it takes effect at once or on 12-07. Its timing isn't documented anywhere found.
 5. **What the shorter path gives up:**
    a. The planned five shadow runs and the Monday TAL run. Discovery and transcripts were already seen agreeing live from the Mac on every show, and TAL's Monday import isn't exercised by the shadow anyway.
@@ -101,10 +103,10 @@ CI is green on the fixes, which are small and tested, so they had no fourth revi
   1. **The id move:** done 11-24 (snapshot, then his paste).
   2. **Deleting the two Taddy secrets** on Fri 11-27, after two green daily runs.
   3. **Deleting the rehearsal Neon branch:** done 11-24.
-- Nothing else waits on him. The Taddy downgrade is the money session's click, once Claude messages it.
+- The Taddy downgrade is Kevin's own click (his login), when Gabby says go on Fri 11-27.
 
 ## Phase 5 (the manual tools): designed, not built (2026-11-24)
-A read-only design pass. The full note is kept privately at `~/.claude/plans/2026-11-23-off-taddy-phase5-design.md` and not in this repo, because it quotes saved-episode titles.
+A read-only design pass. The full note is `claude-plans/2026-11-24-list-maker-yours-now/phase5-design.md` in the private gabby repo (gabby#648), not in this repo, because it quotes saved-episode titles.
 1. **This has to land with or before the teardown.** `pipeline/save_episode.py:49` imports `scrapers.taddy` at module level, so deleting that folder breaks its tests and CI. Both manual tools are already broken: clip transcription used OpenAI's Whisper, and that account closed 2026-11-14.
 2. **Finding an episode:**
    a. Apple's free iTunes Search (`entity=podcastEpisode`) gives the feed guid, the audio url and the duration. The guid matched the live feed on 15 of 15 episodes across 5 shows.
