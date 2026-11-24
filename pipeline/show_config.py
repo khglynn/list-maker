@@ -119,10 +119,10 @@ class ShowConfig:
     extraction_type: Optional[str] = None  # "entity_extraction", "song_extraction"
 
 
-# The cut-over from Taddy (claude-plans/2026-11-23-off-taddy-plan.md, phase 3), planned
-# for 2026-11-25. Hard Fork was imported by Taddy until then; the date is only shown in
-# the checks that skip it ("not collected since ...").
-HARD_FORK_LAST_COLLECTED = date(2026, 11, 25)
+# The cut-over from Taddy (claude-plans/2026-11-23-off-taddy-plan.md, phase 3) merged
+# 2026-11-24 at 21:12 UTC. Taddy's last import of Hard Fork was that day's 20:30 UTC run;
+# the date is only shown in the checks that skip it ("not collected since ...").
+HARD_FORK_LAST_COLLECTED = date(2026, 11, 24)
 # Machine Gods is collected from its first episode (Kevin, 2026-11-24: "complete
 # work"). The importer reads import_since as "everything from this date", so the whole
 # run (2026-10-21 on; the 09-16 trailer is skipped as a trailer) arrives on the first
