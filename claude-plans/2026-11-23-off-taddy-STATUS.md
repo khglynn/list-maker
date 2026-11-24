@@ -69,6 +69,7 @@ A read-only design pass. The full note is kept privately at `~/.claude/plans/202
 4. **Fri 11-27:**
    a. Claude deletes the two Taddy secrets.
    b. The money session ("Q4 budgeting and subs") clicks "Downgrade to the free plan" on Taddy's dashboard. That leaves 10 days before the 12-07 bill.
+   b2. **If that session is closed by then:** put "Taddy downgrade: go" at the top of this file, and give Kevin the click in chat: https://taddy.org/login, sign in with his personal (trimm.co) login, then "Downgrade to the free plan". The money session also put a Friday 11-27 reminder on his calendar as a backstop. If the dates move, send that session a one-line message.
    c. After PR #85 nothing scheduled calls Taddy; only comments name it. So the downgrade is safe whether it takes effect at once or on 12-07. Its timing isn't documented anywhere found.
 5. **What the shorter path gives up:**
    a. The planned five shadow runs and the Monday TAL run. Discovery and transcripts were already seen agreeing live from the Mac on every show, and TAL's Monday import isn't exercised by the shadow anyway.
