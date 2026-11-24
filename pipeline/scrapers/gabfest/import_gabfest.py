@@ -54,10 +54,12 @@ def parse_pubdate(raw: Optional[str]) -> Optional[date]:
 
 def episode_url(item: dict[str, Any]) -> str:
     """Per-episode-unique dedup key (episodes.url is UNIQUE): the guid, else the
-    enclosure, else the link, else a synthetic key. The same chain as
-    feeds.episode_identity, which the feed check uses to rebuild it; tests/
-    test_import_gabfest.py holds the two equal. <link> comes last because it can be a
-    generic show page (that was the Hard Fork url-collapse bug)."""
+    enclosure, else the link, else a synthetic key. The same order as
+    feeds.episode_identity, which the feed check uses to rebuild it; the two agree on
+    every item with a guid, enclosure or link (tests/test_feed_check.py pins that on a
+    shared fixture). Their synthetic keys can differ for an item with none of the three,
+    which no item in Slate's feed has. <link> comes last because it can be a generic
+    show page (that was the Hard Fork url-collapse bug)."""
     return (
         item.get("guid")
         or item.get("enclosure_url")

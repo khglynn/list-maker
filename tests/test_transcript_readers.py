@@ -69,8 +69,8 @@ def _aidb_page(title: str, day: str, body_words: int = 2000) -> str:
 
 
 def test_aidb_markdown_loses_its_header_and_timestamps() -> None:
-    title, body = aidailybrief.parse_markdown(_aidb_page("Why Agents Need Memory", "2026-11-20", 3))
-    assert title == "Why Agents Need Memory"
+    title, day, body = aidailybrief.parse_markdown(_aidb_page("Why Agents Need Memory", "2026-11-20", 3) + "\n\u200b\n")
+    assert (title, day) == ("Why Agents Need Memory", "2026-11-20")
     assert body == "Opening line here.\n\nword word word\n\nLater."
     assert "[00:" not in body
 
@@ -82,14 +82,45 @@ def test_aidb_looks_up_the_eastern_day_first() -> None:
     assert len(days) == len(set(days))
 
 
-def test_aidb_refuses_another_episodes_page_on_the_same_date() -> None:
-    """The probe that found this source matched the day before when a date slipped, and a
-    promo item shared a date with the main episode. Only the title tells them apart."""
+def test_aidb_on_a_shared_day_takes_only_the_page_that_is_ours() -> None:
+    """A promo item shared its date with the main episode (2026-10-26). With another item
+    on the day, the page must match this item's title better than the other's."""
     url = aidailybrief.BASE_URL.format(day="2026-11-20")
-    session = _Session({url: _Resp(text=_aidb_page("A Completely Different Story", "2026-11-20"))})
-    result = aidailybrief.fetch(_item(), session=session)
+    session = _Session({url: _Resp(text=_aidb_page("Listen to Our Sister Show", "2026-11-20"))})
+    result = aidailybrief.fetch(_item(), session=session, same_day_titles=["Listen to Our Sister Show"])
+    assert isinstance(result, NotYet) and "another episode" in result.reason
+
+
+def test_aidb_a_retitled_page_on_the_episodes_own_day_is_still_its_page() -> None:
+    """The feed's "A System for Testing New AI Models" is "The Best Way to Test New AI
+    Models" on its own 2026-10-07 page. The only item that day owns that day's page."""
+    url = aidailybrief.BASE_URL.format(day="2026-11-20")
+    session = _Session({url: _Resp(text=_aidb_page("The Best Way to Remember Things", "2026-11-20"))})
+    assert isinstance(aidailybrief.fetch(_item(), session=session), Transcript)
+
+
+def test_aidb_the_day_before_needs_an_exact_title() -> None:
+    """Today's page is not up yet, and yesterday's is "Part 1" of today's "Part 2": a
+    token-set score calls those 100. A page from another day must match exactly."""
+    item = _item(title="Agents, Part 2")
+    yesterday = aidailybrief.BASE_URL.format(day="2026-11-19")
+    session = _Session({yesterday: _Resp(text=_aidb_page("Agents, Part 1", "2026-11-19"))})
+    result = aidailybrief.fetch(item, session=session)
+    assert isinstance(result, NotYet) and yesterday in session.asked
+
+
+def test_aidb_a_page_whose_header_names_another_day_is_refused() -> None:
+    url = aidailybrief.BASE_URL.format(day="2026-11-20")
+    session = _Session({url: _Resp(text=_aidb_page("Why Agents Need Memory", "2026-11-19"))})
+    assert isinstance(aidailybrief.fetch(_item(), session=session), NotYet)
+
+
+def test_aidb_numbers_must_agree_on_a_shared_day() -> None:
+    url = aidailybrief.BASE_URL.format(day="2026-11-20")
+    page = _aidb_page("Why the AI Kids Hate Astra 6.3", "2026-11-20")
+    result = aidailybrief.fetch(_item(title="Why the AI Kids Hate Astra 6.2"), session=_Session({url: _Resp(text=page)}),
+                                same_day_titles=["A Bonus Episode"])
     assert isinstance(result, NotYet)
-    assert "another episode" in result.reason
 
 
 def test_aidb_finds_the_page_whose_title_matches() -> None:
@@ -145,19 +176,28 @@ def test_npr_story_id_from_both_link_shapes() -> None:
 
 
 def test_npr_page_keeps_the_turns_and_drops_labels_stage_directions_and_boilerplate() -> None:
-    text = npr.parse_transcript_page(_npr_page([
+    text, generated = npr.parse_transcript_page(_npr_page([
         "STEPHEN THOMPSON, BYLINE: Welcome to the show.",
-        "LIM: I loved it. (LAUGHTER) Truly.",
+        "LIM: I loved it. (LAUGHTER) Truly. [LAUGHTER]",
         "(SOUNDBITE OF MUSIC)",
-        "Roose: A mixed-case label (with an aside in parentheses) stays as speech.",
+        "[THEME MUSIC]",
+        "SPEAKER 2: A numbered label goes too.",
+        "Roose: A mixed-case label (with an aside in parentheses) stays as speech. [Laughs]",
     ]))
     assert text.split("\n\n") == [
         "Welcome to the show.",
         "I loved it. Truly.",
+        "A numbered label goes too.",
         "A mixed-case label (with an aside in parentheses) stays as speech.",
     ]
-    for gone in ("Navigation", "Copyright", "Accuracy", "Footer", "Transcript", "THOMPSON", "Roose:"):
+    assert generated is False
+    for gone in ("Navigation", "Copyright", "Accuracy", "Footer", "Transcript", "THOMPSON", "Roose:", "[", "SPEAKER"):
         assert gone not in text
+
+
+def test_npr_says_when_the_page_was_generated_by_ai() -> None:
+    text, generated = npr.parse_transcript_page(_npr_page(["This transcript was generated by AI.", "HOST: Hello."]))
+    assert (text, generated) == ("Hello.", True)
 
 
 def test_npr_fetch_reads_the_items_own_story() -> None:
@@ -178,8 +218,18 @@ def test_npr_takes_no_title_check() -> None:
     assert isinstance(npr.fetch(_item(title="Feed Title", link=link), session=_Session({url: _Resp(text=page)})), Transcript)
 
 
-def test_npr_without_a_story_id_fails_rather_than_waiting_forever() -> None:
-    assert isinstance(npr.fetch(_item(link="https://example.org/x"), session=_Session({})), Failed)
+def test_npr_without_a_story_id_is_an_item_with_no_transcript_not_a_failure() -> None:
+    """NPR posts announcements and trailers without a story. Failed would redden every
+    run for the two weeks the importer keeps asking."""
+    result = npr.fetch(_item(link="https://example.org/x"), session=_Session({}))
+    assert isinstance(result, NotYet) and "no transcript expected" in result.reason
+
+
+def test_a_rate_limit_is_said_so_the_caller_can_stop_asking() -> None:
+    link = "https://www.npr.org/2026/11/20/nx-s1-1234567/slug"
+    url = npr.TRANSCRIPT_URL.format(story_id="nx-s1-1234567")
+    result = npr.fetch(_item(link=link), session=_Session({url: _Resp(429)}))
+    assert isinstance(result, NotYet) and result.rate_limited
 
 
 def test_npr_page_without_transcript_text_is_not_yet() -> None:

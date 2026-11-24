@@ -168,13 +168,10 @@ def rss_recent_episodes(
     importer kept the feed's local date and this reader had to copy it; Slate's feed is
     all GMT, so the move changed no stored date).
 
-    `title_prefix` None means Culture Gabfest's, the one mixed feed this reads today.
+    `title_prefix` None or empty means no filter, as everywhere else; a mixed feed
+    (Culture Gabfest's) passes its show_config.feed_title_prefix.
     """
-    from scrapers.gabfest.import_gabfest import TITLE_PREFIX
-
-    if title_prefix is None:
-        title_prefix = TITLE_PREFIX
-    items = _rss_items(feed_url, title_prefix)
+    items = _rss_items(feed_url, title_prefix or "")
     if items is None:
         return None
     episodes = [

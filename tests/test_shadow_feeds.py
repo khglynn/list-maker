@@ -77,7 +77,7 @@ def test_nothing_the_publisher_wrote_reaches_the_summary_or_the_log_line(monkeyp
         title="Ep", publish_date=date(2026, 11, 24), duration_seconds=600,
         published_at=datetime(2026, 11, 24, 12, tzinfo=timezone.utc),
     )
-    reader = SimpleNamespace(fetch=lambda it, session=None: Transcript(
+    reader = SimpleNamespace(fetch=lambda it, session=None, same_day_titles=(): Transcript(
         text=f"publisher said {SECRET_PHRASE} Claude " + "word " * 2000, source_type="publisher_transcript",
         model="npr_transcript_page", is_generated=False, source_url="https://www.npr.org/transcripts/nx-s1-1"))
     monkeypatch.setattr(sh, "reader_for", lambda source: reader)

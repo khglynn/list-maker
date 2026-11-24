@@ -47,7 +47,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "scrapers" / "rss"))
 from thefuzz import fuzz  # noqa: E402
 
 from feeds import FeedItem, fetch_feed, parse_feed  # noqa: E402
-from import_feed import HeldIndex, load_held, plan_import  # noqa: E402
+from import_feed import HeldIndex, eastern_day, load_held, plan_import  # noqa: E402
 from scrapers.transcripts import reader_for  # noqa: E402
 from scrapers.transcripts.base import Transcript, words_per_minute  # noqa: E402
 from show_config import SHOWS, ShowConfig  # noqa: E402
@@ -101,6 +101,7 @@ class TranscriptCheck:
     ad_phrases_taddy: Optional[int] = None
     ad_phrases_new: Optional[int] = None
     seconds: Optional[float] = None
+    rate_limited: bool = False
 
 
 @dataclass
@@ -219,11 +220,12 @@ def _taddy_text(conn, episode_id: int) -> Optional[str]:
     return row["transcript_text"] if row else None
 
 
-def check_transcript(conn, cfg: ShowConfig, item: FeedItem, episode_id: Optional[int], now: datetime, session=None) -> TranscriptCheck:
+def check_transcript(conn, cfg: ShowConfig, item: FeedItem, episode_id: Optional[int], now: datetime, session=None,
+                     same_day_titles=()) -> TranscriptCheck:
     reader = reader_for(cfg.transcript_source)
     hours = round((now - item.published_at).total_seconds() / 3600, 1)
     started = time.monotonic()
-    result = reader.fetch(item, session=session)
+    result = reader.fetch(item, session=session, same_day_titles=same_day_titles)
     elapsed = round(time.monotonic() - started, 2)
     check = TranscriptCheck(
         episode_id=episode_id,
@@ -235,6 +237,7 @@ def check_transcript(conn, cfg: ShowConfig, item: FeedItem, episode_id: Optional
     )
     if not isinstance(result, Transcript):
         check.reason = result.reason[:200]
+        check.rate_limited = bool(getattr(result, "rate_limited", False))
         return check
     check.words = result.words
     wpm = words_per_minute(result.words, item.duration_seconds)
@@ -271,6 +274,9 @@ def shadow_show(conn, cfg: ShowConfig, now: datetime, session=None, pause: float
     )
     out.feed_items = len(actions)
     dated = [a for a in actions if a.item.publish_date and a.kind != "future"]
+    if not dated:
+        out.ok, out.error = False, f"the feed lists no dated items ({len(feed.items)} raw items)"
+        return out
     if dated:
         out.feed_latest = str(max(a.item.publish_date for a in dated))
     held_dates = [r.publish_date for r in held.rows if r.publish_date]
@@ -304,12 +310,24 @@ def shadow_show(conn, cfg: ShowConfig, now: datetime, session=None, pause: float
         recent = [a for a in actions if a.item.publish_date and a.kind != "future"
                   and (a.item.publish_date >= lookback or not cfg.show_id)]
         recent.sort(key=lambda a: a.item.published_at, reverse=True)
+        same_day: dict = {}
+        for b in actions:
+            if b.item.published_at:
+                same_day.setdefault(eastern_day(b.item), []).append(b.item.title)
         for a in recent[:MAX_TRANSCRIPT_FETCHES_PER_SHOW]:
+            others = [t for t in same_day.get(eastern_day(a.item), []) if t != a.item.title]
             try:
-                out.transcripts.append(asdict(check_transcript(conn, cfg, a.item, a.row.id if a.row else None, now, session)))
+                check = check_transcript(conn, cfg, a.item, a.row.id if a.row else None, now, session, others)
+                out.transcripts.append(asdict(check))
             except Exception as exc:  # noqa: BLE001
+                if conn is not None:
+                    conn.rollback()  # a failed query must not abort the rest of the run
                 out.transcripts.append({"publish_date": str(a.item.publish_date), "title": a.item.title[:80],
-                                        "status": "error", "reason": f"{exc.__class__.__name__}: {exc}"[:200]})
+                                        "status": "error", "reason": exc.__class__.__name__})
+                continue
+            if check.rate_limited:
+                out.notes.append("transcript source asked us to slow down (HTTP 429); stopped for this run")
+                break
             if pause:
                 time.sleep(pause)
     return out

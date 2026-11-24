@@ -6,10 +6,23 @@ keyed by the episode's date in US Eastern time. 39 of 39 episodes in the 45 days
 2026-11-23 had one. Its first line is "# <title> — Transcript (<date>)", and
 "[HH:MM:SS]" markers start some paragraphs.
 
-The lookup is by DATE, so the page can belong to a different episode: a date that
-slips a day finds yesterday's, and a promo item can share a day with the main episode.
-The title on the page's first line must match the feed's (base.MIN_TITLE_SIMILARITY),
-otherwise the answer is NotYet and a later run asks again.
+The lookup is by DATE, so the page can belong to a different episode. Three ways that
+happens, each seen in the live feed (2026-11-24 review of PR #84):
+  - A new episode's page is not up yet, and the day before holds YESTERDAY's episode,
+    often with a near-identical title ("... Part 1" / "... Part 2"; token-set matching
+    scores a title whose words are a subset of another's as 100).
+  - A promo item shares its date with the main episode.
+  - The site retitles the page ("A System for Testing New AI Models" in the feed is
+    "The Best Way to Test New AI Models" on its 2026-10-07 page).
+So the rule depends on which day the page is for:
+  - The episode's OWN Eastern day: when no other feed item shares that day, the page is
+    this episode's whatever its title says (the retitle case). When others do, the page
+    must match this item's title better than any of theirs, at MIN_TITLE_SIMILARITY or
+    above, with the same numbers in both titles.
+  - Any OTHER day (the UTC day when it differs, the day before or after): the page's title
+    must equal the feed's once normalised. Anything else is NotYet, and a later run asks
+    again.
+The page's own header date must also equal the day in its url.
 """
 
 from __future__ import annotations
@@ -18,7 +31,7 @@ import re
 import sys
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 from zoneinfo import ZoneInfo
 
 # pipeline/ on the path, as every module under scrapers/ does, so this imports the same
@@ -32,6 +45,7 @@ from scrapers.transcripts.base import (  # noqa: E402
     Result,
     Transcript,
     join_paragraphs,
+    normalize_title,
     sanity_check,
     title_similarity,
 )
@@ -59,14 +73,15 @@ def candidate_days(item: FeedItem) -> list[date]:
     return days
 
 
-def parse_markdown(markdown: str) -> tuple[Optional[str], str]:
-    """(title from the header line or None, the body as plain paragraphs)."""
+def parse_markdown(markdown: str) -> tuple[Optional[str], Optional[str], str]:
+    """(title from the header line, the header's date, the body as plain paragraphs).
+    Title and date are None when the first line is not the expected header."""
     lines = markdown.strip().splitlines()
-    title = None
+    title = page_day = None
     if lines:
         m = _HEADER_RE.match(lines[0].strip())
         if m:
-            title = m.group("title").strip()
+            title, page_day = m.group("title").strip(), m.group("day")
             lines = lines[1:]
     paragraphs: list[str] = []
     current: list[str] = []
@@ -82,10 +97,33 @@ def parse_markdown(markdown: str) -> tuple[Optional[str], str]:
         current.append(line)
     if current:
         paragraphs.append(" ".join(current))
-    return title, join_paragraphs(paragraphs)
+    return title, page_day, join_paragraphs(paragraphs)
 
 
-def fetch(item: FeedItem, session=None) -> Result:
+def _numbers(title: Optional[str]) -> list[str]:
+    return sorted(re.findall(r"\d+", normalize_title(title)))
+
+
+def _accepts(page_title: Optional[str], item: FeedItem, own_day: bool, same_day_titles: Sequence[str]) -> tuple[bool, str]:
+    """(is this page the item's episode, why not)."""
+    if not own_day:
+        if page_title and normalize_title(page_title) == normalize_title(item.title):
+            return True, ""
+        return False, "another episode's page (a different day needs an exact title)"
+    others = [t for t in same_day_titles if normalize_title(t) != normalize_title(item.title)]
+    if not others:
+        return True, ""  # the only episode that day: the page is ours, even retitled
+    mine = title_similarity(page_title, item.title)
+    best_other = max(title_similarity(page_title, t) for t in others)
+    if mine >= MIN_TITLE_SIMILARITY and mine > best_other and _numbers(page_title) == _numbers(item.title):
+        return True, ""
+    return False, f"another episode's page (title match {mine}, another item that day {best_other})"
+
+
+def fetch(item: FeedItem, session=None, same_day_titles: Sequence[str] = ()) -> Result:
+    """`same_day_titles`: the titles of the OTHER feed items on this item's Eastern day.
+    The caller holds the whole feed; without them the reader cannot tell a retitled page
+    from a promo's."""
     import requests
 
     getter = session or requests
@@ -93,7 +131,7 @@ def fetch(item: FeedItem, session=None) -> Result:
     if not days:
         return Failed("the feed item has no parseable date, and this source is keyed by date")
     tried: list[str] = []
-    for day in days:
+    for index, day in enumerate(days):
         url = BASE_URL.format(day=day.isoformat())
         try:
             resp = getter.get(url, timeout=TIMEOUT_SECONDS, headers={"User-Agent": USER_AGENT})
@@ -102,12 +140,17 @@ def fetch(item: FeedItem, session=None) -> Result:
         if resp.status_code == 404:
             tried.append(f"{day} (none)")
             continue
+        if resp.status_code == 429:
+            return NotYet(f"{url}: HTTP 429", rate_limited=True)
         if resp.status_code != 200:
             return NotYet(f"{url}: HTTP {resp.status_code}")
-        page_title, body = parse_markdown(resp.text)
-        similarity = title_similarity(page_title, item.title)
-        if similarity < MIN_TITLE_SIMILARITY:
-            tried.append(f"{day} (another episode, title match {similarity})")
+        page_title, page_day, body = parse_markdown(resp.text)
+        if page_day is not None and page_day != day.isoformat():
+            tried.append(f"{day} (page says {page_day})")
+            continue
+        ok, why = _accepts(page_title, item, own_day=index == 0, same_day_titles=same_day_titles)
+        if not ok:
+            tried.append(f"{day} ({why})")
             continue
         problem = sanity_check(body, item.duration_seconds)
         if problem:

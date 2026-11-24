@@ -57,7 +57,7 @@ def test_a_title_one_day_off_still_matches_and_says_how() -> None:
 
 def test_titles_match_through_curly_quotes_and_case() -> None:
     item = _item("Jensen Huang’s Fall", "g", days_ago=0)
-    held = _held(4, "jensen huang's fall", item.publish_date, url="x")
+    held = _held(4, "jensen huang's fall", item.publish_date, url="https://old.example/x")
     assert imp.HeldIndex([held]).match(item, "g")[1] == "title_date"
 
 
@@ -300,3 +300,71 @@ def test_the_cli_refuses_an_unknown_show_without_retrying(monkeypatch) -> None:
     with pytest.raises(SystemExit) as exc:
         imp.main(["--shows", "no-such-show"])
     assert exc.value.code == imp.DETERMINISTIC_EXIT_CODE
+
+
+def test_a_title_match_onto_a_row_tied_to_another_guid_is_a_conflict_not_a_merge() -> None:
+    """Two items can share a title (a daily roundup, a re-upload under a new guid). Folding
+    the second onto the first row would attach its transcript to the wrong episode."""
+    item = _item("Daily Roundup", "guid-B", days_ago=1)
+    held = imp.HeldIndex([_held(1, "Daily Roundup", item.publish_date - timedelta(days=1), url="guid-A",
+                                has_transcript=False)])
+    assert held.match(item, "guid-B")[1] == "guid_conflict"
+    assert _kinds(imp.plan_import([item], held, now=NOW, wants_transcript=True)) == {"Daily Roundup": "conflict"}
+
+
+def test_two_new_items_with_one_title_and_day_insert_once() -> None:
+    items = [_item("Re-uploaded", "g-1", days_ago=1), _item("Re-uploaded", "g-2", days_ago=1)]
+    kinds = [a.kind for a in imp.plan_import(items, imp.HeldIndex([]), now=NOW, wants_transcript=False)]
+    assert kinds == ["insert", "duplicate"]
+
+
+def test_an_undated_item_still_matches_by_guid() -> None:
+    item = FeedItem("Undated but held", "g-held", None, None, "garbage", None, "")
+    held = imp.HeldIndex([_held(1, "x", date(2026, 1, 1), url="g-held")])
+    assert _kinds(imp.plan_import([item], held, now=NOW, wants_transcript=False)) == {"Undated but held": "held"}
+
+
+def test_backfill_also_retries_old_rows_still_missing_a_transcript() -> None:
+    item = _item("Old, no transcript", "g", days_ago=40)
+    held = imp.HeldIndex([_held(1, "x", date(2026, 1, 1), url="g", has_transcript=False)])
+    assert _kinds(imp.plan_import([item], held, now=NOW, wants_transcript=True)) == {"Old, no transcript": "held"}
+    assert _kinds(imp.plan_import([item], held, now=NOW, wants_transcript=True, backfill=True)) == {"Old, no transcript": "transcript"}
+
+
+def test_a_feed_with_no_dated_items_is_a_problem_not_a_quiet_day() -> None:
+    feed = b"<rss><channel><title>Show</title></channel></rss>"
+    report = imp.run_show(_cfg(), FakeConn(), now=NOW, dry_run=False, backfill=False,
+                          session=FakeSession(feed, {}), pause_seconds=0)
+    assert report.problems and "no dated items" in report.problems[0]
+
+
+def test_conflicts_duplicates_and_undated_items_are_problems() -> None:
+    feed = _feed_xml([
+        ("Same", "g-1", "Tue, 24 Nov 2026 08:00:00 +0000", "https://www.npr.org/2026/11/24/nx-s1-7/x"),
+        ("Same", "g-2", "Tue, 24 Nov 2026 09:00:00 +0000", "https://www.npr.org/2026/11/24/nx-s1-8/x"),
+        ("No date", "g-3", "garbage", "https://www.npr.org/2026/11/24/nx-s1-9/x"),
+    ])
+    report = imp.run_show(_cfg(), FakeConn(), now=NOW, dry_run=False, backfill=False,
+                          session=FakeSession(feed, {}), pause_seconds=0)
+    assert len(report.inserted) == 1
+    assert any("share a title and day" in p for p in report.problems)
+    assert any("unreadable date" in p for p in report.problems)
+
+
+def test_a_rate_limited_source_is_not_asked_again_this_run() -> None:
+    feed = _feed_xml([
+        ("One", "g-1", "Tue, 24 Nov 2026 08:00:00 +0000", "https://www.npr.org/2026/11/24/nx-s1-11/x"),
+        ("Two", "g-2", "Mon, 23 Nov 2026 08:00:00 +0000", "https://www.npr.org/2026/11/23/nx-s1-12/x"),
+    ])
+
+    class Limited(FakeSession):
+        def get(self, url, **kwargs):
+            if "transcripts" in url:
+                self.asked.append(url)
+                return SimpleNamespace(status_code=429, text="")
+            return super().get(url, **kwargs)
+
+    session = Limited(feed, {})
+    report = imp.run_show(_cfg(), FakeConn(), now=NOW, dry_run=False, backfill=False, session=session, pause_seconds=0)
+    assert len([u for u in session.asked if "transcripts" in u]) == 1
+    assert any("429" in n for n in report.notes) and len(report.inserted) == 2

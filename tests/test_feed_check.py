@@ -264,7 +264,16 @@ def test_feed_recent_episodes_routes_the_real_gabfest_config_to_its_rss_feed(mon
         if it["title"].startswith("Culture Gabfest")
     ]
     assert [ep.identity for ep in episodes] == expected  # the guid the importer stores
-    # The dispatch relies on rss_recent_episodes' DEFAULT title filter, unlike
-    # feed_recent_dates which passes one explicitly — so prove the filter still happens
-    # here: the ICYMI item is a different Slate show in the same feed.
+    # The filter comes from show_config.feed_title_prefix: the ICYMI item is a different
+    # Slate show in the same feed.
     assert all("ICYMI" not in ep.title for ep in episodes)
+
+
+def test_rss_recent_episodes_without_a_prefix_filters_nothing(monkeypatch) -> None:
+    """None used to mean "Culture Gabfest's prefix", which would have filtered every
+    other show's feed down to nothing once they read RSS (review of PR #84)."""
+    from tests.test_import_gabfest import SAMPLE_FEED
+
+    monkeypatch.setattr(feed_check.requests, "get", lambda *a, **k: _Resp(content=SAMPLE_FEED))
+    episodes = feed_check.rss_recent_episodes("https://example.org/feed.xml")
+    assert len(episodes) == 3 and any("ICYMI" in ep.title for ep in episodes)

@@ -59,6 +59,9 @@ class Transcript:
 @dataclass(frozen=True)
 class NotYet:
     reason: str
+    # The publisher said "slow down" (HTTP 429). Callers stop asking that source for the
+    # rest of the run instead of trying every remaining episode.
+    rate_limited: bool = False
 
 
 @dataclass(frozen=True)
@@ -109,8 +112,12 @@ def sanity_check(text: str, duration_seconds: Optional[int]) -> Optional[str]:
     return None
 
 
+_INVISIBLE = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff"), None)
+
+
 def join_paragraphs(paragraphs: list[str]) -> str:
     """The shape extraction was tuned on: plain paragraphs separated by a blank line,
-    which is how the Taddy importer joined its PARAGRAPH-style items."""
-    cleaned = [re.sub(r"\s+", " ", p).strip() for p in paragraphs]
+    which is how the Taddy importer joined its PARAGRAPH-style items. Zero-width
+    characters go (AI Daily's pages end with a paragraph that is only one)."""
+    cleaned = [re.sub(r"\s+", " ", p.translate(_INVISIBLE)).strip() for p in paragraphs]
     return "\n\n".join(p for p in cleaned if p)

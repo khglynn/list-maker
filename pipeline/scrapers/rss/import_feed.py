@@ -101,7 +101,12 @@ class HeldIndex:
                 self.by_title_date.setdefault((normalize_title(row.title or "Untitled Episode"), row.publish_date), row)
 
     def match(self, item: FeedItem, identity: str) -> tuple[Optional[HeldEpisode], Optional[str]]:
-        """(the held row, how it matched) or (None, None)."""
+        """(the held row, how it matched) or (None, None).
+
+        A title match onto a row that already carries a DIFFERENT feed guid comes back as
+        "guid_conflict": two items with one title (a daily "roundup", a re-upload under a
+        new guid) must not share a row, and which one is right is a person's call.
+        """
         if identity in self.by_url:
             return self.by_url[identity], "url"
         if item.guid and item.guid in self.by_guid:
@@ -109,12 +114,26 @@ class HeldIndex:
         day = item.publish_date
         if day:
             title = normalize_title(item.title or "Untitled Episode")
-            if (title, day) in self.by_title_date:
-                return self.by_title_date[(title, day)], "title_date"
-            for shifted in (day - timedelta(days=1), day + timedelta(days=1)):
-                if (title, shifted) in self.by_title_date:
-                    return self.by_title_date[(title, shifted)], "title_date_shifted"
+            for shifted, how in ((day, "title_date"), (day - timedelta(days=1), "title_date_shifted"),
+                                 (day + timedelta(days=1), "title_date_shifted")):
+                row = self.by_title_date.get((title, shifted))
+                if row is not None:
+                    known = known_guid(row)
+                    if item.guid and known and known != item.guid:
+                        return row, "guid_conflict"
+                    return row, how
         return None, None
+
+
+def known_guid(row: HeldEpisode) -> Optional[str]:
+    """The feed guid a held row is already tied to: the one Taddy saved, or its url when
+    the url IS a guid (this importer's rows, Gabfest's, and every row after the id move).
+    A web address is a legacy page url, not a guid."""
+    if row.raw_guid:
+        return row.raw_guid
+    if row.url and not row.url.startswith(("http://", "https://")):
+        return row.url
+    return None
 
 
 @dataclass(frozen=True)
@@ -129,6 +148,10 @@ class Action:
       old         not held, older than the window (counted; --backfill imports it)
       undated     the item's pubDate does not parse; skipped and counted
       future      dated in the future (a scheduled pre-release); skipped until it isn't
+      conflict    its title matches a held row tied to a different guid; nothing written,
+                  reported for a person to settle
+      duplicate   a second new item with the same title and day as one already planned
+                  in this run (a re-upload under a new guid); not inserted, reported
     """
 
     kind: str
@@ -153,6 +176,7 @@ def plan_import(
     today = now.astimezone(timezone.utc).date()
     actions: list[Action] = []
     seen: set[str] = set()
+    planned_inserts: set[tuple[str, date]] = set()
     for item in items:
         if title_prefix and not item.title.startswith(title_prefix):
             continue
@@ -162,23 +186,32 @@ def plan_import(
             continue
         seen.add(identity)
         if not item.published_at:
-            actions.append(Action("undated", item, identity))
+            row, how = held.match(item, identity)  # url and guid still work without a date
+            actions.append(Action("held" if row is not None else "undated", item, identity, row, how))
             continue
         if item.published_at > now + timedelta(hours=1):
             actions.append(Action("future", item, identity))
             continue
         row, how = held.match(item, identity)
         day = item.publish_date
-        if row is not None:
+        if how == "guid_conflict":
+            actions.append(Action("conflict", item, identity, row, how))
+        elif row is not None:
             waiting = (
                 wants_transcript
                 and not row.has_transcript
                 and day is not None
-                and day >= today - timedelta(days=transcript_retry_days)
+                # --backfill also repairs older rows whose transcript fetch once failed
+                and (backfill or day >= today - timedelta(days=transcript_retry_days))
             )
             actions.append(Action("transcript" if waiting else "held", item, identity, row, how))
         elif backfill or day >= today - timedelta(days=new_window_days):
-            actions.append(Action("insert", item, identity))
+            key = (normalize_title(item.title or "Untitled Episode"), day)
+            if key in planned_inserts:
+                actions.append(Action("duplicate", item, identity))
+            else:
+                planned_inserts.add(key)
+                actions.append(Action("insert", item, identity))
         else:
             actions.append(Action("old", item, identity))
     return actions
@@ -314,6 +347,14 @@ class ShowReport:
     notes: list[str] = field(default_factory=list)
 
 
+def eastern_day(item: FeedItem) -> date:
+    """The day AI Daily keys its transcript pages by; also groups "the same day" for the
+    title rule. Harmless for other shows, which ignore it."""
+    from zoneinfo import ZoneInfo
+
+    return item.published_at.astimezone(ZoneInfo("America/New_York")).date()
+
+
 def _label(item: FeedItem) -> str:
     return f"{item.publish_date} {item.title[:70]!r}"
 
@@ -357,6 +398,24 @@ def run_show(
             report.notes.append(
                 f"matched across a one-day date shift (row {a.row.id}, held {a.row.publish_date}, feed {a.item.publish_date}): {a.item.title[:70]!r}"
             )
+        elif a.kind == "conflict":
+            report.problems.append(
+                f"title matches row {a.row.id}, which is tied to another guid ({known_guid(a.row)!r}, feed has {a.item.guid!r}); "
+                f"nothing written: {_label(a.item)}"
+            )
+        elif a.kind == "duplicate":
+            report.problems.append(f"two new feed items share a title and day; only the first was planned: {_label(a.item)}")
+        elif a.kind == "undated":
+            report.problems.append(f"feed item with an unreadable date {a.item.pubdate_raw!r}: {a.item.title[:70]!r}")
+    if not any(a.item.publish_date for a in actions):
+        # "Empty means unverified" (feed_check's rule): a feed that parses but lists
+        # nothing usable is a broken feed, never a quiet day.
+        report.problems.append(f"the feed lists no dated items ({len(feed.items)} raw items); treating it as unreadable")
+
+    same_day: dict[date, list[str]] = {}
+    for a in actions:
+        if a.item.published_at:
+            same_day.setdefault(eastern_day(a.item), []).append(a.item.title)
 
     todo = [a for a in actions if a.kind in ("insert", "transcript")]
     # Oldest first, so a --limit'ed backfill fills the gap from its start.
@@ -364,6 +423,7 @@ def run_show(
     if limit is not None:
         todo = todo[:limit]
     reader = reader_for(cfg.transcript_source) if cfg.transcript_source else None
+    rate_limited = False
 
     for a in todo:
         if dry_run:
@@ -378,9 +438,10 @@ def run_show(
                 continue
             report.inserted.append(_label(a.item))
             print(f"  + episode {episode_id}: {_label(a.item)}")
-        if reader is None:
+        if reader is None or rate_limited:
             continue
-        result = reader.fetch(a.item, session=session)
+        others = [t for t in same_day.get(eastern_day(a.item), []) if t != a.item.title]
+        result = reader.fetch(a.item, session=session, same_day_titles=others)
         if pause_seconds:
             time.sleep(pause_seconds)
         if isinstance(result, Transcript):
@@ -389,6 +450,9 @@ def run_show(
                 print(f"  + transcript for episode {episode_id} ({result.words} words, {result.model}): {_label(a.item)}")
         elif isinstance(result, NotYet):
             report.transcripts_pending.append(f"{_label(a.item)}: {result.reason}")
+            if result.rate_limited:
+                rate_limited = True
+                report.notes.append(f"{cfg.transcript_source} asked us to slow down (HTTP 429); no more transcript requests this run")
         elif isinstance(result, Failed):
             report.problems.append(f"transcript source cannot read {_label(a.item)}: {result.reason}")
     return report
@@ -440,8 +504,11 @@ def main(argv: Optional[list[str]] = None) -> None:
                 report = run_show(cfg, conn, now=now, dry_run=args.dry_run, backfill=args.backfill, limit=args.limit)
             except Exception as exc:  # one show's broken feed must not stop the others
                 conn.rollback()
-                log.error("show=%s import failed: %s: %s", slug, exc.__class__.__name__, exc)
-                print(f"[{slug}] FAILED: {exc.__class__.__name__}: {exc}")
+                # First line only, capped: a database error can echo the values it was
+                # given, and this log is public.
+                brief = (str(exc).splitlines() or [""])[0][:200]
+                log.error("show=%s import failed: %s: %s", slug, exc.__class__.__name__, brief)
+                print(f"[{slug}] FAILED: {exc.__class__.__name__}: {brief}")
                 failed_shows.append(slug)
                 continue
             print_report(report)
