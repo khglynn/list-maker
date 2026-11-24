@@ -4,7 +4,19 @@
 
 **Clock:** Taddy Pro ($75/mo) next bills **2026-12-07**. Target: new path live and seen working by **12-04**, Kevin cancels by **12-05**.
 
-## Latest (2026-11-24, 21:15 UTC / 3:15pm CT): the first shadow run from a GitHub runner is clean
+## Latest (2026-11-24, 21:25 UTC / 3:25pm CT): cut over. The feed path is live and seen writing.
+1. **The id move ran (Kevin's paste, about 21:11 UTC):** 1,868 rows moved (the rehearsal's 1,865 plus 3 that arrived since). After it: AI Daily 1,148, Hard Fork 227 and PCHH 465 on their feed guids, 0 Taddy ids; TAL's 28 on guids and 889 on page urls; `shows` row 65 is Machine Gods.
+2. **PR #85 merged** (`36d27a7`, CI green on `7d1ab8a`).
+3. **Seen working:** hand-dispatched entities run 45488726197 (21:12 UTC), green.
+   a. Machine Gods: 11 inserted, 11 transcripts, the trailer skipped; 79 mentions extracted; Notion synced.
+   b. AI Daily 1,148 and PCHH 300 feed items all held; nothing inserted, no duplicates (every show's urls unique).
+   c. Health: `import_caught_up_to_feed` passes on guid identity; Hard Fork skipped as not collected. Two warnings, both known: SOP's transcript gap (follow-up PR) and the alias-split list.
+4. **Rehearsal Neon branch deleted** (Kevin's yes). The snapshot `pre-off-taddy-014-2026-11-24` stays until the downgrade.
+5. **Left for the teardown:** SOP's 2 rows still on Taddy ids (7852, a 07-14 Netflix promo; 7853, a 06-23 rerun). Nothing calls Taddy with them.
+
+**Next:** Wed 11-25 and Thu 11-26 20:30 UTC runs green on the new path, then Fri 11-27: delete the two Taddy secrets and message the money session for the downgrade.
+
+## Earlier (2026-11-24, 21:15 UTC / 3:15pm CT): the first shadow run from a GitHub runner is clean
 **Seen working:** entities run 45481428202 (20:30 UTC, green; every step green, the shadow step included). Its "Shadow" step:
 1. **Discovery 100% on every show:** AI Daily 1,147 of 1,147, PCHH 300 of 300 (by saved guid), TAL 16 of 16 (title and date). Nothing to insert on the shows the importer will write.
 2. **Transcripts answer the runner's network:** AI Daily 6 of 6 older than a day (word overlap with Taddy 96–98%); PCHH 4 of 4 older than a day (81–85%), today's not posted 12.6 h in; Machine Gods 11 of 12, the missing one the September trailer.
@@ -58,8 +70,8 @@ CI is green on the fixes, which are small and tested, so they had no fourth revi
 1. **Tue 11-24, 20:30 UTC:** the first shadow run from a GitHub runner, the one thing not yet seen (NPR and aidailybrief.ai answering the runner). PR #84 merged 2026-11-24.
 2. **Between Tue 11-24 evening and Wed 11-25 2:30pm CT (the run was clean):**
    a. Claude makes a Neon snapshot branch. **Done 11-24 21:10 UTC.**
-   b. Kevin pastes `apply_sql.py … 014` (one line).
-   c. Claude merges PR #85 right after and dispatches the entities run by hand, to see the new path write. The paste and the merge go back to back, with no 20:30 UTC run between them.
+   b. Kevin pastes `apply_sql.py … 014` (one line). **Done 11-24, about 21:11 UTC.**
+   c. Claude merges PR #85 right after and dispatches the entities run by hand, to see the new path write. **Done 11-24 21:12 UTC; the run was green.**
 3. **Wed 11-25 and Thu 11-26, 20:30 UTC:** two green daily runs on the new path. That is the alert rule's own "verified".
 4. **Fri 11-27:**
    a. Claude deletes the two Taddy secrets.
@@ -85,10 +97,10 @@ CI is green on the fixes, which are small and tested, so they had no fourth revi
    d. Until it lands, the warning-level check keeps the gap visible.
 
 ## Waiting on Kevin
-- **Kevin's yeses, given in chat on 2026-11-24.** Each is used only if the 11-24 shadow run is clean:
-  1. **The id move:** Claude makes the snapshot branch on Wed 11-25, then sends Kevin the one-line paste.
-  2. **Deleting the two Taddy secrets** on Fri 11-27.
-  3. **Deleting the rehearsal Neon branch** right after the real id move.
+- **Kevin's yeses, given in chat on 2026-11-24** (the 11-24 shadow run was clean):
+  1. **The id move:** done 11-24 (snapshot, then his paste).
+  2. **Deleting the two Taddy secrets** on Fri 11-27, after two green daily runs.
+  3. **Deleting the rehearsal Neon branch:** done 11-24.
 - Nothing else waits on him. The Taddy downgrade is the money session's click, once Claude messages it.
 
 ## Phase 5 (the manual tools): designed, not built (2026-11-24)
