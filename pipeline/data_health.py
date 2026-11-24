@@ -62,7 +62,10 @@ TRANSCRIPT_POLICIES: dict[str, dict[str, Any]] = {
     # TAL: its own site has every episode's transcript; the importer fetches new ones and
     # scrapers/rss/backfill_transcripts.py the archive. It imports weekly, so a page that
     # is late on Monday is retried the next Monday: 14 days of lag is normal.
-    "tal": {"mode": "latest", "max_latest_lag_days": 14, "min_coverage": 0.01},
+    # Backfilled 2026-11-24: 909 of 917. The 8 without are the site's own: 454 (the
+    # retracted Mike Daisey episode, 403), 460 and 497 (no page), 511 (redirects to 510,
+    # refused), and 4 pages that answer HTTP 500 (57, 79, 86, 375).
+    "tal": {"mode": "latest", "max_latest_lag_days": 14, "min_coverage": 0.95},
     # SOP: Taddy's one-off backfill stopped at 2026-08-04 and SOP publishes no transcript
     # of its own, so the gap since then stays visible here until speech-to-text fills it.
     "sop": {"mode": "latest", "max_latest_lag_days": 14, "min_coverage": 0.50},

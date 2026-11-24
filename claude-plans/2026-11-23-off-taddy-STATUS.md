@@ -62,8 +62,9 @@ CI is green on the fixes, which are small and tested, so they had no fourth revi
 1. **This American Life transcripts are kept,** not stopped.
    a. Its site has every episode's transcript back to #1. The new reader is `scrapers/transcripts/tal.py`, and the importer fetches new episodes' transcripts.
    b. The archive is about 875 episodes; Taddy only ever gave us 42. `scrapers/rss/backfill_transcripts.py --shows tal` fills it.
-   c. The dry run found 60 of 60. It runs against production once its Codex review is clean.
-   d. After it, raise TAL's `min_coverage` in `data_health.TRANSCRIPT_POLICIES` from 0.01.
+   c. **Seen working, 2026-11-24:** after Codex's review and its two fixes, the backfill ran against production and added 867 of 875. TAL now has 909 of 917 episodes with a transcript, and the database grew from 177 to 229 MB.
+   d. The 8 without one are the site's own gaps: 454, the retracted Mike Daisey episode (403); 460 and 497, which have no page; 511, which redirects to 510 and was correctly refused; and 4 pages that answer HTTP 500 (57, 79, 86, 375).
+   e. TAL's `min_coverage` is raised to 0.95.
 2. **Machine Gods arrives whole on its first import** (11 episodes from 10-21). It needs no separate backfill step: `import_since` now means "everything since".
 3. **Switched On Pop has a gap Taddy left.** Its one-off backfill stopped at 2026-08-04, and 180 episodes have no transcript (15 of them since August). SOP publishes no transcript of its own, so filling it takes speech-to-text.
    a. The plan is to run it inside the scheduled `pipeline.yml`, on GitHub's free runner for this public repo, with a CPU build of the same Parakeet model.
