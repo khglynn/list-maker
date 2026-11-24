@@ -59,6 +59,14 @@ A read-only design pass. The full note is kept privately at `~/.claude/plans/202
 5. **Hard Fork stops being collected:** a "not collected since" state so its staleness, feed and transcript checks don't fail forever.
 6. Set aside (taste or rare): conditional GET for AI Daily's 8.6 MB feed; a guid-less feed collapsing items onto one shared link (none of the feeds we read can reach it).
 
+## PR #85 review (2026-11-24)
+Codex found 3 medium issues and nothing high. It checked the id move SQL: preconditions, collisions, idempotence, and all 28 TAL mappings against the banked map. It also checked the workflow secrets and that no scheduled path still calls Taddy. All three issues are fixed in `pipeline: the cut-over review's three fixes`:
+1. Machine Gods' start date would have dropped its first week.
+2. The pulse would have called the stopped Hard Fork BEHIND forever.
+3. Weekend recaps without transcripts would have read as a transcript lag.
+
+CI is green on the fixes, which are small and tested, so they had no fourth review round.
+
 ## The shortened path (2026-11-24, after Kevin asked for a faster cut-over and for Claude to do the Taddy downgrade)
 1. **Tue 11-24, 20:30 UTC:** the first shadow run from a GitHub runner, the one thing not yet seen (NPR and aidailybrief.ai answering the runner). PR #84 merged 2026-11-24.
 2. **Wed 11-25, if that run is clean and the PR #85 review is clean:**
