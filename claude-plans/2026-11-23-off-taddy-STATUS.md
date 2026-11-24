@@ -34,6 +34,23 @@
 - **PR #84** (phase 0 + 1 + shadow): three review rounds (four Claude lenses + Codex, then two Codex passes on the fixes). Round 1: 10 real findings, all fixed. Rounds 2 and 3 kept finding the same kind of hole, AI Daily accepting another episode's page, so the mechanism was cut: the reader now asks only the episode's own Eastern day and matches the page by where its last timestamp lands against the audio length, plus a title floor. Live check: 57 of 61 recent episodes found, the same-day promo refused. Remaining known trade (written in `aidailybrief.same_episode`): a retitled page that also ends early is refused rather than risk a wrong transcript.
 - **Cut-over branch `off-taddy/2-cutover`** (part 2): built and banked, not for merge until the shadow window ends. The id move (`sql/014`) was rehearsed on a throwaway Neon branch (`rehearsal-off-taddy-014-2026-11-24`): 1,865 rows moved, a re-run moves 0; after it, the new importer and the feed check see every show caught up.
 
+## Phase 5 (the manual tools): designed, not built (2026-11-24)
+A read-only design pass. The full note is kept privately at `~/.claude/plans/2026-11-23-off-taddy-phase5-design.md` and not in this repo, because it quotes saved-episode titles.
+1. **This has to land with or before the teardown.** `pipeline/save_episode.py:49` imports `scrapers.taddy` at module level, so deleting that folder breaks its tests and CI. Both manual tools are already broken: clip transcription used OpenAI's Whisper, and that account closed 2026-11-14.
+2. **Finding an episode:**
+   a. Apple's free iTunes Search (`entity=podcastEpisode`) gives the feed guid, the audio url and the duration. The guid matched the live feed on 15 of 15 episodes across 5 shows.
+   b. NPR shows get their transcript from the existing NPR reader, through the story id in Apple's audio url.
+3. **Speech-to-text for everything else:**
+   a. The engine is local `parakeet-mlx` (tdt-0.6b-v2), not `mlx-whisper`. On this M2 Pro a 37-minute episode took 49 s against 92 s, and its published error rate is lower (4.70 against 6.36). `mlx-whisper` turbo stays the fallback.
+   b. It installs from a separate `pipeline/requirements-stt.txt`, never in a workflow.
+   c. The model, about 2.5 GB, is already cached in `~/.cache/huggingface`.
+4. **Traps for the builder:**
+   a. The readers' `Transcript` class is imported under a different module path than `save_episode`'s, so an `isinstance` check silently fails.
+   b. An upgraded transcript probably never reaches Notion, because the sync adopts the old page by Episode ID. This came from reading the code and hasn't been run.
+   c. One saved row (4801) holds another show's episode.
+   d. 19 transcript rows lack `model` and `is_generated`.
+5. **Dead code to delete at the teardown:** `scrapers/ai_daily/transcripts.py` and `run_guarded_backfill.py`. Nothing imports either; only the READMEs mention them.
+
 ## Carried into part 2 (the cut-over PR), from the review
 1. **The feed check must use the importer's matcher** (`import_feed.HeldIndex.match`). Otherwise the importer can call an episode held (punctuation, a one-day shift) while the check calls it missing, and nothing would ever clear the alarm.
 2. **Episodes that will never have a transcript** (trailers, NPR announcements, an AI Daily promo): skip `episodeType=trailer` items, and let the transcript-coverage check stop expecting a transcript for them. Otherwise one trailer is a permanent red check.
@@ -43,7 +60,9 @@
 6. Set aside (taste or rare): conditional GET for AI Daily's 8.6 MB feed; a guid-less feed collapsing items onto one shared link (none of the feeds we read can reach it).
 
 ## Waiting on Kevin
-Nothing yet. The yes-items come with evidence when they're ready: the one-time episode-id change in Neon, stopping TAL transcripts, the Machine Gods backfill, deleting the two Taddy secrets, and the cancel click.
+- **The PR #84 merge (2026-11-24).** Review is clean and CI is green on `be721ab`, but the merge command hit a permission prompt nobody was there to answer, so it was declined and not retried. Until it merges, the daily run does no comparison, and each day without it is one fewer comparison run before 12-04.
+
+The yes-items come with evidence when they're ready: the one-time episode-id change in Neon, stopping TAL transcripts, the Machine Gods backfill, deleting the two Taddy secrets, and the cancel click.
 
 ## Overlaps checked before branching (2026-11-23)
 - `gabby/fix-pipe-list-maker-2` and `-2-workflows`: merged (#81, #82) and deleted; nothing to coordinate.
