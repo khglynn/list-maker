@@ -368,3 +368,15 @@ def test_a_rate_limited_source_is_not_asked_again_this_run() -> None:
     report = imp.run_show(_cfg(), FakeConn(), now=NOW, dry_run=False, backfill=False, session=session, pause_seconds=0)
     assert len([u for u in session.asked if "transcripts" in u]) == 1
     assert any("429" in n for n in report.notes) and len(report.inserted) == 2
+
+
+def test_a_shows_start_date_collects_everything_since_it_however_old() -> None:
+    """Machine Gods: its whole run arrives on the first import, past the 30-day window,
+    and nothing before its start date does."""
+    items = [_item("Ep 11", "g11", days_ago=4), _item("Ep 1", "g1", days_ago=34), _item("Before", "g0", days_ago=80)]
+    actions = imp.plan_import(items, imp.HeldIndex([]), now=NOW, wants_transcript=False,
+                              import_since=(NOW - timedelta(days=60)).date())
+    assert [(a.kind, a.item.title) for a in actions] == [("insert", "Ep 11"), ("insert", "Ep 1"), ("old", "Before")]
+    # Without a start date the 30-day window applies as before.
+    plain = imp.plan_import(items, imp.HeldIndex([]), now=NOW, wants_transcript=False)
+    assert [a.kind for a in plain] == ["insert", "old", "old"]

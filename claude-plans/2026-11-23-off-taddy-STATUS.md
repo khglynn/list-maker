@@ -4,7 +4,19 @@
 
 **Clock:** Taddy Pro ($75/mo) next bills **2026-12-07**. Target: new path live and seen working by **12-04**, Kevin cancels by **12-05**.
 
-## Where it stands (2026-11-24, ~01:10 UTC / 2026-11-23 evening CT)
+## Latest (2026-11-24, 21:15 UTC / 3:15pm CT): the first shadow run from a GitHub runner is clean
+**Seen working:** entities run 45481428202 (20:30 UTC, green; every step green, the shadow step included). Its "Shadow" step:
+1. **Discovery 100% on every show:** AI Daily 1,147 of 1,147, PCHH 300 of 300 (by saved guid), TAL 16 of 16 (title and date). Nothing to insert on the shows the importer will write.
+2. **Transcripts answer the runner's network:** AI Daily 6 of 6 older than a day (word overlap with Taddy 96–98%); PCHH 4 of 4 older than a day (81–85%), today's not posted 12.6 h in; Machine Gods 11 of 12, the missing one the September trailer.
+3. **Entity misses:** none new. Every episode below 100% was already read by hand in the Mac run (Taddy mishearings and sponsor reads); 11-23, the one new AI Daily episode, is 100%.
+4. **One timing note, not a problem:** AI Daily's 11-24 episode went into its feed at 20:12 UTC and wasn't in the copy the runner read at 20:37 (Anchor's cache); Taddy had it. On the new path an episode published that close to the 20:30 run lands the next day. It changes nothing in practice: AI Daily waits for its transcript, and the transcript is never up within the hour.
+5. SOP's would-insert (today's episode) and its two one-day date shifts are the shadow's view only; SOP keeps its website scraper.
+
+**Done after it (2026-11-24, 21:10 UTC):** the Neon snapshot branch `pre-off-taddy-014-2026-11-24` (`br-delicate-term-aeplpww9`, no compute, the rollback for the id move). PR #85 marked ready.
+
+**Next:** Kevin's one-line paste of `apply_sql.py … 014`; Claude merges PR #85 right after it. Both must land before the next 20:30 UTC run (Wed 11-25, 2:30pm CT), with no daily run between them. Then a hand-dispatched entities run to see the new path write.
+
+## Where it stood (2026-11-24, ~01:10 UTC / 2026-11-23 evening CT)
 
 **Phase 0 (bank what only Taddy has): done, seen.**
 - The 28 This American Life rows stored under a Taddy id are mapped to their feed guids: `2026-11-23-off-taddy-probes/out/tal-taddy-uuid-to-guid.json`. 28 of 28, all guids distinct, every title and date agrees with Taddy's. Taddy's "latest" list only covers the feed's 16 items, so the 15 older rows took one `getPodcastEpisode` lookup each (no transcript credits spent).
@@ -31,8 +43,53 @@
 5. **Gabfest's feed moved to Acast** (Slate, by 2026-11; the old Megaphone url redirects). `show_config.feed_url` names the new one; the show ended in July, so this changes no data.
 
 ## In flight
-- **PR #84** (phase 0 + 1 + shadow): three review rounds (four Claude lenses + Codex, then two Codex passes on the fixes). Round 1: 10 real findings, all fixed. Rounds 2 and 3 kept finding the same kind of hole, AI Daily accepting another episode's page, so the mechanism was cut: the reader now asks only the episode's own Eastern day and matches the page by where its last timestamp lands against the audio length, plus a title floor. Live check: 57 of 61 recent episodes found, the same-day promo refused. Remaining known trade (written in `aidailybrief.same_episode`): a retitled page that also ends early is refused rather than risk a wrong transcript.
+- **PR #84** (phase 0 + 1 + shadow): **merged 2026-11-24** after three review rounds (four Claude lenses + Codex, then two Codex passes on the fixes). Round 1: 10 real findings, all fixed. Rounds 2 and 3 kept finding the same kind of hole, AI Daily accepting another episode's page, so the mechanism was cut: the reader now asks only the episode's own Eastern day and matches the page by where its last timestamp lands against the audio length, plus a title floor. Live check: 57 of 61 recent episodes found, the same-day promo refused. Remaining known trade (written in `aidailybrief.same_episode`): a retitled page that also ends early is refused rather than risk a wrong transcript.
 - **Cut-over branch `off-taddy/2-cutover`** (part 2): built and banked, not for merge until the shadow window ends. The id move (`sql/014`) was rehearsed on a throwaway Neon branch (`rehearsal-off-taddy-014-2026-11-24`): 1,865 rows moved, a re-run moves 0; after it, the new importer and the feed check see every show caught up.
+
+## PR #85 review (2026-11-24)
+Codex found 3 medium issues and nothing high. It checked the id move SQL: preconditions, collisions, idempotence, and all 28 TAL mappings against the banked map. It also checked the workflow secrets and that no scheduled path still calls Taddy. All three issues are fixed in `pipeline: the cut-over review's three fixes`:
+1. Machine Gods' start date would have dropped its first week.
+2. The pulse would have called the stopped Hard Fork BEHIND forever.
+3. Weekend recaps without transcripts would have read as a transcript lag.
+
+CI is green on the fixes, which are small and tested, so they had no fourth review round.
+
+## The shortened path (2026-11-24, after Kevin asked for a faster cut-over and for Claude to do the Taddy downgrade)
+1. **Tue 11-24, 20:30 UTC:** the first shadow run from a GitHub runner, the one thing not yet seen (NPR and aidailybrief.ai answering the runner). PR #84 merged 2026-11-24.
+2. **Between Tue 11-24 evening and Wed 11-25 2:30pm CT (the run was clean):**
+   a. Claude makes a Neon snapshot branch. **Done 11-24 21:10 UTC.**
+   b. Kevin pastes `apply_sql.py … 014` (one line).
+   c. Claude merges PR #85 right after and dispatches the entities run by hand, to see the new path write. The paste and the merge go back to back, with no 20:30 UTC run between them.
+3. **Wed 11-25 and Thu 11-26, 20:30 UTC:** two green daily runs on the new path. That is the alert rule's own "verified".
+4. **Fri 11-27:**
+   a. Claude deletes the two Taddy secrets.
+   b. The money session ("Q4 budgeting and subs") clicks "Downgrade to the free plan" on Taddy's dashboard. That leaves 10 days before the 12-07 bill.
+   b2. **If that session is closed by then:** put "Taddy downgrade: go" at the top of this file, and give Kevin the click in chat: https://taddy.org/login, sign in with his personal (trimm.co) login, then "Downgrade to the free plan". The money session also put a Friday 11-27 reminder on his calendar as a backstop. If the dates move, send that session a one-line message.
+   c. After PR #85 nothing scheduled calls Taddy; only comments name it. So the downgrade is safe whether it takes effect at once or on 12-07. Its timing isn't documented anywhere found.
+5. **What the shorter path gives up:**
+   a. The planned five shadow runs and the Monday TAL run. Discovery and transcripts were already seen agreeing live from the Mac on every show, and TAL's Monday import isn't exercised by the shadow anyway.
+   b. Rollback to Taddy after 11-27. A revert of PR #85 would have nothing to fall back on, so a problem after that is fixed forward. The snapshot branch keeps the id move recoverable.
+
+## Complete coverage, not stops (Kevin, 2026-11-24: "I'm asking for complete work please")
+1. **This American Life transcripts are kept,** not stopped.
+   a. Its site has every episode's transcript back to #1. The new reader is `scrapers/transcripts/tal.py`, and the importer fetches new episodes' transcripts.
+   b. The archive is about 875 episodes; Taddy only ever gave us 42. `scrapers/rss/backfill_transcripts.py --shows tal` fills it.
+   c. **Seen working, 2026-11-24:** after Codex's review and its two fixes, the backfill ran against production and added 867 of 875. TAL now has 909 of 917 episodes with a transcript, and the database grew from 177 to 229 MB.
+   d. The 8 without one are the site's own gaps: 454, the retracted Mike Daisey episode (403); 460 and 497, which have no page; 511, which redirects to 510 and was correctly refused; and 4 pages that answer HTTP 500 (57, 79, 86, 375).
+   e. TAL's `min_coverage` is raised to 0.95.
+2. **Machine Gods arrives whole on its first import** (11 episodes from 10-21). It needs no separate backfill step: `import_since` now means "everything since".
+3. **Switched On Pop has a gap Taddy left.** Its one-off backfill stopped at 2026-08-04, and 180 episodes have no transcript (15 of them since August). SOP publishes no transcript of its own, so filling it takes speech-to-text.
+   a. The plan is to run it inside the scheduled `pipeline.yml`, on GitHub's free runner for this public repo, with a CPU build of the same Parakeet model.
+   b. The 180 are backfilled once, locally, with `parakeet-mlx` on the Mac.
+   c. This is a follow-up PR. It doesn't block the Taddy downgrade, because nothing fetches SOP transcripts from Taddy today.
+   d. Until it lands, the warning-level check keeps the gap visible.
+
+## Waiting on Kevin
+- **Kevin's yeses, given in chat on 2026-11-24.** Each is used only if the 11-24 shadow run is clean:
+  1. **The id move:** Claude makes the snapshot branch on Wed 11-25, then sends Kevin the one-line paste.
+  2. **Deleting the two Taddy secrets** on Fri 11-27.
+  3. **Deleting the rehearsal Neon branch** right after the real id move.
+- Nothing else waits on him. The Taddy downgrade is the money session's click, once Claude messages it.
 
 ## Phase 5 (the manual tools): designed, not built (2026-11-24)
 A read-only design pass. The full note is kept privately at `~/.claude/plans/2026-11-23-off-taddy-phase5-design.md` and not in this repo, because it quotes saved-episode titles.
@@ -58,11 +115,6 @@ A read-only design pass. The full note is kept privately at `~/.claude/plans/202
 4. **Pass the episode's real web link to extraction**, not the guid: the extractor sometimes copies the episode url into a mention's source url (112 Taddy urls and 158 Spotify urls in `ai_mentions.source_url` today).
 5. **Hard Fork stops being collected:** a "not collected since" state so its staleness, feed and transcript checks don't fail forever.
 6. Set aside (taste or rare): conditional GET for AI Daily's 8.6 MB feed; a guid-less feed collapsing items onto one shared link (none of the feeds we read can reach it).
-
-## Waiting on Kevin
-- **The PR #84 merge (2026-11-24).** Review is clean and CI is green on `be721ab`, but the merge command hit a permission prompt nobody was there to answer, so it was declined and not retried. Until it merges, the daily run does no comparison, and each day without it is one fewer comparison run before 12-04.
-
-The yes-items come with evidence when they're ready: the one-time episode-id change in Neon, stopping TAL transcripts, the Machine Gods backfill, deleting the two Taddy secrets, and the cancel click.
 
 ## Overlaps checked before branching (2026-11-23)
 - `gabby/fix-pipe-list-maker-2` and `-2-workflows`: merged (#81, #82) and deleted; nothing to coordinate.

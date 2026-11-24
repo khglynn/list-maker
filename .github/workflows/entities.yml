@@ -1,4 +1,4 @@
-name: Entities + Media (AI Daily, Hard Fork, PCHH, Gabfest)
+name: Entities + Media (AI Daily, Machine Gods, PCHH, Gabfest)
 
 # shell: bash turns on pipefail for run steps — without it, `cmd | tee` reports tee's
 # exit code and a crashed script reads as "success" (bit pipeline.yml for six weeks).
@@ -19,7 +19,7 @@ on:
       shows:
         description: 'Comma-separated entity/media show slugs'
         required: false
-        default: 'ai-daily-brief,hard-fork,pchh,culture-gabfest'
+        default: 'ai-daily-brief,machine-gods,pchh,culture-gabfest'
       backfill:
         description: 'Backfill the full archive (ignore the recent-only window)'
         required: false
@@ -61,11 +61,11 @@ jobs:
     # (which the announce step reports) instead of cancelling the whole job. A cancelled
     # job is still announced (announce.py treats it as a failed run), but a failed step
     # says which part hung. tests/test_workflows.py keeps the sum under this line.
-    timeout-minutes: 100
+    timeout-minutes: 90
     env:
       # The shows this run imports (a manual run may narrow them). An input reaches
       # the shell only through env, never interpolated into run: text.
-      ENTITY_SHOWS: ${{ github.event.inputs.shows || 'ai-daily-brief,hard-fork,pchh,culture-gabfest' }}
+      ENTITY_SHOWS: ${{ github.event.inputs.shows || 'ai-daily-brief,machine-gods,pchh,culture-gabfest' }}
       # Where steps leave detail for the announce step: data_health's results, the
       # preflight's diagnostics, mid-run notes (common.alert_note).
       ALERT_DETAILS_DIR: ${{ github.workspace }}/.alert-details
@@ -108,8 +108,6 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}  # entity extraction (extract_entities.resolve_route)
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}          # fallback route + Whisper; account closed 2026-11-14
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          TADDY_USER_ID: ${{ secrets.TADDY_USER_ID }}
-          TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           # Inputs via env (never interpolate ${{ inputs }} directly into run: — injection).
           BACKFILL_INPUT: ${{ github.event.inputs.backfill }}
@@ -120,21 +118,6 @@ jobs:
           [ "$DRY_RUN_INPUT" = "true" ] && FLAGS="$FLAGS --dry-run"
           cd pipeline
           python run_new_episodes.py --shows "$ENTITY_SHOWS" $FLAGS
-
-      - name: "Shadow: the feed path beside Taddy (read-only, never fails the run)"
-        # The move off Taddy, phase 2 (claude-plans/2026-11-23-off-taddy-plan.md). Runs the
-        # new feed importer's plan and the publisher-transcript readers against what Taddy
-        # just imported, and writes only counts, titles and ratios to the step summary.
-        # The database session is read-only. continue-on-error: while Taddy is still the
-        # writer, a shadow problem is something to read here, not a red run. Comes out at
-        # the cut-over, when the feed path becomes the import itself.
-        id: shadow
-        timeout-minutes: 8
-        if: always() && steps.preflight.outcome == 'success'
-        continue-on-error: true
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-        run: cd pipeline && python shadow_feeds.py
 
       - name: Sync transcripts to Notion (Transcripts DB)
         timeout-minutes: 10
@@ -163,8 +146,6 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          TADDY_USER_ID: ${{ secrets.TADDY_USER_ID }}   # second-source: are we behind the feed?
-          TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
         run: |
           # No `|| true`: a crash here should fail the step (→ Slack), not vanish.
           # --results-file: the announce step reads which checks failed from here;

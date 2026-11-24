@@ -101,7 +101,15 @@ class HeldIndex:
                 self.by_title_date.setdefault((normalize_title(row.title or "Untitled Episode"), row.publish_date), row)
 
     def match(self, item: FeedItem, identity: str) -> tuple[Optional[HeldEpisode], Optional[str]]:
-        """(the held row, how it matched) or (None, None).
+        """(the held row, how it matched) or (None, None)."""
+        return self.match_keys(identity, item.guid, item.title, item.publish_date)
+
+    def match_keys(
+        self, identity: str, guid: Optional[str], title: Optional[str], day: Optional[date]
+    ) -> tuple[Optional[HeldEpisode], Optional[str]]:
+        """The match itself, on plain values, so the feed check (data_health) asks exactly
+        the importer's question: if the importer would call an episode held, the check
+        must not call it missing, or nothing could ever clear the alarm.
 
         A title match onto a row that already carries a DIFFERENT feed guid comes back as
         "guid_conflict": two items with one title (a daily "roundup", a re-upload under a
@@ -109,17 +117,16 @@ class HeldIndex:
         """
         if identity in self.by_url:
             return self.by_url[identity], "url"
-        if item.guid and item.guid in self.by_guid:
-            return self.by_guid[item.guid], "raw_guid"
-        day = item.publish_date
+        if guid and guid in self.by_guid:
+            return self.by_guid[guid], "raw_guid"
         if day:
-            title = normalize_title(item.title or "Untitled Episode")
+            key = normalize_title(title or "Untitled Episode")
             for shifted, how in ((day, "title_date"), (day - timedelta(days=1), "title_date_shifted"),
                                  (day + timedelta(days=1), "title_date_shifted")):
-                row = self.by_title_date.get((title, shifted))
+                row = self.by_title_date.get((key, shifted))
                 if row is not None:
                     known = known_guid(row)
-                    if item.guid and known and known != item.guid:
+                    if guid and known and known != guid:
                         return row, "guid_conflict"
                     return row, how
         return None, None
@@ -147,6 +154,8 @@ class Action:
       held        held; nothing to do
       old         not held, older than the window (counted; --backfill imports it)
       undated     the item's pubDate does not parse; skipped and counted
+      trailer     the show's trailer (<itunes:episodeType>trailer): an ad for the show,
+                  never imported
       future      dated in the future (a scheduled pre-release); skipped until it isn't
       conflict    its title matches a held row tied to a different guid; nothing written,
                   reported for a person to settle
@@ -169,10 +178,17 @@ def plan_import(
     wants_transcript: bool,
     title_prefix: Optional[str] = None,
     backfill: bool = False,
+    import_since: Optional[date] = None,
     new_window_days: int = NEW_EPISODE_WINDOW_DAYS,
     transcript_retry_days: int = TRANSCRIPT_RETRY_DAYS,
 ) -> list[Action]:
-    """Decide, without any I/O, what to do with every item of a show's feed."""
+    """Decide, without any I/O, what to do with every item of a show's feed.
+
+    `import_since` (show_config), when a show sets it, replaces the 30-day window: the
+    show is collected from that date on, however far back it is, so a new show's whole
+    run arrives on its first import without a manual --backfill. Items before it are
+    "old" unless this is a --backfill.
+    """
     today = now.astimezone(timezone.utc).date()
     actions: list[Action] = []
     seen: set[str] = set()
@@ -185,6 +201,9 @@ def plan_import(
             # A feed that lists the same guid twice gets one row, not a conflict.
             continue
         seen.add(identity)
+        if item.is_trailer:
+            actions.append(Action("trailer", item, identity))
+            continue
         if not item.published_at:
             row, how = held.match(item, identity)  # url and guid still work without a date
             actions.append(Action("held" if row is not None else "undated", item, identity, row, how))
@@ -205,7 +224,7 @@ def plan_import(
                 and (backfill or day >= today - timedelta(days=transcript_retry_days))
             )
             actions.append(Action("transcript" if waiting else "held", item, identity, row, how))
-        elif backfill or day >= today - timedelta(days=new_window_days):
+        elif backfill or (day >= import_since if import_since is not None else day >= today - timedelta(days=new_window_days)):
             key = (normalize_title(item.title or "Untitled Episode"), day)
             if key in planned_inserts:
                 actions.append(Action("duplicate", item, identity))
@@ -380,6 +399,7 @@ def run_show(
         wants_transcript=bool(cfg.transcript_source),
         title_prefix=cfg.feed_title_prefix,
         backfill=backfill,
+        import_since=getattr(cfg, "import_since", None),
     )
     report.feed_items = len(actions)
     for a in actions:

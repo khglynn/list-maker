@@ -155,6 +155,12 @@ def show_status(s: dict, today: date | None = None) -> tuple[str, str]:
     if cfg is not None and s["slug"] in curated_show_slugs():
         return f"📌 curated — {s['episodes']} item(s), last saved {db_latest}", "curated"
 
+    stopped = getattr(cfg, "collected_until", None)
+    if stopped is not None:
+        # Collection stopped on purpose (Hard Fork, 2026-11): the feed keeps publishing,
+        # so comparing would say BEHIND on every pulse forever.
+        return f"⏸ not collected since {stopped} — we have {db_latest}", "retired"
+
     grace = getattr(cfg, "feed_grace_days", DEFAULT_FEED_GRACE_DAYS)
     if getattr(cfg, "episode_identity", None):
         feed_episodes = s.get("feed_episodes")

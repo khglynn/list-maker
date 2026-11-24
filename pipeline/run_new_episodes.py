@@ -3,7 +3,7 @@
 Fetch new episodes and process them through the full pipeline.
 
 Per-show pipeline:
-1. Import new episodes + transcripts from Taddy
+1. Import new episodes from each show's own feed, with the publisher's transcript
 2. Extract entities (for entity-type shows like AI Daily)
 3. Normalize aliases (dedup)
 4. Sync to Notion (for shows with Notion DBs)
@@ -46,7 +46,8 @@ SCRAPERS_DIR = PIPELINE_DIR / "scrapers"
 RECENT_EPISODE_WINDOW_DAYS = 90
 
 # Bounded retry for transient subprocess (step) failures. Steps are idempotent
-# (Taddy upserts, A2 delete-then-insert load, incremental Notion sync), so a
+# (the feed import writes only what is missing, A2 delete-then-insert load,
+# incremental Notion sync), so a
 # retry is safe and recovers transient API/network blips.
 MAX_STEP_RETRIES = 2
 
@@ -62,10 +63,10 @@ MAX_STEP_RETRIES = 2
 # the convention is written up in pipeline/README.md.
 DETERMINISTIC_EXIT_CODE = 2
 
-# How long a transcript-based show waits for Taddy before giving up and mining the
-# show notes anyway. Taddy publishes ~24h after an episode, so a week is many times
-# the normal wait: past it, the transcript is not coming (rights pulled, a Taddy gap,
-# a feed mismatch) and holding out forever would silently drop the episode from the
+# How long a transcript-based show waits for its transcript before giving up and mining
+# the show notes anyway. Publishers post within a day or so (Taddy did too, p90 = 1 day),
+# so a week is many times the normal wait: past it, the transcript is not coming (a page
+# never posted, a feed mismatch) and holding out forever would silently drop the episode from the
 # dataset. Falling back is announced, and the recovery loop below re-extracts the
 # episode for real if a transcript ever does land.
 TRANSCRIPT_GRACE_DAYS = 7
@@ -92,7 +93,7 @@ class EpisodeSource:
 
 def run_script(script_path: str, args: list[str], dry_run: bool, label: str, timeout: int = 600) -> bool:
     """Run a pipeline script as a subprocess, with bounded retry + backoff on
-    failure. Pipeline steps are idempotent (Taddy upserts, A2 delete-then-insert
+    failure. Pipeline steps are idempotent (feed import, A2 delete-then-insert
     load, incremental Notion sync), so a retry is safe and recovers transient
     API/network blips. Returns True on success.
 
@@ -158,9 +159,10 @@ def find_unextracted_episodes(
     pre-date the current quality bar. Use recent_only=False (the --backfill flag)
     for the full archive, e.g. when onboarding a show.
 
-    require_transcript=True makes a transcript-based (Taddy) show PREFER its transcript
-    and wait for it, because the show-notes fallback is a RACE, not a safety net: Taddy
-    publishes a transcript about a day after the episode, so a same-day run would mine
+    require_transcript=True makes a transcript-based show PREFER its transcript and wait
+    for it, because the show-notes fallback is a RACE, not a safety net: the transcript
+    lands hours to a day after the episode (AI Daily's page was not up 7 hours in on
+    2026-11-23; Taddy's p90 was a day), so a same-day run would mine
     the show-notes blurb instead — and since the episode then HAS mentions, the exclusion
     below means it is never re-extracted once the real transcript lands. That silently
     cost us episodes 5133 (hard-fork) and 7261 (ai-daily-brief), whose only mentions are
@@ -288,27 +290,50 @@ def _take_batches_within_budget(
     return selected
 
 
-def step_import(cfg: ShowConfig, dry_run: bool, per_show_limit: int = 50) -> bool:
-    """Step 1: Import new episodes. Taddy shows get transcripts; cfg.importer routes
-    non-Taddy scheduled sources (Gabfest's Megaphone RSS show-notes). Curated sources
-    (blogs, research — cfg.importer None) are ingested via save_item/the pull queue,
-    never here, so skipping them is correct rather than a gap."""
-    if cfg.taddy_uuid:
-        script = str(SCRAPERS_DIR / "taddy" / "import_transcripts.py")
-        args = ["--shows", cfg.slug, "--per-show-limit", str(per_show_limit)]
+def step_import(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> bool:
+    """Step 1: import new episodes. "rss" shows go through the feed importer (each show's
+    own feed, plus its publisher transcripts); Culture Gabfest keeps its show-notes
+    importer. Shows with no scheduled importer (curated sources, shows no longer
+    collected) are skipped, which is correct rather than a gap."""
+    if cfg.importer == "rss":
+        script = str(SCRAPERS_DIR / "rss" / "import_feed.py")
+        args = ["--shows", cfg.slug]
+        if backfill:
+            args.append("--backfill")
         if dry_run:
             args.append("--dry-run")
-        return run_script(script, args, dry_run=False, label=f"Taddy import ({cfg.slug})")
+        return run_script(script, args, dry_run=False, label=f"Feed import ({cfg.slug})")
 
     if cfg.importer == "gabfest_rss":
         script = str(SCRAPERS_DIR / "gabfest" / "import_gabfest.py")
-        args = ["--limit", str(per_show_limit)]
+        args = ["--limit", "500" if backfill else "50"]
         if dry_run:
             args.append("--dry-run")
         return run_script(script, args, dry_run=False, label="Gabfest RSS import")
 
     print(f"  Skipping import (no scheduled source for {cfg.slug})")
     return True
+
+
+def episode_web_link(url: str | None, raw_content: str | None) -> str:
+    """The episode's real web page for the extractor's prompt, or "".
+
+    The stored url is an identity, and since the move off Taddy it is usually the feed's
+    guid, not a web address. The extractor sometimes copies the episode url into a
+    mention's source url (112 Taddy ids and 158 Spotify pages sat in ai_mentions.source_url
+    on 2026-11-24), so it gets the feed's <link> when one was saved, a url only when it
+    really is one, and otherwise nothing.
+    """
+    try:
+        payload = json.loads(raw_content) if raw_content and raw_content.lstrip().startswith("{") else {}
+    except ValueError:
+        payload = {}
+    link = payload.get("link") if isinstance(payload, dict) else None
+    if isinstance(link, str) and link.startswith(("https://", "http://")):
+        return link
+    if url and url.startswith(("https://", "http://")) and not url.startswith("https://api.taddy.org/"):
+        return url
+    return ""
 
 
 def prepare_extraction_inputs(conn, episode_ids: list[int]) -> tuple[Path, Path, Path, Path]:
@@ -384,7 +409,7 @@ def prepare_extraction_inputs(conn, episode_ids: list[int]) -> tuple[Path, Path,
             "episode_id": eid,
             "title": row["title"],
             "publish_date": str(row["publish_date"]),
-            "episode_url": row.get("episode_url") or "",
+            "episode_url": episode_web_link(row.get("episode_url"), row.get("raw_content")),
         })
 
     with csv_path.open("w", newline="", encoding="utf-8") as f:
@@ -470,7 +495,7 @@ def step_entity_extraction(cfg: ShowConfig, episodes: list[EpisodeSource], dry_r
     episode_ids = [e.episode_id for e in episodes]
     degraded = [e.episode_id for e in episodes if e.source == "show_notes"]
     print(f"  {len(episode_ids)} episodes need entity extraction")
-    if degraded and cfg.taddy_uuid:
+    if degraded and cfg.require_transcript:
         # A transcript show falling back to notes is a real (bounded) quality loss.
         # Say it in the run output and the log rather than letting it pass as normal.
         print(
@@ -631,8 +656,8 @@ def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> tupl
     self-healing that happened. Steps stay resilient (one failure doesn't block the rest),
     but the failure is recorded.
 
-    backfill=True extracts the full archive (recent_only=False) and raises the
-    Taddy per-run import cap — use it when onboarding a show or catching up history.
+    backfill=True extracts the full archive (recent_only=False) and imports every feed
+    episode not yet held — use it when onboarding a show or catching up history.
     """
     started = time.time()
     failed: list[str] = []
@@ -641,9 +666,9 @@ def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> tupl
     print(f"Processing: {cfg.name} ({cfg.slug}){' [BACKFILL]' if backfill else ''}")
     print(f"{'='*60}")
 
-    # Step 1: import (Taddy transcripts, or Megaphone RSS for Gabfest)
+    # Step 1: import (the show's feed and publisher transcripts, or Gabfest's show notes)
     print("\n[1/6] Import")
-    if not step_import(cfg, dry_run, per_show_limit=500 if backfill else 50):
+    if not step_import(cfg, dry_run, backfill=backfill):
         print("  WARNING: import failed, continuing...")
         failed.append("import")
 
@@ -670,9 +695,8 @@ def process_show(cfg: ShowConfig, dry_run: bool, backfill: bool = False) -> tupl
                 conn,
                 cfg.show_id,
                 recent_only=not backfill,
-                # Taddy shows are transcript-based; anything else (Gabfest) is
-                # legitimately show-notes-only.
-                require_transcript=bool(cfg.taddy_uuid),
+                # Transcript shows wait for their transcript; Gabfest is show notes only.
+                require_transcript=cfg.require_transcript,
             )
         finally:
             conn.close()
@@ -722,8 +746,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--backfill",
         action="store_true",
-        help="Extract the full archive (ignore the recent-only window) and raise the "
-        "Taddy import cap — for onboarding a show or catching up history.",
+        help="Extract the full archive (ignore the recent-only window) and import every "
+        "feed episode not yet held — for onboarding a show or catching up history.",
     )
     return p.parse_args()
 

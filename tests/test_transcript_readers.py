@@ -259,3 +259,45 @@ def test_aidb_a_same_day_neighbour_whose_page_ends_early_cannot_take_it() -> Non
     shorter = _item(title="How People Are Using AI for Health", duration=1462)
     page = _aidb_page("Why Everyone Is Obsessed With Claude Code", "2026-11-20", body_words=4800, ends_at="00:24:00")
     assert isinstance(aidailybrief.fetch(shorter, session=_aidb({"2026-11-20": page})), NotYet)
+
+
+# ── This American Life ────────────────────────────────────────────────────────
+
+from pipeline.scrapers.transcripts import tal  # noqa: E402
+
+
+def _tal_page(number: int, words: int = 8000) -> str:
+    return (f'<header><span>Episode #{number}</span><h1>{number}: A Title</h1></header>'
+            f'<div class="content"><div class="act"><h3>Prologue: Prologue</h3><div class="act-inner">'
+            f'<div class="host"><h4>Ira Glass</h4><p begin="00:00:11.80" data-timestamp="11.8"> It&#039;s '
+            f'<i>This</i> <i>American</i> <i>Life.</i> [MUSIC]</p></div>'
+            f'<div class="subject"><h4>A Guest</h4><p begin="00:00:45.64">{_words(words)}</p>'
+            f'<p begin="00:57:05.71"></p></div></div></div></div><div id="torey">Thanks Torey</div>')
+
+
+def _tal_item(link="https://www.thisamericanlife.org/902/the-missing-minutes", title="902: The Missing Minutes"):
+    return FeedItem(title, "46259 at https://www.thisamericanlife.org", link, None, None, None, "", duration_seconds=3546)
+
+
+def test_tal_reads_the_episodes_own_numbered_page() -> None:
+    session = _Session({tal.TRANSCRIPT_URL.format(number=902): _Resp(text=_tal_page(902))})
+    result = tal.fetch(_tal_item(), session=session)
+    assert isinstance(result, Transcript) and result.model == "tal_transcript_page" and not result.is_generated
+    first = result.text.split("\n\n")[0]
+    assert first == "It's This American Life."  # no speaker, act title or [MUSIC]
+
+
+def test_tal_refuses_a_page_for_another_episode() -> None:
+    session = _Session({tal.TRANSCRIPT_URL.format(number=902): _Resp(text=_tal_page(901))})
+    assert isinstance(tal.fetch(_tal_item(), session=session), NotYet)
+
+
+def test_tal_announcements_without_a_number_expect_no_transcript() -> None:
+    result = tal.fetch(_tal_item(link="https://www.thisamericanlife.org/lifepartners", title="An Update from Ira"),
+                       session=_Session({}))
+    assert isinstance(result, NotYet) and "no transcript expected" in result.reason
+
+
+def test_tal_finds_the_number_in_an_archive_rows_page_url() -> None:
+    item = _tal_item(link="https://www.thisamericanlife.org/436/the-psychopath-test", title="The Psychopath Test")
+    assert tal.episode_number(item) == 436
