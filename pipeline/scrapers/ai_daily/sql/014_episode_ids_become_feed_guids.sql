@@ -16,8 +16,9 @@
 -- Notion is unaffected: the Transcripts DB stores no episode url, and the Tech and Media DBs store
 -- entity urls, not episode ids.
 --
--- Run it AFTER the cut-over PR is merged (the Taddy importer no longer runs, so no new Taddy-id row
--- can appear after this). Take the Neon branch first (pre-off-taddy-<date>); that is the rollback.
+-- Run it back to back with merging the cut-over PR, either order, with no daily run (20:30 UTC)
+-- between them: that run is the only writer of new Taddy-id rows, and the first one after the merge
+-- uses the feed importer. Take the Neon branch first (pre-off-taddy-<date>); that is the rollback.
 -- One transaction. Every precondition is checked before anything changes, and a re-run changes
 -- nothing (rows already on their guid are skipped; the TAL rows match only while they still hold
 -- their Taddy url). Kevin's paste (UPDATE + INSERT), with the runner in the cut-over PR.

@@ -4,7 +4,19 @@
 
 **Clock:** Taddy Pro ($75/mo) next bills **2026-12-07**. Target: new path live and seen working by **12-04**, Kevin cancels by **12-05**.
 
-## Where it stands (2026-11-24, ~01:10 UTC / 2026-11-23 evening CT)
+## Latest (2026-11-24, 21:15 UTC / 3:15pm CT): the first shadow run from a GitHub runner is clean
+**Seen working:** entities run 45481428202 (20:30 UTC, green; every step green, the shadow step included). Its "Shadow" step:
+1. **Discovery 100% on every show:** AI Daily 1,147 of 1,147, PCHH 300 of 300 (by saved guid), TAL 16 of 16 (title and date). Nothing to insert on the shows the importer will write.
+2. **Transcripts answer the runner's network:** AI Daily 6 of 6 older than a day (word overlap with Taddy 96–98%); PCHH 4 of 4 older than a day (81–85%), today's not posted 12.6 h in; Machine Gods 11 of 12, the missing one the September trailer.
+3. **Entity misses:** none new. Every episode below 100% was already read by hand in the Mac run (Taddy mishearings and sponsor reads); 11-23, the one new AI Daily episode, is 100%.
+4. **One timing note, not a problem:** AI Daily's 11-24 episode went into its feed at 20:12 UTC and wasn't in the copy the runner read at 20:37 (Anchor's cache); Taddy had it. On the new path an episode published that close to the 20:30 run lands the next day. It changes nothing in practice: AI Daily waits for its transcript, and the transcript is never up within the hour.
+5. SOP's would-insert (today's episode) and its two one-day date shifts are the shadow's view only; SOP keeps its website scraper.
+
+**Done after it (2026-11-24, 21:10 UTC):** the Neon snapshot branch `pre-off-taddy-014-2026-11-24` (`br-delicate-term-aeplpww9`, no compute, the rollback for the id move). PR #85 marked ready.
+
+**Next:** Kevin's one-line paste of `apply_sql.py … 014`; Claude merges PR #85 right after it. Both must land before the next 20:30 UTC run (Wed 11-25, 2:30pm CT), with no daily run between them. Then a hand-dispatched entities run to see the new path write.
+
+## Where it stood (2026-11-24, ~01:10 UTC / 2026-11-23 evening CT)
 
 **Phase 0 (bank what only Taddy has): done, seen.**
 - The 28 This American Life rows stored under a Taddy id are mapped to their feed guids: `2026-11-23-off-taddy-probes/out/tal-taddy-uuid-to-guid.json`. 28 of 28, all guids distinct, every title and date agrees with Taddy's. Taddy's "latest" list only covers the feed's 16 items, so the 15 older rows took one `getPodcastEpisode` lookup each (no transcript credits spent).
@@ -44,10 +56,10 @@ CI is green on the fixes, which are small and tested, so they had no fourth revi
 
 ## The shortened path (2026-11-24, after Kevin asked for a faster cut-over and for Claude to do the Taddy downgrade)
 1. **Tue 11-24, 20:30 UTC:** the first shadow run from a GitHub runner, the one thing not yet seen (NPR and aidailybrief.ai answering the runner). PR #84 merged 2026-11-24.
-2. **Wed 11-25, if that run is clean and the PR #85 review is clean:**
-   a. Claude makes a Neon snapshot branch.
+2. **Between Tue 11-24 evening and Wed 11-25 2:30pm CT (the run was clean):**
+   a. Claude makes a Neon snapshot branch. **Done 11-24 21:10 UTC.**
    b. Kevin pastes `apply_sql.py … 014` (one line).
-   c. Claude merges PR #85 and dispatches the entities run by hand, to see the new path write.
+   c. Claude merges PR #85 right after and dispatches the entities run by hand, to see the new path write. The paste and the merge go back to back, with no 20:30 UTC run between them.
 3. **Wed 11-25 and Thu 11-26, 20:30 UTC:** two green daily runs on the new path. That is the alert rule's own "verified".
 4. **Fri 11-27:**
    a. Claude deletes the two Taddy secrets.
