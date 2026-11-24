@@ -1,0 +1,125 @@
+{
+  "taken_at": "2026-11-24T00:52:15+00:00",
+  "shows": {
+    "ai-daily-brief": {
+      "episodes": 1147,
+      "transcripts": 1147,
+      "transcript_chars": 27465460,
+      "first_date": "2023-04-04",
+      "last_date": "2026-11-23",
+      "url_taddy": 167,
+      "url_spotify": 980,
+      "url_npr": 0,
+      "url_tal_site": 0,
+      "url_not_http": 0,
+      "raw_has_guid": 1147,
+      "transcript_sources": [
+        {
+          "source_type": "taddy_transcript",
+          "model": "taddy_paragraph",
+          "n": 1147
+        }
+      ],
+      "guid_pairs_sha256": "da68c6bee247119147931c09b33dd98b59af22a81bc935bfc800d8f8c49cb237"
+    },
+    "hard-fork": {
+      "episodes": 226,
+      "transcripts": 226,
+      "transcript_chars": 14863051,
+      "first_date": "2022-09-27",
+      "last_date": "2026-11-20",
+      "url_taddy": 223,
+      "url_spotify": 0,
+      "url_npr": 0,
+      "url_tal_site": 0,
+      "url_not_http": 0,
+      "raw_has_guid": 226,
+      "transcript_sources": [
+        {
+          "source_type": "taddy_transcript",
+          "model": "taddy_paragraph",
+          "n": 226
+        }
+      ],
+      "guid_pairs_sha256": "cc5375bd1fe9b53c71b4aab66e4c6ca65e3cf1d7ccd7e8d2b095677ecaf9c1f2"
+    },
+    "pchh": {
+      "episodes": 464,
+      "transcripts": 464,
+      "transcript_chars": 10824143,
+      "first_date": "2024-09-06",
+      "last_date": "2026-11-20",
+      "url_taddy": 107,
+      "url_spotify": 0,
+      "url_npr": 356,
+      "url_tal_site": 0,
+      "url_not_http": 0,
+      "raw_has_guid": 464,
+      "transcript_sources": [
+        {
+          "source_type": "taddy_transcript",
+          "model": "taddy_paragraph",
+          "n": 464
+        }
+      ],
+      "guid_pairs_sha256": "44135f38b3735e5f10e3f813f360a01b3321caa896e43e6fac699239db8de6b8"
+    },
+    "tal": {
+      "episodes": 917,
+      "transcripts": 42,
+      "transcript_chars": 2152112,
+      "first_date": "1995-11-17",
+      "last_date": "2026-11-23",
+      "url_taddy": 28,
+      "url_spotify": 0,
+      "url_npr": 0,
+      "url_tal_site": 888,
+      "url_not_http": 0,
+      "raw_has_guid": 0,
+      "transcript_sources": [
+        {
+          "source_type": "taddy_transcript",
+          "model": "taddy_paragraph",
+          "n": 42
+        }
+      ],
+      "guid_pairs_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "sop": {
+      "episodes": 727,
+      "transcripts": 547,
+      "transcript_chars": 16195897,
+      "first_date": "2014-10-27",
+      "last_date": "2026-11-17",
+      "url_taddy": 2,
+      "url_spotify": 0,
+      "url_npr": 0,
+      "url_tal_site": 0,
+      "url_not_http": 0,
+      "raw_has_guid": 0,
+      "transcript_sources": [
+        {
+          "source_type": "taddy_transcript",
+          "model": "taddy_paragraph",
+          "n": 547
+        }
+      ],
+      "guid_pairs_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "culture-gabfest": {
+      "episodes": 931,
+      "transcripts": 0,
+      "transcript_chars": 0,
+      "first_date": "2008-02-14",
+      "last_date": "2026-08-21",
+      "url_taddy": 0,
+      "url_spotify": 0,
+      "url_npr": 0,
+      "url_tal_site": 0,
+      "url_not_http": 931,
+      "raw_has_guid": 931,
+      "transcript_sources": [],
+      "guid_pairs_sha256": "3bfb6bb777cd85e22e6081c1aabe6978635a2f992891a291c7e977552d03671a"
+    }
+  }
+}
