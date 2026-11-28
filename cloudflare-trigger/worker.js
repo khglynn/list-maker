@@ -4,7 +4,7 @@
 // workflow_dispatch calls. Consolidated from five crons on 2026-08-26: the
 // Workers Free plan caps cron triggers at 5 PER ACCOUNT, and other projects
 // (remembrall-hub) need slots. Per-workflow cadence is unchanged in kind:
-//   - entities.yml  every day            (AI Daily, Hard Fork, PCHH, Culture Gabfest)
+//   - entities.yml  every day            (AI Daily, Machine Gods, PCHH, Culture Gabfest)
 //   - pipeline.yml  Mon/Wed/Fri          (Mon → show_id=2 TAL; Wed+Fri → show_id=1 SOP)
 //   - eval.yml      Mon                  (weekly extraction-quality eval — gated)
 //   - blogs.yml     Mon                  (weekly blog pull queue)

@@ -122,9 +122,8 @@ jobs:
           SPOTIFY_REDIRECT_URI: ${{ secrets.SPOTIFY_REDIRECT_URI }}
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
-          # TAL's discovery step imports new episodes from Taddy before scraping songs.
-          TADDY_USER_ID: ${{ secrets.TADDY_USER_ID }}
-          TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
+          # TAL's discovery step imports new episodes from TAL's own feed before scraping
+          # songs (scrapers/rss/import_feed.py); no key needed.
         run: |
           DRY_RUN_FLAG=""
           if [ "${{ steps.show.outputs.dry_run }}" = "true" ]; then
@@ -147,7 +146,7 @@ jobs:
       # run with nothing to discover — that is how TAL sat 6 episodes behind its feed
       # for ten weeks while every Monday run exited 0. Asking the feed (not the DB)
       # whether we are caught up is the only way this run can prove it did its job.
-      # Scoped to the show that just ran: one Taddy call, not one per show.
+      # Scoped to the show that just ran: one feed download, not one per show.
       - name: Feed second-source check (did this run actually catch up?)
         timeout-minutes: 5
         id: feed_check
@@ -155,8 +154,6 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          TADDY_USER_ID: ${{ secrets.TADDY_USER_ID }}
-          TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
           SHOW_ID: ${{ steps.show.outputs.show_id }}
         run: |
           case "$SHOW_ID" in

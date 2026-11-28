@@ -16,7 +16,8 @@ from pipeline.feed_check import FeedEpisode
 
 def _held_row(slug: str, url: str | None, title: str | None, publish_date: date | None) -> dict:
     """One row as _held_episodes_by_show's bulk query returns it."""
-    return {"slug": slug, "url": url, "title": title, "publish_date": publish_date}
+    return {"slug": slug, "id": len(f"{slug}{url}{title}") * 1000 + (publish_date.toordinal() % 1000 if publish_date else 0),
+            "url": url, "title": title, "publish_date": publish_date, "raw_guid": None}
 
 
 def _held(*episodes: tuple[str, str, date]) -> HeldEpisodes:
@@ -737,15 +738,15 @@ def test_feed_check_names_a_scheme_change_when_every_episode_looks_missing(monke
     url it writes. The alert has to name both, or the second one reads as the first."""
     result = _feed_check(
         monkeypatch,
-        rows=[_held_row("hard-fork", "old-scheme://1", "Held", date(2026, 8, 28))],
+        rows=[_held_row("pchh", "old-scheme://1", "Held", date(2026, 8, 28))],
         feed_episodes={
-            "hard-fork": [
+            "pchh": [
                 FeedEpisode("taddy:1", date(2026, 8, 28), "One"),
                 FeedEpisode("taddy:2", date(2026, 8, 21), "Two"),
             ]
         },
         today=date(2026, 9, 1),
-        slugs=["hard-fork"],
+        slugs=["pchh"],
     )
 
     assert result.status == "fail"
@@ -1799,3 +1800,50 @@ def test_r5_4_a_failed_create_still_eligible_stays_a_failure_however_old(monkeyp
                              "since_try": timedelta(days=10), "has_mentions": True}],
     )
     assert check_notion_sync_freshness(conn=None).status == "fail"
+
+
+def test_a_show_no_longer_collected_is_neither_stale_nor_behind(monkeypatch) -> None:
+    """Hard Fork keeps publishing after we stopped importing it (Kevin's choice of Machine
+    Gods); failing its feed or staleness check every day would be noise nobody can clear."""
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("hard-fork", "g-old", "Held", date(2026, 11, 20))],
+        feed_episodes={"hard-fork": [FeedEpisode("g-new", date(2026, 12, 20), "New")]},
+        today=date(2027, 1, 10),
+        slugs=["hard-fork"],
+    )
+    assert result.status == "pass"
+    assert any("not collected since" in d for d in result.details)
+
+
+def test_the_feed_check_counts_held_what_the_importer_counts_held(monkeypatch) -> None:
+    """A row held under a legacy url with a curly-quote title, a day off: the importer
+    matches it (and so will never insert it), so the check must not call it missing."""
+    result = _feed_check(
+        monkeypatch,
+        rows=[_held_row("tal", "https://www.thisamericanlife.org/902/x", "902: Jensen’s Fall", date(2026, 11, 22))],
+        feed_episodes={"tal": [FeedEpisode("46259 at x", date(2026, 11, 23), "902: Jensen's Fall", "46259 at x")]},
+        today=date(2026, 12, 10),
+        slugs=["tal"],
+    )
+    assert result.status == "pass", result.details
+
+
+def test_weekend_recaps_without_transcripts_do_not_read_as_a_lag(monkeypatch) -> None:
+    """Friday has its transcript, Saturday's and Sunday's 5-minute recaps expect none, and
+    Monday's is still inside the window. Nothing is late."""
+    import pipeline.data_health as dh
+
+    coverage_rows = [{
+        "slug": "ai-daily-brief", "episodes": 1200, "transcripts": 1197, "missing_transcripts": 3,
+        "latest_episode": date(2026, 11, 30), "latest_transcript": date(2026, 11, 27),
+    }]
+    missing_rows = [
+        {"slug": "ai-daily-brief", "publish_date": date(2026, 11, 28), "duration_seconds": 356},
+        {"slug": "ai-daily-brief", "publish_date": date(2026, 11, 29), "duration_seconds": 340},
+        {"slug": "ai-daily-brief", "publish_date": date(2026, 11, 30), "duration_seconds": 1600},
+    ]
+    monkeypatch.setattr(dh, "_rows", lambda conn, sql, params=None: missing_rows if "et.id IS NULL AND s.slug = ANY" in sql else coverage_rows)
+    monkeypatch.setattr(dh, "_today", lambda: date(2026, 11, 30))
+    result = dh.check_transcript_coverage(conn=None)
+    assert result.status == "pass", result.details

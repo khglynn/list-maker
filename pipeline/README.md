@@ -33,7 +33,7 @@ pipeline/
 │   │
 │   ├── ai_daily/          # AI Daily Brief entity extraction
 │   │   ├── transcripts.py        # Fetch transcripts (RSS + OpenAI STT)
-│   │   ├── extract_entities.py   # LLM entity extraction (OpenAI)
+│   │   ├── extract_entities.py   # LLM entity extraction (gpt-4.1-mini via OpenRouter, or OpenAI)
 │   │   ├── init_entity_schema.py # Create/reset Neon schema
 │   │   ├── load_entity_batch.py  # Load batch artifacts into Neon
 │   │   ├── normalize_aliases.py  # Merge duplicate entities
@@ -194,14 +194,14 @@ file that isn't there — never for anything a network or a database could have 
 The producers today (grep `sys.exit(2)`):
 
 - `scrapers/taddy/import_transcripts.py` — missing `TADDY_USER_ID`/`TADDY_API_KEY`, unknown show slug
-- `scrapers/ai_daily/extract_entities.py` — missing `OPENAI_API_KEY`, no episodes selected, any missing input file
+- `scrapers/ai_daily/extract_entities.py` — no model key (`OPENROUTER_API_KEY` or `OPENAI_API_KEY`), a key the provider refuses (401/402/403), no episodes selected, any missing input file
 - `scrapers/ai_daily/load_entity_batch.py` — missing `batch_manifest.json` / `mentions.csv`, unknown show slug
 - `sync_notion.py` — show has no `notion_database_id`, missing `NOTION_TOKEN`
 - `sync_playlist.py` — unknown `--show-id`
 
 Note the shape: several of these are raised inline rather than through a shared
 `except SomeError` handler, because `RuntimeError` is *also* how the Taddy importer and
-the extractor report OpenAI/GraphQL HTTP failures — which are exactly the retryable
+the extractor report model-API/GraphQL HTTP failures — which are exactly the retryable
 case. Catching by type there would stop retrying real API blips.
 
 **The loader is the sharpest version of that rule.** A database error that rolls the

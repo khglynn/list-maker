@@ -76,8 +76,6 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          TADDY_USER_ID: ${{ secrets.TADDY_USER_ID }}   # second source (are we behind the feed?)
-          TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
         run: cd pipeline && python pulse_report.py
 
       - name: Notify Slack (failure)

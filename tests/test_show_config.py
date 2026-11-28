@@ -36,7 +36,7 @@ def test_only_configured_notion_shows_have_database_ids() -> None:
     # show sharing a DB id, so an accidental addition here changes shared counts.
     assert by_db == {
         TECH_DB: {
-            "ai-daily-brief", "hard-fork",
+            "ai-daily-brief", "hard-fork", "machine-gods",
             "openai-blog", "anthropic-blog", "saved-articles", "agentic-research",
         },
         MEDIA_DB: {"pchh", "culture-gabfest"},
@@ -73,9 +73,9 @@ def test_ended_on_is_a_date_not_a_string() -> None:
             assert isinstance(cfg.ended_on, date), f"{slug}: ended_on must be a datetime.date"
 
 
-def test_scheduled_non_taddy_importers_are_known() -> None:
+def test_scheduled_importers_are_known() -> None:
     """step_import routes on cfg.importer — an unknown value would silently no-op."""
-    known = {None, "gabfest_rss"}
+    known = {None, "gabfest_rss", "rss"}
     for slug, cfg in SHOWS.items():
         assert cfg.importer in known, f"{slug}: unknown importer {cfg.importer!r}"
 
@@ -137,24 +137,21 @@ def test_grace_rule_helper_counts_the_weekend_gap() -> None:
 def test_episode_identity_names_the_writer_of_each_show_url() -> None:
     """episode_identity says which identity a show's episodes.url carries, and the feed
     check compares ids only where it is set. Getting it wrong is not a soft failure: a
-    show wrongly marked "taddy_uuid" reports its whole feed missing every day.
+    show wrongly marked reports its whole feed missing every day.
 
-    Pinned against what actually writes each row (verified against live Neon 2026-09-03):
-      - the four Taddy-imported shows, plus TAL, whose discovery step runs that same
-        importer (run_pipeline.discover_tal_episodes)
-      - culture-gabfest, written by import_gabfest with the Megaphone <guid>
-      - SOP: NOT identity-comparable. scrapers/sop/scrape.py writes
-        switchedonpop.com/episodes/... urls; only 2 of its 716 rows carry a Taddy url,
-        and 13 of the 15 episodes in its Taddy feed match nothing we hold.
+    Since the move off Taddy every podcast but SOP is written by a feed importer, and
+    sql/014 moved the rows Taddy had written onto their guids. SOP is NOT identity-
+    comparable: scrapers/sop/scrape.py writes switchedonpop.com/episodes/... urls.
     """
     identity_by_slug = {slug: cfg.episode_identity for slug, cfg in SHOWS.items()}
 
     assert identity_by_slug == {
         "sop": None,
-        "tal": "taddy_uuid",
-        "ai-daily-brief": "taddy_uuid",
-        "pchh": "taddy_uuid",
-        "hard-fork": "taddy_uuid",
+        "tal": "rss_guid",
+        "ai-daily-brief": "rss_guid",
+        "pchh": "rss_guid",
+        "hard-fork": "rss_guid",
+        "machine-gods": "rss_guid",
         "culture-gabfest": "rss_guid",
         "openai-blog": None,
         "anthropic-blog": None,
@@ -164,6 +161,29 @@ def test_episode_identity_names_the_writer_of_each_show_url() -> None:
     }
 
 
+def test_every_collected_podcast_has_a_scheduled_importer() -> None:
+    """A podcast with no importer imports nothing, silently. SOP's website scraper runs
+    from pipeline.yml; a show we stopped collecting has none on purpose."""
+    for slug, cfg in SHOWS.items():
+        if cfg.medium != "podcast" or slug == "sop" or cfg.collected_until is not None:
+            continue
+        assert cfg.importer in {"rss", "gabfest_rss"}, slug
+
+
+def test_only_hard_fork_has_stopped_being_collected() -> None:
+    from pipeline.show_config import not_collected_show_slugs
+
+    assert not_collected_show_slugs() == {"hard-fork"}
+    assert SHOWS["hard-fork"].importer is None
+
+
+def test_machine_gods_has_a_fixed_show_id_and_a_start_date() -> None:
+    """sql/014 creates its shows row with id 65; import_since keeps the October back
+    catalogue a decision (--backfill) rather than an accident of the 30-day window."""
+    cfg = SHOWS["machine-gods"]
+    assert cfg.show_id == 65 and cfg.import_since is not None
+
+
 def test_episode_identity_values_are_backed_by_a_real_source() -> None:
     """Each declared scheme needs the config the reader actually uses, or
     feed_recent_episodes silently returns None and the show goes unverified forever."""
@@ -171,7 +191,7 @@ def test_episode_identity_values_are_backed_by_a_real_source() -> None:
         if cfg.episode_identity == "taddy_uuid":
             assert cfg.taddy_uuid, f"{slug}: declares taddy identity with no taddy_uuid"
         elif cfg.episode_identity == "rss_guid":
-            assert "megaphone" in (cfg.fallback_website_url or ""), f"{slug}: no RSS feed url"
+            assert (cfg.feed_url or "").startswith("https://"), f"{slug}: no RSS feed url"
         else:
             assert cfg.episode_identity is None, f"{slug}: unknown scheme {cfg.episode_identity!r}"
 
@@ -181,3 +201,34 @@ def test_curated_sources_have_no_episode_identity() -> None:
     the feed check skips them before either reader is asked."""
     for slug in curated_show_slugs():
         assert SHOWS[slug].episode_identity is None, f"{slug}: curated shows have no feed"
+
+
+def test_every_podcast_names_its_own_feed() -> None:
+    """The feed is where new episodes come from once Taddy is gone, and what the feed
+    check reads. A podcast without one would import nothing and check nothing."""
+    for slug, cfg in SHOWS.items():
+        if cfg.medium == "podcast":
+            assert (cfg.feed_url or "").startswith("https://"), f"{slug}: no feed_url"
+
+
+def test_transcript_sources_are_registered_readers() -> None:
+    """A typo here would fail every day at import time, far from the cause."""
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "pipeline"))
+    from scrapers.transcripts import READERS
+
+    for slug, cfg in SHOWS.items():
+        if cfg.transcript_source is not None:
+            assert cfg.transcript_source in READERS, f"{slug}: unknown transcript_source {cfg.transcript_source!r}"
+            # Shows extracted FROM the transcript wait for it; TAL's songs come from its website.
+            if cfg.extraction_type == "entity_extraction":
+                assert cfg.require_transcript, f"{slug}: extracts from a transcript but doesn't wait for it"
+
+
+def test_which_shows_wait_for_a_transcript() -> None:
+    """Until 2026-11 this was inferred from "has a taddy_uuid"; it is now stated, and
+    the set must not move by accident (a show-notes show that waited would lose a week
+    on every episode; a transcript show that didn't would mine show notes the same day)."""
+    assert {slug for slug, cfg in SHOWS.items() if cfg.require_transcript} == {"ai-daily-brief", "pchh", "machine-gods"}

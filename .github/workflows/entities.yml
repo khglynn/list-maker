@@ -1,4 +1,4 @@
-name: Entities + Media (AI Daily, Hard Fork, PCHH, Gabfest)
+name: Entities + Media (AI Daily, Machine Gods, PCHH, Gabfest)
 
 # shell: bash turns on pipefail for run steps — without it, `cmd | tee` reports tee's
 # exit code and a crashed script reads as "success" (bit pipeline.yml for six weeks).
@@ -19,7 +19,7 @@ on:
       shows:
         description: 'Comma-separated entity/media show slugs'
         required: false
-        default: 'ai-daily-brief,hard-fork,pchh,culture-gabfest'
+        default: 'ai-daily-brief,machine-gods,pchh,culture-gabfest'
       backfill:
         description: 'Backfill the full archive (ignore the recent-only window)'
         required: false
@@ -65,7 +65,7 @@ jobs:
     env:
       # The shows this run imports (a manual run may narrow them). An input reaches
       # the shell only through env, never interpolated into run: text.
-      ENTITY_SHOWS: ${{ github.event.inputs.shows || 'ai-daily-brief,hard-fork,pchh,culture-gabfest' }}
+      ENTITY_SHOWS: ${{ github.event.inputs.shows || 'ai-daily-brief,machine-gods,pchh,culture-gabfest' }}
       # Where steps leave detail for the announce step: data_health's results, the
       # preflight's diagnostics, mid-run notes (common.alert_note).
       ALERT_DETAILS_DIR: ${{ github.workspace }}/.alert-details
@@ -105,10 +105,9 @@ jobs:
         timeout-minutes: 50
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}  # entity extraction (extract_entities.resolve_route)
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}          # fallback route + Whisper; account closed 2026-11-14
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          TADDY_USER_ID: ${{ secrets.TADDY_USER_ID }}
-          TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           # Inputs via env (never interpolate ${{ inputs }} directly into run: — injection).
           BACKFILL_INPUT: ${{ github.event.inputs.backfill }}
@@ -147,8 +146,6 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          TADDY_USER_ID: ${{ secrets.TADDY_USER_ID }}   # second-source: are we behind the feed?
-          TADDY_API_KEY: ${{ secrets.TADDY_API_KEY }}
         run: |
           # No `|| true`: a crash here should fail the step (→ Slack), not vanish.
           # --results-file: the announce step reads which checks failed from here;
@@ -173,7 +170,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: extraction-batches-${{ github.run_id }}
-          path: codex-notes/ai-daily-entity-extraction/incremental-*
+          # The summary only: mentions.csv and review_queue.csv carry context snippets
+          # quoted from the transcript, and this repo's artifacts are public. The full
+          # batch can be rebuilt from Neon by re-running the show.
+          path: codex-notes/ai-daily-entity-extraction/incremental-*/episode_summary.csv
           if-no-files-found: ignore
           retention-days: 14
 

@@ -80,7 +80,8 @@ jobs:
         timeout-minutes: 25
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}  # the same route as production extraction
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}          # fallback route; account closed 2026-11-14
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           MODEL_INPUT: ${{ github.event.inputs.model }}
           MODE_INPUT: ${{ github.event.inputs.mode }}

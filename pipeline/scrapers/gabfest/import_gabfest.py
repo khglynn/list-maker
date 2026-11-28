@@ -6,6 +6,9 @@ feed carries each episode's show-notes, which describe the cultural items the
 hosts discuss/endorse. We import those notes as episode raw_content so the media
 extraction profile can pull media recommendations from them.
 
+Slate moved the feed to Acast by 2026-11 (show_config.feed_url; the Megaphone url
+redirects). The show ended 2026-07-01, so this now finds nothing new unless it returns.
+
 Caveats baked into the design (verified 2026-06-07 against the live feed):
   - feeds.megaphone.fm/slatesculturegabfest is the broad Slate Culture feed and
     MIXES shows, so we filter to titles starting with "Culture Gabfest".
@@ -18,13 +21,9 @@ load_entity_batch), so it never interferes with a running extraction backfill.
 from __future__ import annotations
 
 import argparse
-import html
 import json
-import re
 import sys
-import defusedxml.ElementTree as ET  # hardened against XXE / billion-laughs
 from datetime import date, datetime
-from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -33,6 +32,7 @@ import requests
 # pipeline/ on the path so `common` / `show_config` import (file is pipeline/scrapers/gabfest/).
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from common import get_db_connection, get_logger, load_environment  # noqa: E402
+import feeds  # noqa: E402  (the one RSS parser: pipeline/feeds.py)
 
 log = get_logger("import_gabfest")
 
@@ -40,41 +40,26 @@ SHOW_SLUG = "culture-gabfest"
 TITLE_PREFIX = "Culture Gabfest"
 DEFAULT_FEED_URL = "https://feeds.megaphone.fm/slatesculturegabfest"
 
-_TAG_RE = re.compile(r"<[^>]+>")
-_WS_RE = re.compile(r"\s+")
-
-
 def clean_html(raw: str) -> str:
-    """Strip tags, unescape entities, collapse whitespace → plain text.
-
-    Tags become spaces (to preserve word boundaries across e.g. ``</p><p>``), then
-    we drop the space that leaves before punctuation — ``<i>Backrooms</i>.`` would
-    otherwise render as ``Backrooms .``.
-    """
-    if not raw:
-        return ""
-    text = _TAG_RE.sub(" ", raw)
-    text = html.unescape(text)
-    text = _WS_RE.sub(" ", text).strip()
-    return re.sub(r"\s+([.,;:!?])", r"\1", text)
+    """Plain text from show-note HTML (feeds.clean_html, kept here under its old name)."""
+    return feeds.clean_html(raw)
 
 
 def parse_pubdate(raw: Optional[str]) -> Optional[date]:
-    if not raw:
-        return None
-    try:
-        return parsedate_to_datetime(raw).date()
-    except (TypeError, ValueError, IndexError):
-        return None
+    """The UTC day of a pubDate (feeds.py, rule 1). Slate's feed dates every item in GMT,
+    so this is the same day the importer always stored; checked 2026-11-23."""
+    dt = feeds.parse_pubdate_utc(raw)
+    return dt.date() if dt else None
 
 
 def episode_url(item: dict[str, Any]) -> str:
-    """Per-episode-unique dedup key (episodes.url is UNIQUE). The RSS guid is unique
-    and stable per episode, so it's the single source of identity here; fall back to
-    the enclosure (audio) URL, then link. We deliberately do NOT prefer <link>, which
-    can be a generic show page (that was the Hard Fork url-collapse bug). Caveat: if a
-    feed ever reassigned guids while keeping enclosures stable, an episode could
-    double-insert — not observed for Megaphone."""
+    """Per-episode-unique dedup key (episodes.url is UNIQUE): the guid, else the
+    enclosure, else the link, else a synthetic key. The same order as
+    feeds.episode_identity, which the feed check uses to rebuild it; the two agree on
+    every item with a guid, enclosure or link (tests/test_feed_check.py pins that on a
+    shared fixture). Their synthetic keys can differ for an item with none of the three,
+    which no item in Slate's feed has. <link> comes last because it can be a generic
+    show page (that was the Hard Fork url-collapse bug)."""
     return (
         item.get("guid")
         or item.get("enclosure_url")
@@ -84,30 +69,21 @@ def episode_url(item: dict[str, Any]) -> str:
 
 
 def parse_feed(xml_bytes: bytes) -> list[dict[str, Any]]:
-    """Parse the RSS feed into episode dicts (all shows, unfiltered)."""
-    root = ET.fromstring(xml_bytes)
-    channel = root.find("channel")
-    if channel is None:
-        return []
-    items: list[dict[str, Any]] = []
-    for it in channel.findall("item"):
-        guid_el = it.find("guid")
-        enclosure_el = it.find("enclosure")
-        desc_html = it.findtext("description") or ""
-        pubdate_raw = it.findtext("pubDate")
-        items.append(
-            {
-                "title": (it.findtext("title") or "").strip(),
-                "guid": (guid_el.text or "").strip() if guid_el is not None and guid_el.text else None,
-                "link": (it.findtext("link") or "").strip() or None,
-                "enclosure_url": enclosure_el.get("url") if enclosure_el is not None else None,
-                "pubdate_raw": pubdate_raw,
-                "publish_date": parse_pubdate(pubdate_raw),
-                "description_html": desc_html,
-                "description_text": clean_html(desc_html),
-            }
-        )
-    return items
+    """Every item in the feed (all shows, unfiltered), as the dicts this importer and
+    scrapers/tal/fetch.py read. Parsing itself is feeds.parse_feed."""
+    return [
+        {
+            "title": it.title,
+            "guid": it.guid,
+            "link": it.link,
+            "enclosure_url": it.enclosure_url,
+            "pubdate_raw": it.pubdate_raw,
+            "publish_date": it.publish_date,
+            "description_html": it.description_html,
+            "description_text": it.description_text,
+        }
+        for it in feeds.parse_feed(xml_bytes).items
+    ]
 
 
 def filter_gabfest(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -168,10 +144,10 @@ def main() -> None:
     from show_config import get_show  # local import: keeps the module test-importable without the DB
 
     show = get_show(SHOW_SLUG)
-    feed_url = args.feed_url or show.fallback_website_url or DEFAULT_FEED_URL
+    feed_url = args.feed_url or show.feed_url or DEFAULT_FEED_URL
 
     log.info("Fetching Gabfest feed: %s", feed_url)
-    resp = requests.get(feed_url, timeout=60)
+    resp = requests.get(feed_url, timeout=60, headers={"User-Agent": feeds.USER_AGENT})
     resp.raise_for_status()
 
     all_items = parse_feed(resp.content)

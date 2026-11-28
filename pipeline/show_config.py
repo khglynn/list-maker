@@ -26,10 +26,22 @@ class ShowConfig:
     # never the daily import — so data_health skips their feed/staleness checks.
     medium: str = "podcast"  # "podcast" | "blog" | "research"
 
-    # Scheduled importer for non-Taddy shows ("gabfest_rss"). None + no taddy_uuid =
-    # nothing to import on a scheduled run (curated sources). Taddy shows are keyed
-    # off taddy_uuid itself — the uuid IS the importer config.
+    # The scheduled importer: "rss" (scrapers/rss/import_feed.py, every show's own feed)
+    # or "gabfest_rss" (the Culture Gabfest importer, kept because it is show-notes only
+    # and the show has ended). None = nothing to import on a scheduled run: curated
+    # sources, SOP (its website scraper runs in pipeline.yml) and shows no longer collected.
     importer: Optional[str] = None
+
+    # The day we stopped collecting a show that still publishes (Hard Fork, 2026-12: Kevin
+    # chose Machine Gods, its hosts' new show, over it). Like ended_on, its staleness check
+    # stops; unlike ended_on, so does its feed check, because the feed keeps moving and
+    # nothing will ever import from it again. Its rows stay.
+    collected_until: Optional[date] = None
+
+    # A new show's first scheduled run imports nothing published before this day. Without
+    # it the 30-day window would import a month of back catalogue on day one, which is a
+    # backfill, and a backfill is a decision (scrapers/rss/import_feed.py --backfill).
+    import_since: Optional[date] = None
 
     # Date of the show's final episode, for shows that have concluded. A finished show
     # can never be "fresh" again, so data_health skips its STALENESS check — otherwise
@@ -58,22 +70,37 @@ class ShowConfig:
 
     # WHICH IDENTITY THIS SHOW'S `episodes.url` CARRIES — i.e. whether the feed check can
     # compare the FEED's episode ids against the ids we hold, or must fall back to
-    # comparing dates. It is a fact about WHO WRITES THE ROW, not about who we ask for a
-    # second source, and the two are not the same show-by-show:
-    #   "taddy_uuid" — the Taddy importer writes the row, so url is
-    #       taddy_episode_url(uuid). True for the entity/media shows (run_new_episodes'
-    #       step_import) AND for TAL, whose discovery step runs that same importer
-    #       (run_pipeline.discover_tal_episodes).
-    #   "rss_guid"  — the Gabfest importer writes the row, so url is the Megaphone <guid>
-    #       (scrapers/gabfest/import_gabfest.episode_url).
+    # comparing dates. It is a fact about WHO WRITES THE ROW:
+    #   "rss_guid" — a feed importer writes the row, so url is the item's <guid>
+    #       (feeds.episode_identity). Every podcast but SOP since the move off Taddy
+    #       (2026-12); sql/014 moved the rows Taddy had written onto their guids.
     #   None        — a scraper writes urls the feed knows nothing about. SOP is the one
     #       podcast in this bucket: its rows come from switchedonpop.com/episodes/... via
-    #       scrapers/sop/scrape.py, while Taddy is only its second source. Measured
-    #       2026-09-03 against live Neon: 13 of the 15 episodes in SOP's Taddy feed carry
-    #       no matching url — every one of them held under its website url — so an
-    #       identity comparison there would report a 13-episode BEHIND every single day.
-    #       Curated sources are None too: no feed at all (see curated_show_slugs).
+    #       scrapers/sop/scrape.py, and its feed is only the second source. Measured
+    #       2026-09-03: an identity comparison there would report a 13-episode BEHIND every
+    #       day. Curated sources are None too: no feed at all (see curated_show_slugs).
     episode_identity: Optional[str] = None
+
+    # The show's own public RSS feed: where new episodes are found (scrapers/rss/
+    # import_feed.py) and what the feed check compares against. Found through Apple's
+    # free lookup (https://itunes.apple.com/lookup?id=<itunes_id> returns feedUrl), so if
+    # a feed ever moves, re-finding it is one lookup with the id kept here. Checked live
+    # 2026-11-23 for every show below.
+    feed_url: Optional[str] = None
+    itunes_id: Optional[int] = None
+    # Keep only items whose title starts with this, for a feed that carries several
+    # shows (Slate's feed mixes Culture Gabfest with its other podcasts).
+    feed_title_prefix: Optional[str] = None
+
+    # Where this show's full transcripts come from: a key of scrapers.transcripts.READERS
+    # ("aidailybrief", "npr"), or None for a show we do not transcribe (TAL and SOP get
+    # their songs from their websites; Gabfest is show notes only).
+    transcript_source: Optional[str] = None
+    # Whether extraction should wait for that transcript before falling back to the show
+    # notes (run_new_episodes.find_unextracted_episodes, up to TRANSCRIPT_GRACE_DAYS).
+    # Until 2026-11 this was inferred from "has a taddy_uuid"; it is a fact about the
+    # show, so it is stated here instead.
+    require_transcript: bool = False
 
     # Taddy
     taddy_uuid: Optional[str] = None
@@ -90,6 +117,17 @@ class ShowConfig:
 
     # Extraction
     extraction_type: Optional[str] = None  # "entity_extraction", "song_extraction"
+
+
+# The cut-over from Taddy (claude-plans/2026-11-23-off-taddy-plan.md, phase 3) merged
+# 2026-11-24 at 21:12 UTC. Taddy's last import of Hard Fork was that day's 20:30 UTC run;
+# the date is only shown in the checks that skip it ("not collected since ...").
+HARD_FORK_LAST_COLLECTED = date(2026, 11, 24)
+# Machine Gods is collected from its first episode (Kevin, 2026-11-24: "complete
+# work"). The importer reads import_since as "everything from this date", so the whole
+# run (2026-10-21 on; the 09-16 trailer is skipped as a trailer) arrives on the first
+# import, and the feed check expects all of it.
+MACHINE_GODS_IMPORT_SINCE = date(2026, 9, 16)
 
 
 SHOWS: dict[str, ShowConfig] = {
@@ -109,6 +147,8 @@ SHOWS: dict[str, ShowConfig] = {
         # switchedonpop.com/episodes/... urls, so Taddy uuids match almost nothing we
         # hold. The feed check compares DATES for SOP (see ShowConfig.episode_identity).
         taddy_uuid="97ed51a4-460e-4dc8-8db5-30df96ad59bc",
+        feed_url="https://feeds.megaphone.fm/switchedonpop",
+        itunes_id=934552872,
         fallback_website_url="https://switchedonpop.com",
         spotify_playlist_id="0cEVeX4pdHf5RJOiTRzgxX",
         spotify_playlist_name="Switched On Pop - All Songs Ever Discussed",
@@ -126,10 +166,18 @@ SHOWS: dict[str, ShowConfig] = {
         # import that fetches it, so a bonus can't false-alarm there; widening for it
         # would only slow the real alarm.
         feed_grace_days=2,
-        # run_pipeline.discover_tal_episodes runs the Taddy importer, so TAL rows do
-        # carry the Taddy uuid url — unlike SOP.
-        episode_identity="taddy_uuid",
+        # run_pipeline.discover_tal_episodes runs the feed importer, so new TAL rows carry
+        # the feed's <guid> ("46259 at https://www.thisamericanlife.org") — unlike SOP. The
+        # 28 rows Taddy wrote moved to their guids in sql/014; older rows keep their page
+        # urls and match by title + date.
+        importer="rss",
+        episode_identity="rss_guid",
+        # thisamericanlife.org/<number>/transcript, every episode back to #1. A song-credits
+        # show, so a missing one is a warning, never a red run (data_health policy).
+        transcript_source="tal",
         taddy_uuid="d682a935-ad2d-46ee-a0ac-139198b83bcc",
+        feed_url="https://www.thisamericanlife.org/podcast/rss.xml",
+        itunes_id=201671138,
         fallback_website_url="https://www.thisamericanlife.org/podcast/rss.xml",
         spotify_playlist_id="3d7fjfrTTKvrl7VHv5JzIz",
         spotify_playlist_name="This American Life: Full Music Archive",
@@ -140,8 +188,13 @@ SHOWS: dict[str, ShowConfig] = {
         name="The AI Daily Brief",
         show_id=3,
         content_types=["entities"],
-        episode_identity="taddy_uuid",
+        importer="rss",
+        episode_identity="rss_guid",
         taddy_uuid="60fabbea-f51e-4c8b-82b4-1cbd57fe8c02",
+        feed_url="https://anchor.fm/s/f7cac464/podcast/rss",
+        itunes_id=1680633614,
+        transcript_source="aidailybrief",
+        require_transcript=True,
         fallback_website_url="https://www.aidailybrief.ai/",
         store_raw_content=True,
         notion_database_id="982dafa0ad374d618e25207e67860e33",
@@ -152,8 +205,13 @@ SHOWS: dict[str, ShowConfig] = {
         name="Pop Culture Happy Hour",
         show_id=11,
         content_types=["mixed"],
-        episode_identity="taddy_uuid",
+        importer="rss",
+        episode_identity="rss_guid",
         taddy_uuid="81b2a312-6976-4d22-bc54-4e3991fee332",
+        feed_url="https://feeds.npr.org/510282/podcast.xml",
+        itunes_id=278974813,
+        transcript_source="npr",
+        require_transcript=True,
         fallback_website_url="https://www.npr.org/podcasts/510282/pop-culture-happy-hour",
         store_raw_content=True,
         notion_database_id="3780501ef95081a783ebf8a32fa94657",  # shared Media DB (Option A)
@@ -165,11 +223,35 @@ SHOWS: dict[str, ShowConfig] = {
         name="Hard Fork",
         show_id=48,
         content_types=["entities"],
-        episode_identity="taddy_uuid",
+        episode_identity="rss_guid",
+        # No longer collected: Kevin, 2026-11-23, "hard fork has basically become machine
+        # gods". Its 226 rows and transcripts stay; nothing imports it.
+        collected_until=HARD_FORK_LAST_COLLECTED,
         taddy_uuid="ff1d51d4-4fc9-4161-b23b-f0079f6dd5a0",
+        feed_url="https://feeds.simplecast.com/6HKOhNgS",
+        itunes_id=1528594034,
         fallback_website_url="https://www.nytimes.com/column/hard-fork",
         store_raw_content=True,
         notion_database_id="982dafa0ad374d618e25207e67860e33",  # shared Tech DB (Option A) — same as AI Daily
+        extraction_type="entity_extraction",
+    ),
+    "machine-gods": ShowConfig(
+        slug="machine-gods",
+        name="Machine Gods",
+        show_id=65,  # created by sql/014 with this explicit id
+        content_types=["entities"],
+        # Kevin Roose and Casey Newton's twice-weekly NPR show (from 2026-10), which took
+        # Hard Fork's place here. Full NPR transcripts, read like PCHH's.
+        importer="rss",
+        episode_identity="rss_guid",
+        feed_url="https://feeds.npr.org/g-s1-143588/podcast.xml",
+        itunes_id=6812430636,
+        transcript_source="npr",
+        require_transcript=True,
+        import_since=MACHINE_GODS_IMPORT_SINCE,
+        fallback_website_url="https://www.npr.org/podcasts/g-s1-143588/machine-gods",
+        store_raw_content=True,
+        notion_database_id="982dafa0ad374d618e25207e67860e33",  # shared Tech DB, as Hard Fork was
         extraction_type="entity_extraction",
     ),
     "culture-gabfest": ShowConfig(
@@ -181,6 +263,10 @@ SHOWS: dict[str, ShowConfig] = {
         episode_identity="rss_guid",
         taddy_uuid=None,  # Taddy won't transcribe Gabfest (iHeart rights) — Megaphone RSS show-notes instead
         fallback_website_url="https://feeds.megaphone.fm/slatesculturegabfest",
+        # Slate moved its feed to Acast; the Megaphone url above redirects there, and the
+        # channel's itunes:new-feed-url names this one (checked 2026-11-23).
+        feed_url="https://feeds.acast.com/public/shows/6969638b5f7f66b0e4468dad",
+        feed_title_prefix="Culture Gabfest",
         # Slate ended the show: final episode 2026-07-01, "So Long, and Thanks for All
         # the Granola Edition". https://slate.com/podcasts/culture-gabfest/2026/07/the-last-episode-of-the-slate-culture-gabfest-ever
         ended_on=date(2026, 7, 1),
@@ -250,7 +336,7 @@ SHOWS: dict[str, ShowConfig] = {
 # Shows whose full transcripts mirror into the Notion "Transcripts" DB
 # (sync_transcripts_notion.py, daily via entities.yml). Single source for the
 # sync default AND data_health's notion-freshness check — keep them in lockstep.
-TRANSCRIPT_NOTION_SHOWS: tuple[str, ...] = ("ai-daily-brief", "hard-fork", "saved-episodes")
+TRANSCRIPT_NOTION_SHOWS: tuple[str, ...] = ("ai-daily-brief", "hard-fork", "machine-gods", "saved-episodes")
 
 # Shows whose full texts mirror into the Notion "Blog Posts" DB (same engine,
 # --target blog-posts). agentic-research is deliberately absent: those docs'
@@ -414,6 +500,12 @@ def ended_show_slugs() -> set[str]:
     data_health skips STALENESS for these — a concluded show is permanently stale by
     definition, and a check that can never pass again is noise, not signal."""
     return {slug for slug, cfg in SHOWS.items() if cfg.ended_on is not None}
+
+
+def not_collected_show_slugs() -> set[str]:
+    """Slugs of shows we stopped importing while they keep publishing (collected_until).
+    data_health skips their staleness and feed checks; their rows stay."""
+    return {slug for slug, cfg in SHOWS.items() if cfg.collected_until is not None}
 
 
 def curated_show_slugs() -> set[str]:

@@ -272,3 +272,16 @@ def test_identity_show_matches_a_legacy_url_row_by_title_and_date() -> None:
     )
     status, state = show_status(s, today=date(2026, 6, 20))
     assert state == "ok" and "BEHIND" not in status
+
+
+def test_a_show_no_longer_collected_is_not_behind() -> None:
+    """Hard Fork keeps publishing after we stopped importing it; the pulse must not call
+    it BEHIND on every digest."""
+    s = _show(slug="hard-fork", latest="2026-11-20", feed_dates=["2026-12-20"])
+    s["cfg"] = SimpleNamespace(collected_until=date(2026, 11, 25), episode_identity="rss_guid", feed_grace_days=2,
+                               spotify_playlist_id=None, notion_database_id=None)
+    status, state = show_status(s, today=date(2027, 1, 10))
+    assert state == "retired" and "not collected since 2026-11-25" in status
+    digest = build_digest([_show(), s], TOTALS, [CheckResult("x", "pass", "ok", [])],
+                          intake={"judged": 0, "would_save_backlog": 0})
+    assert "All systems firing" in digest

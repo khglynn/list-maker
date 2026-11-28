@@ -41,8 +41,10 @@ CHECK_GUIDES: dict[str, Guide] = {
     ),
     "transcript_coverage_by_show": Guide(
         "Episodes are missing their transcripts",
-        "Taddy hasn't published the transcript yet (normally within a day) or the transcript import failed.",
-        "whether Taddy has transcripts for the episodes it names; if it does, the import step's log.",
+        "the publisher hasn't posted the transcript yet (AI Daily's page and NPR's usually appear within "
+        "a day or two) or the import couldn't read it.",
+        "the import step's log, which says for each episode why its transcript was 'not yet'; then the "
+        "publisher's page (aidailybrief.ai/e/<date>/transcript.md, or npr.org/transcripts/<story id>).",
     ),
     "episode_freshness_by_show": Guide(
         "A show has gone too long without a new episode",
@@ -96,7 +98,7 @@ CHECK_GUIDES: dict[str, Guide] = {
     ),
     "import_caught_up_to_feed": Guide(
         "A show is behind its podcast feed",
-        "the import that fetches the episode hasn't had its turn yet, the source (website or Taddy) lags "
+        "the import that fetches the episode hasn't had its turn yet, the source (the website, for SOP) lags "
         "the feed, or the importer stopped finding episodes.",
         "the show's next scheduled import; if the line says 'backstop', whether that workflow is still "
         "being dispatched at all.",
@@ -116,7 +118,8 @@ STEP_GUIDES: dict[str, Guide] = {
     "entities:preflight": _PREFLIGHT,
     "entities:import": Guide(
         "The daily import and extraction step failed",
-        "a Taddy or OpenAI error, a timeout on a large batch, or a code error.",
+        "a feed or publisher-page error, a model-API error (a refused key reads \"refused the key (401)\"), "
+        "a timeout on a large batch, or a code error.",
         "the end of the step's log; the extraction batch is kept as the run's dead-letter artifact.",
     ),
     "entities:notion": Guide(
@@ -143,7 +146,7 @@ STEP_GUIDES: dict[str, Guide] = {
     ),
     "music:feed_check": Guide(
         "The feed check crashed before it could report",
-        "a Taddy error or a query error.",
+        "a feed that couldn't be read or a query error.",
         "the traceback in the step's log.",
     ),
     "intake:preflight": _PREFLIGHT,

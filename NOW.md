@@ -1,11 +1,15 @@
 # NOW — list-maker
 
-**Last updated:** 2026-11-06 · **Mode:** live (routine cron-driven operation since 2026-06-07; hardening on top)
+**Last updated:** 2026-11-24 · **Mode:** live (routine cron-driven operation since 2026-06-07; hardening on top)
+
+## 2026-11-23: moving off Taddy before its 12-07 charge
+- **The arc:** new episodes from each show's own RSS feed, transcripts from the publishers' own pages (AI Daily's markdown, NPR's transcript pages), Taddy cancelled. Hard Fork stops being collected; Machine Gods (NPR) replaces it. Plan `claude-plans/2026-11-23-off-taddy-plan.md`; **live status and next step: `claude-plans/2026-11-23-off-taddy-STATUS.md`.**
+- **2026-11-24: cut over.** The feed path is live (PR #85) and was seen writing (Machine Gods' 11 episodes arrived with transcripts); Taddy is no longer called by anything scheduled. Left: two green daily runs, then the Taddy secrets on Fri 11-27, then the teardown PR. Kevin downgraded Taddy to its free plan on 2026-11-24 (Taddy confirmed it), so the 12-07 bill should not come. **Gabby owns all of it from 2026-11-24** (AGENTS.md, "Gabby owns this").
 
 ## 2026-11-06: Gabby watches it; the 39-day red run was four mistitled essays
 - **Health today (Gabby, read 11-06):** every show's episodes are current (AI Daily 11-05, Hard Fork and PCHH 11-06, SOP 11-03, TAL 11-02); the music run (`pipeline.yml`) and the Monday intake pass; songs are still arriving. The daily entities run has been red since 09-29 on one check only: `duplicate_episodes_by_show_title_date` (issue #68). Warnings only elsewhere: SOP's latest transcript lags 91 days.
 - **Cause:** not duplicates. darioamodei.com titles pages "Dario Amodei — <essay>", the importer kept the first half, and three essays saved 09-28 (plus one on 09-21) were stored as "Dario Amodei". Fixed in `import_blog.pick_title`; the four Notion Blog Posts pages were renamed the same day. **Still waiting:** `sql/013`, which retitles the four stored rows (Kevin's paste, or Gabby's once Neon is her connector); the daily run stays red until it runs.
-- **Watching:** Gabby's morning check on the Air reads the open `pipeline-failure` issues and each dispatched run (AGENTS.md, "Gabby watches this"), from her next install.
+- **Watching:** Gabby's morning check on the Air reads the open `pipeline-failure` issues and each dispatched run (AGENTS.md, "Gabby owns this"). Since 2026-11-24 she owns list-maker day to day.
 
 ## Right now (as of 2026-09-10)
 - **The curated intake is live and has ingested its first batch.** Arc on `main` 2026-09-02 (PR #33); Kevin approved all 75 eval labels unchanged the same evening, so auto-ingest was flipped on (PR #38) and the per-post Notion sync batched into one pass per run (PR #39). The first live run (09-02, 18:17–18:45 CT) saved **49 posts** — 38 OpenAI, 8 Anthropic, 3 other — all 49 mirrored to Blog Posts, **481 mentions across 389 entities** into the Tech DB, 30 skipped, 0 failed. The sponsor retag was applied (230 mentions / 45 entities). Next scheduled intake: Monday 2026-09-07, 15:30 CT.

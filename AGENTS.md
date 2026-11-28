@@ -1,7 +1,7 @@
 # list-maker - Agent Instructions
 
 *Inherits from ~/DevKev/AGENTS.md*
-*Last verified: 2026-11-13*
+*Last updated: 2026-11-24*
 
 ## ⚑ Resuming (especially after a compaction)
 
@@ -27,14 +27,14 @@ Automated pipeline that extracts recommendations from podcasts and routes them t
 | SOP | Switched On Pop | Website show notes |
 | TAL | This American Life | Website song credits |
 | AI Daily | AI Daily Brief | Taddy transcripts → LLM extraction |
-| PCHH | Pop Culture Happy Hour | Taddy transcripts → media extraction (Media DB) |
+| PCHH | Pop Culture Happy Hour | NPR transcript pages (Taddy until 2026-11-24) → media extraction (Media DB) |
 
 ## Tech Stack
 
 - **Database:** Neon (Postgres) - source of truth
 - **APIs:** Spotify (spotipy, in `pipeline/spotify_match.py` and `sync_playlist.py`), Notion, Firecrawl (web scraping)
 - **Transcripts:** Taddy API (multi-show transcript import)
-- **Extraction:** OpenAI gpt-4.1-mini (AI Daily entity extraction from transcripts)
+- **Extraction:** gpt-4.1-mini (AI Daily entity extraction from transcripts), through OpenRouter when the step has `OPENROUTER_API_KEY`, else OpenAI direct (OpenAI closed that account 2026-11-14, appeal pending)
 
 ## Spotify MCP
 
@@ -87,7 +87,7 @@ list-maker/
 
 ## What's live (no counts here — run `pipeline/data_health.py` or open the Notion hub for numbers)
 
-Eleven sources (one ended), three destinations. **Podcasts** (Taddy transcripts unless noted): AI Daily Brief + Hard Fork → the shared **Tech DB**; Pop Culture Happy Hour + Culture Gabfest (Megaphone show-notes; the show ended 2026-07-01) → the shared **Media DB**; Switched On Pop + This American Life (website song lists) → one **Spotify playlist** each. **Curated sources** (no feed, no cadence): openai-blog, anthropic-blog, saved-articles, agentic-research → Tech DB, full texts mirrored to the Blog Posts DB; saved-episodes → the Transcripts DB. Entities are global across shows, deduped, tagged with a "Shows" multi-select (Option A, 2026-06-07). Design and data flow: `ARCHITECTURE.md`. History: `DEVLOG.md`.
+Twelve sources (one ended, one no longer collected), three destinations. **Podcasts** (since 2026-11-24 new episodes come from each show's own RSS feed and transcripts from the publisher's pages, unless noted; Taddy before that): AI Daily Brief + Machine Gods (NPR; it took Hard Fork's place, and Hard Fork is no longer collected since 2026-11-24) → the shared **Tech DB**; Pop Culture Happy Hour + Culture Gabfest (show notes only; the show ended 2026-07-01) → the shared **Media DB**; Switched On Pop + This American Life (website song lists) → one **Spotify playlist** each. **Curated sources** (no feed, no cadence): openai-blog, anthropic-blog, saved-articles, agentic-research → Tech DB, full texts mirrored to the Blog Posts DB; saved-episodes → the Transcripts DB. Entities are global across shows, deduped, tagged with a "Shows" multi-select (Option A, 2026-06-07). Design and data flow: `ARCHITECTURE.md`. History: `DEVLOG.md`.
 
 ## Automation
 
@@ -97,7 +97,7 @@ The pipeline runs automatically. The **durable trigger** is the Cloudflare Worke
 
 **Manual trigger:** Actions tab → the workflow → Run workflow (or the Worker's `/?token=…` endpoint).
 
-**Secrets:** `SPOTIFY_CLIENT_ID/SECRET/REDIRECT_URI/CACHE_JSON`, `NEON_DATABASE_URL`, `FIRECRAWL_API_KEY`, `SLACK_WEBHOOK_URL`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY` (the two intake judge models), `NOTION_TOKEN`, `TADDY_USER_ID/API_KEY`. `claude.yml` has its own (`ANTHROPIC_API_KEY`, `HELPER_REPO_PAT`). Cloudflare Worker secret: `GH_PAT` (+ optional `SLACK_WEBHOOK_URL`, `TRIGGER_TOKEN`).
+**Secrets:** `SPOTIFY_CLIENT_ID/SECRET/REDIRECT_URI/CACHE_JSON`, `NEON_DATABASE_URL`, `FIRECRAWL_API_KEY`, `SLACK_WEBHOOK_URL`, `OPENROUTER_API_KEY` (the two intake judge models, and entity extraction in any step whose env carries it: `extract_entities.resolve_route` prefers it), `OPENAI_API_KEY` (the fallback extraction route and Whisper; OpenAI closed that account 2026-11-14, so a step with only this key fails extraction), `NOTION_TOKEN`, `TADDY_USER_ID/API_KEY`. `claude.yml` has its own (`ANTHROPIC_API_KEY`, `HELPER_REPO_PAT`). Cloudflare Worker secret: `GH_PAT` (+ optional `SLACK_WEBHOOK_URL`, `TRIGGER_TOKEN`).
 
 **If Spotify auth fails:** Re-auth locally from `pipeline/` (`./venv/bin/python spotify_match.py --show-id 1 --limit 1`), then update the `SPOTIFY_CACHE_JSON` secret with the new token cache's contents. Careful: the scripts' default cache path (`DEFAULT_CACHE_PATH` in `spotify_match.py` and `sync_playlist.py`) still names the MCP's old folder, `~/DevKev/personal/spotify-bulk-actions-mcp/.spotify_cache/.cache`, so a local re-auth writes there or fails to save until that is fixed in code. CI is unaffected: `pipeline.yml` passes `--cache-path` to `run_pipeline.py`.
 
@@ -109,13 +109,15 @@ See `pipeline/README.md` for orchestrator docs, `evals/README.md` for the eval h
 
 What each Slack message means, the first move for each, the known trade-offs and where to change a threshold or its words: `docs/alerts.md`. Read it before touching `announce.py`, `data_health.py` or `alert_guides.py`, or when a message needs explaining.
 
-## Gabby watches this (2026-11-06)
+## Gabby owns this (watching since 2026-11-06, owning since 2026-11-24)
 
-Kevin, 2026-11-06, in his Slack DM with Gabby: "That list automation should live here too", and that the always-on Air should "keep an eye on all our automated pipes". The jobs stay where they are (the Cloudflare cron, GitHub Actions, Neon, Notion); Gabby on the Air is the one who knows whether they ran, runs them on his ask and fixes them. Why: from 2026-09-29 the daily entities run was red on one check (issue #68) and its only word went to `#list-maker`, which nobody read.
+**Since 2026-11-24 Gabby owns list-maker day to day:** watching, fixing, and the follow-up builds of the move off Taddy. As owner she re-runs a workflow herself when that is how a fix gets checked; a run costs cents of OpenRouter and Firecrawl credit, inside her own spend rules. Kevin, closing the off-Taddy session: "they're supposed to monitor and fix things on an ongoing basis now". Her handoff brief is `claude-plans/2026-11-24-list-maker-yours-now/BRIEF.md` in the private `khglynn/gabby` repo (gabby#648); this repo's live record is `claude-plans/2026-11-23-off-taddy-STATUS.md`. A session of Kevin's working here should leave a line for her there, or on her list, when it changes what she watches.
 
-- **How she hears** (from her next install on the Air). Her 06:30 morning check reads this repo's open `pipeline-failure` issues (one per check that keeps failing, as above), each dispatched workflow's last run against the rhythm the Worker gives it (`cloudflare-trigger/worker.js` is the one source for that), since a cron that stops firing files no issue, and a failed last run, the eval's only word there since it files no issue. A change is a quiet line in her log channel and one line on her own work list, which her morning roundup picks up; Kevin hears only what needs him. `#list-maker` keeps getting the messages in `docs/alerts.md`.
+Kevin, 2026-11-06, in his Slack DM with Gabby: "That list automation should live here too", and that the always-on Air should "keep an eye on all our automated pipes". The jobs stay where they are (the Cloudflare cron, GitHub Actions, Neon, Notion); Gabby on the Air is the one who knows whether they ran, runs them and fixes them. Why: from 2026-09-29 the daily entities run was red on one check (issue #68) and its only word went to `#list-maker`, which nobody read.
+
+- **How she hears.** Her 06:30 morning check reads this repo's open `pipeline-failure` issues (one per check that keeps failing, as above), each dispatched workflow's last run against the rhythm the Worker gives it (`cloudflare-trigger/worker.js` is the one source for that), since a cron that stops firing files no issue, and a failed last run, the eval's only word there since it files no issue. A change is a quiet line in her log channel and one line on her own work list, which her morning roundup picks up; Kevin hears only what needs him. `#list-maker` keeps getting the messages in `docs/alerts.md`.
 - **Checking by hand.** `gh issue list -R khglynn/list-maker --label pipeline-failure --state open` and `gh run list -R khglynn/list-maker --limit 10`; a failed run's checks: `gh run view <id> -R khglynn/list-maker --log | grep -E '\[(FAIL|WARN)\]' -A3`, or read the "Data health check" step.
-- **Running one.** On his ask only: `gh workflow run entities.yml -R khglynn/list-maker` (or `pipeline.yml` with `-f show_id=...`, `blogs.yml`). A real run can spend a little OpenAI, OpenRouter and Firecrawl credit as well as Actions minutes. `pipeline.yml` and `blogs.yml` take `-f dry_run=true`, a preview that writes nothing; `entities.yml`'s `dry_run` previews extraction, but its Notion transcript sync step still runs for real.
+- **Running one.** On his ask, or to check her own fix: `gh workflow run entities.yml -R khglynn/list-maker` (or `pipeline.yml` with `-f show_id=...`, `blogs.yml`). A real run can spend a little OpenAI, OpenRouter and Firecrawl credit as well as Actions minutes. `pipeline.yml` and `blogs.yml` take `-f dry_run=true`, a preview that writes nothing; `entities.yml`'s `dry_run` previews extraction, but its Notion transcript sync step still runs for real.
 - **Fixing.** A worktree and a PR, as any change here; a data fix is a numbered file in `pipeline/scrapers/ai_daily/sql/` that Kevin pastes (or she runs, once Neon is one of her connectors and he says so).
 - **His lists.** The Notion side (Pod Lists: Blog Posts, Transcripts, the Tech DB, Blog Intake) through her Notion connector; edits there are hers to make on his ask. The Spotify playlists through his `spotify-bulk-actions-mcp`, once it is one of the Air's connectors.
 
@@ -124,15 +126,15 @@ Kevin, 2026-11-06, in his Slack DM with Gabby: "That list automation should live
 Extracts app/tool/platform mentions from transcripts using LLM extraction.
 
 **Neon schema:** 3 tables — `ai_runs`, `ai_entities`, `ai_mentions` (plus `notion_page_id` / `notion_synced_at` on entities)
-**Extraction model:** gpt-4.1-mini via OpenAI API
-**Transcripts:** imported via Taddy API (originally RSS + Firecrawl, migrated to Taddy)
+**Extraction model:** gpt-4.1-mini via OpenRouter (`openai/gpt-4.1-mini`, same price), or the OpenAI API when only its key is set; the route is written to `ai_runs.provider`
+**Transcripts:** since 2026-11-24 new episodes come from the show's own RSS feed and their transcripts from aidailybrief.ai (`pipeline/scrapers/transcripts/aidailybrief.py`); before that, Taddy (originally RSS + Firecrawl)
 **Extraction status:** new episodes are extracted automatically. About 141 old episodes (pre-Dec 2025) are intentionally skipped — they failed quality gates on lighter episodes and aren't worth re-processing; the orchestrator's recent-only window (`RECENT_EPISODE_WINDOW_DAYS = 90` in `run_new_episodes.py`) leaves them out. Counts: `pipeline/data_health.py`.
 **Notion destination:** the Tech DB (🛠️ Tech Tools & Mentions, which began as "AI Daily Brief — Tools & Mentions"; DB ID: `982dafa0ad374d618e25207e67860e33`, MCP data source: `a72f8f82-1ca0-4973-9dc2-3757aa729c6e`). Sync via `pipeline/sync_notion.py`.
 **Orchestrator:** `pipeline/run_new_episodes.py` — chains Taddy import → entity extraction → alias normalization → Notion sync → Spotify sync. Run with `--shows ai-daily-brief` or `--all`.
 
 **Required env vars** (in `.env.local`):
 - `DATABASE_URL` — Neon connection string (`common.py` also takes `NEON_DATABASE_URL`, the name CI uses)
-- `OPENAI_API_KEY` — for entity extraction
+- `OPENROUTER_API_KEY` (or `OPENAI_API_KEY`) — for entity extraction
 - `NOTION_TOKEN` — for Notion sync
 - `TADDY_USER_ID` / `TADDY_API_KEY` — for Taddy transcript import
 
@@ -156,7 +158,7 @@ cd ~/DevKev/personal/list-maker && set -a && source .env.local && source pipelin
 - **SOP and TAL automated** - Both shows backfilled, playlists updated automatically via GitHub Actions
 - **Scrape before transcribe** - SOP and TAL have song data on their websites
 - **Mosaic artwork done** - See `marketing/` for playlist cover generators
-- **Taddy covers every podcast but Culture Gabfest** (Megaphone show notes; Taddy won't transcribe it) - see each show's `taddy_uuid` in `pipeline/show_config.py`
+- **Off Taddy since 2026-11-24** - every podcast still collected, except SOP, is imported from its own RSS feed; transcripts come from the publishers' pages (each show's `transcript_source` in `pipeline/show_config.py`); Culture Gabfest stays show notes only
 
 ## Notion surface — the Pod Lists hub
 
@@ -173,7 +175,7 @@ cd ~/DevKev/personal/list-maker && set -a && source .env.local && source pipelin
 ## Relevant Docs & Links
 
 - **Engineering principles:** `docs/principles.md` — distilled from Kevin's four research guides (legibility, automation planes, data provenance, dependency hygiene). Read before substantive pipeline changes; the full-reasoning canonical guides live in his Obsidian vault.
-- **Plans:** no arc is live (NOW.md, 2026-11-06: routine operation). The last ones, all shipped, sit at the top of `claude-plans/`: `2026-09-02-curated-intake-v2/` (judged intake + ads as data), `2026-09-03-phase-4/`, `2026-09-04-phase-5/`, and `2026-09-01-ground-it-cleanup-plan.md` (the cleanup pass and Kevin's decisions)
+- **Plans:** the live arc is the move off Taddy (cut over 2026-11-24; Gabby owns its follow-ups): `claude-plans/2026-11-23-off-taddy-STATUS.md`, with its plan beside it. The earlier ones, all shipped, sit at the top of `claude-plans/`: `2026-09-02-curated-intake-v2/` (judged intake + ads as data), `2026-09-03-phase-4/`, `2026-09-04-phase-5/`, and `2026-09-01-ground-it-cleanup-plan.md` (the cleanup pass and Kevin's decisions)
 - **Origins:** `claude-plans/archive/2025/2025-12-12-initial-plan.md` and `…-project-context.md` (the original research chats, summarized)
 - **Original research chats:**
   - `~/Documents/HG Main/0.0 Daily Notes + Projects/2025/Q4/11 Nov/Projects/Notes organizer workflow - agent/AI chats on this topic/Unknown - CSV Playlist Creation Guide_67e70c24.md`

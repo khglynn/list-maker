@@ -127,7 +127,7 @@ def count_tal_episodes() -> int:
 
 
 def discover_tal_episodes(dry_run: bool, limit: int = 25) -> dict:
-    """Insert newly published TAL episodes into `episodes` via the Taddy importer.
+    """Insert newly published TAL episodes into `episodes` from TAL's own feed.
 
     TAL had no discovery step at all. Its scraper starts from
     `get_episodes_missing_songs` (scrapers/tal/fetch.py), which reads rows ALREADY in
@@ -137,28 +137,26 @@ def discover_tal_episodes(dry_run: bool, limit: int = 25) -> dict:
     episodes behind its feed. Every Monday run still reported success in under a
     minute, because finding no work is not an error.
 
-    The Taddy importer is already the discovery mechanism for every show with a
-    taddy_uuid, and it upserts ON CONFLICT (url), so re-running is safe.
-
-    IT ALSO STAMPS `scraped_at` (import_transcripts.py:364 and :397) — on the INSERT
-    that creates the row, and on the title+date dedup UPDATE of a row that already
-    existed. That is harmless for the shows this importer was written for, and it was
-    NOT harmless here: it emptied the TAL song scrape's old `scraped_at IS NULL` queue
-    from the day this step was added (2026-08-02) until the queue was rewritten to ask
-    "has this episode got songs" instead. Adding a discovery step to another
-    website-scraped show means checking what its scraper keys on first.
+    The feed importer (scrapers/rss/import_feed.py) is that discovery, as it is for
+    every other podcast since the move off Taddy (2026-12). It writes only rows it does
+    not hold and never touches `scraped_at` on a row it already has. The Taddy importer
+    it replaced stamped scraped_at on every TAL row it re-saw, which emptied the song
+    scrape's old `scraped_at IS NULL` queue from 2026-08-02 until the queue was
+    rewritten. Adding a discovery step to another website-scraped show still means
+    checking what its scraper keys on first. TAL has no transcript source, so this
+    fetches no transcripts.
     """
     if dry_run:
-        print("  [dry-run] would import new TAL episodes from Taddy")
+        print("  [dry-run] would import new TAL episodes from its feed")
         return {"discovered": 0, "dry_run": True}
 
     before = count_tal_episodes()
     result = subprocess.run(
         [
             VENV_PYTHON,
-            str(PIPELINE_DIR / "scrapers" / "taddy" / "import_transcripts.py"),
+            str(PIPELINE_DIR / "scrapers" / "rss" / "import_feed.py"),
             "--shows", "tal",
-            "--per-show-limit", str(limit),
+            "--limit", str(limit),
         ],
         capture_output=True,
         text=True,

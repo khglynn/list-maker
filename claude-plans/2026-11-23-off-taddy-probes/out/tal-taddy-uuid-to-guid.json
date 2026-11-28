@@ -1,0 +1,262 @@
+{
+  "banked_at": "2026-11-24T00:49:23+00:00",
+  "source": "Taddy getLatestPodcastEpisodes (TAL, page 1) + getPodcastEpisode for rows off the feed",
+  "taddy_items_returned": 16,
+  "looked_up_one_by_one": 15,
+  "neon_rows_with_taddy_url": 28,
+  "mapped": [
+    {
+      "episode_id": 7423,
+      "taddy_uuid": "0b3f0d5f-4673-4bc5-8b60-f4b1596eeb7d",
+      "title": "Bonus: Nancy's Deep Cuts",
+      "publish_date": "2025-07-17",
+      "guid": "45933 at https://www.thisamericanlife.org",
+      "taddy_title": "Bonus: Nancy's Deep Cuts",
+      "taddy_date_utc": "2025-07-17"
+    },
+    {
+      "episode_id": 13672,
+      "taddy_uuid": "85097c98-5fb1-441c-a98d-08e043e4b160",
+      "title": "880: What Is Your Emergency?",
+      "publish_date": "2026-01-30",
+      "guid": "46104 at https://www.thisamericanlife.org",
+      "taddy_title": "880: What Is Your Emergency?",
+      "taddy_date_utc": "2026-01-30"
+    },
+    {
+      "episode_id": 7422,
+      "taddy_uuid": "5320abd4-1eab-4a1a-8d2a-ccd59e06faf3",
+      "title": "Ira (Reluctantly) Gives a Graduation Speech",
+      "publish_date": "2026-05-01",
+      "guid": "46148 at https://www.thisamericanlife.org",
+      "taddy_title": "Ira (Reluctantly) Gives a Graduation Speech",
+      "taddy_date_utc": "2026-05-01"
+    },
+    {
+      "episode_id": 7846,
+      "taddy_uuid": "a4d1bd8d-1b8a-4e23-96a4-46ff7e239890",
+      "title": "886: Blackout",
+      "publish_date": "2026-05-04",
+      "guid": "46146 at https://www.thisamericanlife.org",
+      "taddy_title": "886: Blackout",
+      "taddy_date_utc": "2026-05-04"
+    },
+    {
+      "episode_id": 7845,
+      "taddy_uuid": "1078d642-3408-4974-8ff1-3ae4bc6eae01",
+      "title": "887: Two Is One, One Is None!",
+      "publish_date": "2026-05-18",
+      "guid": "46156 at https://www.thisamericanlife.org",
+      "taddy_title": "887: Two Is One, One Is None!",
+      "taddy_date_utc": "2026-05-18"
+    },
+    {
+      "episode_id": 7421,
+      "taddy_uuid": "add5ecc2-e038-4bde-a0e8-5ebaa8310db5",
+      "title": "888: Not Today, Hades!",
+      "publish_date": "2026-06-08",
+      "guid": "46163 at https://www.thisamericanlife.org",
+      "taddy_title": "888: Not Today, Hades!",
+      "taddy_date_utc": "2026-06-08"
+    },
+    {
+      "episode_id": 7420,
+      "taddy_uuid": "cdfba1d6-383f-4a2a-9fda-a639221ed5a4",
+      "title": "889: There’s Something About Hail Mary",
+      "publish_date": "2026-06-22",
+      "guid": "46170 at https://www.thisamericanlife.org",
+      "taddy_title": "889: There’s Something About Hail Mary",
+      "taddy_date_utc": "2026-06-22"
+    },
+    {
+      "episode_id": 7419,
+      "taddy_uuid": "f1116008-8557-436b-bbe6-9c87ccd068f6",
+      "title": "890: Maximal Americanness",
+      "publish_date": "2026-07-06",
+      "guid": "46176 at https://www.thisamericanlife.org",
+      "taddy_title": "890: Maximal Americanness",
+      "taddy_date_utc": "2026-07-06"
+    },
+    {
+      "episode_id": 7418,
+      "taddy_uuid": "bdd599c5-1bb0-4fc8-a3b6-6ae3aa7570a0",
+      "title": "891: The Test Case",
+      "publish_date": "2026-07-13",
+      "guid": "46177 at https://www.thisamericanlife.org",
+      "taddy_title": "891: The Test Case",
+      "taddy_date_utc": "2026-07-13"
+    },
+    {
+      "episode_id": 7417,
+      "taddy_uuid": "c804efe0-077d-463f-aad6-270478d7f48a",
+      "title": "892: Trapped on a Bus",
+      "publish_date": "2026-07-20",
+      "guid": "46192 at https://www.thisamericanlife.org",
+      "taddy_title": "892: Trapped on a Bus",
+      "taddy_date_utc": "2026-07-20"
+    },
+    {
+      "episode_id": 7416,
+      "taddy_uuid": "b4a17459-b752-45ed-b784-e0a2d01af010",
+      "title": "893: Testosterone",
+      "publish_date": "2026-07-27",
+      "guid": "46201 at https://www.thisamericanlife.org",
+      "taddy_title": "893: Testosterone",
+      "taddy_date_utc": "2026-07-27"
+    },
+    {
+      "episode_id": 7526,
+      "taddy_uuid": "3975842c-2961-4327-83db-783ed61bdc38",
+      "title": "894: I Couldn't Help but Notice",
+      "publish_date": "2026-08-03",
+      "guid": "46200 at https://www.thisamericanlife.org",
+      "taddy_title": "894: I Couldn't Help but Notice",
+      "taddy_date_utc": "2026-08-03"
+    },
+    {
+      "episode_id": 7837,
+      "taddy_uuid": "7157432e-b6f1-4597-9b6a-f1b9a27cae17",
+      "title": "443: Amusement Park",
+      "publish_date": "2026-08-10",
+      "guid": "37230 at https://www.thisamericanlife.org",
+      "taddy_title": "443: Amusement Park",
+      "taddy_date_utc": "2026-08-10"
+    },
+    {
+      "episode_id": 8168,
+      "taddy_uuid": "9739c752-f131-4d8a-9a91-d45962d8b31d",
+      "title": "895: Label Maker!",
+      "publish_date": "2026-08-17",
+      "guid": "46208 at https://www.thisamericanlife.org",
+      "taddy_title": "895: Label Maker!",
+      "taddy_date_utc": "2026-08-17"
+    },
+    {
+      "episode_id": 8532,
+      "taddy_uuid": "6ff904d4-46d6-47bd-ad4f-d5ba60542822",
+      "title": "206: Somewhere in the Arabian Sea",
+      "publish_date": "2026-08-24",
+      "guid": "37467 at https://www.thisamericanlife.org",
+      "taddy_title": "206: Somewhere in the Arabian Sea",
+      "taddy_date_utc": "2026-08-24"
+    },
+    {
+      "episode_id": 8843,
+      "taddy_uuid": "e457f2c3-000d-47ac-a94e-0abac595ca71",
+      "title": "896: I Know What You Need",
+      "publish_date": "2026-08-31",
+      "guid": "46218 at https://www.thisamericanlife.org",
+      "taddy_title": "896: I Know What You Need",
+      "taddy_date_utc": "2026-08-31"
+    },
+    {
+      "episode_id": 9707,
+      "taddy_uuid": "150faab0-2a6d-4240-bac6-d14cbe47664d",
+      "title": "449: Middle School",
+      "publish_date": "2026-09-07",
+      "guid": "37224 at https://www.thisamericanlife.org",
+      "taddy_title": "449: Middle School",
+      "taddy_date_utc": "2026-09-07"
+    },
+    {
+      "episode_id": 10119,
+      "taddy_uuid": "bc45776b-0d42-44e3-8f7c-c0d2fdef0150",
+      "title": "646: The Secret of My Death",
+      "publish_date": "2026-09-14",
+      "guid": "43933 at https://www.thisamericanlife.org",
+      "taddy_title": "646: The Secret of My Death",
+      "taddy_date_utc": "2026-09-14"
+    },
+    {
+      "episode_id": 10535,
+      "taddy_uuid": "e6b77a0b-59b9-4e60-bee7-92450915d95e",
+      "title": "897: Intergenerational Space Travel",
+      "publish_date": "2026-09-21",
+      "guid": "46224 at https://www.thisamericanlife.org",
+      "taddy_title": "897: Intergenerational Space Travel",
+      "taddy_date_utc": "2026-09-21"
+    },
+    {
+      "episode_id": 10947,
+      "taddy_uuid": "1388a4dd-2f1a-4c7c-972f-c5fa82f6ddad",
+      "title": "898: An Argument",
+      "publish_date": "2026-09-28",
+      "guid": "46226 at https://www.thisamericanlife.org",
+      "taddy_title": "898: An Argument",
+      "taddy_date_utc": "2026-09-28"
+    },
+    {
+      "episode_id": 11362,
+      "taddy_uuid": "cee25f1a-bfd0-454d-aa13-23810eedb86d",
+      "title": "899: Reaching Out",
+      "publish_date": "2026-10-05",
+      "guid": "46233 at https://www.thisamericanlife.org",
+      "taddy_title": "899: Reaching Out",
+      "taddy_date_utc": "2026-10-05"
+    },
+    {
+      "episode_id": 11677,
+      "taddy_uuid": "d70c7c31-1e57-4735-9fec-c064257c03a1",
+      "title": "427: Original Recipe",
+      "publish_date": "2026-10-12",
+      "guid": "37246 at https://www.thisamericanlife.org",
+      "taddy_title": "427: Original Recipe",
+      "taddy_date_utc": "2026-10-12"
+    },
+    {
+      "episode_id": 12086,
+      "taddy_uuid": "5661fc47-da9b-42d7-bd81-d1b1af8985f5",
+      "title": "489: No Coincidence, No Story!",
+      "publish_date": "2026-10-19",
+      "guid": "37184 at https://www.thisamericanlife.org",
+      "taddy_title": "489: No Coincidence, No Story!",
+      "taddy_date_utc": "2026-10-19"
+    },
+    {
+      "episode_id": 12495,
+      "taddy_uuid": "184dbabd-9732-4271-8882-fd211dcf50fb",
+      "title": "506: Secret Identity",
+      "publish_date": "2026-10-26",
+      "guid": "37167 at https://www.thisamericanlife.org",
+      "taddy_title": "506: Secret Identity",
+      "taddy_date_utc": "2026-10-26"
+    },
+    {
+      "episode_id": 12903,
+      "taddy_uuid": "02ddd53b-4e49-47b8-a1b2-dd8416e012df",
+      "title": "900: Talk Me Into It",
+      "publish_date": "2026-11-02",
+      "guid": "46252 at https://www.thisamericanlife.org",
+      "taddy_title": "900: Talk Me Into It",
+      "taddy_date_utc": "2026-11-02"
+    },
+    {
+      "episode_id": 13317,
+      "taddy_uuid": "42962444-d5a3-4121-8784-10cacab37340",
+      "title": "901: Is Your Blue My Blue?",
+      "publish_date": "2026-11-09",
+      "guid": "46253 at https://www.thisamericanlife.org",
+      "taddy_title": "901: Is Your Blue My Blue?",
+      "taddy_date_utc": "2026-11-09"
+    },
+    {
+      "episode_id": 13671,
+      "taddy_uuid": "0975286b-95ae-4a8f-b166-a323376ffcbd",
+      "title": "902: The Missing Minutes",
+      "publish_date": "2026-11-16",
+      "guid": "46259 at https://www.thisamericanlife.org",
+      "taddy_title": "902: The Missing Minutes",
+      "taddy_date_utc": "2026-11-16"
+    },
+    {
+      "episode_id": 14085,
+      "taddy_uuid": "178d4cef-6c21-4270-bb05-15c360614833",
+      "title": "436: The Psychopath Test",
+      "publish_date": "2026-11-23",
+      "guid": "37237 at https://www.thisamericanlife.org",
+      "taddy_title": "436: The Psychopath Test",
+      "taddy_date_utc": "2026-11-23"
+    }
+  ],
+  "unmapped": []
+}

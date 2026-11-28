@@ -138,3 +138,4 @@ def test_every_step_has_a_timeout_that_fits_inside_the_job():
             assert m, f"{name}: step without timeout-minutes: {step.splitlines()[0]}"
             total += int(m.group(1))
         assert total < job_limit, f"{name}: steps may take {total} min, job allows {job_limit}"
+
